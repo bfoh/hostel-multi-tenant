@@ -1,0 +1,70 @@
+import type { Metadata } from 'next'
+import { headers } from 'next/headers'
+import { Suspense } from 'react'
+
+import { OccupancyCard } from '@/components/dashboard/occupancy-card'
+import { RevenueCard } from '@/components/dashboard/revenue-card'
+import { BookingsCard } from '@/components/dashboard/bookings-card'
+import { AlertsCard } from '@/components/dashboard/alerts-card'
+import { OccupancyChart } from '@/components/dashboard/occupancy-chart'
+import { RecentBookings } from '@/components/dashboard/recent-bookings'
+import { StatCardSkeleton } from '@/components/dashboard/stat-card-skeleton'
+
+export const metadata: Metadata = {
+  title: 'Dashboard',
+}
+
+export default async function DashboardPage() {
+  const headersList = await headers()
+  const tenantName = headersList.get('x-tenant-name') ?? 'Your Hostel'
+
+  return (
+    <div className="space-y-6">
+      {/* ── Page header ──────────────────────────────────────────── */}
+      <div>
+        <h1 className="text-2xl font-bold text-text-primary">{tenantName}</h1>
+        <p className="mt-0.5 text-sm text-text-secondary">
+          Here&apos;s what&apos;s happening today
+        </p>
+      </div>
+
+      {/* ── KPI stat cards ───────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Suspense fallback={<StatCardSkeleton />}>
+          <OccupancyCard />
+        </Suspense>
+        <Suspense fallback={<StatCardSkeleton />}>
+          <RevenueCard />
+        </Suspense>
+        <Suspense fallback={<StatCardSkeleton />}>
+          <BookingsCard />
+        </Suspense>
+        <Suspense fallback={<StatCardSkeleton />}>
+          <AlertsCard />
+        </Suspense>
+      </div>
+
+      {/* ── Charts + recent activity ─────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Suspense
+            fallback={
+              <div className="skeleton h-64 w-full rounded-xl" />
+            }
+          >
+            <OccupancyChart />
+          </Suspense>
+        </div>
+        <div>
+          <Suspense
+            fallback={
+              <div className="skeleton h-64 w-full rounded-xl" />
+            }
+          >
+            <RecentBookings />
+          </Suspense>
+        </div>
+      </div>
+    </div>
+  )
+}

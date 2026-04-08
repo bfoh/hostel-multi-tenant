@@ -1,0 +1,291 @@
+/* ═══════════════════════════════════════════════════════════════
+   ADINKRA DESIGN SYSTEM — Global CSS
+   AbrempongHMS — Hostel Management System
+   ═══════════════════════════════════════════════════════════════ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── GOOGLE FONTS (subsetting to latin + latin-ext for Twi) ── */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin,latin-ext');
+
+@layer base {
+  /* ── PRIMITIVE COLOR TOKENS (Volta Blue scale) ──────────────── */
+  :root {
+    /* Volta Blue — Primary Brand */
+    --primitive-volta-50:  210 100% 97%;
+    --primitive-volta-100: 210 90%  92%;
+    --primitive-volta-200: 209 80%  82%;
+    --primitive-volta-300: 208 72%  68%;
+    --primitive-volta-400: 207 65%  54%;
+    --primitive-volta-500: 207 60%  44%;
+    --primitive-volta-600: 207 59%  36%;
+    --primitive-volta-700: 207 58%  28%;  /* Base — Volta Blue */
+    --primitive-volta-800: 207 58%  22%;
+    --primitive-volta-900: 207 58%  16%;
+    --primitive-volta-950: 207 58%  10%;
+
+    /* Kente Gold — Accent */
+    --primitive-gold-50:   38 100% 96%;
+    --primitive-gold-100:  38  97% 88%;
+    --primitive-gold-200:  38  95% 76%;
+    --primitive-gold-300:  38  93% 64%;
+    --primitive-gold-400:  38  93% 52%;
+    --primitive-gold-500:  38  93% 41%;  /* Base — Kente Gold */
+    --primitive-gold-600:  38  93% 34%;
+    --primitive-gold-700:  38  90% 28%;
+    --primitive-gold-800:  38  88% 22%;
+    --primitive-gold-900:  38  85% 16%;
+
+    /* Kakum Green — Success */
+    --primitive-green-50:  150 60% 96%;
+    --primitive-green-100: 150 58% 88%;
+    --primitive-green-200: 150 58% 76%;
+    --primitive-green-500: 150 64% 38%;
+    --primitive-green-700: 150 64% 29%;  /* Base — Kakum Green */
+    --primitive-green-900: 150 64% 16%;
+
+    /* Harmattan Red — Danger */
+    --primitive-red-50:    5  80% 96%;
+    --primitive-red-100:   5  75% 90%;
+    --primitive-red-200:   5  70% 78%;
+    --primitive-red-500:   5  62% 52%;
+    --primitive-red-600:   5  62% 46%;  /* Base — Harmattan Red */
+    --primitive-red-800:   5  62% 30%;
+
+    /* Savanna Amber — Warning */
+    --primitive-amber-50:  33  95% 96%;
+    --primitive-amber-500: 33  95% 44%;  /* Base — Savanna Amber */
+    --primitive-amber-700: 33  92% 30%;
+
+    /* Densu Blue — Info */
+    --primitive-info-50:  204  70% 95%;
+    --primitive-info-500: 204  64% 44%;  /* Base — Densu Blue */
+    --primitive-info-800: 204  64% 26%;
+
+    /* Harmattan Grays — Warm-toned neutrals */
+    --primitive-neutral-50:  50  10% 98%;   /* #FAFAF8 */
+    --primitive-neutral-100: 50  8%  96%;   /* #F4F4F0 */
+    --primitive-neutral-200: 60  5%  91%;   /* #E8E8E2 */
+    --primitive-neutral-300: 60  4%  83%;   /* #D4D4CC */
+    --primitive-neutral-400: 40  3%  66%;   /* #A8A89E */
+    --primitive-neutral-500: 35  3%  48%;   /* #7A7A72 */
+    --primitive-neutral-600: 35  3%  35%;   /* #5A5A54 */
+    --primitive-neutral-700: 30  4%  23%;   /* #3C3C38 */
+    --primitive-neutral-800: 30  5%  16%;   /* #282824 */
+    --primitive-neutral-900: 30  5%  10%;   /* #1A1A18 */
+    --primitive-neutral-950: 0   0%  6%;    /* #0F0F0E */
+  }
+
+  /* ── SEMANTIC TOKENS — LIGHT MODE ──────────────────────────── */
+  :root {
+    /* Brand (Volta Blue — tenant can override these) */
+    --color-brand:              var(--primitive-volta-700);
+    --color-brand-hover:        var(--primitive-volta-800);
+    --color-brand-active:       var(--primitive-volta-900);
+    --color-brand-subtle:       var(--primitive-volta-50);
+    --color-brand-subtle-hover: var(--primitive-volta-100);
+    --color-brand-fg:           0 0% 100%;
+
+    /* Accent (Kente Gold — tenant can override) */
+    --color-accent:             var(--primitive-gold-500);
+    --color-accent-hover:       var(--primitive-gold-600);
+    --color-accent-subtle:      var(--primitive-gold-50);
+    --color-accent-fg:          0 0% 100%;
+
+    /* Status (FIXED — do not override per tenant) */
+    --color-success:            var(--primitive-green-700);
+    --color-success-subtle:     var(--primitive-green-50);
+    --color-success-fg:         0 0% 100%;
+
+    --color-danger:             var(--primitive-red-600);
+    --color-danger-hover:       var(--primitive-red-800);
+    --color-danger-subtle:      var(--primitive-red-50);
+    --color-danger-fg:          0 0% 100%;
+
+    --color-warning:            var(--primitive-amber-500);
+    --color-warning-subtle:     var(--primitive-amber-50);
+    --color-warning-fg:         var(--primitive-amber-700);
+
+    --color-info:               var(--primitive-info-500);
+    --color-info-subtle:        var(--primitive-info-50);
+    --color-info-fg:            0 0% 100%;
+
+    /* Surfaces */
+    --color-bg:                 var(--primitive-neutral-50);
+    --color-surface:            0 0% 100%;
+    --color-surface-raised:     var(--primitive-neutral-50);
+    --color-surface-sunken:     var(--primitive-neutral-100);
+
+    /* Borders */
+    --color-border:             var(--primitive-neutral-200);
+    --color-border-muted:       var(--primitive-neutral-100);
+    --color-border-strong:      var(--primitive-neutral-300);
+
+    /* Text */
+    --color-text-primary:       var(--primitive-neutral-800);
+    --color-text-secondary:     var(--primitive-neutral-600);
+    --color-text-tertiary:      var(--primitive-neutral-500);
+    --color-text-disabled:      var(--primitive-neutral-400);
+    --color-text-inverse:       0 0% 100%;
+
+    /* Sidebar — ALWAYS DARK, never overridden */
+    --color-sidebar-bg:         var(--primitive-neutral-950);
+    --color-sidebar-text:       var(--primitive-neutral-400);
+    --color-sidebar-text-active: 0 0% 100%;
+    --color-sidebar-item-active: var(--primitive-volta-700);
+    --color-sidebar-item-hover:  0 0% 12%;
+
+    /* Easing functions */
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-enter:    cubic-bezier(0.0, 0.0, 0.2, 1);
+    --ease-exit:     cubic-bezier(0.4, 0.0, 1, 1);
+    --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* ── SEMANTIC TOKENS — DARK MODE ────────────────────────────── */
+  .dark {
+    --color-bg:                 12 10% 8%;
+    --color-surface:            12 8%  11%;
+    --color-surface-raised:     12 8%  14%;
+    --color-surface-sunken:     12 6%  7%;
+
+    --color-border:             30 6%  20%;
+    --color-border-muted:       30 6%  16%;
+    --color-border-strong:      30 6%  28%;
+
+    --color-text-primary:       30 10% 92%;
+    --color-text-secondary:     30 6%  62%;
+    --color-text-tertiary:      30 4%  44%;
+    --color-text-disabled:      30 4%  35%;
+
+    /* Status: slightly lighter/desaturated in dark mode */
+    --color-success:            150 45% 38%;
+    --color-danger:             5   55% 52%;
+    --color-warning:            33  75% 52%;
+    --color-info:               204 55% 52%;
+
+    /* Brand and accent shift slightly lighter in dark mode */
+    --color-brand:              var(--primitive-volta-500);
+    --color-brand-subtle:       207 58% 14%;
+    --color-accent:             var(--primitive-gold-400);
+    --color-accent-subtle:      38 93% 12%;
+
+    /* Sidebar stays identical in dark mode — already dark */
+  }
+
+  /* ── BASE ELEMENT STYLES ─────────────────────────────────────── */
+  * {
+    box-sizing: border-box;
+    border-color: hsl(var(--color-border));
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: hsl(var(--color-bg));
+    color: hsl(var(--color-text-primary));
+    font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Slashed zero: critical for financial data so 0 ≠ O */
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Headings use display font */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+    font-weight: 600;
+    color: hsl(var(--color-text-primary));
+    line-height: 1.25;
+  }
+
+  /* Focus visible — keyboard navigation */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--color-brand) / 0.25);
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ── UTILITY CLASSES ─────────────────────────────────────────── */
+@layer utilities {
+  /* Financial data — tabular numbers so columns align */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .slashed-zero {
+    font-variant-numeric: slashed-zero;
+  }
+  .currency-amount {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  /* Booking reference, invoice numbers */
+  .ref-number {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.875em;
+    letter-spacing: 0.03em;
+  }
+
+  /* Skeleton loading pulse */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--primitive-neutral-100)) 25%,
+      hsl(var(--primitive-neutral-200)) 50%,
+      hsl(var(--primitive-neutral-100)) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Sidebar transition */
+  .sidebar-transition {
+    transition: width 200ms var(--ease-standard);
+  }
+
+  /* Occupancy bar fill animation */
+  .occupancy-bar-fill {
+    transition: width 400ms var(--ease-standard);
+  }
+}
+
+/* ── SCROLLBAR STYLING (subtle, cross-browser) ─────────────── */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primitive-neutral-300));
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primitive-neutral-400));
+  }
+}
