@@ -1,3 +1,6 @@
+/* ── GOOGLE FONTS (subsetting to latin + latin-ext for Twi) ── */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin,latin-ext');
+
 /* ═══════════════════════════════════════════════════════════════
    ADINKRA DESIGN SYSTEM — Global CSS
    AbrempongHMS — Hostel Management System
@@ -6,9 +9,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* ── GOOGLE FONTS (subsetting to latin + latin-ext for Twi) ── */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin,latin-ext');
 
 @layer base {
   /* ── PRIMITIVE COLOR TOKENS (Volta Blue scale) ──────────────── */
@@ -272,6 +272,15 @@
   }
 }
 
+/* ── FORM INPUT BASE ─────────────────────────────────────────── */
+@layer components {
+  .input-base {
+    @apply w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary
+           placeholder:text-text-disabled transition-colors
+           focus:outline-none focus:ring-2 focus:ring-brand/25 focus:border-brand;
+  }
+}
+
 /* ── SCROLLBAR STYLING (subtle, cross-browser) ─────────────── */
 @layer base {
   ::-webkit-scrollbar {
@@ -288,4 +297,11 @@
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--primitive-neutral-400));
   }
+}
+
+/* ── PRINT STYLES (invoice page) ─────────────────────────── */
+@media print {
+  nav, aside, header, .print\:hidden { display: none !important; }
+  body { background: white !important; }
+  @page { margin: 1.5cm; }
 }

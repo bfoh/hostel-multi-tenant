@@ -20,6 +20,7 @@ export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/dashboard'
+  const resetSuccess = searchParams.get('reset') === 'success'
 
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -57,6 +58,12 @@ export default function LoginPage() {
         <h1 className="font-display text-2xl font-bold text-text-primary">Welcome back</h1>
         <p className="text-sm text-text-secondary">Sign in to your hostel dashboard</p>
       </div>
+
+      {resetSuccess && (
+        <div className="rounded-md bg-success-subtle px-3 py-2 text-sm text-success">
+          Password updated successfully. Sign in with your new password.
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div className="space-y-1.5">
@@ -116,6 +123,13 @@ export default function LoginPage() {
           {isSubmitting ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
+
+      <p className="text-center text-sm text-text-secondary">
+        Don&apos;t have an account?{' '}
+        <Link href="/signup" className="font-medium text-brand hover:text-brand-hover transition-colors">
+          Start free trial
+        </Link>
+      </p>
     </div>
   )
 }

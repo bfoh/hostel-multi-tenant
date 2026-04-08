@@ -192,25 +192,32 @@ create index on booking_payments (paystack_reference) where paystack_reference i
 
 create or replace function sync_booking_paid_amount()
 returns trigger language plpgsql security definer as $$
+declare
+  v_booking_id uuid;
+  v_paid       bigint;
+  v_final      bigint;
 begin
+  v_booking_id := coalesce(new.booking_id, old.booking_id);
+
+  select coalesce(sum(amount), 0)
+  into   v_paid
+  from   booking_payments
+  where  booking_id = v_booking_id
+    and  status = 'success';
+
+  select final_amount
+  into   v_final
+  from   bookings
+  where  id = v_booking_id;
+
   update bookings
-  set    paid_amount = (
-           select coalesce(sum(amount), 0)
-           from   booking_payments
-           where  booking_id = coalesce(new.booking_id, old.booking_id)
-             and  status = 'success'
-         ),
+  set    paid_amount    = v_paid,
          payment_status = case
-           when coalesce(sum(bp.amount) filter (where bp.status = 'success'), 0) = 0
-             then 'unpaid'
-           when coalesce(sum(bp.amount) filter (where bp.status = 'success'), 0) >= b.final_amount
-             then 'paid'
-           else 'partial'
+           when v_paid = 0          then 'unpaid'::payment_status
+           when v_paid >= v_final   then 'paid'::payment_status
+           else                          'partial'::payment_status
          end
-  from   bookings b
-  left join booking_payments bp on bp.booking_id = b.id
-  where  b.id = coalesce(new.booking_id, old.booking_id)
-  group  by b.id;
+  where  id = v_booking_id;
 
   return coalesce(new, old);
 end;

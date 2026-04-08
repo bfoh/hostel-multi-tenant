@@ -84,9 +84,29 @@ export async function middleware(request: NextRequest) {
     if (tenant.branding.primaryColor) {
       response.headers.set('x-tenant-color', tenant.branding.primaryColor)
     }
+  } else if (user) {
+    // On localhost (or any app domain) tenant resolution returns null.
+    // Fall back to JWT claims so API routes and server components work in dev.
+    const { data: { session } } = await supabase.auth.getSession()
+    const claims = session?.access_token ? decodeJwtPayload(session.access_token) : null
+    if (claims?.tenant_id) {
+      response.headers.set('x-tenant-id',   claims.tenant_id)
+      response.headers.set('x-tenant-slug',  claims.tenant_slug ?? '')
+      response.headers.set('x-tenant-name',  claims.tenant_name ?? '')
+    }
   }
 
   return response
+}
+
+function decodeJwtPayload(token: string): Record<string, string> | null {
+  try {
+    const part = token.split('.')[1]
+    if (!part) return null
+    return JSON.parse(Buffer.from(part, 'base64').toString('utf8'))
+  } catch {
+    return null
+  }
 }
 
 function isAppDomain(hostname: string): boolean {

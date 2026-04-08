@@ -9,6 +9,7 @@ import { AlertsCard } from '@/components/dashboard/alerts-card'
 import { OccupancyChart } from '@/components/dashboard/occupancy-chart'
 import { RecentBookings } from '@/components/dashboard/recent-bookings'
 import { StatCardSkeleton } from '@/components/dashboard/stat-card-skeleton'
+import { SetupChecklist } from '@/components/dashboard/setup-checklist'
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -27,6 +28,11 @@ export default async function DashboardPage() {
           Here&apos;s what&apos;s happening today
         </p>
       </div>
+
+      {/* ── Onboarding checklist (hidden once all steps complete) ── */}
+      <Suspense fallback={null}>
+        <SetupChecklist />
+      </Suspense>
 
       {/* ── KPI stat cards ───────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

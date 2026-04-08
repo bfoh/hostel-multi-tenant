@@ -1,15 +1,9 @@
 import { BedDouble } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { createClient } from '@/lib/supabase/server'
+import { getOccupancySummary } from '@/lib/data/dashboard'
 
 export async function OccupancyCard() {
-  // TODO: fetch real occupancy data from Supabase
-  // const supabase = await createClient()
-  // const { data } = await supabase.rpc('get_occupancy_summary')
-
-  const occupied = 0
-  const total = 0
-  const pct = total > 0 ? Math.round((occupied / total) * 100) : 0
+  const { occupied, total, pct } = await getOccupancySummary()
 
   return (
     <Card>
@@ -21,7 +15,7 @@ export async function OccupancyCard() {
               {pct}%
             </p>
             <p className="mt-1 text-xs text-text-tertiary">
-              {occupied} / {total} rooms
+              {occupied} / {total} rooms occupied
             </p>
           </div>
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-subtle">

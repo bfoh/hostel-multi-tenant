@@ -66,7 +66,7 @@ create table tenants (
   id               uuid primary key default gen_random_uuid(),
   slug             text not null unique,   -- subdomain: acme.abrempong.com
   name             text not null,
-  plan             subscription_plan not null default 'trial',
+  plan             subscription_plan not null default 'starter',
   status           tenant_status not null default 'trial',
   trial_ends_at    timestamptz,
   custom_domain    text unique,            -- e.g. "app.acmehostel.com"
@@ -158,12 +158,12 @@ create index on tenant_members (tenant_id, role);
 -- without a DB lookup per request.
 
 create or replace function public.custom_access_token_hook(event jsonb)
-returns jsonb language plpgsql stable security definer as $$
+returns jsonb language plpgsql security definer as $$
 declare
   claims      jsonb;
   member_rec  record;
 begin
-  claims = event -> 'claims';
+  claims = coalesce(event -> 'claims', '{}'::jsonb);
 
   select tm.tenant_id, tm.role, t.slug
   into   member_rec

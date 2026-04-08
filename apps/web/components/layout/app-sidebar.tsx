@@ -16,6 +16,10 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  HardHat,
+  Shield,
+  MessageSquare,
+  UserCog,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -31,15 +35,19 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard',    href: '/dashboard',    icon: LayoutDashboard },
-  { label: 'Occupants',    href: '/occupants',    icon: Users },
-  { label: 'Rooms',        href: '/rooms',        icon: BedDouble },
-  { label: 'Bookings',     href: '/bookings',     icon: CalendarCheck },
-  { label: 'Invoices',     href: '/invoices',     icon: FileText },
-  { label: 'Payments',     href: '/payments',     icon: DollarSign },
-  { label: 'Housekeeping', href: '/housekeeping', icon: Wrench },
-  { label: 'Reports',      href: '/reports',      icon: BarChart3 },
-  { label: 'Intelligence', href: '/intelligence', icon: Sparkles },
+  { label: 'Dashboard',      href: '/dashboard',      icon: LayoutDashboard },
+  { label: 'Occupants',      href: '/occupants',      icon: Users },
+  { label: 'Rooms',          href: '/rooms',          icon: BedDouble },
+  { label: 'Bookings',       href: '/bookings',       icon: CalendarCheck },
+  { label: 'Invoices',       href: '/invoices',       icon: FileText },
+  { label: 'Payments',       href: '/payments',       icon: DollarSign },
+  { label: 'Housekeeping',   href: '/housekeeping',   icon: Wrench },
+  { label: 'Staff',          href: '/staff',          icon: UserCog },
+  { label: 'Maintenance',    href: '/maintenance',    icon: HardHat },
+  { label: 'Security',       href: '/security',       icon: Shield },
+  { label: 'Communications', href: '/communications', icon: MessageSquare },
+  { label: 'Reports',        href: '/reports',        icon: BarChart3 },
+  { label: 'Intelligence',   href: '/intelligence',   icon: Sparkles },
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [

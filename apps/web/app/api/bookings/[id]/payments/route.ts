@@ -1,0 +1,104 @@
+import { NextResponse, type NextRequest } from 'next/server'
+import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
+import { getServerTenantId } from '@/lib/auth/tenant'
+import { sendPaymentReceipt } from '@/lib/sms'
+import { formatGHS } from '@/lib/utils'
+
+const schema = z.object({
+  amount:    z.number().int().min(1),
+  method:    z.enum(['momo_mtn', 'momo_vodafone', 'momo_airteltigo', 'card', 'bank_transfer', 'cash', 'cheque']),
+  reference: z.string().max(100).optional().nullable(),
+  notes:     z.string().max(300).optional().nullable(),
+})
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const body = await request.json().catch(() => null)
+  const parsed = schema.safeParse(body)
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
+  }
+
+  const tenantId = await getServerTenantId()
+  if (!tenantId) {
+    return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+  }
+
+  const supabase = await createClient()
+
+  // Verify booking exists and belongs to this tenant (RLS handles this)
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id, occupant_id, final_amount, paid_amount, status')
+    .eq('id', id)
+    .single()
+
+  if (!booking) {
+    return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+  }
+
+  if (booking.status === 'cancelled') {
+    return NextResponse.json({ error: 'Cannot record payment on a cancelled booking.' }, { status: 409 })
+  }
+
+  const { data: user } = await supabase.auth.getUser()
+
+  const { data, error } = await supabase
+    .from('booking_payments')
+    .insert({
+      tenant_id:    tenantId,
+      booking_id:   id,
+      amount:       parsed.data.amount,
+      method:       parsed.data.method,
+      reference:    parsed.data.reference ?? null,
+      notes:        parsed.data.notes ?? null,
+      status:       'success',
+      paid_at:      new Date().toISOString(),
+      received_by:  user.user?.id ?? null,
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Check if fully paid — auto-confirm if was pending_payment
+  const newPaidAmount = booking.paid_amount + parsed.data.amount
+  if (newPaidAmount >= booking.final_amount && booking.status === 'pending_payment') {
+    await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', id)
+  }
+
+  // Fire SMS receipt — non-blocking
+  try {
+    const METHOD_LABEL: Record<string, string> = {
+      momo_mtn: 'MTN MoMo', momo_vodafone: 'Vodafone Cash',
+      momo_airteltigo: 'AirtelTigo Money', cash: 'Cash',
+      bank_transfer: 'Bank Transfer', card: 'Card', cheque: 'Cheque',
+    }
+    const [occupantRes, bookingRes, tenantRes] = await Promise.all([
+      supabase.from('occupants').select('first_name, phone').eq('id', booking.occupant_id).single(),
+      supabase.from('bookings').select('booking_ref, final_amount, paid_amount').eq('id', id).single(),
+      supabase.from('tenants').select('name').eq('id', tenantId).single(),
+    ])
+    if (occupantRes.data?.phone) {
+      const balance = Math.max(0, (bookingRes.data?.final_amount ?? 0) - (bookingRes.data?.paid_amount ?? 0))
+      sendPaymentReceipt({
+        phone:      occupantRes.data.phone,
+        firstName:  occupantRes.data.first_name,
+        amountGHS:  formatGHS(parsed.data.amount),
+        method:     METHOD_LABEL[parsed.data.method] ?? parsed.data.method,
+        bookingRef: bookingRes.data?.booking_ref ?? id,
+        balance:    formatGHS(balance),
+        hostelName: tenantRes.data?.name ?? 'Your Hostel',
+      }).catch(() => {})
+    }
+  } catch { /* non-critical */ }
+
+  return NextResponse.json(data, { status: 201 })
+}

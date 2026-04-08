@@ -16,11 +16,14 @@ export interface TenantRecord {
 
 let redis: Redis | null = null
 
-function getRedis(): Redis {
+function getRedis(): Redis | null {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return null // Redis not configured — skip cache, go straight to DB
+  }
   if (!redis) {
     redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
     })
   }
   return redis
@@ -55,8 +58,11 @@ export async function resolveTenant(hostname: string): Promise<TenantRecord | nu
 
   // ── Cache hit ──────────────────────────────────────────────────────────────
   try {
-    const cached = await getRedis().get<TenantRecord>(cacheKey)
-    if (cached) return cached
+    const r = getRedis()
+    if (r) {
+      const cached = await r.get<TenantRecord>(cacheKey)
+      if (cached) return cached
+    }
   } catch {
     // Redis down — degrade gracefully, continue to DB lookup
   }
@@ -67,7 +73,8 @@ export async function resolveTenant(hostname: string): Promise<TenantRecord | nu
   // ── Cache write ────────────────────────────────────────────────────────────
   if (tenant) {
     try {
-      await getRedis().set(cacheKey, tenant, { ex: CACHE_TTL })
+      const r = getRedis()
+      if (r) await r.set(cacheKey, tenant, { ex: CACHE_TTL })
     } catch {
       // Non-fatal — next request will just hit DB again
     }
@@ -145,7 +152,8 @@ function escapeRegExp(str: string): string {
 export async function invalidateTenantCache(hostname: string): Promise<void> {
   const host = normaliseHostname(hostname)
   try {
-    await getRedis().del(`tenant:host:${host}`)
+    const r = getRedis()
+    if (r) await r.del(`tenant:host:${host}`)
   } catch {
     // Non-fatal
   }
