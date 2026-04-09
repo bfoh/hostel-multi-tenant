@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Upload, X, Loader2 } from 'lucide-react'
@@ -41,7 +41,7 @@ export function BrandingForm({ tenant }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const { register, handleSubmit, formState: { errors, isSubmitting, isDirty } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as Resolver<FormValues>,
     defaultValues: {
       primary_color: tenant.primary_color ?? '#1B4F72',
       accent_color:  tenant.accent_color  ?? '#F39C12',

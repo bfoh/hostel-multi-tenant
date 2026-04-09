@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       recorded_by:  user.user?.id,
       status:       'unclaimed',
       ...parsed.data,
+      found_date:   parsed.data.found_date ?? undefined,
     })
     .select('id')
     .single()

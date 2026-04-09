@@ -15,7 +15,8 @@ export async function getBookings(filter?: { status?: string; search?: string })
     .limit(100)
 
   if (filter?.status && filter.status !== 'all') {
-    query = query.eq('status', filter.status)
+    // filter.status comes from URL search params (string); cast is safe as DB ignores invalid values
+    query = query.eq('status', filter.status as 'enquiry')
   }
 
   const { data, error } = await query

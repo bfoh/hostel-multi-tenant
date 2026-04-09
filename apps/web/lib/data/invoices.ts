@@ -31,7 +31,7 @@ export async function getInvoices(filter?: { payment_status?: string; search?: s
     .limit(200)
 
   if (filter?.payment_status && filter.payment_status !== 'all') {
-    query = query.eq('payment_status', filter.payment_status)
+    query = query.eq('payment_status', filter.payment_status as 'unpaid')
   }
 
   const { data, error } = await query

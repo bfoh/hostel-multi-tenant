@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { headers } from 'next/headers'
-import { createElement } from 'react'
+import React, { createElement } from 'react'
 import { getInvoiceById } from '@/lib/data/invoices'
 import { createClient } from '@/lib/supabase/server'
 import { InvoicePDF } from '@/components/invoices/invoice-pdf'
@@ -65,12 +65,12 @@ export async function GET(
       hostelPhone,
       hostelEmail,
       logoUrl,
-    })
+    }) as React.ReactElement<any>
   )
 
   const filename = `invoice-${inv.booking_ref}.pdf`
 
-  return new NextResponse(pdfBuffer, {
+  return new NextResponse(pdfBuffer as unknown as BodyInit, {
     status: 200,
     headers: {
       'Content-Type':        'application/pdf',

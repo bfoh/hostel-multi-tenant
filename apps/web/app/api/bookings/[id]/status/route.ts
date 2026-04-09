@@ -32,7 +32,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
   }
 
-  const updatePayload: Record<string, unknown> = { status: nextStatus }
+  const updatePayload: {
+    status: typeof nextStatus
+    actual_check_in?: string
+    actual_check_out?: string
+    cancelled_at?: string
+  } = { status: nextStatus }
 
   if (nextStatus === 'checked_in') {
     updatePayload.actual_check_in = new Date().toISOString()
@@ -72,7 +77,7 @@ export async function PATCH(
 
     const activeRemaining = remaining ?? 0
 
-    let roomStatus: string
+    let roomStatus: 'available' | 'occupied' | 'reserved'
     if (nextStatus === 'checked_in') {
       // This booking is now checked in — checked_in counts as active
       const totalActive = activeRemaining + 1

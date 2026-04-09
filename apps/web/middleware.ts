@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
 import { resolveTenant } from '@/lib/tenant/resolve'
 
@@ -16,6 +16,7 @@ const BYPASS_PATHS = [
 // Paths that skip auth but still need tenant header injection
 const NO_AUTH_PATHS = [
   '/book',
+  '/portal',
   '/api/public',
 ]
 
@@ -70,7 +71,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>

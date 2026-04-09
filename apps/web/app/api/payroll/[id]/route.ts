@@ -48,7 +48,7 @@ export async function PATCH(
   if (!parsed.success) return NextResponse.json({ error: 'Invalid status' }, { status: 422 })
 
   const supabase = await createClient()
-  const update: Record<string, unknown> = { status: parsed.data.status }
+  const update: { status: 'draft' | 'approved' | 'paid'; paid_at?: string } = { status: parsed.data.status }
   if (parsed.data.status === 'paid') {
     update.paid_at = new Date().toISOString()
   }

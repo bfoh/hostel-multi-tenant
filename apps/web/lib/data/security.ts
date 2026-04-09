@@ -28,7 +28,7 @@ export async function getIncidentReports(filter?: { severity?: string }) {
     .order('occurred_at', { ascending: false })
 
   if (filter?.severity && filter.severity !== 'all') {
-    query = query.eq('severity', filter.severity)
+    query = query.eq('severity', filter.severity as 'low')
   }
 
   const { data, error } = await query.limit(100)
@@ -45,7 +45,7 @@ export async function getLostFoundItems(filter?: { status?: string }) {
     .order('created_at', { ascending: false })
 
   if (filter?.status && filter.status !== 'all') {
-    query = query.eq('status', filter.status)
+    query = query.eq('status', filter.status as 'unclaimed')
   }
 
   const { data, error } = await query.limit(100)

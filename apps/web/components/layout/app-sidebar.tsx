@@ -20,6 +20,7 @@ import {
   Shield,
   MessageSquare,
   UserCog,
+  ClipboardList,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -48,6 +49,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Communications', href: '/communications', icon: MessageSquare },
   { label: 'Reports',        href: '/reports',        icon: BarChart3 },
   { label: 'Intelligence',   href: '/intelligence',   icon: Sparkles },
+  { label: 'Activity log',   href: '/activity',       icon: ClipboardList },
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [

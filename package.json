@@ -14,13 +14,16 @@
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "turbo": "^2.1.3",
     "prettier": "^3.3.0",
+    "turbo": "^2.1.3",
     "typescript": "^5.5.0"
   },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
   },
-  "packageManager": "npm@10.8.1"
+  "packageManager": "npm@10.8.1",
+  "dependencies": {
+    "@supabase/ssr": "^0.10.2"
+  }
 }

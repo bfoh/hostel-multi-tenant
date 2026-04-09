@@ -9,11 +9,11 @@ export async function getMaintenanceRequests(filter?: { status?: string; priorit
     .order('created_at', { ascending: false })
 
   if (filter?.status && filter.status !== 'all') {
-    query = query.eq('status', filter.status)
+    query = query.eq('status', filter.status as 'open')
   }
 
   if (filter?.priority && filter.priority !== 'all') {
-    query = query.eq('priority', filter.priority)
+    query = query.eq('priority', filter.priority as 'low')
   }
 
   const { data, error } = await query.limit(100)

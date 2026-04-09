@@ -124,7 +124,7 @@ export default async function MaintenancePage({
             const room = Array.isArray(req.room) ? req.room[0] : req.room
             const contractor = Array.isArray(req.contractor) ? req.contractor[0] : req.contractor
             return (
-              <div key={req.id} className="rounded-xl border border-border bg-surface p-4 hover:bg-surface-raised transition-colors">
+              <Link key={req.id} href={`/maintenance/${req.id}`} className="block rounded-xl border border-border bg-surface p-4 hover:bg-surface-raised transition-colors">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -154,7 +154,7 @@ export default async function MaintenancePage({
                     <MaintenanceStatusAction requestId={req.id} currentStatus={req.status} />
                   </div>
                 </div>
-              </div>
+              </Link>
             )
           })}
         </div>
@@ -193,9 +193,11 @@ function MaintenanceStatusAction({ requestId, currentStatus }: { requestId: stri
       const tenantId = headersList.get('x-tenant-id')
       if (!tenantId) return
       const supabase = await createClient()
-      const update: Record<string, unknown> = { status: nextStatus }
-      if (nextStatus === 'completed') update.resolved_at = new Date().toISOString()
-      await supabase.from('maintenance_requests').update(update).eq('id', requestId).eq('tenant_id', tenantId)
+      if (nextStatus === 'completed') {
+        await supabase.from('maintenance_requests').update({ status: 'completed', resolved_at: new Date().toISOString() }).eq('id', requestId).eq('tenant_id', tenantId)
+      } else {
+        await supabase.from('maintenance_requests').update({ status: nextStatus as 'in_progress' }).eq('id', requestId).eq('tenant_id', tenantId)
+      }
       revalidatePath('/maintenance')
     }}>
       <button type="submit" className="text-[11px] text-brand hover:text-brand-hover transition-colors font-medium">
