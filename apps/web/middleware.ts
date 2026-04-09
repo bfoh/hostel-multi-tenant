@@ -3,14 +3,20 @@ import { createServerClient } from '@supabase/ssr'
 
 import { resolveTenant } from '@/lib/tenant/resolve'
 
-const PUBLIC_PATHS = [
+// Paths that skip auth AND skip all middleware (static assets etc.)
+const BYPASS_PATHS = [
   '/widget',
   '/api/webhooks',
-  '/api/public',
   '/_next',
   '/favicon.ico',
   '/robots.txt',
   '/sitemap.xml',
+]
+
+// Paths that skip auth but still need tenant header injection
+const NO_AUTH_PATHS = [
+  '/book',
+  '/api/public',
 ]
 
 const AUTH_PATHS = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite']
@@ -19,10 +25,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hostname = request.headers.get('host') ?? ''
 
-  // ── Pass through public / static paths ───────────────────────────────────
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // ── Fast pass-through for static / webhook paths ──────────────────────────
+  if (BYPASS_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next()
   }
+
+  const isNoAuth = NO_AUTH_PATHS.some((p) => pathname.startsWith(p))
 
   // ── Tenant resolution ─────────────────────────────────────────────────────
   const tenant = await resolveTenant(hostname)
@@ -32,9 +40,23 @@ export async function middleware(request: NextRequest) {
     return new NextResponse('Hostel not found', { status: 404 })
   }
 
-  // Inactive tenant → maintenance page
-  if (tenant && !tenant.isActive) {
+  // Inactive tenant → maintenance page (only for non-API paths)
+  if (tenant && !tenant.isActive && !pathname.startsWith('/api/')) {
     return NextResponse.rewrite(new URL('/maintenance', request.url))
+  }
+
+  // ── For no-auth paths, inject tenant headers and pass through ─────────────
+  if (isNoAuth) {
+    const response = NextResponse.next({ request })
+    if (tenant) {
+      response.headers.set('x-tenant-id',   tenant.id)
+      response.headers.set('x-tenant-slug',  tenant.slug)
+      response.headers.set('x-tenant-name',  tenant.name)
+      if (tenant.branding.primaryColor) {
+        response.headers.set('x-tenant-color', tenant.branding.primaryColor)
+      }
+    }
+    return response
   }
 
   // ── Supabase auth session refresh ─────────────────────────────────────────
