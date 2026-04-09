@@ -231,8 +231,5 @@ create policy "hr_manage_payroll_items"
   on payroll_items for all
   using (tenant_id = public.tenant_id() and public.tenant_role() in ('owner', 'manager', 'accountant'));
 
--- Tenants UPDATE policy (needed for settings saves)
-create policy "owners_can_update_own_tenant"
-  on tenants for update
-  using (id = public.tenant_id() and public.tenant_role() = 'owner')
-  with check (id = public.tenant_id());
+-- Note: "owners_can_update_own_tenant" policy on tenants was already
+-- created in a prior migration run. No action needed here.
