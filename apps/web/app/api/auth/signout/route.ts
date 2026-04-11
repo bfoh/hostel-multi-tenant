@@ -1,13 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
 
-  const response = NextResponse.redirect(
-    new URL('/login', process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
-  )
+  // Redirect to /login on the same domain the request came from
+  // so tenant custom domains (e.g. app.abremponghostel.com) stay on their own login page
+  const origin = request.nextUrl.origin
+  const response = NextResponse.redirect(new URL('/login', origin))
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
