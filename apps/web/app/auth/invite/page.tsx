@@ -54,22 +54,29 @@ export default function InvitePage() {
 
         // Resolve the correct base URL for this tenant so the user lands on
         // their hostel's domain, not the generic platform domain.
-        // JWT claims (injected by the custom_access_token_hook) carry tenant_slug.
-        const claims     = refreshed?.access_token
+        // JWT claims carry tenant_domain (custom domain) and tenant_slug as fallback.
+        const claims      = refreshed?.access_token
           ? JSON.parse(atob(refreshed.access_token.split('.')[1]))
           : {}
-        const tenantSlug = claims?.tenant_slug as string | undefined
-        const appDomain  = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
-        const currentHost = window.location.hostname
+        const tenantDomain = claims?.tenant_domain as string | undefined  // e.g. "app.abremponghostel.com"
+        const tenantSlug   = claims?.tenant_slug   as string | undefined
+        const appDomain    = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+        const currentHost  = window.location.hostname
 
-        // Only redirect cross-domain if we're on the platform root and have a slug
-        const needsCrossDomainRedirect =
-          tenantSlug &&
-          (currentHost === appDomain || currentHost === `app.${appDomain}` || currentHost === 'gh-hostels.com')
+        // Only redirect cross-domain if we're on the platform root
+        const onPlatformRoot =
+          currentHost === appDomain ||
+          currentHost === `app.${appDomain}` ||
+          currentHost === 'gh-hostels.com'
 
-        const tenantBase = needsCrossDomainRedirect
-          ? `https://${tenantSlug}.${appDomain}`
-          : ''   // empty = use relative URLs (already on correct domain)
+        let tenantBase = ''
+        if (onPlatformRoot) {
+          if (tenantDomain) {
+            tenantBase = `https://${tenantDomain}`
+          } else if (tenantSlug) {
+            tenantBase = `https://${tenantSlug}.${appDomain}`
+          }
+        }
 
         // Use a hard navigation so the browser sends a fresh HTTP request,
         // ensuring middleware reads the newly-set session cookies.

@@ -132,8 +132,9 @@ export async function middleware(request: NextRequest) {
     reqHeaders.set('x-tenant-id',   claims.tenant_id)
     reqHeaders.set('x-tenant-slug', claims.tenant_slug  ?? '')
     reqHeaders.set('x-tenant-name', claims.tenant_name  ?? '')
-    if (claims.tenant_logo)  reqHeaders.set('x-tenant-logo',  claims.tenant_logo)
-    if (claims.tenant_color) reqHeaders.set('x-tenant-color', claims.tenant_color)
+    if (claims.tenant_logo)   reqHeaders.set('x-tenant-logo',   claims.tenant_logo)
+    if (claims.tenant_color)  reqHeaders.set('x-tenant-color',  claims.tenant_color)
+    if (claims.tenant_domain) reqHeaders.set('x-tenant-domain', claims.tenant_domain)
     // Override branding with fresh DB values
     const freshBranding = await fetchBrandingForTenant(claims.tenant_id)
     if (freshBranding) {
@@ -143,6 +144,8 @@ export async function middleware(request: NextRequest) {
       else reqHeaders.delete('x-tenant-logo')
       if (freshBranding.faviconUrl)   reqHeaders.set('x-tenant-favicon', freshBranding.faviconUrl)
       else reqHeaders.delete('x-tenant-favicon')
+      if (freshBranding.customDomain) reqHeaders.set('x-tenant-domain',  freshBranding.customDomain)
+      else reqHeaders.delete('x-tenant-domain')
     }
   } else if (user) {
     // Fallback: no JWT claims — look up tenant from DB.
@@ -156,6 +159,7 @@ export async function middleware(request: NextRequest) {
       if (t.branding.primaryColor) reqHeaders.set('x-tenant-color',   t.branding.primaryColor)
       if (t.branding.logoUrl)      reqHeaders.set('x-tenant-logo',    t.branding.logoUrl)
       if (t.branding.faviconUrl)   reqHeaders.set('x-tenant-favicon', t.branding.faviconUrl)
+      if (t.domain)                reqHeaders.set('x-tenant-domain',  t.domain)
       reqHeaders.set('x-tenant-role', role)
     } else {
       // Try occupants table (occupant portal users are not in tenant_members)
@@ -167,6 +171,7 @@ export async function middleware(request: NextRequest) {
         if (tenantFromOccupant.branding.primaryColor) reqHeaders.set('x-tenant-color',   tenantFromOccupant.branding.primaryColor)
         if (tenantFromOccupant.branding.logoUrl)      reqHeaders.set('x-tenant-logo',    tenantFromOccupant.branding.logoUrl)
         if (tenantFromOccupant.branding.faviconUrl)   reqHeaders.set('x-tenant-favicon', tenantFromOccupant.branding.faviconUrl)
+        if (tenantFromOccupant.domain)                reqHeaders.set('x-tenant-domain',  tenantFromOccupant.domain)
       }
     }
   }
@@ -208,7 +213,11 @@ export async function middleware(request: NextRequest) {
       !pathname.startsWith('/onboarding') &&
       !pathname.startsWith('/api/')
     ) {
-      const dest = `https://${resolvedSlug}.${appDomain}${pathname}${request.nextUrl.search}`
+      // Prefer the tenant's custom domain over the slug-based subdomain
+      const resolvedDomain = reqHeaders.get('x-tenant-domain')
+      const dest = resolvedDomain
+        ? `https://${resolvedDomain}${pathname}${request.nextUrl.search}`
+        : `https://${resolvedSlug}.${appDomain}${pathname}${request.nextUrl.search}`
       return NextResponse.redirect(dest)
     }
   }
@@ -256,6 +265,8 @@ function injectHeaders(h: Headers, tenant: Awaited<ReturnType<typeof resolveTena
   else h.delete('x-tenant-logo')
   if (tenant.branding.faviconUrl)   h.set('x-tenant-favicon', tenant.branding.faviconUrl)
   else h.delete('x-tenant-favicon')
+  if (tenant.domain)                h.set('x-tenant-domain',  tenant.domain)
+  else h.delete('x-tenant-domain')
 }
 
 function decodeJwtPayload(token: string): Record<string, string> | null {
@@ -281,7 +292,7 @@ async function fetchTenantForUser(userId: string): Promise<TenantWithRole | null
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-  const url = `${supabaseUrl}/rest/v1/tenant_members?user_id=eq.${userId}&is_active=eq.true&select=role,tenants(id,slug,name,plan,is_active,primary_color,logo_url)&limit=1`
+  const url = `${supabaseUrl}/rest/v1/tenant_members?user_id=eq.${userId}&is_active=eq.true&select=role,tenants(id,slug,name,plan,is_active,primary_color,logo_url,custom_domain)&limit=1`
 
   try {
     const res = await fetch(url, {
@@ -300,7 +311,7 @@ async function fetchTenantForUser(userId: string): Promise<TenantWithRole | null
     return {
       role: rows[0].role ?? 'staff',
       tenant: {
-        id: t.id, slug: t.slug, name: t.name, domain: null, plan: t.plan,
+        id: t.id, slug: t.slug, name: t.name, domain: t.custom_domain ?? null, plan: t.plan,
         isActive: t.is_active,
         branding: { primaryColor: t.primary_color ?? null, logoUrl: t.logo_url ?? null, faviconUrl: null },
       },
@@ -311,9 +322,10 @@ async function fetchTenantForUser(userId: string): Promise<TenantWithRole | null
 }
 
 interface TenantBranding {
-  primaryColor: string | null
-  logoUrl: string | null
-  faviconUrl: string | null
+  primaryColor:  string | null
+  logoUrl:       string | null
+  faviconUrl:    string | null
+  customDomain:  string | null
 }
 
 async function checkIsOccupant(userId: string): Promise<boolean> {
@@ -334,7 +346,7 @@ async function checkIsOccupant(userId: string): Promise<boolean> {
 async function fetchTenantForOccupant(userId: string): Promise<import('@/lib/tenant/resolve').TenantRecord | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  const url = `${supabaseUrl}/rest/v1/occupants?user_id=eq.${userId}&select=tenant_id,tenants(id,slug,name,plan,is_active,primary_color,logo_url,favicon_url)&limit=1`
+  const url = `${supabaseUrl}/rest/v1/occupants?user_id=eq.${userId}&select=tenant_id,tenants(id,slug,name,plan,is_active,primary_color,logo_url,favicon_url,custom_domain)&limit=1`
   try {
     const res = await fetch(url, {
       headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
@@ -346,7 +358,7 @@ async function fetchTenantForOccupant(userId: string): Promise<import('@/lib/ten
     const t = Array.isArray(rows[0].tenants) ? rows[0].tenants[0] : rows[0].tenants
     if (!t) return null
     return {
-      id: t.id, slug: t.slug, name: t.name, domain: null, plan: t.plan,
+      id: t.id, slug: t.slug, name: t.name, domain: t.custom_domain ?? null, plan: t.plan,
       isActive: t.is_active,
       branding: { primaryColor: t.primary_color ?? null, logoUrl: t.logo_url ?? null, faviconUrl: t.favicon_url ?? null },
     }
@@ -356,7 +368,7 @@ async function fetchTenantForOccupant(userId: string): Promise<import('@/lib/ten
 async function fetchBrandingForTenant(tenantId: string): Promise<TenantBranding | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  const url = `${supabaseUrl}/rest/v1/tenants?id=eq.${tenantId}&select=primary_color,logo_url,favicon_url&limit=1`
+  const url = `${supabaseUrl}/rest/v1/tenants?id=eq.${tenantId}&select=primary_color,logo_url,favicon_url,custom_domain&limit=1`
   try {
     const res = await fetch(url, {
       headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
@@ -366,9 +378,10 @@ async function fetchBrandingForTenant(tenantId: string): Promise<TenantBranding 
     const rows = await res.json()
     if (!Array.isArray(rows) || rows.length === 0) return null
     return {
-      primaryColor: rows[0].primary_color ?? null,
-      logoUrl:      rows[0].logo_url      ?? null,
-      faviconUrl:   rows[0].favicon_url   ?? null,
+      primaryColor: rows[0].primary_color  ?? null,
+      logoUrl:      rows[0].logo_url       ?? null,
+      faviconUrl:   rows[0].favicon_url    ?? null,
+      customDomain: rows[0].custom_domain  ?? null,
     }
   } catch { return null }
 }
