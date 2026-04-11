@@ -34,7 +34,20 @@ export async function POST(
     return NextResponse.json({ error: 'Occupant already has a portal account' }, { status: 409 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  // Resolve the tenant's own domain so the invite link lands on their portal,
+  // not the generic platform login page.
+  const { data: tenantRow } = await admin
+    .from('tenants')
+    .select('slug, custom_domain')
+    .eq('id', tenantId)
+    .single()
+
+  const appDomain  = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+  const tenantBase = tenantRow?.custom_domain
+    ? `https://${tenantRow.custom_domain}`
+    : tenantRow?.slug
+      ? `https://${tenantRow.slug}.${appDomain}`
+      : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
 
   const invitePayload = {
     data: {
@@ -44,7 +57,7 @@ export async function POST(
       tenant_id:   tenantId,
     },
     // After accepting the invite the user is taken to set their password
-    redirectTo: `${appUrl}/auth/invite`,
+    redirectTo: `${tenantBase}/auth/invite`,
   }
 
   // ── Send invite (Supabase handles the email) ───────────────────────────────
