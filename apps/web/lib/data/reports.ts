@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /* ── helpers ──────────────────────────────────────────────────────── */
 
@@ -15,7 +15,7 @@ function monthEnd(offset = 0) {
 /* ── Revenue report ───────────────────────────────────────────────── */
 
 export async function getRevenueReport(months = 6) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const results: { month: string; label: string; amount: number }[] = []
 
@@ -31,7 +31,7 @@ export async function getRevenueReport(months = 6) {
     const { data } = await supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'success')
+      .eq('status', 'paid')
       .gte('paid_at', start)
       .lte('paid_at', end)
 
@@ -45,13 +45,13 @@ export async function getRevenueReport(months = 6) {
 /* ── Payment method breakdown ─────────────────────────────────────── */
 
 export async function getPaymentMethodBreakdown() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const start = monthStart(-11) // last 12 months
 
   const { data } = await supabase
     .from('booking_payments')
     .select('method, amount')
-    .eq('status', 'success')
+    .eq('status', 'paid')
     .gte('paid_at', start)
 
   const map: Record<string, number> = {}
@@ -73,7 +73,7 @@ export async function getPaymentMethodBreakdown() {
 /* ── Occupancy report ─────────────────────────────────────────────── */
 
 export async function getOccupancyReport() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: rooms } = await supabase
     .from('rooms')
@@ -121,7 +121,7 @@ export async function getOccupancyReport() {
 /* ── Overdue rent ─────────────────────────────────────────────────── */
 
 export async function getOverdueRent() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
 
   const { data } = await supabase
@@ -152,7 +152,7 @@ export async function getOverdueRent() {
 /* ── Booking summary ──────────────────────────────────────────────── */
 
 export async function getBookingSummary() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data } = await supabase
     .from('bookings')
@@ -179,10 +179,100 @@ export async function getBookingSummary() {
   return { total, byStatus, bySource, totalRevenue, totalPaid, totalOutstanding }
 }
 
+/* ── Revenue management metrics (RevPAR, ADR, Yield) ─────────────── */
+
+export interface RevenueMetricsMonth {
+  month:        string   // 'YYYY-MM'
+  label:        string   // 'Jan 2025'
+  revenue:      number   // pesewas paid
+  roomNights:   number   // total available room-nights (supply)
+  bookedNights: number   // nights actually booked (demand)
+  occupancyPct: number   // 0–100
+  revpar:       number   // pesewas per available room-night
+  adr:          number   // pesewas per booked room-night
+  yieldPct:     number   // RevPAR / max possible RevPAR × 100
+}
+
+export async function getRevenueMetrics(months = 6): Promise<RevenueMetricsMonth[]> {
+  const supabase = createAdminClient()
+
+  // Total rooms (supply denominator)
+  const { count: totalRooms } = await supabase
+    .from('rooms')
+    .select('id', { count: 'exact', head: true })
+
+  const supply = totalRooms ?? 0
+
+  // Max base rate (for yield ceiling)
+  const { data: catRates } = await supabase
+    .from('room_categories')
+    .select('base_rate, rate_unit')
+    .eq('is_active', true)
+
+  // Normalise everything to a per-night rate (rough: semester=120d, month=30d, week=7d)
+  const NIGHT_DIVISOR: Record<string, number> = { night: 1, week: 7, month: 30, semester: 120 }
+  const maxNightlyRate = Math.max(
+    1,
+    ...(catRates ?? []).map((c) => Math.round(c.base_rate / (NIGHT_DIVISOR[c.rate_unit] ?? 30))),
+  )
+
+  const results: RevenueMetricsMonth[] = []
+
+  for (let i = months - 1; i >= 0; i--) {
+    const d    = new Date()
+    d.setMonth(d.getMonth() - i)
+    const year  = d.getFullYear()
+    const month = d.getMonth()
+    const label = d.toLocaleDateString('en-GH', { month: 'short', year: 'numeric' })
+    const key   = `${year}-${String(month + 1).padStart(2, '0')}`
+
+    const daysInMonth  = new Date(year, month + 1, 0).getDate()
+    const monthStartDt = new Date(year, month, 1).toISOString()
+    const monthEndDt   = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+
+    // Revenue collected this month
+    const { data: payments } = await supabase
+      .from('booking_payments')
+      .select('amount')
+      .eq('status', 'paid')
+      .gte('paid_at', monthStartDt)
+      .lte('paid_at', monthEndDt)
+
+    const revenue = (payments ?? []).reduce((s, p) => s + p.amount, 0)
+
+    // Booked nights: bookings that overlap this month
+    const { data: bookings } = await supabase
+      .from('bookings')
+      .select('check_in_date, check_out_date')
+      .in('status', ['confirmed', 'checked_in', 'checked_out'])
+      .lte('check_in_date', monthEndDt.slice(0, 10))
+      .gte('check_out_date', monthStartDt.slice(0, 10))
+
+    let bookedNights = 0
+    for (const b of bookings ?? []) {
+      const start = Math.max(new Date(b.check_in_date).getTime(),  new Date(year, month, 1).getTime())
+      const end   = Math.min(new Date(b.check_out_date).getTime(), new Date(year, month + 1, 0).getTime())
+      const nights = Math.max(0, Math.round((end - start) / 86_400_000))
+      bookedNights += nights
+    }
+
+    const roomNights    = supply * daysInMonth
+    const occupancyPct  = roomNights > 0 ? Math.round((bookedNights / roomNights) * 100) : 0
+    const revpar        = roomNights > 0 ? Math.round(revenue / roomNights) : 0
+    const adr           = bookedNights > 0 ? Math.round(revenue / bookedNights) : 0
+    const maxRevpar     = maxNightlyRate  // ceiling = max nightly rate at 100% occ
+    const yieldPct      = maxRevpar > 0 ? Math.min(100, Math.round((revpar / maxRevpar) * 100)) : 0
+
+    results.push({ month: key, label, revenue, roomNights, bookedNights, occupancyPct, revpar, adr, yieldPct })
+  }
+
+  return results
+}
+
 /* ── YTD summary (for headline cards) ────────────────────────────── */
 
 export async function getYtdSummary() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const ytdStart = new Date(new Date().getFullYear(), 0, 1).toISOString()
   const mtdStart = monthStart(0)
 
@@ -190,12 +280,12 @@ export async function getYtdSummary() {
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'success')
+      .eq('status', 'paid')
       .gte('paid_at', ytdStart),
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'success')
+      .eq('status', 'paid')
       .gte('paid_at', mtdStart),
     supabase
       .from('bookings')

@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatGHS, formatDate } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { RoomStatusActions } from '@/components/rooms/room-status-actions'
+import { InspectionCard } from '@/components/rooms/inspection-card'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -39,9 +40,20 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled:       'bg-danger-subtle text-danger border-danger/20',
 }
 
+async function getRoomInspections(roomId: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('room_inspections')
+    .select('*')
+    .eq('room_id', roomId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+  return data ?? []
+}
+
 export default async function RoomDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [room, bookings] = await Promise.all([getRoomById(id), getRoomBookings(id)])
+  const [room, bookings, inspections] = await Promise.all([getRoomById(id), getRoomBookings(id), getRoomInspections(id)])
 
   if (!room) notFound()
 
@@ -156,8 +168,14 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
           )}
         </div>
 
-        {/* ── Booking history ──────────────────────────────────── */}
-        <div className="lg:col-span-2">
+        {/* ── Booking history + Inspections ──────────────────── */}
+        <div className="lg:col-span-2 space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Inspections</CardTitle></CardHeader>
+            <CardContent className="pt-0">
+              <InspectionCard roomId={id} initialInspections={inspections as any[]} />
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle>Booking History</CardTitle>

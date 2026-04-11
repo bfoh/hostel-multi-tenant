@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function getVisitorLog(filter?: { date?: string }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('visitor_log')
@@ -20,7 +20,7 @@ export async function getVisitorLog(filter?: { date?: string }) {
 }
 
 export async function getIncidentReports(filter?: { severity?: string }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('incident_reports')
@@ -37,7 +37,7 @@ export async function getIncidentReports(filter?: { severity?: string }) {
 }
 
 export async function getLostFoundItems(filter?: { status?: string }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('lost_found_items')
@@ -54,7 +54,7 @@ export async function getLostFoundItems(filter?: { status?: string }) {
 }
 
 export async function getSecurityStats() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const today = new Date().toISOString().slice(0, 10)
 

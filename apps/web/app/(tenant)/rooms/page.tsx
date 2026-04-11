@@ -45,6 +45,12 @@ export default async function RoomsPage() {
         </div>
         <div className="flex gap-2">
           <Link
+            href="/rooms/import"
+            className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
+          >
+            Import CSV
+          </Link>
+          <Link
             href="/rooms/categories"
             className="rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
           >

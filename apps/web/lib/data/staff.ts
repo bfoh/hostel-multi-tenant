@@ -1,11 +1,21 @@
-import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+async function getTenantId(): Promise<string | null> {
+  const h = await headers()
+  return h.get('x-tenant-id')
+}
 
 export async function getStaff(search?: string) {
-  const supabase = await createClient()
+  const tenantId = await getTenantId()
+  if (!tenantId) return []
+
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('staff_profiles')
-    .select('id, first_name, last_name, job_title, department, employment_type, is_active, photo_url, phone, email, basic_salary, start_date, member:tenant_members(role, is_active)')
+    .select('id, first_name, last_name, job_title, department, employment_type, is_active, photo_url, phone, email, basic_salary, start_date, user_id, member:tenant_members(role, is_active)')
+    .eq('tenant_id', tenantId)
     .order('last_name')
 
   if (search) {
@@ -20,7 +30,10 @@ export async function getStaff(search?: string) {
 }
 
 export async function getStaffById(id: string) {
-  const supabase = await createClient()
+  const tenantId = await getTenantId()
+  if (!tenantId) return null
+
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('staff_profiles')
@@ -31,6 +44,7 @@ export async function getStaffById(id: string) {
       leave_requests(id, leave_type, start_date, end_date, days, status, reason, review_note, created_at)
     `)
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (error) return null
@@ -38,7 +52,7 @@ export async function getStaffById(id: string) {
 }
 
 export async function getAttendanceRecords(filter?: { staffId?: string; month?: string }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('attendance_records')
@@ -63,7 +77,7 @@ export async function getAttendanceRecords(filter?: { staffId?: string; month?: 
 }
 
 export async function getLeaveRequests(filter?: { status?: string }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('leave_requests')
@@ -80,7 +94,7 @@ export async function getLeaveRequests(filter?: { status?: string }) {
 }
 
 export async function getPayrollRuns() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('payroll_runs')
@@ -93,7 +107,7 @@ export async function getPayrollRuns() {
 }
 
 export async function getPayrollRunById(id: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('payroll_runs')

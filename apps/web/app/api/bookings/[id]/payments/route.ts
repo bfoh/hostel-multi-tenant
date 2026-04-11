@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { sendPaymentReceipt } from '@/lib/sms'
 import { formatGHS } from '@/lib/utils'
+import { sendEmail, paymentReceiptHtml } from '@/lib/email'
 
 const schema = z.object({
   amount:    z.number().int().min(1),
@@ -74,7 +75,7 @@ export async function POST(
     await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', id)
   }
 
-  // Fire SMS receipt — non-blocking
+  // Fire SMS + email receipt — non-blocking
   try {
     const METHOD_LABEL: Record<string, string> = {
       momo_mtn: 'MTN MoMo', momo_vodafone: 'Vodafone Cash',
@@ -82,20 +83,43 @@ export async function POST(
       bank_transfer: 'Bank Transfer', card: 'Card', cheque: 'Cheque',
     }
     const [occupantRes, bookingRes, tenantRes] = await Promise.all([
-      supabase.from('occupants').select('first_name, phone').eq('id', booking.occupant_id).single(),
+      supabase.from('occupants').select('first_name, last_name, phone, email').eq('id', booking.occupant_id).single(),
       supabase.from('bookings').select('booking_ref, final_amount, paid_amount').eq('id', id).single(),
-      supabase.from('tenants').select('name').eq('id', tenantId).single(),
+      supabase.from('tenants').select('name, primary_color').eq('id', tenantId).single(),
     ])
-    if (occupantRes.data?.phone) {
-      const balance = Math.max(0, (bookingRes.data?.final_amount ?? 0) - (bookingRes.data?.paid_amount ?? 0))
+
+    const occ       = occupantRes.data
+    const bkn       = bookingRes.data
+    const ten       = tenantRes.data
+    const balance   = Math.max(0, (bkn?.final_amount ?? 0) - ((bkn?.paid_amount ?? 0) + parsed.data.amount))
+    const methodLabel = METHOD_LABEL[parsed.data.method] ?? parsed.data.method
+
+    if (occ?.phone) {
       sendPaymentReceipt({
-        phone:      occupantRes.data.phone,
-        firstName:  occupantRes.data.first_name,
+        phone:      occ.phone,
+        firstName:  occ.first_name,
         amountGHS:  formatGHS(parsed.data.amount),
-        method:     METHOD_LABEL[parsed.data.method] ?? parsed.data.method,
-        bookingRef: bookingRes.data?.booking_ref ?? id,
+        method:     methodLabel,
+        bookingRef: bkn?.booking_ref ?? id,
         balance:    formatGHS(balance),
-        hostelName: tenantRes.data?.name ?? 'Your Hostel',
+        hostelName: ten?.name ?? 'Your Hostel',
+      }).catch(() => {})
+    }
+
+    if (occ?.email && ten) {
+      sendEmail({
+        to:      occ.email,
+        subject: `Payment receipt — ${ten.name}`,
+        html:    paymentReceiptHtml({
+          hostelName:   ten.name,
+          primaryColor: ten.primary_color ?? '#2563EB',
+          guestName:    `${occ.first_name} ${occ.last_name}`,
+          bookingRef:   bkn?.booking_ref ?? id.slice(0, 8).toUpperCase(),
+          amountGHS:    formatGHS(parsed.data.amount),
+          method:       methodLabel,
+          paidAt:       new Date().toLocaleDateString('en-GH', { dateStyle: 'long' }),
+          balance:      formatGHS(balance),
+        }),
       }).catch(() => {})
     }
   } catch { /* non-critical */ }

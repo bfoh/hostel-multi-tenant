@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 import { ProfileForm } from '@/components/settings/profile-form'
 import { BrandingForm } from '@/components/settings/branding-form'
 import { NotificationsForm } from '@/components/settings/notifications-form'
 import { PasswordForm } from '@/components/settings/password-form'
+import { PushToggle } from '@/components/settings/push-toggle'
+import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Settings' }
 
@@ -17,11 +19,10 @@ const TABS = [
 ]
 
 async function getTenant() {
-  const headersList = await headers()
-  const tenantId = headersList.get('x-tenant-id')
+  const tenantId = await getServerTenantId()
   if (!tenantId) return null
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('tenants')
     .select(`
@@ -132,6 +133,7 @@ create policy "tenant logo read"
                   </p>
                 </div>
                 <NotificationsForm tenant={tenant} />
+                <PushToggle />
 
                 {/* API key hints */}
                 <div className="mt-4 rounded-lg border border-border bg-surface-sunken p-4 text-xs text-text-secondary space-y-1">
@@ -151,6 +153,75 @@ create policy "tenant logo read"
                   </p>
                 </div>
                 <PasswordForm />
+
+                {/* Website CMS shortcut */}
+                <div className="border-t border-border pt-6">
+                  <Link
+                    href="/settings/website"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <Globe className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Website Content</p>
+                      <p className="text-xs text-text-secondary">Edit hero, about, gallery and FAQ on your public booking page</p>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/settings/ai"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <Bot className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">AI Agent</p>
+                      <p className="text-xs text-text-secondary">Configure agent name, personality, language and capabilities</p>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/settings/domain"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <Link2 className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Custom Domain</p>
+                      <p className="text-xs text-text-secondary">
+                        {tenant.custom_domain
+                          ? <span className="font-mono text-success">{tenant.custom_domain}</span>
+                          : 'Connect your own domain to the booking page'}
+                      </p>
+                    </div>
+                  </Link>
+                </div>
+
+                  <Link
+                    href="/settings/rates"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <CalendarRange className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Rate Management</p>
+                      <p className="text-xs text-text-secondary">Seasonal pricing, promotions, and date-range rate overrides</p>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/settings/webhooks"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <Webhook className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Webhooks</p>
+                      <p className="text-xs text-text-secondary">Send real-time HTTP events to external systems</p>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/settings/notification-templates"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <MessageSquare className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Notification Templates</p>
+                      <p className="text-xs text-text-secondary">Customise SMS and email messages sent to occupants</p>
+                    </div>
+                  </Link>
 
                 {/* Account info */}
                 <div className="border-t border-border pt-6 space-y-3">

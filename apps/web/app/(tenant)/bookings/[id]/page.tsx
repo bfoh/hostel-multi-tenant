@@ -8,6 +8,12 @@ import { formatGHS, formatDate, initials } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookingActions } from '@/components/bookings/booking-actions'
 import { RecordPaymentForm } from '@/components/bookings/record-payment-form'
+import { PaymentPlanCard } from '@/components/bookings/payment-plan-card'
+import { InvoicePdfButton } from '@/components/bookings/invoice-pdf-button'
+import { LeasePdfButton } from '@/components/bookings/lease-pdf-button'
+import { RoomTransferButton } from '@/components/bookings/room-transfer-button'
+import { DepositCard } from '@/components/bookings/deposit-card'
+import { createClient } from '@/lib/supabase/server'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -40,6 +46,20 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
   if (!booking) notFound()
 
+  // Fetch payment plan (if any)
+  const supabase = await createClient()
+  const { data: paymentPlan } = await supabase
+    .from('payment_plans')
+    .select('*, payment_plan_installments(*)')
+    .eq('booking_id', id)
+    .maybeSingle()
+
+  const { data: deposit } = await supabase
+    .from('damage_deposits')
+    .select('*')
+    .eq('booking_id', id)
+    .maybeSingle()
+
   const occupant = Array.isArray(booking.occupant) ? booking.occupant[0] : booking.occupant
   const room = Array.isArray(booking.room) ? booking.room[0] : booking.room
   const category = room?.category ? (Array.isArray(room.category) ? room.category[0] : room.category) : null
@@ -65,7 +85,16 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             </span>
           </div>
         </div>
-        <BookingActions bookingId={id} status={booking.status} />
+        <div className="flex flex-wrap gap-2">
+          <InvoicePdfButton bookingId={id} />
+          <LeasePdfButton bookingId={id} />
+          <RoomTransferButton
+            bookingId={id}
+            currentRoomId={room?.id ?? ''}
+            bookingStatus={booking.status}
+          />
+          <BookingActions bookingId={id} status={booking.status} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -213,6 +242,30 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   />
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Payment plan */}
+          <Card>
+            <CardHeader><CardTitle>Payment Plan</CardTitle></CardHeader>
+            <CardContent className="pt-0">
+              <PaymentPlanCard
+                bookingId={id}
+                balance={balance}
+                initialPlan={paymentPlan as any}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Damage deposit */}
+          <Card>
+            <CardHeader><CardTitle>Damage Deposit</CardTitle></CardHeader>
+            <CardContent className="pt-0">
+              <DepositCard
+                bookingId={id}
+                occupantId={occupant?.id ?? ''}
+                initialDeposit={deposit as any}
+              />
             </CardContent>
           </Card>
 

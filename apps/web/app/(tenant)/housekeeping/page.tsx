@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { RoomHKCard } from '@/components/housekeeping/room-hk-card'
+import { HkTaskRow } from '@/components/housekeeping/hk-task-row'
 
 export const metadata: Metadata = { title: 'Housekeeping' }
 
@@ -14,6 +16,13 @@ const STATUS_FILTERS: { value: string; label: string; dot: string }[] = [
   { value: 'clean',        label: 'Clean',        dot: 'bg-success' },
   { value: 'out_of_order', label: 'Out of Order', dot: 'bg-danger' },
 ]
+
+const PRIORITY_STYLE: Record<string, string> = {
+  urgent: 'text-danger',
+  high:   'text-warning',
+  normal: 'text-text-secondary',
+  low:    'text-text-tertiary',
+}
 
 async function getRooms(filter: string) {
   const supabase = await createClient()
@@ -35,13 +44,37 @@ async function getRooms(filter: string) {
   return data ?? []
 }
 
+async function getPendingTasks(tenantId: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('housekeeping_tasks')
+    .select(`
+      id, status, priority, due_by, notes, source, created_at,
+      rooms(id, room_number, block),
+      staff_profiles(id, first_name, last_name)
+    `)
+    .eq('tenant_id', tenantId)
+    .not('status', 'in', '("done","skipped")')
+    .order('due_by', { ascending: true, nullsFirst: false })
+    .order('priority')
+    .limit(30)
+  return data ?? []
+}
+
 export default async function HousekeepingPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string }>
 }) {
   const { status = 'all' } = await searchParams
-  const rooms = await getRooms(status)
+
+  const headersList = await headers()
+  const tenantId    = headersList.get('x-tenant-id') ?? ''
+
+  const [rooms, tasks] = await Promise.all([
+    getRooms(status),
+    getPendingTasks(tenantId),
+  ])
 
   // Counts for summary bar (always fetch all for counts)
   const supabase = await createClient()
@@ -82,11 +115,26 @@ export default async function HousekeepingPage({
           <p className="mt-0.5 text-xs text-success/70">clean</p>
         </div>
         <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-xs text-text-tertiary">Out of order</p>
-          <p className="mt-1 text-2xl font-bold text-text-primary">{counts.out_of_order}</p>
-          <p className="mt-0.5 text-xs text-text-tertiary">maintenance</p>
+          <p className="text-xs text-text-tertiary">Pending tasks</p>
+          <p className="mt-1 text-2xl font-bold text-text-primary">{tasks.length}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">to action</p>
         </div>
       </div>
+
+      {/* ── Pending tasks ───────────────────────────────────────────── */}
+      {tasks.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-surface-raised">
+            <h2 className="text-sm font-semibold text-text-primary">Cleaning Tasks</h2>
+            <span className="text-xs text-text-tertiary">{tasks.length} pending</span>
+          </div>
+          <div className="divide-y divide-border">
+            {tasks.map(task => (
+              <HkTaskRow key={(task as any).id} task={task as any} priorityStyle={PRIORITY_STYLE} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div className="flex flex-wrap gap-2">

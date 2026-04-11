@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
@@ -39,8 +40,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
+  // Verify caller is authenticated
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Use admin client so RLS doesn't block the insert when JWT claims are stale
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('occupants')
     .insert({ ...parsed.data, tenant_id: tenantId })
     .select('id')

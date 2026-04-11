@@ -6,10 +6,7 @@ export async function POST() {
   const cookieStore = await cookies()
 
   const response = NextResponse.redirect(
-    new URL('/login', process.env.NEXT_PUBLIC_APP_DOMAIN
-      ? `https://${process.env.NEXT_PUBLIC_APP_DOMAIN}`
-      : 'http://localhost:3000'
-    )
+    new URL('/login', process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
   )
 
   const supabase = createServerClient(

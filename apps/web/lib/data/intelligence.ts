@@ -1,9 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /* ── Live KPI strip ───────────────────────────────────────────────── */
 
 export async function getIntelligenceKpis() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const today    = new Date().toISOString().slice(0, 10)
   const dayStart = `${today}T00:00:00.000Z`
 
@@ -12,7 +12,7 @@ export async function getIntelligenceKpis() {
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'success')
+      .eq('status', 'paid')
       .gte('paid_at', dayStart),
     supabase
       .from('bookings')
@@ -42,7 +42,7 @@ export async function getIntelligenceKpis() {
 /* ── Activity feed from audit_log ─────────────────────────────────── */
 
 export async function getActivityFeed(limit = 40) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data } = await supabase
     .from('audit_log')
@@ -56,7 +56,7 @@ export async function getActivityFeed(limit = 40) {
 /* ── Anomaly alerts (computed from live data) ─────────────────────── */
 
 export async function getAnomalyAlerts() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const today    = new Date().toISOString().slice(0, 10)
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
 
@@ -177,7 +177,7 @@ export async function getAnomalyAlerts() {
 /* ── 30-day cash flow forecast ────────────────────────────────────── */
 
 export async function getCashFlowForecast() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const today    = new Date().toISOString().slice(0, 10)
   const in30     = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10)
 

@@ -1,10 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * Occupancy summary: total rooms, occupied rooms, pct.
  */
 export async function getOccupancySummary() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('rooms')
@@ -23,7 +23,7 @@ export async function getOccupancySummary() {
  * Revenue this month and last month (in pesewas).
  */
 export async function getRevenueStats() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const now = new Date()
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
@@ -34,12 +34,12 @@ export async function getRevenueStats() {
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'success')
+      .eq('status', 'paid')
       .gte('paid_at', thisMonthStart),
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'success')
+      .eq('status', 'paid')
       .gte('paid_at', lastMonthStart)
       .lte('paid_at', lastMonthEnd),
   ])
@@ -55,7 +55,7 @@ export async function getRevenueStats() {
  * Booking stats: pending bookings, today's check-ins, today's check-outs.
  */
 export async function getBookingStats() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
 
   const [pendingRes, checkInsRes, checkOutsRes] = await Promise.all([
@@ -86,7 +86,7 @@ export async function getBookingStats() {
  * Alert count: overdue bookings (unpaid + check_in_date passed) + pending maintenance.
  */
 export async function getAlertCount() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
 
   const { count } = await supabase
@@ -103,7 +103,7 @@ export async function getAlertCount() {
  * Recent bookings for the activity list on the dashboard.
  */
 export async function getRecentBookings(limit = 8) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('bookings')
@@ -131,7 +131,7 @@ export async function getRecentBookings(limit = 8) {
  * 7-day occupancy trend for the chart.
  */
 export async function getOccupancyTrend() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Get room count first
   const { data: rooms } = await supabase
@@ -172,7 +172,7 @@ export async function getOccupancyTrend() {
  * Setup checklist: which onboarding steps the tenant has completed.
  */
 export async function getSetupChecklist() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const [categories, rooms, occupants, bookings] = await Promise.all([
     supabase.from('room_categories').select('id', { count: 'exact', head: true }),

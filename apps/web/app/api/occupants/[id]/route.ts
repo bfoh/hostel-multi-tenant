@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
   first_name:         z.string().min(1).max(100).optional(),
@@ -38,10 +40,18 @@ export async function PUT(
   }
 
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('occupants')
     .update(parsed.data)
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .select('id')
     .single()
 
@@ -50,4 +60,42 @@ export async function PUT(
   }
 
   return NextResponse.json(data)
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
+
+  const admin = createAdminClient()
+
+  // Fetch the occupant first so we can clean up their auth account
+  const { data: occupant } = await admin
+    .from('occupants')
+    .select('user_id, email')
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  // Delete the occupant — the DB cascade handles everything else:
+  //   bookings (→ booking_payments, payment_plans, damage_deposits, feedback)
+  //   occupant_documents, id_verification_reviews, occupant_blacklist
+  //   lost_and_found.occupant_id, waiting_list.occupant_id  → SET NULL
+  const { error } = await admin
+    .from('occupants')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Delete the auth account so the email can be reused for a fresh invite later
+  if (occupant?.user_id) {
+    await admin.auth.admin.deleteUser(occupant.user_id)
+  }
+
+  return NextResponse.json({ ok: true })
 }

@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Shield, Eye, AlertTriangle, Package } from 'lucide-react'
+import { Shield, Eye, AlertTriangle, Package, UserX, Key as KeyIcon } from 'lucide-react'
 
 import { getVisitorLog, getIncidentReports, getLostFoundItems, getSecurityStats } from '@/lib/data/security'
 import { formatDate } from '@/lib/utils'
 import { VisitorCheckIn } from '@/components/security/visitor-checkin'
 import { ReportIncidentButton } from '@/components/security/report-incident-button'
 import { LogLostFoundButton } from '@/components/security/log-lost-found-button'
+import { VisitorPassButton } from '@/components/security/visitor-pass-button'
 
 export const metadata: Metadata = { title: 'Security' }
 
@@ -60,6 +61,24 @@ export default async function SecurityPage({
         <KpiCard label="Unclaimed items" value={stats.unclaimedItems} icon={<Package className="h-4 w-4" />} />
       </div>
 
+      {/* ── Quick links ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link
+          href="/security/blacklist"
+          className="flex items-center gap-3 rounded-xl border border-danger/20 bg-danger-subtle px-4 py-3 text-sm font-medium text-danger hover:bg-danger/10 transition-colors"
+        >
+          <UserX className="h-4 w-4 shrink-0" />
+          Manage blacklist &amp; banned occupants
+        </Link>
+        <Link
+          href="/security/keys"
+          className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm font-medium text-text-primary hover:bg-surface transition-colors"
+        >
+          <KeyIcon className="h-4 w-4 shrink-0 text-brand" />
+          Key management
+        </Link>
+      </div>
+
       {/* ── Tabs ─────────────────────────────────────────────────── */}
       <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
         {TABS.map(t => (
@@ -87,6 +106,7 @@ export default async function SecurityPage({
                   <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary md:table-cell">Host / Room</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Check in</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Check out</th>
+                  <th className="w-8 px-2 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -110,6 +130,9 @@ export default async function SecurityPage({
                         ? new Date(v.check_out_at).toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' })
                         : <CheckOutButton visitorId={v.id} />
                       }
+                    </td>
+                    <td className="px-2 py-3">
+                      <VisitorPassButton visitorId={v.id} />
                     </td>
                   </tr>
                 ))}

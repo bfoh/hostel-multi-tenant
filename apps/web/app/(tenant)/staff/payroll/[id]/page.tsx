@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Download } from 'lucide-react'
 
 import { getPayrollRunById } from '@/lib/data/staff'
 import { formatGHS, formatDate } from '@/lib/utils'
@@ -37,7 +37,18 @@ export default async function PayrollRunPage({
             {formatDate(run.period_start)} – {formatDate(run.period_end)}
           </span>
         </div>
-        <PayrollStatusButton runId={id} currentStatus={run.status} />
+        <div className="flex items-center gap-2">
+          <a
+            href={`/api/payroll/${id}/payslip`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-raised transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Download payslips
+          </a>
+          <PayrollStatusButton runId={id} currentStatus={run.status} />
+        </div>
       </div>
 
       {/* ── Summary cards ────────────────────────────────────────── */}

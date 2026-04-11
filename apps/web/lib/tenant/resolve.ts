@@ -29,7 +29,7 @@ function getRedis(): Redis | null {
   return redis
 }
 
-const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'abrempong.com'
+const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'ghh.com'
 const CACHE_TTL = 300 // 5 minutes
 
 /**
@@ -41,8 +41,8 @@ const CACHE_TTL = 300 // 5 minutes
  * 3. Write result back to cache
  *
  * Hostname formats handled:
- *   - {slug}.abrempong.com    → platform subdomain
- *   - app.abrempong.com       → platform admin (returns null)
+ *   - {slug}.ghh.com    → platform subdomain
+ *   - app.ghh.com       → platform admin (returns null)
  *   - www.clienthostel.com    → custom domain (strip www)
  *   - clienthostel.com        → custom domain
  */

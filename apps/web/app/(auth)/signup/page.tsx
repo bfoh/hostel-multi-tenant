@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 
@@ -27,16 +28,48 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>
 
+function toSlug(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+}
+
 export default function SignupPage() {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [success, setSuccess]         = useState(false)
+  const [slugPreview, setSlugPreview] = useState('')
+  const [slugStatus, setSlugStatus]   = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
+
+  const hostelName = watch('hostelName', '')
+
+  // Auto-generate slug and check availability
+  useEffect(() => {
+    const slug = toSlug(hostelName)
+    setSlugPreview(slug)
+    if (slug.length < 2) { setSlugStatus('idle'); return }
+
+    setSlugStatus('checking')
+    const timer = setTimeout(async () => {
+      try {
+        const res  = await fetch(`/api/onboarding/check-slug?slug=${encodeURIComponent(slug)}`)
+        const data = await res.json()
+        setSlugStatus(data.available ? 'available' : 'taken')
+      } catch {
+        setSlugStatus('idle')
+      }
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [hostelName])
 
   async function onSubmit(values: FormValues) {
     setServerError(null)
@@ -70,7 +103,7 @@ export default function SignupPage() {
         <div className="space-y-1">
           <h2 className="font-display text-xl font-bold text-text-primary">Check your email</h2>
           <p className="text-sm text-text-secondary">
-            We&apos;ve sent a confirmation link to your email address. Click it to activate your account and start your free trial.
+            We&apos;ve sent a confirmation link to your email address. Click it to activate your account — you&apos;ll be taken straight to your hostel setup.
           </p>
         </div>
         <Link
@@ -83,6 +116,8 @@ export default function SignupPage() {
     )
   }
 
+  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -93,6 +128,7 @@ export default function SignupPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        {/* Hostel name + URL preview */}
         <div className="space-y-1.5">
           <label htmlFor="hostelName" className="text-sm font-medium text-text-primary">
             Hostel name
@@ -108,6 +144,24 @@ export default function SignupPage() {
           />
           {errors.hostelName && (
             <p className="text-xs text-danger">{errors.hostelName.message}</p>
+          )}
+
+          {/* Live URL preview */}
+          {slugPreview.length >= 2 && (
+            <div className="flex items-center gap-1.5 rounded-md border border-border bg-surface-sunken px-3 py-2 text-xs">
+              <span className="text-text-secondary">Your URL:</span>
+              <span className="font-mono text-text-primary font-medium">
+                {slugPreview}.{appDomain}
+              </span>
+              {slugStatus === 'checking' && <Loader2 className="ml-auto h-3 w-3 animate-spin text-text-disabled" />}
+              {slugStatus === 'available' && <CheckCircle2 className="ml-auto h-3 w-3 text-success" />}
+              {slugStatus === 'taken' && (
+                <>
+                  <XCircle className="ml-auto h-3 w-3 text-danger" />
+                  <span className="text-danger">taken — try a different name</span>
+                </>
+              )}
+            </div>
           )}
         </div>
 
@@ -170,7 +224,7 @@ export default function SignupPage() {
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || slugStatus === 'taken'}
           className="w-full rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/25 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Creating account…' : 'Create account'}
@@ -178,14 +232,9 @@ export default function SignupPage() {
 
         <p className="text-center text-xs text-text-tertiary">
           By signing up you agree to our{' '}
-          <a href="#" className="text-brand hover:text-brand-hover underline underline-offset-2">
-            Terms of Service
-          </a>{' '}
-          and{' '}
-          <a href="#" className="text-brand hover:text-brand-hover underline underline-offset-2">
-            Privacy Policy
-          </a>
-          .
+          <a href="#" className="text-brand hover:text-brand-hover underline underline-offset-2">Terms of Service</a>
+          {' '}and{' '}
+          <a href="#" className="text-brand hover:text-brand-hover underline underline-offset-2">Privacy Policy</a>.
         </p>
       </form>
 

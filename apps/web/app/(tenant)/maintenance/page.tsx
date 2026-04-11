@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, HardHat, AlertTriangle } from 'lucide-react'
+import { Plus, HardHat, AlertTriangle, CalendarClock, Zap } from 'lucide-react'
 
 import { getMaintenanceRequests, getMaintenanceStats } from '@/lib/data/maintenance'
 import { formatDate } from '@/lib/utils'
@@ -63,13 +63,29 @@ export default async function MaintenancePage({
             {activeStatus !== 'all' ? ` · ${activeStatus.replace('_', ' ')}` : ''}
           </p>
         </div>
-        <Link
-          href="/maintenance/new"
-          className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          New request
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/maintenance/schedules"
+            className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-raised transition-colors"
+          >
+            <CalendarClock className="h-4 w-4" />
+            PM Schedules
+          </Link>
+          <Link
+            href="/maintenance/meters"
+            className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-raised transition-colors"
+          >
+            <Zap className="h-4 w-4" />
+            Meter Readings
+          </Link>
+          <Link
+            href="/maintenance/new"
+            className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            New request
+          </Link>
+        </div>
       </div>
 
       {/* ── KPI strip ────────────────────────────────────────────── */}

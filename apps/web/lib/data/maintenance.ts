@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function getMaintenanceRequests(filter?: { status?: string; priority?: string }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('maintenance_requests')
@@ -22,7 +22,7 @@ export async function getMaintenanceRequests(filter?: { status?: string; priorit
 }
 
 export async function getMaintenanceById(id: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('maintenance_requests')
@@ -35,7 +35,7 @@ export async function getMaintenanceById(id: string) {
 }
 
 export async function getContractors() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('contractors')
@@ -48,7 +48,7 @@ export async function getContractors() {
 }
 
 export async function getMaintenanceStats() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('maintenance_requests')

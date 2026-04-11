@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, UserCog, Search, Users, UserCheck, Clock } from 'lucide-react'
+import { Plus, UserCog, Search, Users, UserCheck, Clock, TrendingUp, CalendarClock, Mail, CheckCircle2 } from 'lucide-react'
 
 import { getStaff } from '@/lib/data/staff'
 import { formatGHS } from '@/lib/utils'
 import { initials } from '@/lib/utils'
+import { InviteStaffButton } from '@/components/staff/invite-staff-button'
+import { DeleteStaffButton } from '@/components/staff/delete-staff-button'
 
 export const metadata: Metadata = { title: 'Staff' }
 
@@ -37,13 +39,29 @@ export default async function StaffPage({
             {total} team member{total !== 1 ? 's' : ''}
           </p>
         </div>
-        <Link
-          href="/staff/new"
-          className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add staff
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/staff/performance"
+            className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
+          >
+            <TrendingUp className="h-4 w-4" />
+            Performance
+          </Link>
+          <Link
+            href="/staff/shifts"
+            className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
+          >
+            <CalendarClock className="h-4 w-4" />
+            Shifts
+          </Link>
+          <Link
+            href="/staff/new"
+            className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add staff
+          </Link>
+        </div>
       </div>
 
       {/* ── KPI cards ────────────────────────────────────────────── */}
@@ -117,6 +135,7 @@ export default async function StaffPage({
                 <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary md:table-cell">Type</th>
                 <th className="hidden px-4 py-3 text-right text-xs font-medium text-text-tertiary lg:table-cell">Basic Salary</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary">Portal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -163,6 +182,20 @@ export default async function StaffPage({
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${s.is_active ? 'bg-success-subtle text-success border-success/20' : 'bg-surface-sunken text-text-secondary border-border'}`}>
                       {s.is_active ? 'Active' : 'Inactive'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      <InviteStaffButton
+                        staffId={s.id}
+                        hasEmail={!!s.email}
+                        hasAccount={!!(s as any).user_id}
+                        compact
+                      />
+                      <DeleteStaffButton
+                        staffId={s.id}
+                        staffName={`${s.first_name} ${s.last_name}`}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import { MessageSquare, Send, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { MessageSquare, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/utils'
-import { SendSMSBlast } from '@/components/communications/send-sms-blast'
+import { BroadcastForm } from '@/components/communications/broadcast-form'
 
 export const metadata: Metadata = { title: 'Communications' }
 
@@ -13,14 +13,6 @@ const STATUS_STYLES: Record<string, { icon: React.ReactNode; style: string }> = 
   failed:    { icon: <XCircle className="h-3.5 w-3.5" />,      style: 'text-danger' },
 }
 
-const RECIPIENT_LABELS: Record<string, string> = {
-  all_occupants:    'All occupants',
-  active_occupants: 'Active (checked in)',
-  overdue_rent:     'Overdue rent',
-  specific_rooms:   'Specific rooms',
-  manual_list:      'Manual list',
-}
-
 export default async function CommunicationsPage() {
   const supabase = await createClient()
   const { data: blasts } = await supabase
@@ -29,37 +21,38 @@ export default async function CommunicationsPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  const hasArkesel = !!process.env.ARKESEL_API_KEY
+  const hasSms   = !!process.env.ARKESEL_API_KEY
+  const hasEmail = !!process.env.RESEND_API_KEY
+  const hasPush  = !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
   return (
     <div className="space-y-6">
       {/* ── Header ───────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Communications</h1>
-          <p className="mt-0.5 text-sm text-text-secondary">Send bulk SMS to occupants via Arkesel</p>
+          <p className="mt-0.5 text-sm text-text-secondary">Broadcast messages to occupants via SMS, email, or push</p>
         </div>
-        <SendSMSBlast disabled={!hasArkesel} />
+        <a href="/communications/notices"
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors">
+          <MessageSquare className="h-4 w-4" />
+          Notice Board
+        </a>
       </div>
 
-      {/* ── Arkesel notice ───────────────────────────────────────── */}
-      {!hasArkesel && (
-        <div className="rounded-lg border border-warning/20 bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
-          <strong>ARKESEL_API_KEY</strong> is not set. Add it to your environment variables to enable SMS sending.
-          You can still create blasts — they will be queued but not delivered until the key is configured.
-        </div>
-      )}
+      {/* ── Broadcast form ───────────────────────────────────────── */}
+      <BroadcastForm hasSms={hasSms} hasEmail={hasEmail} hasPush={hasPush} />
 
       {/* ── Stats strip ──────────────────────────────────────────── */}
       {blasts && blasts.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Total blasts" value={blasts.length} />
+          <StatCard label="Total broadcasts" value={blasts.length} />
           <StatCard label="Messages sent" value={blasts.reduce((s, b) => s + (b.sent_count ?? 0), 0)} />
-          <StatCard label="Total recipients" value={blasts.reduce((s, b) => s + (b.recipient_count ?? 0), 0)} />
+          <StatCard label="Total recipients" value={blasts.reduce((s, b) => s + (b.recipient_count ?? b.sent_count ?? 0), 0)} />
         </div>
       )}
 
-      {/* ── Blast history ────────────────────────────────────────── */}
+      {/* ── Send history ─────────────────────────────────────────── */}
       <div>
         <h2 className="text-sm font-semibold text-text-primary mb-3">Send history</h2>
         {!blasts || blasts.length === 0 ? (
@@ -68,7 +61,7 @@ export default async function CommunicationsPage() {
             <div>
               <p className="font-medium text-text-primary">No messages sent yet</p>
               <p className="mt-0.5 text-sm text-text-secondary">
-                Use the Send SMS button to blast a message to your occupants.
+                Use the form above to broadcast a message to your occupants.
               </p>
             </div>
           </div>
@@ -82,11 +75,8 @@ export default async function CommunicationsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-text-primary line-clamp-2">{blast.message}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
-                        <span>{RECIPIENT_LABELS[blast.recipient_type] ?? blast.recipient_type}</span>
-                        <span>{blast.recipient_count ?? 0} recipients</span>
-                        {blast.sent_count != null && (
-                          <span>{blast.sent_count} sent · {blast.failed_count ?? 0} failed</span>
-                        )}
+                        <span>{(blast as any).recipient_filter ?? blast.recipient_type ?? 'Occupants'}</span>
+                        {blast.sent_count != null && <span>{blast.sent_count} sent</span>}
                         <span>{formatDate(blast.created_at)}</span>
                       </div>
                     </div>

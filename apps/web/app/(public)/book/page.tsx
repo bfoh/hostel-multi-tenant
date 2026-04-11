@@ -24,6 +24,15 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
+interface CmsContent {
+  hero_heading?:    string | null
+  hero_subheading?: string | null
+  about_text?:      string | null
+  amenities?:       string[]
+  gallery_urls?:    string[]
+  faqs?:            { q: string; a: string }[]
+}
+
 interface TenantRow {
   id: string
   slug: string
@@ -37,6 +46,7 @@ interface TenantRow {
   address_city: string | null
   address_region: string | null
   website_url: string | null
+  website_content: CmsContent
 }
 
 async function getTenantFromRequest(): Promise<TenantRow | null> {
@@ -47,7 +57,7 @@ async function getTenantFromRequest(): Promise<TenantRow | null> {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_line1, address_city, address_region, website_url')
+    .select('id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_line1, address_city, address_region, website_url, website_content')
     .eq('id', tenantId)
     .single()
 
@@ -119,13 +129,14 @@ export default async function PublicBookingPage() {
 
   const categories = await getRoomCategories(tenant.id)
   const brandColor = tenant.primary_color ?? '#2563EB'
+  const cms: CmsContent = tenant.website_content ?? {}
 
   return (
     <>
       {/* ── CSS variable for brand color ─────────────────────────── */}
       <style>{`:root { --brand: ${brandColor}; }`}</style>
 
-      <div className="min-h-screen" style={{ fontFamily: 'Inter, sans-serif' }}>
+      <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, sans-serif' }}>
         {/* ── Header / Hero ─────────────────────────────────────────── */}
         <header style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}CC 100%)` }}>
           <div className="mx-auto max-w-5xl px-4 py-10 text-white">
@@ -139,10 +150,12 @@ export default async function PublicBookingPage() {
                 </div>
               )}
               <div>
-                <h1 className="text-2xl font-bold">{tenant.name}</h1>
-                {tenant.tagline && (
-                  <p className="mt-0.5 text-white/80 text-sm">{tenant.tagline}</p>
-                )}
+                <h1 className="text-2xl font-bold">
+                  {cms.hero_heading ?? tenant.name}
+                </h1>
+                <p className="mt-0.5 text-white/80 text-sm">
+                  {cms.hero_subheading ?? tenant.tagline ?? ''}
+                </p>
               </div>
             </div>
 
@@ -171,35 +184,100 @@ export default async function PublicBookingPage() {
         </header>
 
         {/* ── Main content ──────────────────────────────────────────── */}
-        <main className="mx-auto max-w-5xl px-4 py-10">
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900">Available rooms</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Choose a room type to start your booking. All prices are in Ghana Cedis (GH₵).
-            </p>
-          </div>
+        <main className="mx-auto max-w-5xl px-4 py-10 space-y-12">
 
-          {categories.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-gray-200 py-20 text-center">
-              <p className="text-gray-500">No rooms available at this time. Please contact the hostel directly.</p>
-              {tenant.contact_phone && (
-                <a href={`tel:${tenant.contact_phone}`} className="mt-4 inline-block rounded-lg px-6 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: brandColor }}>
-                  Call {tenant.contact_phone}
-                </a>
-              )}
-            </div>
-          ) : (
-            <BookingFlow
-              categories={categories}
-              tenant={{ id: tenant.id, name: tenant.name, slug: tenant.slug, brandColor }}
-            />
+          {/* Amenities */}
+          {cms.amenities && cms.amenities.length > 0 && (
+            <section>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Facilities &amp; Amenities</h2>
+              <div className="flex flex-wrap gap-2">
+                {cms.amenities.map((a) => {
+                  const Icon = AMENITY_ICONS[a.toLowerCase()] ?? null
+                  return (
+                    <span key={a} className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700">
+                      {Icon}
+                      {a}
+                    </span>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* About */}
+          {cms.about_text && (
+            <section>
+              <h2 className="text-lg font-bold text-gray-900 mb-3">About Us</h2>
+              <p className="text-gray-600 leading-relaxed whitespace-pre-line">{cms.about_text}</p>
+            </section>
+          )}
+
+          {/* Gallery */}
+          {cms.gallery_urls && cms.gallery_urls.length > 0 && (
+            <section>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Gallery</h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {cms.gallery_urls.map((url, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`${tenant.name} photo ${i + 1}`}
+                    className="aspect-video w-full rounded-xl object-cover bg-gray-100"
+                    loading="lazy"
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Room booking */}
+          <section>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Available Rooms</h2>
+            <p className="text-sm text-gray-500 mb-6">Choose a room type to start your booking. All prices are in Ghana Cedis (GH₵).</p>
+
+            {categories.length === 0 ? (
+              <div className="rounded-2xl border-2 border-dashed border-gray-200 py-20 text-center">
+                <p className="text-gray-500">No rooms available at this time. Please contact the hostel directly.</p>
+                {tenant.contact_phone && (
+                  <a href={`tel:${tenant.contact_phone}`} className="mt-4 inline-block rounded-lg px-6 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: brandColor }}>
+                    Call {tenant.contact_phone}
+                  </a>
+                )}
+              </div>
+            ) : (
+              <BookingFlow
+                categories={categories}
+                tenant={{ id: tenant.id, name: tenant.name, slug: tenant.slug, brandColor }}
+              />
+            )}
+          </section>
+
+          {/* FAQ */}
+          {cms.faqs && cms.faqs.length > 0 && (
+            <section>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+              <div className="space-y-3">
+                {cms.faqs.map((faq, i) => (
+                  <details key={i} className="group rounded-xl border border-gray-200 bg-white">
+                    <summary className="flex cursor-pointer items-center justify-between px-5 py-4 text-sm font-semibold text-gray-800 list-none">
+                      {faq.q}
+                      <span className="ml-3 shrink-0 text-gray-400 group-open:rotate-180 transition-transform">▾</span>
+                    </summary>
+                    <p className="border-t border-gray-100 px-5 py-4 text-sm text-gray-600 leading-relaxed">
+                      {faq.a}
+                    </p>
+                  </details>
+                ))}
+              </div>
+            </section>
           )}
         </main>
 
         {/* ── Footer ───────────────────────────────────────────────── */}
         <footer className="border-t border-gray-100 bg-white py-8 mt-12">
           <div className="mx-auto max-w-5xl px-4 text-center text-xs text-gray-400">
-            <p>{tenant.name} · Powered by <span className="font-semibold">AbrempongHMS</span></p>
+            <p>{tenant.name} · Powered by <span className="font-semibold">GH Hostels</span></p>
             {tenant.contact_phone && (
               <p className="mt-1">
                 Questions? Call or WhatsApp{' '}

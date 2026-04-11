@@ -6,6 +6,7 @@ import { ChevronLeft, Mail, Phone, Building2, Calendar, CreditCard } from 'lucid
 import { getStaffById } from '@/lib/data/staff'
 import { formatGHS, formatDate, initials } from '@/lib/utils'
 import { computeMonthlyPayroll } from '@/lib/payroll/ghana-tax'
+import { InviteStaffButton } from '@/components/staff/invite-staff-button'
 
 export const metadata: Metadata = { title: 'Staff Profile' }
 
@@ -68,11 +69,16 @@ export default async function StaffProfilePage({
                   {staff.department ? ` · ${staff.department}` : ''}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${staff.is_active ? 'bg-success-subtle text-success border-success/20' : 'bg-surface-sunken text-text-secondary border-border'}`}>
                   {staff.is_active ? 'Active' : 'Inactive'}
                 </span>
-                <Link href={`/staff/${id}?tab=profile&edit=true`} className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-raised transition-colors">
+                <InviteStaffButton
+                  staffId={id}
+                  hasEmail={!!staff.email}
+                  hasAccount={!!(staff as any).user_id}
+                />
+                <Link href={`/staff/${id}/edit`} className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-raised transition-colors">
                   Edit
                 </Link>
               </div>

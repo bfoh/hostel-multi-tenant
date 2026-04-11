@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function getBookings(filter?: { status?: string; search?: string }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('bookings')
@@ -25,7 +25,7 @@ export async function getBookings(filter?: { status?: string; search?: string })
 }
 
 export async function getBookingById(id: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('bookings')
@@ -55,7 +55,7 @@ export async function getBookingById(id: string) {
 }
 
 export async function getAvailableRooms(checkIn: string, checkOut: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Count active bookings per room that overlap the requested period
   const { data: activeBookings } = await supabase

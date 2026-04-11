@@ -1,6 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-import type { Database } from '@abrempong/types'
+import type { Database } from '@gh-hostels/types'
 
 /**
  * Browser-side Supabase client.

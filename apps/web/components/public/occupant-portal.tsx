@@ -4,6 +4,7 @@ import { useState } from 'react'
 import {
   Search, BedDouble, Calendar, CreditCard,
   CheckCircle2, Clock, XCircle, Phone, Download,
+  Wrench, AlertCircle, Loader2, Plus, Bell, Star,
 } from 'lucide-react'
 
 interface Tenant {
@@ -66,12 +67,143 @@ function formatDate(d: string) {
   return new Intl.DateTimeFormat('en-GH', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d))
 }
 
-export function OccupantPortal({ tenant }: { tenant: Tenant }) {
+const MAINT_CATEGORIES = [
+  { value: 'plumbing',     label: 'Plumbing' },
+  { value: 'electrical',   label: 'Electrical' },
+  { value: 'furniture',    label: 'Furniture' },
+  { value: 'appliance',    label: 'Appliance' },
+  { value: 'cleaning',     label: 'Cleaning' },
+  { value: 'pest_control', label: 'Pest Control' },
+  { value: 'structural',   label: 'Structural' },
+  { value: 'other',        label: 'Other' },
+]
+
+export function OccupantPortal({ tenant, payStatus }: { tenant: Tenant; payStatus?: 'success' | 'failed' | 'error' }) {
   const [ref,     setRef]     = useState('')
   const [phone,   setPhone]   = useState('')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
   const [result,  setResult]  = useState<BookingResult | null>(null)
+  const [activeTab, setActiveTab] = useState<'booking' | 'maintenance' | 'notices' | 'feedback'>('booking')
+  const [notices, setNotices]     = useState<{ id: string; title: string; body: string; category: string; is_pinned: boolean; published_at: string }[] | null>(null)
+  const [noticesLoading, setNoticesLoading] = useState(false)
+
+  // Pay-now state
+  const [payAmount,   setPayAmount]   = useState('')
+  const [payLoading,  setPayLoading]  = useState(false)
+  const [payError,    setPayError]    = useState<string | null>(null)
+
+  async function startPayment(e: React.FormEvent) {
+    e.preventDefault()
+    setPayLoading(true); setPayError(null)
+    try {
+      const res = await fetch(`/api/public/${tenant.slug}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_ref: ref.trim(),
+          phone:       phone.trim(),
+          amount:      Math.round(parseFloat(payAmount) * 100),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Payment init failed')
+      window.location.href = data.authorization_url
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : 'Failed')
+    } finally {
+      setPayLoading(false)
+    }
+  }
+
+  // Feedback state
+  const [fbRating,     setFbRating]     = useState(5)
+  const [fbClean,      setFbClean]      = useState(5)
+  const [fbStaff,      setFbStaff]      = useState(5)
+  const [fbValue,      setFbValue]      = useState(5)
+  const [fbRecommend,  setFbRecommend]  = useState(true)
+  const [fbComments,   setFbComments]   = useState('')
+  const [fbSending,    setFbSending]    = useState(false)
+  const [fbSuccess,    setFbSuccess]    = useState(false)
+  const [fbError,      setFbError]      = useState<string | null>(null)
+
+  async function submitFeedback(e: React.FormEvent) {
+    e.preventDefault()
+    setFbSending(true); setFbError(null)
+    try {
+      const res = await fetch(`/api/public/${tenant.slug}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_ref:        ref.trim(),
+          phone:              phone.trim(),
+          overall_rating:     fbRating,
+          cleanliness_rating: fbClean,
+          staff_rating:       fbStaff,
+          value_rating:       fbValue,
+          would_recommend:    fbRecommend,
+          comments:           fbComments || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      setFbSuccess(true)
+    } catch (err) {
+      setFbError(err instanceof Error ? err.message : 'Failed')
+    } finally {
+      setFbSending(false)
+    }
+  }
+
+  async function loadNotices() {
+    if (notices !== null) return
+    setNoticesLoading(true)
+    try {
+      const res = await fetch(`/api/public/${tenant.slug}/notices`)
+      if (res.ok) setNotices(await res.json())
+    } finally {
+      setNoticesLoading(false)
+    }
+  }
+
+  // Maintenance form state
+  const [mTitle,    setMTitle]    = useState('')
+  const [mCat,      setMCat]      = useState('plumbing')
+  const [mPriority, setMPriority] = useState('medium')
+  const [mDesc,     setMDesc]     = useState('')
+  const [mSending,  setMSending]  = useState(false)
+  const [mError,    setMError]    = useState<string | null>(null)
+  const [mSuccess,  setMSuccess]  = useState(false)
+
+  async function submitMaintenance(e: React.FormEvent) {
+    e.preventDefault()
+    setMSending(true)
+    setMError(null)
+    setMSuccess(false)
+    try {
+      const res = await fetch(`/api/public/${tenant.slug}/maintenance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_ref: ref.trim(),
+          phone: phone.trim(),
+          title: mTitle,
+          category: mCat,
+          priority: mPriority,
+          description: mDesc || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      setMSuccess(true)
+      setMTitle('')
+      setMDesc('')
+    } catch (err) {
+      setMError(err instanceof Error ? err.message : 'Failed')
+    } finally {
+      setMSending(false)
+    }
+  }
 
   async function lookup(e: React.FormEvent) {
     e.preventDefault()
@@ -127,6 +259,23 @@ export function OccupantPortal({ tenant }: { tenant: Tenant }) {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-8 space-y-6">
+        {/* Paystack return banner */}
+        {payStatus === 'success' && (
+          <div className="rounded-2xl bg-green-50 border border-green-200 px-5 py-4 flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-green-800">Payment successful!</p>
+              <p className="text-xs text-green-700">Look up your booking below to see your updated balance.</p>
+            </div>
+          </div>
+        )}
+        {(payStatus === 'failed' || payStatus === 'error') && (
+          <div className="rounded-2xl bg-red-50 border border-red-200 px-5 py-4 flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
+            <p className="text-sm text-red-700">Payment was not completed. Please try again.</p>
+          </div>
+        )}
+
         {/* Lookup form */}
         <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-1">Check your booking</h2>
@@ -280,6 +429,43 @@ export function OccupantPortal({ tenant }: { tenant: Tenant }) {
                 </div>
               )}
 
+              {/* Pay online */}
+              {balance > 0 && (
+                <div className="p-5 border-t border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Pay online</h3>
+                  <form onSubmit={startPayment} className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-500 mb-1">Amount (GHS)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="1"
+                        max={(balance / 100).toFixed(2)}
+                        value={payAmount}
+                        onChange={(e) => setPayAmount(e.target.value)}
+                        placeholder={(balance / 100).toFixed(2)}
+                        required
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={payLoading}
+                      className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 transition-opacity whitespace-nowrap"
+                      style={{ backgroundColor: tenant.brandColor }}
+                    >
+                      {payLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      {payLoading ? 'Redirecting…' : 'Pay with card'}
+                    </button>
+                  </form>
+                  {payError && (
+                    <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />{payError}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Download invoice */}
               <div className="p-5">
                 <a
@@ -313,9 +499,223 @@ export function OccupantPortal({ tenant }: { tenant: Tenant }) {
               </div>
             )}
 
+            {/* Tab bar */}
+            <div className="flex gap-1 rounded-2xl bg-white border border-gray-100 shadow-sm p-1">
+              {([
+                { id: 'booking',     icon: BedDouble, label: 'My Booking' },
+                { id: 'maintenance', icon: Wrench,    label: 'Report Issue' },
+                { id: 'notices',     icon: Bell,      label: 'Notices' },
+              { id: 'feedback',    icon: Star,      label: 'Rate Stay' },
+              ] as const).map((tab) => {
+                if (tab.id === 'feedback' && result?.status !== 'checked_out') return null
+                return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id as any)
+                    if (tab.id === 'notices') loadNotices()
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium transition-colors ${
+                    activeTab === tab.id ? 'text-white' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  style={activeTab === tab.id ? { backgroundColor: tenant.brandColor } : {}}
+                >
+                  <tab.icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                </button>
+                )
+              })}
+            </div>
+
+            {/* Maintenance request form */}
+            {activeTab === 'maintenance' && (
+              <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-900">Report a maintenance issue</h3>
+
+                {mSuccess && (
+                  <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    Request submitted! Staff will attend to it soon.
+                  </div>
+                )}
+
+                <form onSubmit={submitMaintenance} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Issue title *</label>
+                    <input
+                      value={mTitle}
+                      onChange={(e) => setMTitle(e.target.value)}
+                      required
+                      placeholder="e.g. Tap is leaking"
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                      <select
+                        value={mCat}
+                        onChange={(e) => setMCat(e.target.value)}
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2"
+                      >
+                        {MAINT_CATEGORIES.map((c) => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Urgency</label>
+                      <select
+                        value={mPriority}
+                        onChange={(e) => setMPriority(e.target.value)}
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2"
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Description (optional)</label>
+                    <textarea
+                      value={mDesc}
+                      onChange={(e) => setMDesc(e.target.value)}
+                      rows={3}
+                      placeholder="Describe the issue in detail…"
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 resize-none transition-all"
+                    />
+                  </div>
+                  {mError && (
+                    <p className="rounded-xl bg-red-50 border border-red-100 px-4 py-2.5 text-sm text-red-600 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0" />{mError}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={mSending}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+                    style={{ backgroundColor: tenant.brandColor }}
+                  >
+                    {mSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    {mSending ? 'Submitting…' : 'Submit request'}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Notices tab */}
+            {activeTab === 'notices' && (
+              <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 space-y-3">
+                <h3 className="text-sm font-semibold text-gray-900">Notice Board</h3>
+                {noticesLoading && (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  </div>
+                )}
+                {!noticesLoading && (notices === null || notices.length === 0) && (
+                  <p className="py-6 text-center text-sm text-gray-400">No notices at this time</p>
+                )}
+                {!noticesLoading && notices && notices.length > 0 && (
+                  <div className="space-y-3">
+                    {notices.map((n) => (
+                      <div key={n.id}
+                        className={`rounded-xl border p-4 ${n.category === 'urgent' ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-gray-50'}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`text-sm font-semibold ${n.category === 'urgent' ? 'text-red-700' : 'text-gray-900'}`}>
+                            {n.is_pinned ? '📌 ' : ''}{n.title}
+                          </p>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${
+                            n.category === 'urgent' ? 'bg-red-100 text-red-700'
+                            : n.category === 'payment' ? 'bg-blue-100 text-blue-700'
+                            : n.category === 'event' ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-200 text-gray-600'
+                          }`}>{n.category}</span>
+                        </div>
+                        <p className="mt-1.5 text-sm text-gray-600 whitespace-pre-wrap">{n.body}</p>
+                        <p className="mt-2 text-xs text-gray-400">
+                          {new Date(n.published_at).toLocaleDateString('en-GH', { dateStyle: 'medium' })}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Feedback tab */}
+            {activeTab === 'feedback' && (
+              <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-900">Rate your stay</h3>
+                {fbSuccess ? (
+                  <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-4 text-center">
+                    <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-green-700">Thank you for your feedback!</p>
+                    <p className="text-xs text-green-600 mt-1">Your review helps us improve.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={submitFeedback} className="space-y-4">
+                    {([
+                      { label: 'Overall experience', state: fbRating,  set: setFbRating },
+                      { label: 'Cleanliness',        state: fbClean,   set: setFbClean },
+                      { label: 'Staff',              state: fbStaff,   set: setFbStaff },
+                      { label: 'Value for money',    state: fbValue,   set: setFbValue },
+                    ] as const).map(({ label, state, set }) => (
+                      <div key={label}>
+                        <p className="text-xs font-medium text-gray-600 mb-1">{label}</p>
+                        <div className="flex gap-2">
+                          {[1,2,3,4,5].map((n) => (
+                            <button key={n} type="button" onClick={() => (set as any)(n)}
+                              className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold transition-colors ${
+                                n <= state ? 'text-white' : 'border border-gray-200 text-gray-400'
+                              }`}
+                              style={n <= state ? { backgroundColor: tenant.brandColor } : {}}>
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">Would you recommend us?</p>
+                      <div className="flex gap-2">
+                        {[true, false].map((v) => (
+                          <button key={String(v)} type="button" onClick={() => setFbRecommend(v)}
+                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                              fbRecommend === v ? 'text-white' : 'border border-gray-200 text-gray-500'
+                            }`}
+                            style={fbRecommend === v ? { backgroundColor: tenant.brandColor } : {}}>
+                            {v ? 'Yes' : 'No'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">Comments (optional)</p>
+                      <textarea value={fbComments} onChange={(e) => setFbComments(e.target.value)}
+                        rows={3} placeholder="Tell us about your experience…"
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 resize-none" />
+                    </div>
+                    {fbError && (
+                      <p className="rounded-xl bg-red-50 border border-red-100 px-4 py-2.5 text-sm text-red-600 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 shrink-0" />{fbError}
+                      </p>
+                    )}
+                    <button type="submit" disabled={fbSending}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+                      style={{ backgroundColor: tenant.brandColor }}>
+                      {fbSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
+                      {fbSending ? 'Submitting…' : 'Submit feedback'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+
             {/* Start new lookup */}
             <button
-              onClick={() => { setResult(null); setRef(''); setPhone('') }}
+              onClick={() => { setResult(null); setRef(''); setPhone(''); setActiveTab('booking') }}
               className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors py-2"
             >
               Look up a different booking
@@ -325,7 +725,7 @@ export function OccupantPortal({ tenant }: { tenant: Tenant }) {
       </main>
 
       <footer className="py-8 text-center text-xs text-gray-400 border-t border-gray-100 mt-8">
-        {tenant.name} · Powered by <span className="font-semibold">AbrempongHMS</span>
+        {tenant.name} · Powered by <span className="font-semibold">GH Hostels</span>
       </footer>
     </div>
   )

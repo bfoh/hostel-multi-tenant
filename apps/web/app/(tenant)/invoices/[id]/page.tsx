@@ -2,21 +2,30 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
-import { ChevronLeft, Download } from 'lucide-react'
+import { ChevronLeft, Download, Printer } from 'lucide-react'
+
 import { getInvoiceById } from '@/lib/data/invoices'
+import { splitGhanaTax } from '@/lib/tax/ghana'
 import { formatGHS, formatDate } from '@/lib/utils'
 import { PrintButton } from '@/components/invoices/print-button'
+import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Invoice' }
 
 const METHOD_LABEL: Record<string, string> = {
-  momo_mtn:       'MTN MoMo',
-  momo_vodafone:  'Vodafone Cash',
-  momo_airteltigo:'AirtelTigo Money',
-  cash:           'Cash',
-  bank_transfer:  'Bank Transfer',
-  card:           'Card',
-  cheque:         'Cheque',
+  momo_mtn:        'MTN MoMo',
+  momo_vodafone:   'Vodafone Cash',
+  momo_airteltigo: 'AirtelTigo Money',
+  cash:            'Cash',
+  bank_transfer:   'Bank Transfer',
+  card:            'Card',
+  cheque:          'Cheque',
+}
+
+const PAYMENT_BADGE: Record<string, string> = {
+  unpaid:  'bg-danger-subtle text-danger border-danger/20',
+  partial: 'bg-warning-subtle text-warning-fg border-warning/20',
+  paid:    'bg-success-subtle text-success border-success/20',
 }
 
 export default async function InvoicePage({
@@ -24,24 +33,37 @@ export default async function InvoicePage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = await params
-  const inv = await getInvoiceById(id)
+  const { id }       = await params
+  const inv          = await getInvoiceById(id) as any
   if (!inv) notFound()
 
-  const headersList = await headers()
-  const tenantName  = headersList.get('x-tenant-name') ?? 'Your Hostel'
+  const headersList  = await headers()
+  const tenantId     = headersList.get('x-tenant-id') ?? ''
+  const tenantName   = headersList.get('x-tenant-name') ?? 'Your Hostel'
+
+  // Fetch GRA fields from tenant
+  const supabase = await createClient()
+  const { data: tenantRaw } = await supabase
+    .from('tenants')
+    .select('name, tagline, address_line1, address_city, contact_phone, contact_email, logo_url, tin, vat_reg_number, is_vat_registered')
+    .eq('id', tenantId)
+    .single()
+  const tenant = tenantRaw as any
 
   const occupant = Array.isArray(inv.occupant) ? inv.occupant[0] : inv.occupant
   const room     = Array.isArray(inv.room)     ? inv.room[0]     : inv.room
   const cat      = Array.isArray(room?.category) ? room?.category[0] : room?.category
-  const payments = inv.booking_payments ?? []
+  const payments = (inv.booking_payments ?? []).filter((p: any) => p.status === 'paid' || p.paid_at)
   const balance  = Math.max(0, inv.final_amount - inv.paid_amount)
 
-  const PAYMENT_BADGE: Record<string, string> = {
-    unpaid:  'bg-danger-subtle text-danger border-danger/20',
-    partial: 'bg-warning-subtle text-warning-fg border-warning/20',
-    paid:    'bg-success-subtle text-success border-success/20',
-  }
+  // Tax breakdown — prefer stored itemised fields; fall back to splitting combined tax_amount
+  const hasItemisedTax = (inv as any).vat_amount > 0 || (inv as any).nhil_amount > 0
+  const vatAmt     = hasItemisedTax ? (inv as any).vat_amount     : splitGhanaTax(inv.tax_amount).vat
+  const nhilAmt    = hasItemisedTax ? (inv as any).nhil_amount    : splitGhanaTax(inv.tax_amount).nhil
+  const getfundAmt = hasItemisedTax ? (inv as any).getfund_amount : splitGhanaTax(inv.tax_amount).getfund
+
+  const invoiceNumber = (inv as any).invoice_number ?? inv.booking_ref
+  const isVatReg      = tenant?.is_vat_registered ?? false
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -61,6 +83,7 @@ export default async function InvoicePage({
           >
             View booking
           </Link>
+          <PrintButton />
           <a
             href={`/api/invoices/${id}/pdf`}
             download
@@ -69,72 +92,68 @@ export default async function InvoicePage({
             <Download className="h-3.5 w-3.5" />
             Download PDF
           </a>
-          <PrintButton />
         </div>
       </div>
 
-      {/* Invoice card — print-friendly */}
-      <div className="rounded-xl border border-border bg-white p-8 shadow-sm print:shadow-none print:border-none">
+      {/* Invoice card */}
+      <div className="rounded-xl border border-border bg-white p-8 shadow-sm print:shadow-none print:border-none print:p-0 print:rounded-none">
 
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-border pb-6">
+        <div className="flex items-start justify-between border-b border-gray-200 pb-6">
           <div>
-            <h1 className="text-2xl font-bold text-text-primary">{tenantName}</h1>
-            <p className="mt-0.5 text-sm text-text-secondary">Official Receipt / Invoice</p>
+            <p className="text-2xl font-bold text-[#1B4F72]">{tenant?.name ?? tenantName}</p>
+            {tenant?.tagline    && <p className="text-sm text-gray-500 mt-0.5">{tenant.tagline}</p>}
+            {tenant?.address_line1 && (
+              <p className="text-sm text-gray-500 mt-1">
+                {[tenant.address_line1, tenant.address_city].filter(Boolean).join(', ')}
+              </p>
+            )}
+            {tenant?.contact_phone && <p className="text-sm text-gray-500">{tenant.contact_phone}</p>}
+            {tenant?.contact_email && <p className="text-sm text-gray-500">{tenant.contact_email}</p>}
+            {tenant?.tin && (
+              <p className="text-xs text-gray-400 mt-1">TIN: {tenant.tin}</p>
+            )}
+            {isVatReg && tenant?.vat_reg_number && (
+              <p className="text-xs text-gray-400">VAT Reg: {tenant.vat_reg_number}</p>
+            )}
           </div>
           <div className="text-right">
-            <p className="text-xs text-text-tertiary uppercase tracking-wide">Invoice</p>
-            <p className="font-mono text-sm font-semibold text-text-primary">{inv.booking_ref}</p>
-            <p className="mt-1 text-xs text-text-secondary">Issued: {formatDate(inv.created_at)}</p>
-            <div className="mt-2">
-              <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${PAYMENT_BADGE[inv.payment_status] ?? 'bg-surface-sunken text-text-secondary border-border'}`}>
-                {inv.payment_status}
-              </span>
-            </div>
+            <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">
+              {isVatReg ? 'VAT Invoice' : 'Invoice'}
+            </p>
+            <p className="font-mono text-sm font-bold text-gray-900 mt-1">{invoiceNumber}</p>
+            <p className="text-xs text-gray-500 mt-1">Issued: {formatDate(inv.created_at)}</p>
+            <span className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${PAYMENT_BADGE[inv.payment_status] ?? 'bg-surface-raised text-text-secondary border-border'}`}>
+              {inv.payment_status}
+            </span>
           </div>
         </div>
 
         {/* Bill to + Room details */}
         <div className="mt-6 grid grid-cols-2 gap-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary mb-2">Bill To</p>
-            <p className="font-semibold text-text-primary">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">Bill To</p>
+            <p className="font-semibold text-gray-900">
               {occupant?.first_name} {occupant?.last_name}
               {occupant?.other_names ? ` ${occupant.other_names}` : ''}
             </p>
-            {occupant?.student_id && (
-              <p className="text-sm text-text-secondary">ID: {occupant.student_id}</p>
-            )}
-            {occupant?.institution && (
-              <p className="text-sm text-text-secondary">{occupant.institution}</p>
-            )}
-            {occupant?.programme && (
-              <p className="text-sm text-text-secondary">{occupant.programme}</p>
-            )}
-            {occupant?.phone && (
-              <p className="text-sm text-text-secondary mt-1">{occupant.phone}</p>
-            )}
-            {occupant?.email && (
-              <p className="text-sm text-text-secondary">{occupant.email}</p>
-            )}
+            {occupant?.student_id  && <p className="text-sm text-gray-500">ID: {occupant.student_id}</p>}
+            {occupant?.institution && <p className="text-sm text-gray-500">{occupant.institution}</p>}
+            {occupant?.programme   && <p className="text-sm text-gray-500">{occupant.programme}</p>}
+            {occupant?.phone       && <p className="text-sm text-gray-500 mt-1">{occupant.phone}</p>}
+            {occupant?.email       && <p className="text-sm text-gray-500">{occupant.email}</p>}
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary mb-2">Room Details</p>
-            <p className="font-semibold text-text-primary">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">Room Details</p>
+            <p className="font-semibold text-gray-900">
               Room {room?.room_number}
               {room?.block ? ` — Block ${room.block}` : ''}
               {room?.floor != null ? `, Floor ${room.floor}` : ''}
             </p>
-            {cat && <p className="text-sm text-text-secondary">{cat.name}</p>}
-            <p className="text-sm text-text-secondary mt-1">
-              Check-in: {formatDate(inv.check_in_date)}
-            </p>
-            <p className="text-sm text-text-secondary">
-              Check-out: {formatDate(inv.check_out_date)}
-            </p>
-            {inv.semester && (
-              <p className="text-sm text-text-secondary">Semester: {inv.semester}</p>
-            )}
+            {cat && <p className="text-sm text-gray-500">{(cat as any).name}</p>}
+            <p className="text-sm text-gray-500 mt-1">Check-in: {formatDate(inv.check_in_date)}</p>
+            <p className="text-sm text-gray-500">Check-out: {formatDate(inv.check_out_date)}</p>
+            {inv.semester && <p className="text-sm text-gray-500">Semester: {inv.semester}</p>}
           </div>
         </div>
 
@@ -142,83 +161,136 @@ export default async function InvoicePage({
         <div className="mt-8">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border">
-                <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Description</th>
-                <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Amount</th>
+              <tr className="border-b border-gray-200">
+                <th className="pb-2 text-left text-[10px] font-semibold uppercase tracking-widest text-gray-400">Description</th>
+                <th className="pb-2 text-right text-[10px] font-semibold uppercase tracking-widest text-gray-400 w-36">Amount</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/50">
+            <tbody className="divide-y divide-gray-100">
+              {/* Accommodation */}
               <tr>
-                <td className="py-3 text-text-primary">
-                  Room accommodation — {cat?.name ?? 'Standard'}
-                  <span className="ml-2 text-xs text-text-secondary">
+                <td className="py-3 text-gray-900">
+                  Room accommodation — {(cat as any)?.name ?? 'Standard'}
+                  <span className="ml-2 text-xs text-gray-400">
                     ({formatDate(inv.check_in_date)} → {formatDate(inv.check_out_date)})
                   </span>
                 </td>
                 <td className="py-3 text-right font-mono">{formatGHS(inv.total_amount)}</td>
               </tr>
+
+              {/* Discount */}
               {inv.discount_amount > 0 && (
                 <tr>
-                  <td className="py-3 text-text-secondary">
-                    Discount
-                    {inv.discount_reason ? ` — ${inv.discount_reason}` : ''}
+                  <td className="py-3 text-gray-500">
+                    Discount{inv.discount_reason ? ` — ${inv.discount_reason}` : ''}
                   </td>
-                  <td className="py-3 text-right font-mono text-success">−{formatGHS(inv.discount_amount)}</td>
-                </tr>
-              )}
-              {inv.tax_amount > 0 && (
-                <tr>
-                  <td className="py-3 text-text-secondary">Tax (VAT/NHIL/GETFund)</td>
-                  <td className="py-3 text-right font-mono">{formatGHS(inv.tax_amount)}</td>
+                  <td className="py-3 text-right font-mono text-green-700">−{formatGHS(inv.discount_amount)}</td>
                 </tr>
               )}
             </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-border">
-                <td className="pt-3 font-bold text-text-primary">Total</td>
-                <td className="pt-3 text-right font-mono font-bold text-text-primary text-base">{formatGHS(inv.final_amount)}</td>
-              </tr>
+          </table>
+        </div>
+
+        {/* Tax breakdown */}
+        {inv.tax_amount > 0 && (
+          <div className="mt-4 ml-auto w-72 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 space-y-1.5 text-sm">
+            <div className="flex justify-between text-gray-500">
+              <span>Subtotal (excl. taxes)</span>
+              <span className="font-mono">{formatGHS(inv.total_amount - inv.discount_amount)}</span>
+            </div>
+            <div className="flex justify-between text-gray-500">
+              <span>VAT (15%)</span>
+              <span className="font-mono">{formatGHS(vatAmt)}</span>
+            </div>
+            <div className="flex justify-between text-gray-500">
+              <span>NHIL (2.5%)</span>
+              <span className="font-mono">{formatGHS(nhilAmt)}</span>
+            </div>
+            <div className="flex justify-between text-gray-500">
+              <span>GETFund (2.5%)</span>
+              <span className="font-mono">{formatGHS(getfundAmt)}</span>
+            </div>
+            <div className="flex justify-between border-t border-gray-200 pt-1.5 font-semibold text-gray-900">
+              <span>Total</span>
+              <span className="font-mono">{formatGHS(inv.final_amount)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* No-tax totals block */}
+        {inv.tax_amount === 0 && (
+          <div className="mt-4 flex justify-end">
+            <table className="text-sm w-64">
+              <tbody>
+                {inv.discount_amount > 0 && (
+                  <tr>
+                    <td className="pr-8 text-gray-500">Subtotal</td>
+                    <td className="text-right font-mono">{formatGHS(inv.total_amount)}</td>
+                  </tr>
+                )}
+                <tr className="border-t border-gray-300">
+                  <td className="pr-8 pt-2 font-bold text-gray-900 text-base">Total</td>
+                  <td className="pt-2 text-right font-mono font-bold text-base">{formatGHS(inv.final_amount)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Paid / Balance */}
+        <div className="mt-3 flex justify-end">
+          <table className="text-sm w-64">
+            <tbody>
               <tr>
-                <td className="pt-1 text-text-secondary">Amount paid</td>
-                <td className="pt-1 text-right font-mono text-success">{formatGHS(inv.paid_amount)}</td>
+                <td className="pr-8 text-green-700">Amount paid</td>
+                <td className="text-right font-mono text-green-700">{formatGHS(inv.paid_amount)}</td>
               </tr>
               {balance > 0 && (
                 <tr>
-                  <td className="pt-1 font-semibold text-danger">Balance due</td>
-                  <td className="pt-1 text-right font-mono font-bold text-danger">{formatGHS(balance)}</td>
+                  <td className="pr-8 font-semibold text-red-600">Balance due</td>
+                  <td className="text-right font-mono font-bold text-red-600">{formatGHS(balance)}</td>
                 </tr>
               )}
-            </tfoot>
+            </tbody>
           </table>
         </div>
 
         {/* Payment history */}
         {payments.length > 0 && (
-          <div className="mt-8 border-t border-border pt-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary mb-3">Payment History</p>
+          <div className="mt-8 border-t border-gray-200 pt-5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-3">Payment History</p>
             <div className="space-y-2">
-              {payments
-                .filter((p) => p.status === 'success')
-                .map((p) => (
-                  <div key={p.id} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-3">
-                      <span className="text-text-secondary">{p.paid_at ? formatDate(p.paid_at) : '—'}</span>
-                      <span className="text-text-primary">{METHOD_LABEL[p.method] ?? p.method}</span>
-                      {p.reference && (
-                        <span className="font-mono text-xs text-text-tertiary">Ref: {p.reference}</span>
-                      )}
-                    </div>
-                    <span className="font-mono font-medium text-success">{formatGHS(p.amount)}</span>
+              {payments.map((p: any) => (
+                <div key={p.id} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-400">{p.paid_at ? formatDate(p.paid_at) : '—'}</span>
+                    <span className="text-gray-700">{METHOD_LABEL[p.method] ?? p.method}</span>
+                    {p.reference && (
+                      <span className="font-mono text-xs text-gray-400">Ref: {p.reference}</span>
+                    )}
                   </div>
-                ))}
+                  <span className="font-mono font-medium text-green-700">{formatGHS(p.amount)}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Footer */}
-        <div className="mt-8 border-t border-border pt-4 text-center text-xs text-text-tertiary">
-          <p>Thank you for choosing {tenantName}.</p>
-          <p className="mt-0.5">This is a computer-generated invoice and does not require a signature.</p>
+        {/* GRA compliance note */}
+        <div className="mt-8 border-t border-gray-100 pt-5 space-y-1 text-center text-xs text-gray-400">
+          {isVatReg ? (
+            <p>
+              VAT/NHIL/GETFund charged at 15% / 2.5% / 2.5% respectively per GRA guidelines.
+              VAT Reg. No. {tenant?.vat_reg_number} · TIN: {tenant?.tin}
+            </p>
+          ) : (
+            <p>
+              This invoice includes NHIL (2.5%) and GETFund (2.5%) levies as required by Ghana law.
+              {tenant?.tin && ` TIN: ${tenant.tin}.`}
+            </p>
+          )}
+          <p>Thank you for choosing {tenant?.name ?? tenantName}.</p>
+          <p>This is a computer-generated document and does not require a signature.</p>
         </div>
       </div>
     </div>

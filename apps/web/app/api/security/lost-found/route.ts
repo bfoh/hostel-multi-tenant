@@ -20,7 +20,7 @@ export async function GET() {
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('lost_found_items')
     .select('*')
     .eq('tenant_id', tenantId)
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: user } = await supabase.auth.getUser()
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('lost_found_items')
     .insert({
       tenant_id:    tenantId,

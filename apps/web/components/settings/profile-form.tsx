@@ -103,7 +103,7 @@ export function ProfileForm({ tenant }: Props) {
         <div className="space-y-1.5">
           <p className="text-sm font-medium text-text-primary">Platform URL</p>
           <div className="flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2 text-sm text-text-tertiary select-all">
-            {tenant.slug}.abrempong.com
+            {tenant.slug}.ghh.com
           </div>
           <p className="text-xs text-text-disabled">Auto-generated subdomain — always active, cannot be changed.</p>
         </div>

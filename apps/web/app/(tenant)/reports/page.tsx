@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   TrendingUp, TrendingDown, Users, BedDouble,
-  AlertTriangle, BarChart3, CreditCard, ArrowUpRight,
+  AlertTriangle, BarChart3, CreditCard, ArrowUpRight, Zap,
 } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
 import {
@@ -62,6 +62,12 @@ const REPORT_TABS = [
   { value: 'occupancy',  label: 'Occupancy' },
   { value: 'overdue',    label: 'Overdue Rent' },
   { value: 'bookings',   label: 'Bookings' },
+  { value: 'revenue_mgmt', label: 'Revenue Mgmt →', href: '/reports/revenue' },
+  { value: 'custom',    label: 'Custom Builder →', href: '/reports/custom' },
+  { value: 'retention', label: 'Retention →',      href: '/reports/retention' },
+  { value: 'export',    label: 'Data Export →',    href: '/reports/export' },
+  { value: 'feedback',  label: 'Feedback →',        href: '/reports/feedback' },
+  { value: 'schedules', label: 'Scheduled →',       href: '/reports/schedules' },
 ]
 
 export default async function ReportsPage({
@@ -157,7 +163,7 @@ export default async function ReportsPage({
         {REPORT_TABS.map((t) => (
           <Link
             key={t.value}
-            href={`/reports?report=${t.value}`}
+            href={(t as any).href ?? `/reports?report=${t.value}`}
             className={`rounded-t-md px-4 py-2 text-sm font-medium transition-colors ${
               report === t.value
                 ? 'border-b-2 border-brand text-brand'

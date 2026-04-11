@@ -1,11 +1,14 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Pencil, Phone, Mail, GraduationCap, MapPin } from 'lucide-react'
+import { ChevronLeft, Pencil, Phone, Mail, GraduationCap, MapPin, BadgeCheck, ShieldX, AlertTriangle } from 'lucide-react'
 
 import { getOccupantById } from '@/lib/data/occupants'
 import { formatGHS, formatDate, initials } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DocumentsCard } from '@/components/occupants/documents-card'
+import { SendCredentialsButton } from '@/components/occupants/send-credentials-button'
+import { createClient } from '@/lib/supabase/server'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -26,6 +29,21 @@ export default async function OccupantDetailPage({ params }: { params: Promise<{
   const occupant = await getOccupantById(id)
 
   if (!occupant) notFound()
+
+  const supabase = await createClient()
+  const { data: documents } = await supabase
+    .from('occupant_documents')
+    .select('*')
+    .eq('occupant_id', id)
+    .order('created_at', { ascending: false })
+
+  const { data: blacklistEntriesRaw } = await supabase
+    .from('occupant_blacklist')
+    .select('id, reason, severity, expires_at, created_at')
+    .eq('occupant_id', id)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+  const blacklistEntries = (blacklistEntriesRaw ?? []) as any[]
 
   const bookings = Array.isArray(occupant.bookings) ? occupant.bookings : []
   const activeBooking = bookings.find((b) => b.status === 'checked_in')
@@ -55,19 +73,36 @@ export default async function OccupantDetailPage({ params }: { params: Promise<{
               <h1 className="text-2xl font-bold text-text-primary">
                 {occupant.first_name} {occupant.other_names ? occupant.other_names + ' ' : ''}{occupant.last_name}
               </h1>
-              <span
-                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${
-                  occupant.status === 'active' ? 'bg-success-subtle text-success border-success/20'
-                  : occupant.status === 'blacklisted' ? 'bg-danger-subtle text-danger border-danger/20'
-                  : 'bg-surface-sunken text-text-secondary border-border'
-                }`}
-              >
-                {occupant.status}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${
+                    occupant.status === 'active' ? 'bg-success-subtle text-success border-success/20'
+                    : occupant.status === 'blacklisted' ? 'bg-danger-subtle text-danger border-danger/20'
+                    : 'bg-surface-sunken text-text-secondary border-border'
+                  }`}
+                >
+                  {occupant.status}
+                </span>
+                {(occupant as any).id_verified && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-success/20 bg-success-subtle px-2 py-0.5 text-xs font-medium text-success">
+                    <BadgeCheck className="h-3.5 w-3.5" /> ID Verified
+                  </span>
+                )}
+                {!(occupant as any).id_verified && (
+                  <Link href="/occupants/id-verification" className="inline-flex items-center gap-1 rounded-full border border-warning/20 bg-warning-subtle px-2 py-0.5 text-xs font-medium text-warning-fg hover:bg-warning/10 transition-colors">
+                    ID unverified
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <SendCredentialsButton
+            occupantId={id}
+            hasEmail={!!(occupant as any).email}
+            hasAccount={!!(occupant as any).user_id}
+          />
           <Link
             href={`/bookings/new?occupant=${id}`}
             className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
@@ -83,6 +118,27 @@ export default async function OccupantDetailPage({ params }: { params: Promise<{
           </Link>
         </div>
       </div>
+
+      {/* ── Blacklist banner ─────────────────────────────────────── */}
+      {blacklistEntries && blacklistEntries.length > 0 && (
+        <div className={`flex items-start gap-3 rounded-xl border p-4 ${blacklistEntries[0].severity === 'banned' ? 'border-danger/30 bg-danger-subtle' : 'border-warning/30 bg-warning-subtle'}`}>
+          {blacklistEntries[0].severity === 'banned'
+            ? <ShieldX className="h-5 w-5 shrink-0 text-danger mt-0.5" />
+            : <AlertTriangle className="h-5 w-5 shrink-0 text-warning mt-0.5" />}
+          <div className="min-w-0 flex-1">
+            <p className={`font-semibold text-sm ${blacklistEntries[0].severity === 'banned' ? 'text-danger' : 'text-warning-fg'}`}>
+              {blacklistEntries[0].severity === 'banned' ? 'Occupant is banned' : 'Occupant has a warning flag'}
+            </p>
+            <p className="text-sm text-text-secondary mt-0.5">{blacklistEntries[0].reason}</p>
+            {blacklistEntries[0].expires_at && (
+              <p className="text-xs text-text-tertiary mt-1">Expires {new Date(blacklistEntries[0].expires_at).toLocaleDateString()}</p>
+            )}
+          </div>
+          <Link href="/security/blacklist" className="shrink-0 text-xs font-medium text-brand hover:underline">
+            Manage
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* ── Profile ──────────────────────────────────────────── */}
@@ -174,8 +230,18 @@ export default async function OccupantDetailPage({ params }: { params: Promise<{
           )}
         </div>
 
-        {/* ── Booking history ──────────────────────────────────── */}
-        <div className="lg:col-span-2">
+        {/* ── Booking history + Documents ──────────────────────── */}
+        <div className="lg:col-span-2 space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Documents</CardTitle></CardHeader>
+            <CardContent className="pt-0">
+              <DocumentsCard
+                occupantId={id}
+                initialDocs={(documents ?? []) as any[]}
+              />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle>Booking History</CardTitle>
@@ -238,7 +304,7 @@ export default async function OccupantDetailPage({ params }: { params: Promise<{
               )}
             </CardContent>
           </Card>
-        </div>
+          </div>
       </div>
     </div>
   )

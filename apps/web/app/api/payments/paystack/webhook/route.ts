@@ -53,5 +53,4 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
-// Paystack requires the raw body for signature verification — disable Next.js body parsing
-export const config = { api: { bodyParser: false } }
+// App Router reads raw body via req.text() / req.arrayBuffer() — no config needed

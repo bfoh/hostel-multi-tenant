@@ -277,27 +277,32 @@ export function OccupantForm({ defaultValues, occupantId, returnTo }: Props) {
         </CardContent>
       </Card>
 
-      {serverError && (
-        <div className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
-          {serverError}
-        </div>
-      )}
+      {/* Spacer so content isn't hidden behind sticky bar */}
+      <div className="h-24" />
 
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex-1 rounded-md border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="flex-1 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-50"
-        >
-          {isSubmitting ? 'Saving…' : occupantId ? 'Save changes' : 'Add occupant'}
-        </button>
+      {/* ── Sticky action bar ─────────────────────────────────────────── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-surface/95 backdrop-blur-sm px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-4xl gap-3">
+          {serverError && (
+            <p className="flex-1 self-center truncate text-xs text-danger">{serverError}</p>
+          )}
+          <div className={`flex gap-3 ${serverError ? 'shrink-0' : 'flex-1'}`}>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex-1 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Saving…' : occupantId ? 'Save changes' : 'Add occupant'}
+            </button>
+          </div>
+        </div>
       </div>
     </form>
   )

@@ -28,9 +28,15 @@ async function getTenant() {
   } | null
 }
 
-export default async function PortalPage() {
+export default async function PortalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pay?: string }>
+}) {
   const tenant = await getTenant()
   if (!tenant) notFound()
+
+  const { pay } = await searchParams
 
   return (
     <OccupantPortal
@@ -41,6 +47,7 @@ export default async function PortalPage() {
         brandColor: tenant.primary_color ?? '#2563EB',
         phone:      tenant.contact_phone,
       }}
+      payStatus={pay as 'success' | 'failed' | 'error' | undefined}
     />
   )
 }

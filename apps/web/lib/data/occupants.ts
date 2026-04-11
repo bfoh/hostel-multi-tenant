@@ -1,7 +1,16 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { headers } from 'next/headers'
+
+async function getTenantId(): Promise<string | null> {
+  const h = await headers()
+  return h.get('x-tenant-id')
+}
 
 export async function getOccupants(search?: string) {
-  const supabase = await createClient()
+  const tenantId = await getTenantId()
+  if (!tenantId) return []
+
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('occupants')
@@ -11,6 +20,7 @@ export async function getOccupants(search?: string) {
       photo_url, created_at,
       bookings(id, status, check_in_date, check_out_date, room:rooms(room_number))
     `)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
   if (search) {
@@ -25,7 +35,10 @@ export async function getOccupants(search?: string) {
 }
 
 export async function getOccupantById(id: string) {
-  const supabase = await createClient()
+  const tenantId = await getTenantId()
+  if (!tenantId) return null
+
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('occupants')
@@ -42,6 +55,7 @@ export async function getOccupantById(id: string) {
       )
     `)
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (error) return null

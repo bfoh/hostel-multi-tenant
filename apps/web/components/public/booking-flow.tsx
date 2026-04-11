@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Check, Users, Wifi, Wind, Droplets, Zap, Shield, Car, Utensils, Dumbbell, BookOpen, Share2, Phone } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, Users, Wifi, Wind, Droplets, Zap, Shield, Car, Utensils, Dumbbell, BookOpen, Share2, Phone, Flame, Clock } from 'lucide-react'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -64,6 +64,46 @@ const TYPE_LABEL: Record<string, string> = {
   dormitory: 'Dormitory',
 }
 
+/* ── Scarcity indicator ────────────────────────────────────────────────── */
+
+function scarcityLevel(available: number, total: number): 'none' | 'low' | 'critical' | 'sold' {
+  if (available === 0) return 'sold'
+  if (available <= 2) return 'critical'
+  if (total > 0 && available / total <= 0.3) return 'low'
+  return 'none'
+}
+
+function ScarcityBadge({ available, total }: { available: number; total: number }) {
+  const level = scarcityLevel(available, total)
+
+  if (level === 'sold') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+        <Clock className="h-3 w-3" /> Sold out
+      </span>
+    )
+  }
+  if (level === 'critical') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2.5 py-1 text-xs font-bold text-white animate-pulse">
+        <Flame className="h-3 w-3" /> Only {available} left!
+      </span>
+    )
+  }
+  if (level === 'low') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+        <Flame className="h-3 w-3" /> Almost full — {available} left
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+      {available} available
+    </span>
+  )
+}
+
 /* ── Step 1 — Room Picker ──────────────────────────────────────────────── */
 
 function RoomPicker({
@@ -86,22 +126,30 @@ function RoomPicker({
               sold ? 'opacity-60' : 'hover:shadow-md hover:-translate-y-0.5'
             }`}
           >
-            {/* Image / placeholder */}
-            {cat.image_urls.length > 0 ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={cat.image_urls[0]}
-                alt={cat.name}
-                className="h-44 w-full object-cover"
-              />
-            ) : (
-              <div
-                className="h-44 w-full flex items-center justify-center text-white/60 text-5xl font-bold"
-                style={{ background: `linear-gradient(135deg, ${brandColor}33, ${brandColor}55)` }}
-              >
-                {cat.name[0]}
-              </div>
-            )}
+            {/* Image / placeholder with scarcity overlay */}
+            <div className="relative">
+              {cat.image_urls.length > 0 ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={cat.image_urls[0]}
+                  alt={cat.name}
+                  className="h-44 w-full object-cover"
+                />
+              ) : (
+                <div
+                  className="h-44 w-full flex items-center justify-center text-white/60 text-5xl font-bold"
+                  style={{ background: `linear-gradient(135deg, ${brandColor}33, ${brandColor}55)` }}
+                >
+                  {cat.name[0]}
+                </div>
+              )}
+              {/* Scarcity badge overlay */}
+              {scarcityLevel(cat.available, cat.total) !== 'none' && (
+                <div className="absolute top-2 left-2">
+                  <ScarcityBadge available={cat.available} total={cat.total} />
+                </div>
+              )}
+            </div>
 
             <div className="flex flex-1 flex-col p-5 gap-3">
               {/* Name + type */}
@@ -149,24 +197,22 @@ function RoomPicker({
               <div className="flex-1" />
 
               {/* Price + CTA */}
-              <div className="flex items-end justify-between pt-2 border-t border-gray-100">
-                <div>
-                  <p className="text-xl font-bold text-gray-900">{formatGHS(cat.base_rate)}</p>
-                  <p className="text-xs text-gray-400">{RATE_LABEL[cat.rate_unit] ?? `/ ${cat.rate_unit}`}</p>
+              <div className="pt-2 border-t border-gray-100 space-y-2">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">{formatGHS(cat.base_rate)}</p>
+                    <p className="text-xs text-gray-400">{RATE_LABEL[cat.rate_unit] ?? `/ ${cat.rate_unit}`}</p>
+                  </div>
+                  <ScarcityBadge available={cat.available} total={cat.total} />
                 </div>
-                <div className="text-right">
-                  <p className={`text-xs font-medium mb-1 ${sold ? 'text-red-500' : 'text-green-600'}`}>
-                    {sold ? 'Sold out' : `${cat.available} available`}
-                  </p>
-                  <button
-                    disabled={sold}
-                    onClick={() => onSelect(cat)}
-                    className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
-                    style={{ backgroundColor: brandColor }}
-                  >
-                    Book now
-                  </button>
-                </div>
+                <button
+                  disabled={sold}
+                  onClick={() => onSelect(cat)}
+                  className="w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{ backgroundColor: brandColor }}
+                >
+                  {sold ? 'Unavailable' : 'Book now'}
+                </button>
               </div>
             </div>
           </div>

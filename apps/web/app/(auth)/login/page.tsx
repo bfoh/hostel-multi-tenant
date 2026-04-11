@@ -23,6 +23,8 @@ export default function LoginPage() {
   const resetSuccess = searchParams.get('reset') === 'success'
 
   const [serverError, setServerError] = useState<string | null>(null)
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false)
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle')
 
   const {
     register,
@@ -40,16 +42,32 @@ export default function LoginPage() {
     })
 
     if (error) {
-      setServerError(
-        error.message === 'Invalid login credentials'
-          ? 'Incorrect email or password.'
-          : error.message
-      )
+      const isUnconfirmed = error.message === 'Email not confirmed' || error.code === 'email_not_confirmed'
+      if (isUnconfirmed) {
+        setEmailNotConfirmed(true)
+        setServerError('Your email address has not been confirmed yet. Check your inbox and click the confirmation link.')
+      } else {
+        setEmailNotConfirmed(false)
+        setServerError(
+          error.message === 'Invalid login credentials' || error.code === 'invalid_credentials'
+            ? 'Incorrect email or password.'
+            : error.message
+        )
+      }
       return
     }
 
     router.push(next)
     router.refresh()
+  }
+
+  async function resendConfirmation() {
+    const email = (document.getElementById('email') as HTMLInputElement)?.value
+    if (!email) return
+    setResendState('sending')
+    const supabase = createClient()
+    await supabase.auth.resend({ type: 'signup', email })
+    setResendState('sent')
   }
 
   return (
@@ -110,8 +128,18 @@ export default function LoginPage() {
         </div>
 
         {serverError && (
-          <div className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
-            {serverError}
+          <div className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger space-y-1.5">
+            <p>{serverError}</p>
+            {emailNotConfirmed && (
+              <button
+                type="button"
+                onClick={resendConfirmation}
+                disabled={resendState !== 'idle'}
+                className="text-xs font-semibold underline underline-offset-2 disabled:opacity-60"
+              >
+                {resendState === 'sending' ? 'Sending…' : resendState === 'sent' ? 'Sent! Check your inbox.' : 'Resend confirmation email'}
+              </button>
+            )}
           </div>
         )}
 
@@ -130,6 +158,14 @@ export default function LoginPage() {
           Start free trial
         </Link>
       </p>
+
+      {/* ── Resident / student hint ───────────────────────────── */}
+      <div className="rounded-lg border border-border bg-surface-raised px-4 py-3.5 space-y-1">
+        <p className="text-xs font-semibold text-text-primary">🎓 Student or resident?</p>
+        <p className="text-xs text-text-secondary leading-relaxed">
+          Use this same page to access your resident portal. Your login credentials were sent by your hostel management — just sign in and you&apos;ll be taken to your portal automatically.
+        </p>
+      </div>
     </div>
   )
 }

@@ -1,15 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
   first_name:        z.string().min(1).optional(),
   last_name:         z.string().min(1).optional(),
   other_names:       z.string().optional().nullable(),
+  email:             z.string().email().optional().nullable(),
   date_of_birth:     z.string().optional().nullable(),
-  gender:            z.enum(['male', 'female', 'prefer_not_to_say']).optional().nullable(),
+  gender:            z.preprocess(v => v === '' ? null : v, z.enum(['male', 'female', 'prefer_not_to_say']).optional().nullable()),
   phone:             z.string().optional().nullable(),
+  employee_id:       z.string().optional().nullable(),
   employment_type:   z.enum(['full_time', 'part_time', 'contract', 'casual']).optional(),
   job_title:         z.string().optional().nullable(),
   department:        z.string().optional().nullable(),
@@ -39,11 +41,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const headersList = await headers()
-  const tenantId = headersList.get('x-tenant-id')
+  const tenantId = await getServerTenantId()
+  
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('staff_profiles')
     .select(`*, member:tenant_members(role, is_active),
@@ -63,15 +65,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const headersList = await headers()
-  const tenantId = headersList.get('x-tenant-id')
+  const tenantId = await getServerTenantId()
+  
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { error } = await supabase
     .from('staff_profiles')
     .update(parsed.data)
@@ -79,5 +81,47 @@ export async function PATCH(
     .eq('tenant_id', tenantId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params
+  const tenantId = await getServerTenantId()
+  
+  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
+
+  const supabase = createAdminClient()
+
+  // Get member_id before deleting so we can clean up tenant_members too
+  const { data: profile } = await supabase
+    .from('staff_profiles')
+    .select('member_id, user_id')
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // Delete staff profile (cascades attendance_records, leave_requests, payroll_items)
+  const { error } = await supabase
+    .from('staff_profiles')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Remove from tenant_members so they lose access
+  if (profile.member_id) {
+    await supabase
+      .from('tenant_members')
+      .delete()
+      .eq('id', profile.member_id)
+      .eq('tenant_id', tenantId)
+  }
+
   return NextResponse.json({ ok: true })
 }

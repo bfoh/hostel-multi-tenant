@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-import type { Database } from '@abrempong/types'
+import type { Database } from '@gh-hostels/types'
 
 /**
  * Admin Supabase client using the service role key.

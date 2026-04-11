@@ -1,304 +1,375 @@
 import {
-  Document, Page, Text, View, StyleSheet, Font, Image,
+  Document, Page, Text, View, StyleSheet, Image,
 } from '@react-pdf/renderer'
+import { splitGhanaTax } from '@/lib/tax/ghana'
 
 /* ── Styles ─────────────────────────────────────────────────────────── */
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   page: {
-    fontFamily:    'Helvetica',
-    fontSize:      10,
-    color:         '#1a202c',
-    paddingTop:    48,
-    paddingBottom: 48,
-    paddingHorizontal: 52,
+    fontFamily: 'Helvetica',
+    fontSize: 10,
+    color: '#1a202c',
+    paddingTop: 44,
+    paddingBottom: 56,
+    paddingHorizontal: 50,
     backgroundColor: '#ffffff',
   },
 
   /* Header */
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 },
-  logo:   { width: 56, height: 56, objectFit: 'contain' },
-  logoPlaceholder: {
-    width: 56, height: 56,
-    backgroundColor: '#1B4F72',
-    borderRadius: 8,
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
+  logo: { width: 52, height: 52, objectFit: 'contain' },
+  logoBox: {
+    width: 52, height: 52,
+    backgroundColor: '#1B4F72', borderRadius: 8,
     justifyContent: 'center', alignItems: 'center',
   },
-  logoLetter: { color: '#ffffff', fontSize: 24, fontFamily: 'Helvetica-Bold' },
-  hostelName: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: '#1B4F72' },
-  hostelSub:  { fontSize: 9, color: '#718096', marginTop: 2 },
-  invoiceTag: { textAlign: 'right' },
-  invoiceLabel: { fontSize: 9, color: '#718096', textTransform: 'uppercase', letterSpacing: 1 },
-  invoiceRef:   { fontSize: 14, fontFamily: 'Helvetica-Bold', marginTop: 2 },
-  invoiceDate:  { fontSize: 9, color: '#718096', marginTop: 2 },
+  logoLetter: { color: '#fff', fontSize: 22, fontFamily: 'Helvetica-Bold' },
+  hostelName: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: '#1B4F72', marginTop: 8 },
+  hostelSub: { fontSize: 8.5, color: '#718096', marginTop: 1.5 },
+  tinText: { fontSize: 8, color: '#a0aec0', marginTop: 3 },
 
-  /* Status badge */
-  badge: { marginTop: 6, alignSelf: 'flex-end', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  invoiceTag: { textAlign: 'right' },
+  invoiceType: { fontSize: 8, color: '#718096', textTransform: 'uppercase', letterSpacing: 1.2 },
+  invoiceRef: { fontSize: 14, fontFamily: 'Helvetica-Bold', marginTop: 2 },
+  invoiceDate: { fontSize: 8.5, color: '#718096', marginTop: 2 },
+  badge: { marginTop: 6, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-end' },
   badgeText: { fontSize: 8, fontFamily: 'Helvetica-Bold', textTransform: 'capitalize' },
 
-  divider: { borderBottom: '1pt solid #e2e8f0', marginVertical: 20 },
+  divider: { borderBottom: '1pt solid #e2e8f0', marginVertical: 18 },
+  thinDivider: { borderBottom: '0.5pt solid #f0f0f0', marginVertical: 4 },
 
-  /* Bill-to / Room grid */
+  /* Bill to / Room grid */
   grid2: { flexDirection: 'row', gap: 24 },
-  col:   { flex: 1 },
-  sectionLabel: { fontSize: 8, color: '#718096', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 },
-  boldText: { fontFamily: 'Helvetica-Bold', fontSize: 10 },
-  mutedText: { color: '#718096', marginTop: 1 },
+  col: { flex: 1 },
+  sectionLabel: {
+    fontSize: 7.5, color: '#a0aec0',
+    textTransform: 'uppercase', letterSpacing: 1,
+    marginBottom: 5,
+  },
+  bold: { fontFamily: 'Helvetica-Bold', fontSize: 10 },
+  muted: { color: '#718096', fontSize: 9, marginTop: 1.5 },
 
   /* Line items */
-  table: { marginTop: 28 },
-  tableHeader: { flexDirection: 'row', borderBottom: '1pt solid #e2e8f0', paddingBottom: 6, marginBottom: 4 },
-  tableHeaderCell: { fontSize: 8, color: '#718096', textTransform: 'uppercase', letterSpacing: 0.8 },
+  table: { marginTop: 24 },
+  tableHeader: { flexDirection: 'row', borderBottom: '1pt solid #e2e8f0', paddingBottom: 5, marginBottom: 2 },
+  tableHeaderCell: { fontSize: 7.5, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 0.8 },
   tableRow: { flexDirection: 'row', paddingVertical: 8, borderBottom: '0.5pt solid #f0f0f0' },
-  colDesc:   { flex: 1 },
-  colAmount: { width: 80, textAlign: 'right' },
+  colDesc: { flex: 1 },
+  colAmt: { width: 88, textAlign: 'right' },
+
+  /* Tax breakdown box */
+  taxBox: {
+    marginTop: 16,
+    marginLeft: 'auto',
+    width: 240,
+    backgroundColor: '#f7fafc',
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderLeft: '3pt solid #e2e8f0',
+  },
+  taxRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 },
+  taxLabel: { color: '#718096', fontSize: 9 },
+  taxValue: { fontSize: 9 },
+  taxSeparator: { borderBottom: '0.5pt solid #e2e8f0', marginVertical: 4 },
 
   /* Totals */
-  totals: { marginTop: 12, alignItems: 'flex-end' },
-  totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 3 },
-  totalLabel: { width: 140, textAlign: 'right', color: '#718096' },
-  totalValue: { width: 80, textAlign: 'right' },
-  grandTotalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6, paddingTop: 6, borderTop: '1.5pt solid #1a202c' },
-  grandTotalLabel: { width: 140, textAlign: 'right', fontFamily: 'Helvetica-Bold', fontSize: 11 },
-  grandTotalValue: { width: 80, textAlign: 'right', fontFamily: 'Helvetica-Bold', fontSize: 11 },
-  balanceLabel: { width: 140, textAlign: 'right', fontFamily: 'Helvetica-Bold', color: '#e53e3e' },
-  balanceValue: { width: 80, textAlign: 'right', fontFamily: 'Helvetica-Bold', color: '#e53e3e' },
+  totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 4 },
+  totalLabel: { width: 150, textAlign: 'right', color: '#718096' },
+  totalValue: { width: 88, textAlign: 'right' },
+  grandLabel: { width: 150, textAlign: 'right', fontFamily: 'Helvetica-Bold', fontSize: 11 },
+  grandValue: { width: 88, textAlign: 'right', fontFamily: 'Helvetica-Bold', fontSize: 11 },
+  balanceLabel: { width: 150, textAlign: 'right', fontFamily: 'Helvetica-Bold', color: '#e53e3e' },
+  balanceValue: { width: 88, textAlign: 'right', fontFamily: 'Helvetica-Bold', color: '#e53e3e' },
 
   /* Payment history */
-  paymentSection: { marginTop: 28, paddingTop: 16, borderTop: '1pt solid #e2e8f0' },
-  paymentRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  pmtSection: { marginTop: 24, paddingTop: 14, borderTop: '1pt solid #e2e8f0' },
+  pmtRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5, fontSize: 9 },
+
+  /* GRA compliance */
+  graBox: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#f7fafc',
+    borderRadius: 6,
+    borderLeft: '2pt solid #bee3f8',
+  },
+  graText: { fontSize: 8, color: '#4a5568', lineHeight: 1.6 },
 
   /* Footer */
-  footer: { position: 'absolute', bottom: 32, left: 52, right: 52, textAlign: 'center' },
-  footerText: { fontSize: 8, color: '#a0aec0' },
+  footer: {
+    position: 'absolute', bottom: 28, left: 50, right: 50,
+    flexDirection: 'row', justifyContent: 'space-between',
+    fontSize: 7.5, color: '#a0aec0',
+    borderTop: '0.5pt solid #e2e8f0', paddingTop: 6,
+  },
 })
 
-/* ── Helpers ─────────────────────────────────────────────────────────── */
+/* ── Helpers ──────────────────────────────────────────────────────────── */
 
-function formatGHS(pesewas: number) {
-  return `GH₵ ${(pesewas / 100).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function ghs(p: number) {
+  return `GH₵ ${(p / 100).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-function formatDate(s: string) {
-  return new Date(s).toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' })
+function dt(d: string) {
+  return new Date(d).toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-const METHOD_LABEL: Record<string, string> = {
+const METHOD: Record<string, string> = {
   momo_mtn: 'MTN MoMo', momo_vodafone: 'Vodafone Cash',
   momo_airteltigo: 'AirtelTigo Money', cash: 'Cash',
   bank_transfer: 'Bank Transfer', card: 'Card', cheque: 'Cheque',
 }
 
-const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
+const BADGE: Record<string, { bg: string; text: string }> = {
   unpaid:  { bg: '#FFF5F5', text: '#e53e3e' },
   partial: { bg: '#FFFAF0', text: '#d69e2e' },
   paid:    { bg: '#F0FFF4', text: '#276749' },
   refunded:{ bg: '#F7FAFC', text: '#718096' },
 }
 
-/* ── Props ────────────────────────────────────────────────────────────── */
+/* ── Props ───────────────────────────────────────────────────────────── */
 
 export interface InvoicePDFProps {
   inv: {
-    booking_ref: string
-    created_at: string
+    booking_ref:    string
+    invoice_number: string | null
+    created_at:     string
     payment_status: string
-    check_in_date: string
+    check_in_date:  string
     check_out_date: string
-    semester: string | null
-    total_amount: number
-    discount_amount: number
-    discount_reason: string | null
-    tax_amount: number
-    final_amount: number
-    paid_amount: number
+    semester:       string | null
+    total_amount:   number
+    discount_amount:number
+    discount_reason:string | null
+    tax_amount:     number
+    vat_amount:     number
+    nhil_amount:    number
+    getfund_amount: number
+    final_amount:   number
+    paid_amount:    number
   }
   occupant: {
-    first_name: string
-    last_name: string
-    other_names?: string | null
-    student_id?: string | null
-    institution?: string | null
-    programme?: string | null
-    phone?: string | null
-    email?: string | null
+    first_name: string; last_name: string; other_names?: string | null
+    student_id?: string | null; institution?: string | null
+    programme?: string | null; phone?: string | null; email?: string | null
   } | null
-  room: {
-    room_number: string
-    block?: string | null
-    floor?: number | null
-  } | null
-  categoryName: string
-  payments: {
-    id: string
-    amount: number
-    method: string
-    reference?: string | null
-    paid_at?: string | null
-  }[]
-  hostelName: string
+  room: { room_number: string; block?: string | null; floor?: number | null } | null
+  categoryName:  string
+  payments: { id: string; amount: number; method: string; reference?: string | null; paid_at?: string | null }[]
+  hostelName:    string
   hostelTagline?: string | null
   hostelAddress?: string | null
-  hostelPhone?: string | null
-  hostelEmail?: string | null
-  logoUrl?: string | null
+  hostelPhone?:   string | null
+  hostelEmail?:   string | null
+  logoUrl?:       string | null
+  tin?:           string | null
+  vatRegNumber?:  string | null
+  isVatRegistered?: boolean
 }
 
-/* ── PDF Document ─────────────────────────────────────────────────────── */
+/* ── Document ─────────────────────────────────────────────────────────── */
 
 export function InvoicePDF({
   inv, occupant, room, categoryName, payments,
   hostelName, hostelTagline, hostelAddress, hostelPhone, hostelEmail, logoUrl,
+  tin, vatRegNumber, isVatRegistered,
 }: InvoicePDFProps) {
-  const balance  = Math.max(0, inv.final_amount - inv.paid_amount)
-  const badge    = BADGE_COLORS[inv.payment_status] ?? { bg: '#F7FAFC', text: '#718096' }
-  const successPayments = payments.filter((p) => p.paid_at)
+  const balance         = Math.max(0, inv.final_amount - inv.paid_amount)
+  const badge           = BADGE[inv.payment_status] ?? { bg: '#F7FAFC', text: '#718096' }
+  const paidPayments    = payments.filter((p) => p.paid_at)
+  const invoiceNumber   = inv.invoice_number ?? inv.booking_ref
+  const hasTax          = inv.tax_amount > 0
+
+  // Resolve itemised tax — prefer stored fields, fall back to split
+  const vatAmt     = inv.vat_amount     > 0 ? inv.vat_amount     : splitGhanaTax(inv.tax_amount).vat
+  const nhilAmt    = inv.nhil_amount    > 0 ? inv.nhil_amount    : splitGhanaTax(inv.tax_amount).nhil
+  const getfundAmt = inv.getfund_amount > 0 ? inv.getfund_amount : splitGhanaTax(inv.tax_amount).getfund
+  const subtotal   = inv.total_amount - inv.discount_amount
 
   return (
-    <Document title={`Invoice ${inv.booking_ref}`} author={hostelName}>
-      <Page size="A4" style={styles.page}>
+    <Document title={`Invoice ${invoiceNumber}`} author={hostelName}>
+      <Page size="A4" style={s.page}>
 
         {/* ── Header ── */}
-        <View style={styles.header}>
+        <View style={s.header}>
           <View>
-            {/* Logo or initial */}
             {logoUrl ? (
-              <Image src={logoUrl} style={styles.logo} />
+              <Image src={logoUrl} style={s.logo} />
             ) : (
-              <View style={styles.logoPlaceholder}>
-                <Text style={styles.logoLetter}>{hostelName.charAt(0)}</Text>
+              <View style={s.logoBox}>
+                <Text style={s.logoLetter}>{hostelName.charAt(0)}</Text>
               </View>
             )}
-            <Text style={[styles.hostelName, { marginTop: 8 }]}>{hostelName}</Text>
-            {hostelTagline  && <Text style={styles.hostelSub}>{hostelTagline}</Text>}
-            {hostelAddress  && <Text style={styles.hostelSub}>{hostelAddress}</Text>}
-            {hostelPhone    && <Text style={styles.hostelSub}>{hostelPhone}</Text>}
-            {hostelEmail    && <Text style={styles.hostelSub}>{hostelEmail}</Text>}
+            <Text style={s.hostelName}>{hostelName}</Text>
+            {hostelTagline  && <Text style={s.hostelSub}>{hostelTagline}</Text>}
+            {hostelAddress  && <Text style={s.hostelSub}>{hostelAddress}</Text>}
+            {hostelPhone    && <Text style={s.hostelSub}>{hostelPhone}</Text>}
+            {hostelEmail    && <Text style={s.hostelSub}>{hostelEmail}</Text>}
+            {tin && <Text style={s.tinText}>TIN: {tin}</Text>}
+            {isVatRegistered && vatRegNumber && (
+              <Text style={s.tinText}>VAT Reg: {vatRegNumber}</Text>
+            )}
           </View>
 
-          <View style={styles.invoiceTag}>
-            <Text style={styles.invoiceLabel}>Invoice</Text>
-            <Text style={styles.invoiceRef}>{inv.booking_ref}</Text>
-            <Text style={styles.invoiceDate}>Issued: {formatDate(inv.created_at)}</Text>
-            <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-              <Text style={[styles.badgeText, { color: badge.text }]}>{inv.payment_status}</Text>
+          <View style={s.invoiceTag}>
+            <Text style={s.invoiceType}>{isVatRegistered ? 'VAT Invoice' : 'Invoice'}</Text>
+            <Text style={s.invoiceRef}>{invoiceNumber}</Text>
+            <Text style={s.invoiceDate}>Issued: {dt(inv.created_at)}</Text>
+            <View style={[s.badge, { backgroundColor: badge.bg }]}>
+              <Text style={[s.badgeText, { color: badge.text }]}>{inv.payment_status}</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.divider} />
+        <View style={s.divider} />
 
-        {/* ── Bill to + Room details ── */}
-        <View style={styles.grid2}>
-          <View style={styles.col}>
-            <Text style={styles.sectionLabel}>Bill To</Text>
-            <Text style={styles.boldText}>
+        {/* ── Bill to / Room grid ── */}
+        <View style={s.grid2}>
+          <View style={s.col}>
+            <Text style={s.sectionLabel}>Bill To</Text>
+            <Text style={s.bold}>
               {occupant?.first_name} {occupant?.last_name}
               {occupant?.other_names ? ` ${occupant.other_names}` : ''}
             </Text>
-            {occupant?.student_id  && <Text style={styles.mutedText}>ID: {occupant.student_id}</Text>}
-            {occupant?.institution && <Text style={styles.mutedText}>{occupant.institution}</Text>}
-            {occupant?.programme   && <Text style={styles.mutedText}>{occupant.programme}</Text>}
-            {occupant?.phone       && <Text style={styles.mutedText}>{occupant.phone}</Text>}
-            {occupant?.email       && <Text style={styles.mutedText}>{occupant.email}</Text>}
+            {occupant?.student_id  && <Text style={s.muted}>ID: {occupant.student_id}</Text>}
+            {occupant?.institution && <Text style={s.muted}>{occupant.institution}</Text>}
+            {occupant?.programme   && <Text style={s.muted}>{occupant.programme}</Text>}
+            {occupant?.phone       && <Text style={[s.muted, { marginTop: 4 }]}>{occupant.phone}</Text>}
+            {occupant?.email       && <Text style={s.muted}>{occupant.email}</Text>}
           </View>
 
-          <View style={styles.col}>
-            <Text style={styles.sectionLabel}>Room Details</Text>
-            <Text style={styles.boldText}>
+          <View style={s.col}>
+            <Text style={s.sectionLabel}>Room Details</Text>
+            <Text style={s.bold}>
               Room {room?.room_number}
               {room?.block ? ` — Block ${room.block}` : ''}
               {room?.floor != null ? `, Floor ${room.floor}` : ''}
             </Text>
-            <Text style={styles.mutedText}>{categoryName}</Text>
-            <Text style={[styles.mutedText, { marginTop: 4 }]}>
-              Check-in:  {formatDate(inv.check_in_date)}
-            </Text>
-            <Text style={styles.mutedText}>
-              Check-out: {formatDate(inv.check_out_date)}
-            </Text>
-            {inv.semester && <Text style={styles.mutedText}>Semester: {inv.semester}</Text>}
+            <Text style={s.muted}>{categoryName}</Text>
+            <Text style={[s.muted, { marginTop: 4 }]}>Check-in:  {dt(inv.check_in_date)}</Text>
+            <Text style={s.muted}>Check-out: {dt(inv.check_out_date)}</Text>
+            {inv.semester && <Text style={s.muted}>Semester: {inv.semester}</Text>}
           </View>
         </View>
 
         {/* ── Line items ── */}
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, styles.colDesc]}>Description</Text>
-            <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
+        <View style={s.table}>
+          <View style={s.tableHeader}>
+            <Text style={[s.tableHeaderCell, s.colDesc]}>Description</Text>
+            <Text style={[s.tableHeaderCell, s.colAmt]}>Amount (GHS)</Text>
           </View>
 
-          {/* Accommodation row */}
-          <View style={styles.tableRow}>
-            <View style={styles.colDesc}>
+          <View style={s.tableRow}>
+            <View style={s.colDesc}>
               <Text>Room accommodation — {categoryName}</Text>
-              <Text style={{ fontSize: 8, color: '#718096', marginTop: 2 }}>
-                {formatDate(inv.check_in_date)} → {formatDate(inv.check_out_date)}
+              <Text style={{ fontSize: 8, color: '#a0aec0', marginTop: 2 }}>
+                {dt(inv.check_in_date)} – {dt(inv.check_out_date)}
               </Text>
             </View>
-            <Text style={styles.colAmount}>{formatGHS(inv.total_amount)}</Text>
+            <Text style={s.colAmt}>{ghs(inv.total_amount)}</Text>
           </View>
 
-          {/* Discount */}
           {inv.discount_amount > 0 && (
-            <View style={styles.tableRow}>
-              <Text style={[styles.colDesc, { color: '#718096' }]}>
+            <View style={s.tableRow}>
+              <Text style={[s.colDesc, { color: '#718096' }]}>
                 Discount{inv.discount_reason ? ` — ${inv.discount_reason}` : ''}
               </Text>
-              <Text style={[styles.colAmount, { color: '#276749' }]}>−{formatGHS(inv.discount_amount)}</Text>
-            </View>
-          )}
-
-          {/* Tax */}
-          {inv.tax_amount > 0 && (
-            <View style={styles.tableRow}>
-              <Text style={[styles.colDesc, { color: '#718096' }]}>Tax (VAT/NHIL/GETFund)</Text>
-              <Text style={styles.colAmount}>{formatGHS(inv.tax_amount)}</Text>
+              <Text style={[s.colAmt, { color: '#276749' }]}>−{ghs(inv.discount_amount)}</Text>
             </View>
           )}
         </View>
 
-        {/* ── Totals ── */}
-        <View style={styles.totals}>
-          <View style={styles.grandTotalRow}>
-            <Text style={styles.grandTotalLabel}>Total</Text>
-            <Text style={styles.grandTotalValue}>{formatGHS(inv.final_amount)}</Text>
+        {/* ── Tax breakdown box (GRA-style) ── */}
+        {hasTax ? (
+          <View style={s.taxBox}>
+            <View style={s.taxRow}>
+              <Text style={s.taxLabel}>Subtotal (excl. taxes)</Text>
+              <Text style={s.taxValue}>{ghs(subtotal)}</Text>
+            </View>
+            <View style={s.taxSeparator} />
+            <View style={s.taxRow}>
+              <Text style={s.taxLabel}>VAT (15%)</Text>
+              <Text style={s.taxValue}>{ghs(vatAmt)}</Text>
+            </View>
+            <View style={s.taxRow}>
+              <Text style={s.taxLabel}>NHIL (2.5%)</Text>
+              <Text style={s.taxValue}>{ghs(nhilAmt)}</Text>
+            </View>
+            <View style={s.taxRow}>
+              <Text style={s.taxLabel}>GETFund (2.5%)</Text>
+              <Text style={s.taxValue}>{ghs(getfundAmt)}</Text>
+            </View>
+            <View style={s.taxSeparator} />
+            <View style={s.taxRow}>
+              <Text style={[s.taxLabel, { fontFamily: 'Helvetica-Bold', color: '#1a202c' }]}>Total</Text>
+              <Text style={[s.taxValue, { fontFamily: 'Helvetica-Bold' }]}>{ghs(inv.final_amount)}</Text>
+            </View>
           </View>
-          <View style={styles.totalRow}>
-            <Text style={[styles.totalLabel, { color: '#276749' }]}>Amount paid</Text>
-            <Text style={[styles.totalValue, { color: '#276749' }]}>{formatGHS(inv.paid_amount)}</Text>
+        ) : (
+          /* No-tax simple total */
+          <View style={{ marginTop: 12 }}>
+            <View style={[s.totalRow, { borderTop: '1.5pt solid #1a202c', paddingTop: 6, marginTop: 6 }]}>
+              <Text style={s.grandLabel}>Total</Text>
+              <Text style={s.grandValue}>{ghs(inv.final_amount)}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Paid / Balance */}
+        <View style={{ marginTop: 6 }}>
+          <View style={s.totalRow}>
+            <Text style={[s.totalLabel, { color: '#276749' }]}>Amount paid</Text>
+            <Text style={[s.totalValue, { color: '#276749' }]}>{ghs(inv.paid_amount)}</Text>
           </View>
           {balance > 0 && (
-            <View style={styles.totalRow}>
-              <Text style={styles.balanceLabel}>Balance due</Text>
-              <Text style={styles.balanceValue}>{formatGHS(balance)}</Text>
+            <View style={s.totalRow}>
+              <Text style={s.balanceLabel}>Balance due</Text>
+              <Text style={s.balanceValue}>{ghs(balance)}</Text>
             </View>
           )}
         </View>
 
         {/* ── Payment history ── */}
-        {successPayments.length > 0 && (
-          <View style={styles.paymentSection}>
-            <Text style={styles.sectionLabel}>Payment History</Text>
-            {successPayments.map((p) => (
-              <View key={p.id} style={styles.paymentRow}>
-                <Text style={{ color: '#718096' }}>{p.paid_at ? formatDate(p.paid_at) : '—'}</Text>
-                <Text>{METHOD_LABEL[p.method] ?? p.method}</Text>
-                {p.reference && <Text style={{ color: '#718096', fontSize: 8 }}>Ref: {p.reference}</Text>}
-                <Text style={{ fontFamily: 'Helvetica-Bold', color: '#276749' }}>{formatGHS(p.amount)}</Text>
+        {paidPayments.length > 0 && (
+          <View style={s.pmtSection}>
+            <Text style={s.sectionLabel}>Payment History</Text>
+            {paidPayments.map((p) => (
+              <View key={p.id} style={s.pmtRow}>
+                <Text style={{ color: '#718096' }}>{p.paid_at ? dt(p.paid_at) : '—'}</Text>
+                <Text>{METHOD[p.method] ?? p.method}</Text>
+                {p.reference
+                  ? <Text style={{ color: '#a0aec0', fontSize: 8 }}>Ref: {p.reference}</Text>
+                  : <Text> </Text>}
+                <Text style={{ fontFamily: 'Helvetica-Bold', color: '#276749' }}>{ghs(p.amount)}</Text>
               </View>
             ))}
           </View>
         )}
 
+        {/* ── GRA compliance notice ── */}
+        <View style={s.graBox}>
+          {isVatRegistered ? (
+            <Text style={s.graText}>
+              VAT, NHIL and GETFund are charged at 15%, 2.5% and 2.5% respectively on the taxable supply
+              value, as required by the Value Added Tax Act 2013 (Act 870), the NHIL Act 2003 and the
+              Ghana Education Trust Fund Act 2000. VAT Reg. No. {vatRegNumber ?? '—'} · TIN: {tin ?? '—'}.
+            </Text>
+          ) : (
+            <Text style={s.graText}>
+              NHIL (2.5%) and GETFund (2.5%) levies are included where applicable in accordance with
+              Ghana Revenue Authority guidelines. {tin ? `TIN: ${tin}.` : ''}
+              This is a computer-generated document and does not require a signature.
+            </Text>
+          )}
+        </View>
+
         {/* ── Footer ── */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Thank you for choosing {hostelName}.
-          </Text>
-          <Text style={[styles.footerText, { marginTop: 2 }]}>
-            This is a computer-generated invoice and does not require a signature.
-          </Text>
+        <View style={s.footer} fixed>
+          <Text>{hostelName} — Confidential</Text>
+          <Text>{invoiceNumber}</Text>
+          <Text>Thank you for your payment.</Text>
         </View>
 
       </Page>

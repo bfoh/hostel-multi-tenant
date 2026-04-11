@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 
+import { createAdminClient } from '@/lib/supabase/admin'
 import { OccupancyCard } from '@/components/dashboard/occupancy-card'
 import { RevenueCard } from '@/components/dashboard/revenue-card'
 import { BookingsCard } from '@/components/dashboard/bookings-card'
@@ -18,6 +20,20 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const headersList = await headers()
   const tenantName = headersList.get('x-tenant-name') ?? 'Your Hostel'
+  const tenantId   = headersList.get('x-tenant-id')
+
+  // Redirect new owners to onboarding if they haven't completed it yet
+  if (tenantId) {
+    const admin = createAdminClient()
+    const { data: tenant } = await admin
+      .from('tenants')
+      .select('onboarding_completed')
+      .eq('id', tenantId)
+      .single()
+    if (tenant && !(tenant as any).onboarding_completed) {
+      redirect('/onboarding')
+    }
+  }
 
   return (
     <div className="space-y-6">

@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, Users, Search } from 'lucide-react'
+import { Plus, Users, Search, Pencil } from 'lucide-react'
 
 import { getOccupants } from '@/lib/data/occupants'
 import { initials } from '@/lib/utils'
+import { DeleteOccupantButton } from '@/components/occupants/delete-occupant-button'
 
 export const metadata: Metadata = { title: 'Occupants' }
 
@@ -26,20 +27,28 @@ export default async function OccupantsPage({
   return (
     <div className="space-y-6">
       {/* ── Header ───────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Occupants</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
             {occupants.length} resident{occupants.length !== 1 ? 's' : ''} found
           </p>
         </div>
-        <Link
-          href="/occupants/new"
-          className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add occupant
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/occupants/id-verification"
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors whitespace-nowrap"
+          >
+            ID Verification
+          </Link>
+          <Link
+            href="/occupants/new"
+            className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity whitespace-nowrap shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Add occupant
+          </Link>
+        </div>
       </div>
 
       {/* ── Search ───────────────────────────────────────────────── */}
@@ -71,7 +80,7 @@ export default async function OccupantsPage({
           {!q && (
             <Link
               href="/occupants/new"
-              className="mt-2 flex items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+              className="mt-2 flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity shadow-sm"
             >
               <Plus className="h-4 w-4" />
               Add first occupant
@@ -88,6 +97,7 @@ export default async function OccupantsPage({
                 <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary sm:table-cell">Institution</th>
                 <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary lg:table-cell">Status</th>
                 <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary xl:table-cell">Room</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -136,6 +146,21 @@ export default async function OccupantsPage({
                     </td>
                     <td className="hidden px-4 py-3 xl:table-cell text-sm text-text-secondary">
                       {room ? `Room ${room.room_number}` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/occupants/${o.id}/edit`}
+                          title="Edit occupant"
+                          className="rounded p-1.5 text-text-disabled hover:text-brand hover:bg-brand/10 transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Link>
+                        <DeleteOccupantButton
+                          occupantId={o.id}
+                          occupantName={`${o.first_name} ${o.last_name}`}
+                        />
+                      </div>
                     </td>
                   </tr>
                 )

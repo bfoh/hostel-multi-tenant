@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function getRooms() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('rooms')
@@ -27,7 +27,7 @@ export async function getRooms() {
 }
 
 export async function getRoomById(id: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('rooms')
@@ -54,7 +54,7 @@ export async function getRoomById(id: string) {
 }
 
 export async function getRoomCategories() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('room_categories')
@@ -67,7 +67,7 @@ export async function getRoomCategories() {
 }
 
 export async function getRoomsWithCurrentBooking() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
 
   const { data, error } = await supabase

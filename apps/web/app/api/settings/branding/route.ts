@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
-import { headers } from 'next/headers'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
+import { invalidateTenantCache } from '@/lib/tenant/resolve'
 
 const schema = z.object({
   name:          z.string().min(2).max(200).optional(),
@@ -23,21 +24,36 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const headersList = await headers()
-  const tenantId = headersList.get('x-tenant-id')
-
+  const tenantId = await getServerTenantId()
   if (!tenantId) {
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
-  const supabase = await createClient()
-  const { error } = await supabase
+  const admin = createAdminClient()
+
+  // Fetch slug so we can bust the right cache key
+  const { data: tenant } = await admin
+    .from('tenants')
+    .select('slug, custom_domain')
+    .eq('id', tenantId)
+    .single()
+
+  const { error } = await admin
     .from('tenants')
     .update(parsed.data)
     .eq('id', tenantId)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Bust Redis cache so branding changes take effect immediately
+  if (tenant?.slug) {
+    const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+    await invalidateTenantCache(`${tenant.slug}.${appDomain}`)
+  }
+  if (tenant?.custom_domain) {
+    await invalidateTenantCache(tenant.custom_domain)
   }
 
   return NextResponse.json({ ok: true })

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBookingConfirmation } from '@/lib/sms'
+import { sendEmail, bookingConfirmationHtml } from '@/lib/email'
 
 const schema = z.object({
   category_id: z.string().uuid(),
@@ -126,15 +127,45 @@ export async function POST(
     .update({ status: 'occupied' })
     .eq('id', availableRoom.id)
 
-  // Send SMS confirmation (non-blocking)
+  // Fetch tenant branding for email
+  const { data: tenantFull } = await supabase
+    .from('tenants')
+    .select('primary_color, contact_phone')
+    .eq('id', tenant.id)
+    .single()
+
+  const primaryColor = tenantFull?.primary_color ?? '#2563EB'
+
+  // SMS confirmation (non-blocking)
   sendBookingConfirmation({
     phone:       d.phone,
     firstName:   d.first_name,
     bookingRef:  booking.booking_ref,
-    roomNumber:  availableRoom.id, // will be resolved to room_number in SMS lib
+    roomNumber:  availableRoom.id,
     checkInDate: d.check_in_date,
     hostelName:  tenant.name,
   }).catch(() => {})
+
+  // Email confirmation (non-blocking, only if email provided)
+  if (d.email) {
+    const formatDate = (s: string) => new Date(s + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
+    const formatGHS  = (p: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(p / 100)
+    sendEmail({
+      to:      d.email,
+      subject: `Booking received — ${tenant.name}`,
+      html:    bookingConfirmationHtml({
+        hostelName:   tenant.name,
+        primaryColor,
+        guestName:    `${d.first_name} ${d.last_name}`,
+        bookingRef:   booking.booking_ref,
+        roomName:     category.name,
+        checkInDate:  formatDate(d.check_in_date),
+        checkOutDate: formatDate(d.check_out_date),
+        amountGHS:    formatGHS(category.base_rate),
+        contactPhone: tenantFull?.contact_phone ?? undefined,
+      }),
+    }).catch(() => {})
+  }
 
   return NextResponse.json({
     booking_ref:   booking.booking_ref,

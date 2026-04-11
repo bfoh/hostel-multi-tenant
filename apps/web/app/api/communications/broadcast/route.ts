@@ -1,0 +1,150 @@
+import { NextResponse, type NextRequest } from 'next/server'
+import { headers } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail, baseTemplate, button } from '@/lib/email'
+import { sendPushToTenant } from '@/lib/push'
+
+/**
+ * POST /api/communications/broadcast
+ * Send a message to a filtered set of occupants via SMS, email, and/or push.
+ */
+export async function POST(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+
+  const headersList = await headers()
+  const tenantId = headersList.get('x-tenant-id')
+  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
+
+  const body = await req.json()
+  const { target, channels, subject, message } = body as {
+    target: 'all' | 'checked_in' | 'confirmed' | 'overdue_balance'
+    channels: ('sms' | 'email' | 'push')[]
+    subject: string
+    message: string
+  }
+
+  if (!message?.trim()) return NextResponse.json({ error: 'message is required' }, { status: 400 })
+  if (!channels?.length) return NextResponse.json({ error: 'at least one channel required' }, { status: 400 })
+
+  // Resolve occupants based on target
+  let bookingQuery = supabase
+    .from('bookings')
+    .select('occupant_id, payment_status, paid_amount, final_amount, occupants(first_name, last_name, phone, email)')
+    .eq('tenant_id', tenantId)
+
+  if (target === 'checked_in') {
+    bookingQuery = bookingQuery.eq('status', 'checked_in')
+  } else if (target === 'confirmed') {
+    bookingQuery = bookingQuery.in('status', ['confirmed', 'checked_in'])
+  } else if (target === 'overdue_balance') {
+    bookingQuery = bookingQuery
+      .in('status', ['confirmed', 'checked_in'])
+      .eq('payment_status', 'unpaid')
+  } else {
+    // all — active occupants
+    bookingQuery = bookingQuery.in('status', ['pending_payment', 'confirmed', 'checked_in'])
+  }
+
+  const { data: bookings } = await bookingQuery.limit(500)
+
+  // Deduplicate by occupant_id
+  const seen = new Set<string>()
+  const targets: { name: string; phone: string | null; email: string | null }[] = []
+  for (const b of bookings ?? []) {
+    if (!b.occupant_id || seen.has(b.occupant_id)) continue
+    seen.add(b.occupant_id)
+    const occ = Array.isArray(b.occupants) ? b.occupants[0] : b.occupants
+    if (occ) {
+      targets.push({
+        name:  `${occ.first_name} ${occ.last_name}`,
+        phone: occ.phone ?? null,
+        email: occ.email ?? null,
+      })
+    }
+  }
+
+  if (targets.length === 0) {
+    return NextResponse.json({ error: 'No occupants match the target filter', sent: 0 }, { status: 400 })
+  }
+
+  // Fetch tenant info
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, primary_color, slug')
+    .eq('id', tenantId)
+    .single()
+
+  const results = { sms: 0, email: 0, push: 0, errors: [] as string[] }
+
+  // ── SMS via Arkesel ────────────────────────────────────────────────────────
+  if (channels.includes('sms') && process.env.ARKESEL_API_KEY) {
+    const phones = targets.map((t) => t.phone).filter(Boolean) as string[]
+    if (phones.length > 0) {
+      try {
+        const res = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
+          method: 'POST',
+          headers: {
+            'api-key': process.env.ARKESEL_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sender: tenant?.name?.slice(0, 11) ?? 'HMS',
+            message,
+            recipients: phones,
+          }),
+        })
+        if (res.ok) results.sms = phones.length
+        else results.errors.push(`SMS: ${(await res.json())?.message ?? 'failed'}`)
+      } catch (e) {
+        results.errors.push(`SMS: ${e instanceof Error ? e.message : 'failed'}`)
+      }
+    }
+  }
+
+  // ── Email via Resend ───────────────────────────────────────────────────────
+  if (channels.includes('email') && process.env.RESEND_API_KEY) {
+    const emailTargets = targets.filter((t) => t.email)
+    for (const t of emailTargets) {
+      const html = baseTemplate(
+        tenant?.name ?? 'Hostel',
+        tenant?.primary_color ?? '',
+        `<p style="font-size:15px;color:#374151;line-height:1.6;">${message.replace(/\n/g, '<br>')}</p>`
+      )
+      const sent = await sendEmail({
+        to: t.email!,
+        subject: subject || `Message from ${tenant?.name ?? 'your hostel'}`,
+        html,
+      })
+      results.email++
+    }
+  }
+
+  // ── Push ───────────────────────────────────────────────────────────────────
+  if (channels.includes('push')) {
+    try {
+      await sendPushToTenant(tenantId, {
+        title: subject || tenant?.name || 'Hostel',
+        body:  message,
+        url:   '/',
+      })
+      results.push = targets.length
+    } catch (e) {
+      results.errors.push(`Push: ${e instanceof Error ? e.message : 'failed'}`)
+    }
+  }
+
+  // Log the broadcast
+  await (supabase.from('sms_blasts') as any).insert({
+    tenant_id:       tenantId,
+    message,
+    recipient_filter: target,
+    sent_count:      Math.max(results.sms, results.email, results.push),
+    status:          'sent',
+    sent_by:         user.id,
+  }).select().maybeSingle()
+
+  return NextResponse.json({ ok: true, recipients: targets.length, results })
+}

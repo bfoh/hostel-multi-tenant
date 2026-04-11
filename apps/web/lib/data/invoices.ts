@@ -1,11 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const INVOICE_QUERY = `
   id, booking_ref, status, payment_status,
   check_in_date, check_out_date, created_at,
   rate_per_unit, rate_unit, total_amount,
   discount_amount, discount_reason,
-  tax_amount, final_amount, paid_amount,
+  tax_amount, vat_amount, nhil_amount, getfund_amount,
+  final_amount, paid_amount,
   semester, academic_year, source, notes,
   occupant:occupants(
     id, first_name, last_name, other_names, phone, email,
@@ -21,7 +22,7 @@ const INVOICE_QUERY = `
 `
 
 export async function getInvoices(filter?: { payment_status?: string; search?: string }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('bookings')
@@ -35,12 +36,12 @@ export async function getInvoices(filter?: { payment_status?: string; search?: s
   }
 
   const { data, error } = await query
-  if (error) return []
-  return data ?? []
+  if (error) return [] as any[]
+  return (data ?? []) as any[]
 }
 
 export async function getInvoiceById(bookingId: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('bookings')
@@ -49,7 +50,7 @@ export async function getInvoiceById(bookingId: string) {
     .single()
 
   if (error) return null
-  return data
+  return data as any
 }
 
 export type Invoice = NonNullable<Awaited<ReturnType<typeof getInvoiceById>>>

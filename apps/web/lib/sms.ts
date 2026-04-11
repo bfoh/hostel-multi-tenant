@@ -32,7 +32,7 @@ async function send(to: string | string[], message: string): Promise<void> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sender:     process.env.ARKESEL_SENDER_ID || 'AbrempHMS',
+      sender:     process.env.ARKESEL_SENDER_ID || 'GH Hostels',
       message,
       recipients,
     }),
@@ -104,5 +104,25 @@ export async function sendCheckInReminder(params: {
   const msg = `Check-in reminder — ${params.hostelName}\n` +
     `Hi ${params.firstName}, your check-in is tomorrow (${params.checkInDate}).\n` +
     `Room: ${params.roomNumber}. See you then!`
+  await send(params.phone, msg)
+}
+
+export async function sendPortalCredentials(params: {
+  phone: string
+  firstName: string
+  email: string
+  password: string
+  loginUrl: string
+  changePasswordUrl: string
+  hostelName: string
+}) {
+  const msg = `${params.hostelName} — Resident Portal Access\n` +
+    `Hi ${params.firstName}!\n` +
+    `Your portal account has been created.\n\n` +
+    `Login: ${params.loginUrl}\n` +
+    `Email: ${params.email}\n` +
+    `Password: ${params.password}\n\n` +
+    `IMPORTANT: Change your password after logging in:\n` +
+    `${params.changePasswordUrl}`
   await send(params.phone, msg)
 }
