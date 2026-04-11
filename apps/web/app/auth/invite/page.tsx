@@ -48,20 +48,37 @@ export default function InvitePage() {
         // so the JWT hook couldn't inject tenant_id/tenant_name at that time.
         // Refreshing the session triggers the hook again now that the occupant
         // is linked — the new JWT will carry the correct tenant claims.
-        await supabase.auth.refreshSession()
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession()
 
         const portalType = session.user.user_metadata?.portal_type
 
-        // Use a hard navigation (not client-side router.replace) so the browser
-        // sends a fresh HTTP request. This ensures the middleware reads the
-        // newly-set session cookies with the refreshed JWT claims, rather than
-        // a cached client-side render that may have stale context.
+        // Resolve the correct base URL for this tenant so the user lands on
+        // their hostel's domain, not the generic platform domain.
+        // JWT claims (injected by the custom_access_token_hook) carry tenant_slug.
+        const claims     = refreshed?.access_token
+          ? JSON.parse(atob(refreshed.access_token.split('.')[1]))
+          : {}
+        const tenantSlug = claims?.tenant_slug as string | undefined
+        const appDomain  = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+        const currentHost = window.location.hostname
+
+        // Only redirect cross-domain if we're on the platform root and have a slug
+        const needsCrossDomainRedirect =
+          tenantSlug &&
+          (currentHost === appDomain || currentHost === `app.${appDomain}` || currentHost === 'gh-hostels.com')
+
+        const tenantBase = needsCrossDomainRedirect
+          ? `https://${tenantSlug}.${appDomain}`
+          : ''   // empty = use relative URLs (already on correct domain)
+
+        // Use a hard navigation so the browser sends a fresh HTTP request,
+        // ensuring middleware reads the newly-set session cookies.
         if (portalType === 'occupant') {
-          window.location.href = '/occupant-portal/settings/update-password'
+          window.location.href = `${tenantBase}/occupant-portal/settings/update-password`
         } else if (portalType === 'staff') {
-          window.location.href = '/staff-portal'
+          window.location.href = `${tenantBase}/staff-portal`
         } else {
-          window.location.href = '/dashboard'
+          window.location.href = `${tenantBase}/dashboard`
         }
       })
   }, [router])
