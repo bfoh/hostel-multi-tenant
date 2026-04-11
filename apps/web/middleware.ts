@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { resolveTenant } from '@/lib/tenant/resolve'
 
-const BYPASS_PATHS = ['/widget', '/api/webhooks', '/_next', '/favicon.ico', '/robots.txt', '/sitemap.xml']
+const BYPASS_PATHS = ['/widget', '/api/webhooks', '/_next', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/api/debug-env']
 const NO_AUTH_PATHS = ['/book', '/portal', '/api/public', '/api/widget']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']
 const PORTAL_PATHS  = ['/staff-portal', '/occupant-portal']
