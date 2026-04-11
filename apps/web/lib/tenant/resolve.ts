@@ -29,7 +29,7 @@ function getRedis(): Redis | null {
   return redis
 }
 
-const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'ghh.com'
+const APP_DOMAIN = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
 const CACHE_TTL = 300 // 5 minutes
 
 /**

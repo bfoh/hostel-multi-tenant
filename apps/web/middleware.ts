@@ -196,7 +196,7 @@ export async function middleware(request: NextRequest) {
   // tenant subdomain so the app always runs at slug.gh-hostels.com.
   // Never fires on localhost — subdomains don't resolve in local browsers.
   {
-    const appDomain    = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+    const appDomain    = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
     const hostBase     = hostname.split(':')[0].toLowerCase()
     const isLocalDev   = hostBase === 'localhost' || hostBase === '127.0.0.1'
     const onRootDomain = !isLocalDev && (hostBase === appDomain || hostBase === `app.${appDomain}`)
@@ -267,7 +267,7 @@ function decodeJwtPayload(token: string): Record<string, string> | null {
 }
 
 function isAppDomain(hostname: string): boolean {
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+  const appDomain = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
   const h = hostname.split(':')[0].toLowerCase()
   return h === appDomain || h === `app.${appDomain}` || h === 'localhost'
 }
