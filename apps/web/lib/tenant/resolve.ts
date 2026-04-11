@@ -99,7 +99,8 @@ function normaliseHostname(hostname: string): string {
  */
 async function fetchTenantFromDB(host: string): Promise<TenantRecord | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  // Use service role key to bypass RLS — tenant resolution is server-side only
+  const supabaseAnonKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
   // Determine whether this is a platform subdomain or a custom domain
   const subdomainMatch = host.match(new RegExp(`^([^.]+)\\.${escapeRegExp(APP_DOMAIN)}$`))
