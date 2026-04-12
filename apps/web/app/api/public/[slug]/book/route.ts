@@ -98,6 +98,12 @@ export async function POST(
     occupantId = newOccupant.id
   }
 
+  // Generate booking reference: e.g. ABR-2026-047382
+  const prefix    = slug.replace(/-/g, '').slice(0, 3).toUpperCase()
+  const year      = new Date().getFullYear()
+  const suffix    = Math.floor(100000 + Math.random() * 900000)
+  const bookingRef = `${prefix}-${year}-${suffix}`
+
   // Create booking
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
@@ -105,6 +111,7 @@ export async function POST(
       tenant_id:      tenant.id,
       occupant_id:    occupantId,
       room_id:        availableRoom.id,
+      booking_ref:    bookingRef,
       check_in_date:  d.check_in_date,
       check_out_date: d.check_out_date,
       rate_per_unit:  category.base_rate,
