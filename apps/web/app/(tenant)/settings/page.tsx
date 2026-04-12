@@ -101,25 +101,6 @@ export default async function SettingsPage({
                   </p>
                 </div>
 
-                {/* Storage setup notice */}
-                <div className="rounded-lg border border-info/20 bg-info-subtle px-4 py-3 text-xs text-info">
-                  <strong>Logo upload requires Supabase Storage.</strong> Run this in your Supabase SQL editor to enable it:
-                  <pre className="mt-2 overflow-x-auto rounded bg-white/50 p-2 font-mono text-[11px] text-text-primary">
-{`insert into storage.buckets (id, name, public)
-values ('tenant-logos', 'tenant-logos', true)
-on conflict do nothing;
-
-create policy "tenant logo upload"
-  on storage.objects for insert
-  with check (bucket_id = 'tenant-logos'
-    and auth.role() = 'authenticated');
-
-create policy "tenant logo read"
-  on storage.objects for select
-  using (bucket_id = 'tenant-logos');`}
-                  </pre>
-                </div>
-
                 <BrandingForm tenant={tenant} />
               </section>
             )}

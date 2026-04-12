@@ -2,10 +2,10 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm, type Resolver } from 'react-hook-form'
+import { useForm, Controller, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Upload, X, Loader2 } from 'lucide-react'
+import { Upload, X, Loader2, Eye } from 'lucide-react'
 
 const schema = z.object({
   primary_color: z.string().optional(),
@@ -40,15 +40,18 @@ export function BrandingForm({ tenant }: Props) {
   const [logoError, setLogoError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const { register, handleSubmit, formState: { errors, isSubmitting, isDirty } } = useForm<FormValues>({
+  const { control, register, handleSubmit, watch, formState: { errors, isSubmitting, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
     defaultValues: {
-      primary_color: tenant.primary_color ?? '#1B4F72',
+      primary_color: tenant.primary_color ?? '#159d82',
       accent_color:  tenant.accent_color  ?? '#F39C12',
       currency:      tenant.currency,
       timezone:      tenant.timezone,
     },
   })
+
+  const primaryColor = watch('primary_color') ?? '#159d82'
+  const accentColor  = watch('accent_color')  ?? '#F39C12'
 
   async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -69,7 +72,6 @@ export function BrandingForm({ tenant }: Props) {
       router.refresh()
     }
     setLogoUploading(false)
-    // Reset file input
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -107,11 +109,11 @@ export function BrandingForm({ tenant }: Props) {
       <div className="space-y-2">
         <p className="text-sm font-medium text-text-primary">Hostel logo</p>
         <div className="flex items-center gap-4">
-          {/* Preview */}
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-sunken">
             {logoUploading ? (
               <Loader2 className="h-5 w-5 animate-spin text-text-tertiary" />
             ) : logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={logoUrl} alt="Logo" className="h-full w-full object-contain p-1" />
             ) : (
               <span className="text-xl font-bold text-text-disabled">
@@ -155,42 +157,94 @@ export function BrandingForm({ tenant }: Props) {
 
       {/* Brand colours */}
       <div className="grid grid-cols-2 gap-4">
+        {/* Primary colour */}
         <div className="space-y-1.5">
-          <label htmlFor="primary_color" className="text-sm font-medium text-text-primary">
-            Primary colour
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              id="primary_color"
-              type="color"
-              {...register('primary_color')}
-              className="h-9 w-9 cursor-pointer rounded border border-border p-0.5"
-            />
-            <input
-              type="text"
-              {...register('primary_color')}
-              placeholder="#1B4F72"
-              className="input-base flex-1 font-mono text-sm"
-            />
-          </div>
+          <label className="text-sm font-medium text-text-primary">Primary colour</label>
+          <Controller
+            control={control}
+            name="primary_color"
+            render={({ field }) => (
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={field.value ?? '#159d82'}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className="h-9 w-9 cursor-pointer rounded border border-border p-0.5"
+                />
+                <input
+                  type="text"
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  placeholder="#159d82"
+                  className="input-base flex-1 font-mono text-sm"
+                />
+              </div>
+            )}
+          />
         </div>
+
+        {/* Accent colour */}
         <div className="space-y-1.5">
-          <label htmlFor="accent_color" className="text-sm font-medium text-text-primary">
-            Accent colour
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              id="accent_color"
-              type="color"
-              {...register('accent_color')}
-              className="h-9 w-9 cursor-pointer rounded border border-border p-0.5"
-            />
-            <input
-              type="text"
-              {...register('accent_color')}
-              placeholder="#F39C12"
-              className="input-base flex-1 font-mono text-sm"
-            />
+          <label className="text-sm font-medium text-text-primary">Accent colour</label>
+          <Controller
+            control={control}
+            name="accent_color"
+            render={({ field }) => (
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={field.value ?? '#F39C12'}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className="h-9 w-9 cursor-pointer rounded border border-border p-0.5"
+                />
+                <input
+                  type="text"
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  placeholder="#F39C12"
+                  className="input-base flex-1 font-mono text-sm"
+                />
+              </div>
+            )}
+          />
+        </div>
+      </div>
+
+      {/* Live preview */}
+      <div className="rounded-xl border border-border overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-border bg-surface-sunken px-3 py-2">
+          <Eye className="h-3.5 w-3.5 text-text-tertiary" />
+          <span className="text-xs font-medium text-text-secondary">Live preview</span>
+        </div>
+        <div className="p-4" style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}CC 100%)` }}>
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 text-base font-bold text-white"
+            >
+              {logoUrl
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={logoUrl} alt="" className="h-full w-full rounded-lg object-contain p-0.5" />
+                : tenant.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">{tenant.name}</p>
+              <p className="text-xs text-white/70">Book your room online</p>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              style={{ backgroundColor: accentColor }}
+              className="rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm"
+            >
+              Book now
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white"
+            >
+              Learn more
+            </button>
           </div>
         </div>
       </div>
@@ -218,11 +272,11 @@ export function BrandingForm({ tenant }: Props) {
       </div>
 
       {serverError && <div className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">{serverError}</div>}
-      {success    && <div className="rounded-md bg-success-subtle px-3 py-2 text-sm text-success">Branding saved.</div>}
+      {success    && <div className="rounded-md bg-success-subtle px-3 py-2 text-sm text-success">Branding saved successfully.</div>}
 
       <button
         type="submit"
-        disabled={isSubmitting || !isDirty}
+        disabled={isSubmitting}
         className="rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-50"
       >
         {isSubmitting ? 'Saving…' : 'Save branding'}
