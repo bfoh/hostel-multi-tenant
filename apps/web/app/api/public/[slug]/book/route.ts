@@ -113,7 +113,7 @@ export async function POST(
       paid_amount:    0,
       payment_status: 'unpaid',
       status:         'pending_payment',
-      source:         'online',
+      source:         'website',
       notes:          d.notes,
     })
     .select('id, booking_ref')
