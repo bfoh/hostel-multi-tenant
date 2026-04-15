@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 const ALLOWED_STATUSES = ['pending_payment', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show']
 
@@ -9,13 +9,10 @@ const ALLOWED_STATUSES = ['pending_payment', 'confirmed', 'checked_in', 'checked
  * Body: { ids: string[], action: 'set_status' | 'mark_paid', value?: string }
  */
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const headersList = await headers()
-  const tenantId = headersList.get('x-tenant-id')
-  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
+  const supabase = createAdminClient()
 
   const body = await req.json()
   const { ids, action, value } = body as { ids: string[]; action: string; value?: string }
@@ -46,6 +43,17 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase
       .from('bookings')
       .update({ payment_status: 'paid' })
+      .in('id', ids)
+      .eq('tenant_id', tenantId)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, affected: ids.length })
+  }
+
+  if (action === 'delete') {
+    const { error } = await supabase
+      .from('bookings')
+      .delete()
       .in('id', ids)
       .eq('tenant_id', tenantId)
 
