@@ -272,109 +272,70 @@
   }
 
   /* ── Sidebar icon micro-animations (Resend-style) ──────────── */
+  /* Transition-based: smooth in + smooth out. No one-shot keyframes. */
 
-  /* Bounce — gentle Y-axis hop */
-  @keyframes sb-bounce {
-    0%, 100% { transform: translateY(0); }
-    40%      { transform: translateY(-3px); }
-    60%      { transform: translateY(-1px); }
+  /* Base transition on all sidebar icons */
+  .sb-anim-bounce .sb-icon,
+  .sb-anim-shake .sb-icon,
+  .sb-anim-spin .sb-icon,
+  .sb-anim-pulse .sb-icon,
+  .sb-anim-swing .sb-icon,
+  .sb-anim-ring .sb-icon,
+  .sb-anim-slide .sb-icon,
+  .sb-anim-flip .sb-icon,
+  .sb-anim-tilt .sb-icon,
+  .sb-anim-pop .sb-icon {
+    transition: transform 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
+
+  /* Bounce — subtle lift */
   .sb-anim-bounce:hover .sb-icon {
-    animation: sb-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transform: translateY(-2px);
   }
 
-  /* Shake — horizontal wiggle (messages, comms) */
-  @keyframes sb-shake {
-    0%, 100% { transform: translateX(0); }
-    20%      { transform: translateX(-2px) rotate(-3deg); }
-    40%      { transform: translateX(2px) rotate(3deg); }
-    60%      { transform: translateX(-1px) rotate(-1deg); }
-    80%      { transform: translateX(1px) rotate(1deg); }
-  }
+  /* Shake — slight horizontal nudge + tilt */
   .sb-anim-shake:hover .sb-icon {
-    animation: sb-shake 0.5s ease-in-out forwards;
+    transform: translateX(-1.5px) rotate(-4deg);
   }
 
-  /* Spin — partial rotation (settings, cogs) */
-  @keyframes sb-spin {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(90deg); }
-  }
+  /* Spin — partial rotation */
   .sb-anim-spin:hover .sb-icon {
-    animation: sb-spin 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transform: rotate(60deg);
   }
 
-  /* Pulse — scale throb (dashboard, charts) */
-  @keyframes sb-pulse {
-    0%, 100% { transform: scale(1); }
-    50%      { transform: scale(1.2); }
-  }
+  /* Pulse — gentle scale up */
   .sb-anim-pulse:hover .sb-icon {
-    animation: sb-pulse 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transform: scale(1.15);
   }
 
-  /* Swing — pendulum (wrench, tools) */
-  @keyframes sb-swing {
-    0%   { transform: rotate(0deg); }
-    25%  { transform: rotate(12deg); }
-    50%  { transform: rotate(-8deg); }
-    75%  { transform: rotate(4deg); }
-    100% { transform: rotate(0deg); }
-  }
+  /* Swing — slight clockwise lean */
   .sb-anim-swing:hover .sb-icon {
-    animation: sb-swing 0.5s ease-in-out forwards;
+    transform: rotate(12deg);
   }
 
-  /* Ring — bell ring animation */
-  @keyframes sb-ring {
-    0%   { transform: rotate(0deg); }
-    15%  { transform: rotate(14deg); }
-    30%  { transform: rotate(-12deg); }
-    45%  { transform: rotate(8deg); }
-    60%  { transform: rotate(-4deg); }
-    75%  { transform: rotate(2deg); }
-    100% { transform: rotate(0deg); }
-  }
+  /* Ring — tilt + slight bounce */
   .sb-anim-ring:hover .sb-icon {
-    animation: sb-ring 0.6s ease-in-out forwards;
+    transform: rotate(-12deg) translateY(-1px);
   }
 
-  /* Slide — shift right & back (lists, arrows) */
-  @keyframes sb-slide {
-    0%, 100% { transform: translateX(0); }
-    50%      { transform: translateX(3px); }
-  }
+  /* Slide — nudge right */
   .sb-anim-slide:hover .sb-icon {
-    animation: sb-slide 0.35s ease-in-out forwards;
+    transform: translateX(2.5px);
   }
 
-  /* Flip — Y-axis flip (cards, bookings) */
-  @keyframes sb-flip {
-    0%   { transform: rotateY(0deg); }
-    100% { transform: rotateY(180deg); }
-  }
+  /* Flip — subtle Y-axis perspective tilt */
   .sb-anim-flip:hover .sb-icon {
-    animation: sb-flip 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transform: rotateY(20deg) scale(1.05);
   }
 
-  /* Tilt — lean to side (buildings, packages) */
-  @keyframes sb-tilt {
-    0%, 100% { transform: rotate(0deg); }
-    30%      { transform: rotate(-8deg); }
-    70%      { transform: rotate(4deg); }
-  }
+  /* Tilt — lean to side */
   .sb-anim-tilt:hover .sb-icon {
-    animation: sb-tilt 0.4s ease-in-out forwards;
+    transform: rotate(-6deg) scale(1.05);
   }
 
-  /* Pop — quick scale pop (sparkles, AI) */
-  @keyframes sb-pop {
-    0%   { transform: scale(1); }
-    30%  { transform: scale(0.85); }
-    100% { transform: scale(1.15); }
-  }
+  /* Pop — scale up with slight lift */
   .sb-anim-pop:hover .sb-icon {
-    animation: sb-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transform: scale(1.18) translateY(-1px);
   }
 }
 
