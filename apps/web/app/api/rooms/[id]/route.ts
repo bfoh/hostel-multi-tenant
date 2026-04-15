@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
   room_number: z.string().min(1).max(20).optional(),
@@ -22,11 +23,17 @@ export async function PUT(
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const supabase = await createClient()
+  const tenantId = await getServerTenantId()
+  if (!tenantId) {
+    return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+  }
+
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('rooms')
     .update(parsed.data)
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .select('id')
     .single()
 
@@ -45,13 +52,37 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { error } = await supabase.from('rooms').delete().eq('id', id)
+  const tenantId = await getServerTenantId()
+  if (!tenantId) {
+    return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+  }
+
+  const supabase = createAdminClient()
+
+  // Block delete if room has active booking
+  const { count } = await supabase
+    .from('bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('room_id', id)
+    .in('status', ['confirmed', 'checked_in'])
+
+  if (count && count > 0) {
+    return NextResponse.json(
+      { error: `Cannot delete: room has ${count} active booking(s). Cancel or check out first.` },
+      { status: 409 }
+    )
+  }
+
+  const { error } = await supabase
+    .from('rooms')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return new NextResponse(null, { status: 204 })
+  return NextResponse.json({ ok: true })
 }

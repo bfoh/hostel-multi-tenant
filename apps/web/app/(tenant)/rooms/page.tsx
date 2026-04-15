@@ -5,6 +5,7 @@ import { Plus, BedDouble, Wrench, AlertCircle } from 'lucide-react'
 import { getRoomsWithCurrentBooking } from '@/lib/data/rooms'
 import { formatGHS } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { DeleteRoomButton } from '@/components/rooms/delete-room-button'
 
 export const metadata: Metadata = { title: 'Rooms' }
 
@@ -130,13 +131,16 @@ export default async function RoomsPage() {
                       </p>
                     )}
                   </div>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-                      ROOM_STATUS_STYLES[room.status] ?? 'bg-surface-sunken text-text-secondary border-border'
-                    }`}
-                  >
-                    {room.status.replace('_', ' ')}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <DeleteRoomButton id={room.id} label={`Room ${room.room_number}`} />
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                        ROOM_STATUS_STYLES[room.status] ?? 'bg-surface-sunken text-text-secondary border-border'
+                      }`}
+                    >
+                      {room.status.replace('_', ' ')}
+                    </span>
+                  </div>
                 </div>
 
                 {category && (
