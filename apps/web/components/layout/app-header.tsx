@@ -32,28 +32,27 @@ export function AppHeader({ user: _ }: AppHeaderProps) {
       <button
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         className={cn(
-          'flex h-8 w-8 items-center justify-center rounded-md text-text-secondary',
-          'hover:bg-surface-raised hover:text-text-primary transition-colors'
+          'group flex h-8 w-8 items-center justify-center rounded-md text-text-secondary',
+          'hover:bg-surface-raised hover:text-text-primary transition-all duration-200'
         )}
         aria-label="Toggle theme"
       >
         {theme === 'dark' ? (
-          <Sun className="h-4 w-4" />
+          <Sun className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12" />
         ) : (
-          <Moon className="h-4 w-4" />
+          <Moon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-[-12deg]" />
         )}
       </button>
 
       {/* Notifications */}
       <button
         className={cn(
-          'relative flex h-8 w-8 items-center justify-center rounded-md text-text-secondary',
-          'hover:bg-surface-raised hover:text-text-primary transition-colors'
+          'group relative flex h-8 w-8 items-center justify-center rounded-md text-text-secondary',
+          'hover:bg-surface-raised hover:text-text-primary transition-all duration-200'
         )}
         aria-label="Notifications"
       >
-        <Bell className="h-4 w-4" />
-        {/* Unread dot — replace with real count */}
+        <Bell className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12" />
         <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-danger" />
       </button>
 
@@ -62,13 +61,13 @@ export function AppHeader({ user: _ }: AppHeaderProps) {
         onClick={handleSignOut}
         disabled={loggingOut}
         className={cn(
-          'flex h-8 w-8 items-center justify-center rounded-md text-text-secondary',
-          'hover:bg-surface-raised hover:text-text-primary transition-colors',
+          'group flex h-8 w-8 items-center justify-center rounded-md text-text-secondary',
+          'hover:bg-surface-raised hover:text-text-primary transition-all duration-200',
           'disabled:opacity-50'
         )}
         aria-label="Sign out"
       >
-        <LogOut className="h-4 w-4" />
+        <LogOut className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 group-hover:translate-x-0.5" />
       </button>
     </header>
   )

@@ -72,7 +72,7 @@ const BOTTOM_ITEMS: NavItem[] = [
 
 interface AppSidebarProps {
   user:       User
-  tenantRole: string   // from x-tenant-role header
+  tenantRole: string
 }
 
 export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
@@ -85,36 +85,37 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        'sidebar-transition flex h-screen flex-col bg-sidebar-bg',
+        'sidebar-transition flex h-screen flex-col',
+        'bg-[#000000] border-r border-[rgba(214,235,253,0.19)]',
         collapsed ? 'w-sidebar-collapsed' : 'w-sidebar'
       )}
     >
       {/* ── Logo / hostel name ──────────────────────────────────── */}
-      <div className="flex h-16 items-center justify-between px-4">
+      <div className="flex h-16 items-center justify-between px-4 border-b border-[rgba(214,235,253,0.10)]">
         {!collapsed && (
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-item-active shadow-sm overflow-hidden">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(255,255,255,0.08)] ring-1 ring-[rgba(214,235,253,0.19)] overflow-hidden">
               {tenantLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={tenantLogo} alt="" className="h-8 w-8 object-cover" />
               ) : tenantName ? (
-                <span className="font-display text-sm font-bold text-white">{initials(tenantName)}</span>
+                <span className="font-display text-sm font-bold text-[#f0f0f0]">{initials(tenantName)}</span>
               ) : (
                 <BuildingIcon />
               )}
             </div>
-            <span className="truncate font-display text-sm font-semibold text-white">
+            <span className="truncate text-sm font-semibold text-[#f0f0f0] tracking-[-0.01em]">
               {tenantName ?? 'GH Hostels'}
             </span>
           </div>
         )}
         {collapsed && (
-          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-item-active shadow-sm overflow-hidden">
+          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-[rgba(255,255,255,0.08)] ring-1 ring-[rgba(214,235,253,0.19)] overflow-hidden">
             {tenantLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={tenantLogo} alt="" className="h-8 w-8 object-cover" />
             ) : tenantName ? (
-              <span className="font-display text-sm font-bold text-white">{initials(tenantName)}</span>
+              <span className="font-display text-sm font-bold text-[#f0f0f0]">{initials(tenantName)}</span>
             ) : (
               <BuildingIcon />
             )}
@@ -123,7 +124,7 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
         {!collapsed && (
           <button
             onClick={() => setCollapsed(true)}
-            className="ml-auto rounded p-1 text-sidebar-text hover:bg-sidebar-item-hover hover:text-white transition-colors"
+            className="ml-auto rounded-md p-1 text-[#464a4d] hover:text-[#a1a4a5] hover:bg-[rgba(255,255,255,0.06)] transition-all duration-200"
             aria-label="Collapse sidebar"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -132,12 +133,12 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
       </div>
 
       {/* ── Main nav ─────────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-4">
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-5">
 
         {/* Operations — all roles */}
         <section>
           {!collapsed && (
-            <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-white/30">
+            <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#464a4d]">
               Operations
             </p>
           )}
@@ -152,12 +153,12 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
         {isAdmin ? (
           <section>
             {!collapsed && (
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-white/30">
+              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#464a4d]">
                 Admin
               </p>
             )}
             {collapsed && (
-              <div className="my-1 mx-2 border-t border-white/10" />
+              <div className="my-2 mx-2 border-t border-[rgba(214,235,253,0.12)]" />
             )}
             <ul className="space-y-0.5">
               {ADMIN_ITEMS.map((item) => (
@@ -166,15 +167,14 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
             </ul>
           </section>
         ) : (
-          /* Locked section indicator for staff */
           !collapsed && (
             <section>
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-white/30">
+              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#464a4d]">
                 Admin
               </p>
-              <div className="flex items-center gap-2.5 rounded-lg px-2 py-2 opacity-40 cursor-not-allowed select-none">
-                <Lock className="h-4 w-4 shrink-0 text-white/50" />
-                <span className="text-xs text-white/50">Admin access only</span>
+              <div className="flex items-center gap-2.5 rounded-md px-2 py-2 opacity-40 cursor-not-allowed select-none">
+                <Lock className="h-4 w-4 shrink-0 text-[#464a4d]" />
+                <span className="text-xs text-[#464a4d]">Admin access only</span>
               </div>
             </section>
           )
@@ -182,7 +182,7 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
       </nav>
 
       {/* ── Bottom nav + user ────────────────────────────────────── */}
-      <div className="border-t border-white/10 px-2 py-2">
+      <div className="border-t border-[rgba(214,235,253,0.12)] px-2 py-2">
         {/* Settings — admin only */}
         {isAdmin && (
           <ul className="space-y-0.5 mb-1">
@@ -193,14 +193,17 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
         )}
 
         {/* User avatar */}
-        <div className={cn('mt-2 flex items-center gap-2.5 rounded-lg px-2 py-2', collapsed && 'justify-center')}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-medium text-white">
+        <div className={cn(
+          'mt-2 flex items-center gap-2.5 rounded-lg px-2 py-2',
+          collapsed && 'justify-center'
+        )}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgba(255,255,255,0.08)] ring-1 ring-[rgba(214,235,253,0.15)] text-xs font-medium text-[#a1a4a5]">
             {initials(user.email ?? 'U')}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1 overflow-hidden">
-              <p className="truncate text-xs font-medium text-white">{user.email}</p>
-              <p className="truncate text-[10px] text-white/40 capitalize">{tenantRole}</p>
+              <p className="truncate text-xs font-medium text-[#f0f0f0]">{user.email}</p>
+              <p className="truncate text-[10px] text-[#464a4d] capitalize">{tenantRole}</p>
             </div>
           )}
         </div>
@@ -209,7 +212,7 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
         {collapsed && (
           <button
             onClick={() => setCollapsed(false)}
-            className="mt-1 flex w-full items-center justify-center rounded p-1 text-sidebar-text hover:bg-sidebar-item-hover hover:text-white transition-colors"
+            className="mt-1 flex w-full items-center justify-center rounded-md p-1 text-[#464a4d] hover:text-[#a1a4a5] hover:bg-[rgba(255,255,255,0.06)] transition-all duration-200"
             aria-label="Expand sidebar"
           >
             <ChevronRight className="h-4 w-4" />
@@ -231,18 +234,32 @@ function NavLink({ item, pathname, collapsed }: { item: NavItem; pathname: strin
       <Link
         href={item.href}
         className={cn(
-          'flex items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors',
+          'group/nav flex items-center gap-3 rounded-md px-2 py-[7px] text-[13px] transition-all duration-200',
           collapsed && 'justify-center px-2',
           isActive
-            ? 'bg-sidebar-item-active text-sidebar-text-active font-medium'
-            : 'text-sidebar-text hover:bg-sidebar-item-hover hover:text-sidebar-text-active'
+            ? 'bg-[rgba(255,255,255,0.08)] text-[#f0f0f0] font-medium shadow-[inset_0_0_0_1px_rgba(214,235,253,0.12)]'
+            : 'text-[#a1a4a5] hover:text-[#f0f0f0] hover:bg-[rgba(255,255,255,0.05)]'
         )}
         title={collapsed ? item.label : undefined}
       >
-        <Icon className="h-4.5 w-4.5 shrink-0" />
-        {!collapsed && <span className="truncate">{item.label}</span>}
+        <span className={cn(
+          'relative flex shrink-0 items-center justify-center transition-all duration-200',
+          'group-hover/nav:scale-110 group-hover/nav:rotate-[-4deg]',
+          isActive && 'text-[#f0f0f0]'
+        )}>
+          <Icon className="h-[18px] w-[18px]" />
+          {/* Glow effect on hover */}
+          <span className={cn(
+            'absolute inset-0 rounded-full blur-[6px] opacity-0 transition-opacity duration-300',
+            'group-hover/nav:opacity-30',
+            isActive ? 'bg-[#3b9eff] opacity-20' : 'bg-[#a1a4a5]'
+          )} />
+        </span>
+        {!collapsed && (
+          <span className="truncate tracking-[0.01em]">{item.label}</span>
+        )}
         {!collapsed && item.badge && (
-          <span className="ml-auto rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-medium text-white">
+          <span className="ml-auto rounded-full bg-[rgba(255,128,31,0.15)] px-1.5 py-0.5 text-[10px] font-medium text-[#ff801f]">
             {item.badge}
           </span>
         )}
@@ -256,11 +273,11 @@ function NavLink({ item, pathname, collapsed }: { item: NavItem; pathname: strin
 function BuildingIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-      <path d="M3 11L12 3l9 8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <rect x="5" y="11" width="14" height="10" rx="1" fill="white" opacity="0.15"/>
-      <rect x="7" y="13" width="3" height="3" rx="0.4" fill="white" opacity="0.9"/>
-      <rect x="14" y="13" width="3" height="3" rx="0.4" fill="white" opacity="0.9"/>
-      <rect x="9.5" y="16.5" width="5" height="4.5" rx="0.4" fill="white" opacity="0.95"/>
+      <path d="M3 11L12 3l9 8" stroke="#f0f0f0" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <rect x="5" y="11" width="14" height="10" rx="1" fill="#f0f0f0" opacity="0.15"/>
+      <rect x="7" y="13" width="3" height="3" rx="0.4" fill="#f0f0f0" opacity="0.9"/>
+      <rect x="14" y="13" width="3" height="3" rx="0.4" fill="#f0f0f0" opacity="0.9"/>
+      <rect x="9.5" y="16.5" width="5" height="4.5" rx="0.4" fill="#f0f0f0" opacity="0.95"/>
     </svg>
   )
 }
