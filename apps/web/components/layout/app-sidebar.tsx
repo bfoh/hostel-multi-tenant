@@ -27,45 +27,62 @@ export function isAdminRole(role: string) {
 
 // ── Nav structure ────────────────────────────────────────────────────────────
 
+type IconAnim = 'bounce' | 'shake' | 'spin' | 'pulse' | 'swing' | 'ring' | 'slide' | 'flip' | 'tilt' | 'pop'
+
+// Explicit map so class names aren't purged by Tailwind/PostCSS
+const ANIM_CLASS: Record<IconAnim, string> = {
+  bounce: 'sb-anim-bounce',
+  shake:  'sb-anim-shake',
+  spin:   'sb-anim-spin',
+  pulse:  'sb-anim-pulse',
+  swing:  'sb-anim-swing',
+  ring:   'sb-anim-ring',
+  slide:  'sb-anim-slide',
+  flip:   'sb-anim-flip',
+  tilt:   'sb-anim-tilt',
+  pop:    'sb-anim-pop',
+}
+
 interface NavItem {
   label: string
   href:  string
   icon:  React.ElementType
+  anim:  IconAnim
   badge?: string
 }
 
 /** Day-to-day operations — visible to ALL authenticated roles (staff + admin) */
 const OPS_ITEMS: NavItem[] = [
-  { label: 'Dashboard',      href: '/dashboard',      icon: LayoutDashboard },
-  { label: 'Occupants',      href: '/occupants',      icon: Users           },
-  { label: 'Rooms',          href: '/rooms',           icon: BedDouble       },
-  { label: 'Bookings',       href: '/bookings',        icon: CalendarCheck   },
-  { label: 'Housekeeping',   href: '/housekeeping',    icon: Wrench          },
-  { label: 'Maintenance',    href: '/maintenance',     icon: HardHat         },
-  { label: 'Kiosk',          href: '/kiosk',           icon: Monitor         },
-  { label: 'Lost & Found',   href: '/lost-found',      icon: Search          },
-  { label: 'Communications', href: '/communications',  icon: MessageSquare   },
-  { label: 'Security',       href: '/security',        icon: Shield          },
+  { label: 'Dashboard',      href: '/dashboard',      icon: LayoutDashboard, anim: 'pulse'  },
+  { label: 'Occupants',      href: '/occupants',      icon: Users,           anim: 'bounce' },
+  { label: 'Rooms',          href: '/rooms',           icon: BedDouble,       anim: 'tilt'   },
+  { label: 'Bookings',       href: '/bookings',        icon: CalendarCheck,   anim: 'flip'   },
+  { label: 'Housekeeping',   href: '/housekeeping',    icon: Wrench,          anim: 'swing'  },
+  { label: 'Maintenance',    href: '/maintenance',     icon: HardHat,         anim: 'bounce' },
+  { label: 'Kiosk',          href: '/kiosk',           icon: Monitor,         anim: 'pulse'  },
+  { label: 'Lost & Found',   href: '/lost-found',      icon: Search,          anim: 'slide'  },
+  { label: 'Communications', href: '/communications',  icon: MessageSquare,   anim: 'shake'  },
+  { label: 'Security',       href: '/security',        icon: Shield,          anim: 'pop'    },
 ]
 
 /** Sensitive management — visible to owner / manager / admin ONLY */
 const ADMIN_ITEMS: NavItem[] = [
-  { label: 'Portfolio',      href: '/portfolio',           icon: Building2   },
-  { label: 'Invoices',       href: '/invoices',            icon: FileText    },
-  { label: 'Payments',       href: '/payments',            icon: DollarSign  },
-  { label: 'Accounting',     href: '/accounting',          icon: BookOpen    },
-  { label: 'Expenses',       href: '/accounting/expenses', icon: TrendingDown},
-  { label: 'Staff',          href: '/staff',               icon: UserCog     },
-  { label: 'Assets',         href: '/assets',              icon: Package     },
-  { label: 'Waiting List',   href: '/waiting-list',        icon: ListOrdered },
-  { label: 'Reports',        href: '/reports',             icon: BarChart3   },
-  { label: 'Intelligence',   href: '/intelligence',        icon: Sparkles    },
-  { label: 'AI Assistant',   href: '/ai',                  icon: Bot         },
-  { label: 'Activity log',   href: '/activity',            icon: ClipboardList},
+  { label: 'Portfolio',      href: '/portfolio',           icon: Building2,    anim: 'tilt'   },
+  { label: 'Invoices',       href: '/invoices',            icon: FileText,     anim: 'slide'  },
+  { label: 'Payments',       href: '/payments',            icon: DollarSign,   anim: 'bounce' },
+  { label: 'Accounting',     href: '/accounting',          icon: BookOpen,     anim: 'flip'   },
+  { label: 'Expenses',       href: '/accounting/expenses', icon: TrendingDown, anim: 'slide'  },
+  { label: 'Staff',          href: '/staff',               icon: UserCog,      anim: 'spin'   },
+  { label: 'Assets',         href: '/assets',              icon: Package,      anim: 'tilt'   },
+  { label: 'Waiting List',   href: '/waiting-list',        icon: ListOrdered,  anim: 'slide'  },
+  { label: 'Reports',        href: '/reports',             icon: BarChart3,    anim: 'pulse'  },
+  { label: 'Intelligence',   href: '/intelligence',        icon: Sparkles,     anim: 'pop'    },
+  { label: 'AI Assistant',   href: '/ai',                  icon: Bot,          anim: 'ring'   },
+  { label: 'Activity log',   href: '/activity',            icon: ClipboardList,anim: 'shake'  },
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [
-  { label: 'Settings', href: '/settings', icon: Settings },
+  { label: 'Settings', href: '/settings', icon: Settings, anim: 'spin' },
 ]
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -234,7 +251,8 @@ function NavLink({ item, pathname, collapsed }: { item: NavItem; pathname: strin
       <Link
         href={item.href}
         className={cn(
-          'group/nav flex items-center gap-3 rounded-md px-2 py-[7px] text-[13px] transition-all duration-200',
+          ANIM_CLASS[item.anim],
+          'flex items-center gap-3 rounded-md px-2 py-[7px] text-[13px] transition-all duration-200',
           collapsed && 'justify-center px-2',
           isActive
             ? 'bg-[rgba(255,255,255,0.08)] text-[#f0f0f0] font-medium shadow-[inset_0_0_0_1px_rgba(214,235,253,0.12)]'
@@ -242,18 +260,8 @@ function NavLink({ item, pathname, collapsed }: { item: NavItem; pathname: strin
         )}
         title={collapsed ? item.label : undefined}
       >
-        <span className={cn(
-          'relative flex shrink-0 items-center justify-center transition-all duration-200',
-          'group-hover/nav:scale-110 group-hover/nav:rotate-[-4deg]',
-          isActive && 'text-[#f0f0f0]'
-        )}>
+        <span className="sb-icon relative flex shrink-0 items-center justify-center">
           <Icon className="h-[18px] w-[18px]" />
-          {/* Glow effect on hover */}
-          <span className={cn(
-            'absolute inset-0 rounded-full blur-[6px] opacity-0 transition-opacity duration-300',
-            'group-hover/nav:opacity-30',
-            isActive ? 'bg-[#3b9eff] opacity-20' : 'bg-[#a1a4a5]'
-          )} />
         </span>
         {!collapsed && (
           <span className="truncate tracking-[0.01em]">{item.label}</span>
