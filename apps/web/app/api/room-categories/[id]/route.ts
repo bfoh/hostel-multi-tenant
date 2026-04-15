@@ -59,6 +59,21 @@ export async function DELETE(
   }
 
   const supabase = createAdminClient()
+
+  // Check if rooms reference this category
+  const { count } = await supabase
+    .from('rooms')
+    .select('id', { count: 'exact', head: true })
+    .eq('category_id', id)
+    .eq('tenant_id', tenantId)
+
+  if (count && count > 0) {
+    return NextResponse.json(
+      { error: `Cannot delete: ${count} room(s) still use this type. Reassign or remove them first.` },
+      { status: 409 }
+    )
+  }
+
   const { error } = await supabase
     .from('room_categories')
     .delete()
