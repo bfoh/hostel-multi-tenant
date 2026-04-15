@@ -272,12 +272,12 @@
   }
 
   /* ── Sidebar icon micro-animations (Resend-style) ──────────────
-   *  Resend pattern: spring overshoot on hover-in, smooth ease on hover-out.
-   *  Each icon gets a semantically meaningful transform.
-   *  Dual cubic-bezier: base = smooth exit, hover = spring enter.
+   *  Resend pattern: multi-step spring keyframes on hover-in,
+   *  smooth CSS transition on hover-out (hybrid approach).
+   *  When hover ends → animation removed → transition eases back.
    * ─────────────────────────────────────────────────────────────── */
 
-  /* Base: smooth ease-out for mouse-leave (no overshoot) */
+  /* Base: smooth return transition for mouse-leave */
   .sb-anim-bounce .sb-icon,
   .sb-anim-shake .sb-icon,
   .sb-anim-spin .sb-icon,
@@ -288,77 +288,124 @@
   .sb-anim-flip .sb-icon,
   .sb-anim-tilt .sb-icon,
   .sb-anim-pop .sb-icon {
-    transition: transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                opacity 300ms ease;
+    transition: transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
     will-change: transform;
   }
 
-  /* Hover-in: spring with overshoot — applied on ALL hover states */
-  .sb-anim-bounce:hover .sb-icon,
-  .sb-anim-shake:hover .sb-icon,
-  .sb-anim-spin:hover .sb-icon,
-  .sb-anim-pulse:hover .sb-icon,
-  .sb-anim-swing:hover .sb-icon,
-  .sb-anim-ring:hover .sb-icon,
-  .sb-anim-slide:hover .sb-icon,
-  .sb-anim-flip:hover .sb-icon,
-  .sb-anim-tilt:hover .sb-icon,
-  .sb-anim-pop:hover .sb-icon {
-    transition: transform 250ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
-                opacity 250ms ease;
-    opacity: 1;
+  /* ── Keyframes: multi-step spring with overshoot ─────────────── */
+
+  /* Bounce — hop up, overshoot, settle */
+  @keyframes sb-bounce {
+    0%   { transform: translateY(0) scale(1); }
+    40%  { transform: translateY(-4px) scale(1.08); }
+    70%  { transform: translateY(-1px) scale(1.02); }
+    100% { transform: translateY(-2.5px) scale(1.05); }
   }
-
-  /* ── Per-icon transforms (semantically matched) ─────────────── */
-
-  /* Bounce — people/users hop up */
   .sb-anim-bounce:hover .sb-icon {
-    transform: translateY(-2.5px) scale(1.04);
+    animation: sb-bounce 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  /* Shake — messages/comms vibrate */
+  /* Shake — quick rattle, settle tilted (messages, comms) */
+  @keyframes sb-shake {
+    0%   { transform: rotate(0deg); }
+    20%  { transform: rotate(-12deg); }
+    40%  { transform: rotate(8deg); }
+    60%  { transform: rotate(-6deg); }
+    80%  { transform: rotate(3deg); }
+    100% { transform: rotate(-4deg); }
+  }
   .sb-anim-shake:hover .sb-icon {
-    transform: rotate(-8deg);
+    animation: sb-shake 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  /* Spin — settings cog turns */
+  /* Spin — cog turns with slight overshoot */
+  @keyframes sb-spin {
+    0%   { transform: rotate(0deg); }
+    70%  { transform: rotate(100deg); }
+    100% { transform: rotate(90deg); }
+  }
   .sb-anim-spin:hover .sb-icon {
-    transform: rotate(90deg);
+    animation: sb-spin 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  /* Pulse — dashboard/monitor throb */
+  /* Pulse — throb with spring overshoot (dashboard, kiosk) */
+  @keyframes sb-pulse {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.24); }
+    75%  { transform: scale(1.12); }
+    100% { transform: scale(1.18); }
+  }
   .sb-anim-pulse:hover .sb-icon {
-    transform: scale(1.18);
+    animation: sb-pulse 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  /* Swing — wrench/tool swings like in use */
+  /* Swing — wrench swing with inertia */
+  @keyframes sb-swing {
+    0%   { transform: rotate(0deg); }
+    30%  { transform: rotate(22deg); }
+    55%  { transform: rotate(10deg); }
+    75%  { transform: rotate(18deg); }
+    100% { transform: rotate(14deg) translateX(1px); }
+  }
   .sb-anim-swing:hover .sb-icon {
-    transform: rotate(16deg) translateX(1px);
+    animation: sb-swing 450ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  /* Ring — bell/notification ring (tilt + lift) */
+  /* Ring — bell ring oscillation (AI, notifications) */
+  @keyframes sb-ring {
+    0%   { transform: rotate(0deg); }
+    15%  { transform: rotate(-18deg); }
+    30%  { transform: rotate(12deg); }
+    45%  { transform: rotate(-10deg); }
+    60%  { transform: rotate(6deg); }
+    75%  { transform: rotate(-8deg); }
+    100% { transform: rotate(-6deg) translateY(-1px); }
+  }
   .sb-anim-ring:hover .sb-icon {
-    transform: rotate(-14deg) translateY(-1.5px);
+    animation: sb-ring 550ms ease-in-out forwards;
   }
 
-  /* Slide — search/list slides right (scanning motion) */
+  /* Slide — scan right, overshoot, settle (search, lists) */
+  @keyframes sb-slide {
+    0%   { transform: translateX(0); }
+    50%  { transform: translateX(4.5px); }
+    75%  { transform: translateX(2px); }
+    100% { transform: translateX(3px); }
+  }
   .sb-anim-slide:hover .sb-icon {
-    transform: translateX(3px);
+    animation: sb-slide 350ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  /* Flip — calendar/book page turn */
+  /* Flip — page turn with depth (calendar, book) */
+  @keyframes sb-flip {
+    0%   { transform: rotateY(0deg) scale(1); }
+    50%  { transform: rotateY(32deg) scale(1.06); }
+    100% { transform: rotateY(22deg) scale(1.04); }
+  }
   .sb-anim-flip:hover .sb-icon {
-    transform: rotateY(25deg) scale(1.04);
+    animation: sb-flip 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  /* Tilt — building/package leans (weighted feel) */
+  /* Tilt — lean with weight (buildings, packages) */
+  @keyframes sb-tilt {
+    0%   { transform: rotate(0deg); }
+    40%  { transform: rotate(-12deg) translateY(-2px); }
+    70%  { transform: rotate(-5deg) translateY(0); }
+    100% { transform: rotate(-8deg) translateY(-1px); }
+  }
   .sb-anim-tilt:hover .sb-icon {
-    transform: rotate(-8deg) translateY(-1px);
+    animation: sb-tilt 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  /* Pop — sparkle/AI burst outward */
+  /* Pop — burst outward with spring (sparkles, shield) */
+  @keyframes sb-pop {
+    0%   { transform: scale(1) translateY(0); }
+    35%  { transform: scale(1.3) translateY(-2.5px); }
+    65%  { transform: scale(1.14) translateY(-0.5px); }
+    100% { transform: scale(1.22) translateY(-1.5px); }
+  }
   .sb-anim-pop:hover .sb-icon {
-    transform: scale(1.22) translateY(-1.5px);
+    animation: sb-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 }
 
