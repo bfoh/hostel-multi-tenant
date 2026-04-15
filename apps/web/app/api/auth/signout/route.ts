@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
 
   // Redirect to /login on the same domain the request came from
-  // so tenant custom domains (e.g. app.abremponghostel.com) stay on their own login page
+  // so tenant custom domains (e.g. app.myhostel.com) stay on their own login page
   const origin = request.nextUrl.origin
   const response = NextResponse.redirect(new URL('/login', origin))
 

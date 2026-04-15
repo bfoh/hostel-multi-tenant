@@ -28,6 +28,9 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>
 
+const inputClass =
+  'w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand hover:border-slate-300'
+
 function toSlug(name: string) {
   return name
     .toLowerCase()
@@ -52,7 +55,6 @@ export default function SignupPage() {
 
   const hostelName = watch('hostelName', '')
 
-  // Auto-generate slug and check availability
   useEffect(() => {
     const slug = toSlug(hostelName)
     setSlugPreview(slug)
@@ -94,21 +96,21 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="space-y-4 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success-subtle">
-          <svg className="h-6 w-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="space-y-5 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 ring-4 ring-emerald-50/50">
+          <svg className="h-7 w-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <div className="space-y-1">
-          <h2 className="font-display text-xl font-bold text-text-primary">Check your email</h2>
-          <p className="text-sm text-text-secondary">
-            We&apos;ve sent a confirmation link to your email address. Click it to activate your account — you&apos;ll be taken straight to your hostel setup.
+        <div className="space-y-1.5">
+          <h2 className="font-display text-xl font-bold text-slate-900">Check your email</h2>
+          <p className="text-sm text-slate-500 leading-relaxed max-w-[300px] mx-auto">
+            We&apos;ve sent a confirmation link to your email address. Click it to activate your account.
           </p>
         </div>
         <Link
           href="/login"
-          className="inline-block text-sm font-medium text-brand hover:text-brand-hover transition-colors"
+          className="inline-block text-sm font-semibold text-brand hover:text-brand-hover transition-colors"
         >
           Back to sign in
         </Link>
@@ -119,18 +121,17 @@ export default function SignupPage() {
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="font-display text-2xl font-bold text-text-primary">Start your free trial</h1>
-        <p className="text-sm text-text-secondary">
+    <div className="space-y-7">
+      <div className="space-y-1.5">
+        <h1 className="font-display text-[26px] font-bold text-slate-900 tracking-tight">Start your free trial</h1>
+        <p className="text-[14px] text-slate-500">
           Set up your hostel in minutes. No credit card required.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-        {/* Hostel name + URL preview */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <div className="space-y-1.5">
-          <label htmlFor="hostelName" className="text-sm font-medium text-text-primary">
+          <label htmlFor="hostelName" className="text-[13px] font-semibold text-slate-700">
             Hostel name
           </label>
           <input
@@ -139,26 +140,25 @@ export default function SignupPage() {
             autoComplete="organization"
             autoFocus
             {...register('hostelName')}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:ring-2 focus:ring-brand/25 focus:border-brand transition-colors"
+            className={inputClass}
             placeholder="Acacia Hostel"
           />
           {errors.hostelName && (
-            <p className="text-xs text-danger">{errors.hostelName.message}</p>
+            <p className="text-xs text-danger font-medium mt-1">{errors.hostelName.message}</p>
           )}
 
-          {/* Live URL preview */}
           {slugPreview.length >= 2 && (
-            <div className="flex items-center gap-1.5 rounded-md border border-border bg-surface-sunken px-3 py-2 text-xs">
-              <span className="text-text-secondary">Your URL:</span>
-              <span className="font-mono text-text-primary font-medium">
+            <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs">
+              <span className="text-slate-500">Your URL:</span>
+              <span className="font-mono text-slate-800 font-medium">
                 {slugPreview}.{appDomain}
               </span>
-              {slugStatus === 'checking' && <Loader2 className="ml-auto h-3 w-3 animate-spin text-text-disabled" />}
-              {slugStatus === 'available' && <CheckCircle2 className="ml-auto h-3 w-3 text-success" />}
+              {slugStatus === 'checking' && <Loader2 className="ml-auto h-3 w-3 animate-spin text-slate-400" />}
+              {slugStatus === 'available' && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-emerald-500" />}
               {slugStatus === 'taken' && (
                 <>
-                  <XCircle className="ml-auto h-3 w-3 text-danger" />
-                  <span className="text-danger">taken — try a different name</span>
+                  <XCircle className="ml-auto h-3.5 w-3.5 text-red-500" />
+                  <span className="text-red-600 font-medium">taken</span>
                 </>
               )}
             </div>
@@ -166,7 +166,7 @@ export default function SignupPage() {
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-sm font-medium text-text-primary">
+          <label htmlFor="email" className="text-[13px] font-semibold text-slate-700">
             Email address
           </label>
           <input
@@ -174,16 +174,16 @@ export default function SignupPage() {
             type="email"
             autoComplete="email"
             {...register('email')}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:ring-2 focus:ring-brand/25 focus:border-brand transition-colors"
+            className={inputClass}
             placeholder="kwame@acaciahostel.com"
           />
           {errors.email && (
-            <p className="text-xs text-danger">{errors.email.message}</p>
+            <p className="text-xs text-danger font-medium mt-1">{errors.email.message}</p>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="password" className="text-sm font-medium text-text-primary">
+          <label htmlFor="password" className="text-[13px] font-semibold text-slate-700">
             Password
           </label>
           <input
@@ -191,16 +191,16 @@ export default function SignupPage() {
             type="password"
             autoComplete="new-password"
             {...register('password')}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:ring-2 focus:ring-brand/25 focus:border-brand transition-colors"
+            className={inputClass}
             placeholder="Min. 8 characters, one uppercase, one number"
           />
           {errors.password && (
-            <p className="text-xs text-danger">{errors.password.message}</p>
+            <p className="text-xs text-danger font-medium mt-1">{errors.password.message}</p>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="text-sm font-medium text-text-primary">
+          <label htmlFor="confirmPassword" className="text-[13px] font-semibold text-slate-700">
             Confirm password
           </label>
           <input
@@ -208,16 +208,16 @@ export default function SignupPage() {
             type="password"
             autoComplete="new-password"
             {...register('confirmPassword')}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:ring-2 focus:ring-brand/25 focus:border-brand transition-colors"
+            className={inputClass}
             placeholder="••••••••"
           />
           {errors.confirmPassword && (
-            <p className="text-xs text-danger">{errors.confirmPassword.message}</p>
+            <p className="text-xs text-danger font-medium mt-1">{errors.confirmPassword.message}</p>
           )}
         </div>
 
         {serverError && (
-          <div className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">
+          <div className="rounded-lg bg-red-50 border border-red-200/60 px-4 py-3 text-sm text-red-700">
             {serverError}
           </div>
         )}
@@ -225,12 +225,12 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={isSubmitting || slugStatus === 'taken'}
-          className="w-full rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand/25 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg shadow-sm transition-all duration-200 hover:bg-brand-hover hover:shadow-md active:scale-[0.98] active:shadow-none focus:outline-none focus:ring-2 focus:ring-brand/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          {isSubmitting ? 'Creating account…' : 'Create account'}
+          {isSubmitting ? 'Creating account\u2026' : 'Create account'}
         </button>
 
-        <p className="text-center text-xs text-text-tertiary">
+        <p className="text-center text-xs text-slate-400">
           By signing up you agree to our{' '}
           <a href="#" className="text-brand hover:text-brand-hover underline underline-offset-2">Terms of Service</a>
           {' '}and{' '}
@@ -238,9 +238,9 @@ export default function SignupPage() {
         </p>
       </form>
 
-      <p className="text-center text-sm text-text-secondary">
+      <p className="text-center text-sm text-slate-500">
         Already have an account?{' '}
-        <Link href="/login" className="font-medium text-brand hover:text-brand-hover transition-colors">
+        <Link href="/login" className="font-semibold text-brand hover:text-brand-hover transition-colors">
           Sign in
         </Link>
       </p>

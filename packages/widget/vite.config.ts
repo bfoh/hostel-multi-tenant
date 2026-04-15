@@ -6,7 +6,7 @@ export default defineConfig({
   build: {
     lib: {
       entry:    'src/index.tsx',
-      name:     'AbrempongWidget',
+      name:     'GHHostelsWidget',
       fileName: () => 'widget.js',   // output always as widget.js (not widget.iife.js)
       formats:  ['iife'],
     },

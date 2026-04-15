@@ -2,7 +2,7 @@
   "name": "@gh-hostels/widget",
   "version": "0.1.0",
   "private": true,
-  "description": "AbrempongHMS public booking embed widget — Preact, < 45 KB",
+  "description": "GH Hostels public booking embed widget — Preact, < 45 KB",
   "scripts": {
     "dev": "vite",
     "build": "vite build && cp dist/widget.js ../../apps/web/public/widget.js",

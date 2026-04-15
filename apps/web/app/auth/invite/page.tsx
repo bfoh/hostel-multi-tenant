@@ -58,7 +58,7 @@ export default function InvitePage() {
         const claims      = refreshed?.access_token
           ? JSON.parse(atob(refreshed.access_token.split('.')[1]))
           : {}
-        const tenantDomain = claims?.tenant_domain as string | undefined  // e.g. "app.abremponghostel.com"
+        const tenantDomain = claims?.tenant_domain as string | undefined  // e.g. "app.myhostel.com"
         const tenantSlug   = claims?.tenant_slug   as string | undefined
         const appDomain    = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
         const currentHost  = window.location.hostname

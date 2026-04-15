@@ -2,7 +2,7 @@
   "name": "@gh-hostels/types",
   "version": "0.1.0",
   "private": true,
-  "description": "Shared TypeScript types for AbrempongHMS",
+  "description": "Shared TypeScript types for GH Hostels",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

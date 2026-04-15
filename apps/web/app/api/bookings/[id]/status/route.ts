@@ -81,8 +81,9 @@ export async function PATCH(
 
     if (nextStatus === 'confirmed') {
       sendEmail({
-        to:      occ.email,
-        subject: `Booking Confirmed — ${hostelName}`,
+        to:         occ.email,
+        senderName: hostelName,
+        subject:    `Booking Confirmed — ${hostelName}`,
         html:    bookingConfirmationHtml({
           hostelName,
           primaryColor,
@@ -99,8 +100,9 @@ export async function PATCH(
 
     if (nextStatus === 'checked_out') {
       sendEmail({
-        to:      occ.email,
-        subject: `Thanks for staying — ${hostelName}`,
+        to:         occ.email,
+        senderName: hostelName,
+        subject:    `Thanks for staying — ${hostelName}`,
         html:    checkoutSummaryHtml({
           hostelName,
           primaryColor,

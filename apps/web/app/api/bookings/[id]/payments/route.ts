@@ -108,8 +108,9 @@ export async function POST(
 
     if (occ?.email && ten) {
       sendEmail({
-        to:      occ.email,
-        subject: `Payment receipt — ${ten.name}`,
+        to:         occ.email,
+        senderName: ten.name,
+        subject:    `Payment receipt — ${ten.name}`,
         html:    paymentReceiptHtml({
           hostelName:   ten.name,
           primaryColor: ten.primary_color ?? '#2563EB',

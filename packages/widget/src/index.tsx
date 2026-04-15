@@ -1,5 +1,5 @@
 /**
- * AbrempongHMS Booking Widget
+ * GH Hostels Booking Widget
  *
  * Usage (floating button):
  *   <script src="https://yourhostel.com/widget.js"
@@ -69,7 +69,7 @@ function init() {
     ?? document.querySelector('script[data-hostel]') as HTMLScriptElement | null
 
   if (!script) {
-    console.error('[AbrempongWidget] Cannot find script tag with data-hostel attribute.')
+    console.error('[GHHostelsWidget] Cannot find script tag with data-hostel attribute.')
     return
   }
 
@@ -79,7 +79,7 @@ function init() {
   const target  = script.getAttribute('data-target')
 
   if (!slug) {
-    console.error('[AbrempongWidget] Missing data-hostel attribute.')
+    console.error('[GHHostelsWidget] Missing data-hostel attribute.')
     return
   }
 
@@ -92,7 +92,7 @@ function init() {
       : document.getElementById('booking-widget')
 
     if (!container) {
-      console.error('[AbrempongWidget] Could not find inline target element:', target)
+      console.error('[GHHostelsWidget] Could not find inline target element:', target)
       return
     }
 
@@ -105,9 +105,9 @@ function init() {
   }
 }
 
-// ── Programmatic API (window.AbrempongWidget) ──────────────────────────
+// ── Programmatic API (window.GHHostelsWidget) ──────────────────────────
 
-;(window as any).AbrempongWidget = { init, setBaseUrl }
+;(window as any).GHHostelsWidget = { init, setBaseUrl }
 
 // Auto-init on DOMContentLoaded
 if (document.readyState === 'loading') {

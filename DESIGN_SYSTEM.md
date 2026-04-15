@@ -1,5 +1,5 @@
 # Adinkra Design System
-## AbrempongHMS — Default UI/UX Framework
+## GH Hostels — Default UI/UX Framework
 ### Version 1.0
 
 > **Named after Adinkra** — the visual symbols of the Akan people of Ghana, where each symbol
@@ -12,7 +12,7 @@
 ## TABLE OF CONTENTS
 
 1.  [Design Philosophy & Principles](#1-design-philosophy--principles)
-2.  [Brand Identity — AbrempongHMS Default](#2-brand-identity--abrempong-hms-default)
+2.  [Brand Identity — GH Hostels Default](#2-brand-identity--gh-hostels-default)
 3.  [Color System — Token Architecture](#3-color-system--token-architecture)
 4.  [Typography System](#4-typography-system)
 5.  [Spacing System](#5-spacing-system)
@@ -69,14 +69,14 @@ LAW 5 — GHANAIAN WARMTH IN A PROFESSIONAL SHELL
 ### 1.2 Visual Personality
 
 ```
-AbrempongHMS feels:
+GH Hostels feels:
   ✓ Authoritative — clear hierarchy, confident typography
   ✓ Warm — not cold blue-gray enterprise, but human and approachable
   ✓ Precise — every element is where it should be, nothing is random
   ✓ Modern — but timeless, not trend-chasing
   ✓ Ghanaian — unmistakably rooted in the context it serves
 
-AbrempongHMS does NOT feel:
+GH Hostels does NOT feel:
   ✗ Playful or childish (not a consumer social app)
   ✗ Cold or clinical (not a hospital ERP)
   ✗ Generic (not another SaaS template clone)
@@ -86,11 +86,11 @@ AbrempongHMS does NOT feel:
 
 ---
 
-## 2. BRAND IDENTITY — ABREMPONG HMS DEFAULT
+## 2. BRAND IDENTITY — GH HOSTELS DEFAULT
 
 ### 2.1 Brand Palette
 
-The default AbrempongHMS palette before any tenant customisation.
+The default GH Hostels palette before any tenant customisation.
 Named after places and cultural references that carry meaning in Ghana.
 
 ```
@@ -1029,7 +1029,7 @@ AVATAR GROUP (stacked):
 
 ### 9.10 Ghana-Specific Components
 
-These are unique to AbrempongHMS and not in any standard library.
+These are unique to GH Hostels and not in any standard library.
 
 ```
 SEMESTER PICKER:
@@ -1815,5 +1815,5 @@ Modal vs Drawer?
 
 ---
 
-*Adinkra Design System — v1.0 — AbrempongHMS — April 2026*
+*Adinkra Design System — v1.0 — GH Hostels — April 2026*
 *"Bi nka bi" — an Adinkra symbol of harmony, peace, and unity through design*

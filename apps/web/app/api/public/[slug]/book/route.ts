@@ -160,8 +160,9 @@ export async function POST(
     const formatDate = (s: string) => new Date(s + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
     const formatGHS  = (p: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(p / 100)
     sendEmail({
-      to:      d.email,
-      subject: `Booking received — ${tenant.name}`,
+      to:         d.email,
+      senderName: tenant.name,
+      subject:    `Booking received — ${tenant.name}`,
       html:    bookingConfirmationHtml({
         hostelName:   tenant.name,
         primaryColor,

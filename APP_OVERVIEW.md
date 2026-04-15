@@ -1,8 +1,8 @@
-# AbrempongHMS — What's Been Built
+# GH Hostels — What's Been Built
 
 ## Architecture Overview
 
-**Multi-tenant SaaS** — one codebase serves multiple hostels. Each hostel (tenant) gets their own subdomain (e.g., `unity.abrempong.com`) or custom domain. The middleware resolves which hostel you're on from the hostname, injects it as headers, and all data is isolated per tenant via Postgres Row Level Security.
+**Multi-tenant SaaS** — one codebase serves multiple hostels. Each hostel (tenant) gets their own subdomain (e.g., `unity.gh-hostels.com`) or custom domain. The middleware resolves which hostel you're on from the hostname, injects it as headers, and all data is isolated per tenant via Postgres Row Level Security.
 
 **Stack:** Next.js 15 (App Router) · Supabase (Postgres + Auth + Storage) · Tailwind CSS · TypeScript
 
@@ -178,7 +178,7 @@ On **localhost**, there's no subdomain, so the middleware falls back to reading 
 Request arrives
       │
       ▼
-Is hostname localhost / app.abrempong.com?
+Is hostname localhost / app.gh-hostels.com?
       │
    YES│                          NO
       │                           │

@@ -1,4 +1,4 @@
-# AbrempongHMS
+# GH Hostels
 
 > Modern hostel management system for Ghana — multi-tenant, offline-first, AI-powered.
 
@@ -21,7 +21,7 @@
 ## Repository Structure
 
 ```
-abrempong/
+gh-hostels/
 ├── apps/
 │   └── web/                    # Next.js 15 application
 │       ├── app/                # App Router pages
@@ -99,7 +99,7 @@ npx supabase gen types typescript --local \
 
 ## Multi-Tenancy
 
-Each hostel gets a subdomain: `{slug}.abrempong.com`. Custom domains are also supported.
+Each hostel gets a subdomain: `{slug}.gh-hostels.com`. Custom domains are also supported.
 
 **Resolution flow:**
 1. Edge Middleware reads the incoming hostname
@@ -133,4 +133,4 @@ See `DESIGN_SYSTEM.md` for full specification.
 
 ## License
 
-Private — All rights reserved © 2024 AbrempongHMS.
+Private — All rights reserved © 2024 GH Hostels.

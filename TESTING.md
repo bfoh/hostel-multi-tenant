@@ -2,7 +2,7 @@
 
 Last updated: 2026-04-11
 
-This document covers the full testing checklist for AbrempongHMS — from localhost to production.
+This document covers the full testing checklist for GH Hostels — from localhost to production.
 Work through phases in order. Each phase builds on the previous.
 
 ---
@@ -157,7 +157,7 @@ This is the most critical flow. The auth callback fix must route invites to `/oc
 
 Once all phases pass locally, do the following before going live:
 
-- [ ] Set `NEXT_PUBLIC_APP_DOMAIN` to your real domain (e.g. `abrempong.com`)
+- [ ] Set `NEXT_PUBLIC_APP_DOMAIN` to your real domain (e.g. `gh-hostels.com`)
 - [ ] Provision an **Upstash Redis** instance and add env vars — subdomain routing needs it
 - [ ] Configure **Resend** so invite and receipt emails actually deliver
 - [ ] Add **Paystack test keys**, run a live payment through Phase 5, then swap to live keys
@@ -165,7 +165,7 @@ Once all phases pass locally, do the following before going live:
 - [ ] Deploy to **Vercel** with all env vars set in the Vercel dashboard
 - [ ] Re-run Phases 3–5 on the real domain with subdomain routing active
 - [ ] Verify `custom_access_token_hook` is registered on the production Supabase project
-- [ ] Verify at least one tenant subdomain resolves correctly: `yourslug.abrempong.com`
+- [ ] Verify at least one tenant subdomain resolves correctly: `yourslug.gh-hostels.com`
 - [ ] Test a custom domain CNAME setup end-to-end (Settings → Custom Domain)
 
 ---

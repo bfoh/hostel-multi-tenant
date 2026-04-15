@@ -1,4 +1,4 @@
-// ── AbrempongHMS — Shared Types ───────────────────────────────────────────────
+// ── GH Hostels — Shared Types ─────────────────────────────────────────────────
 
 export * from './auth'
 export * from './tenant'

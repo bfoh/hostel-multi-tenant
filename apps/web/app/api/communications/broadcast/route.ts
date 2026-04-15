@@ -114,8 +114,9 @@ export async function POST(req: NextRequest) {
         `<p style="font-size:15px;color:#374151;line-height:1.6;">${message.replace(/\n/g, '<br>')}</p>`
       )
       const sent = await sendEmail({
-        to: t.email!,
-        subject: subject || `Message from ${tenant?.name ?? 'your hostel'}`,
+        to:         t.email!,
+        senderName: tenant?.name ?? undefined,
+        subject:    subject || `Message from ${tenant?.name ?? 'your hostel'}`,
         html,
       })
       results.email++

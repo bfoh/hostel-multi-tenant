@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
       // Tenant custom image domains (CDN)
       {
         protocol: 'https',
-        hostname: '*.abrempong.com',
+        hostname: '*.gh-hostels.com',
       },
     ],
     formats: ['image/avif', 'image/webp'],

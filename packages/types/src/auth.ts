@@ -1,7 +1,7 @@
 // ── Auth & RBAC ───────────────────────────────────────────────────────────────
 
 /**
- * Platform-level roles (for Abrempong employees managing hostels).
+ * Platform-level roles (for GH Hostels employees managing hostels).
  * Stored in auth.users app_metadata.
  */
 export type PlatformRole = 'platform_admin' | 'platform_support'

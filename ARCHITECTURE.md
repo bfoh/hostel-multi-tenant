@@ -1,4 +1,4 @@
-# AbrempongHMS — Hostel Management System
+# GH Hostels — Hostel Management System
 ## Comprehensive Architecture & Product Plan
 ### Tailored for the Ghanaian Market
 
@@ -36,8 +36,8 @@
 
 ### 1.1 Product Identity
 
-**Name:** `AbrempongHMS`
-*(Abrempong = "nobleman/person of stature" in Twi — connoting prestige and trustworthiness)*
+**Name:** `GH Hostels`
+*(GH Hostels = "nobleman/person of stature" in Twi — connoting prestige and trustworthiness)*
 
 **Tagline:** *"Every Room. Every Cedi. Every Moment — In Your Hands."*
 
@@ -70,7 +70,7 @@ properties through a modern, resilient, offline-capable platform purpose-built f
 3. **Ghana-Native** — MoMo, GHS, GRA, Ghana Card — not bolted on, but foundational
 4. **Role-Appropriate Simplicity** — Each role sees only what they need, with the right UX depth
 5. **Startup-Smart** — Leverage managed services (Supabase, Vercel) to eliminate infrastructure ops
-6. **Each Hostel Owns Its Identity** — Custom domain, custom branding — no AbrempongHMS watermark unless the hostel wants it
+6. **Each Hostel Owns Its Identity** — Custom domain, custom branding — no GH Hostels watermark unless the hostel wants it
 7. **Real-Time Awareness** — Owners get live dashboards, push alerts, and anomaly flags
 
 ---
@@ -300,7 +300,7 @@ TENANT-SCOPED TABLES (all have tenant_id, all protected by RLS):
 ### 3.4 Tenant Onboarding Flow
 
 ```
-1. Owner signs up at app.abrempong.com/register
+1. Owner signs up at app.gh-hostels.com/register
    ↓
 2. Supabase Auth creates user record
    ↓
@@ -308,7 +308,7 @@ TENANT-SCOPED TABLES (all have tenant_id, all protected by RLS):
    - Creates row in public.tenants (slug auto-generated from hostel name)
    - Creates row in public.tenant_members (role: owner)
    - Creates row in public.tenant_config (default branding)
-   - Provisions subdomain: {slug}.abrempong.com
+   - Provisions subdomain: {slug}.gh-hostels.com
    ↓
 4. Owner completes onboarding wizard:
    - Upload logo
@@ -328,15 +328,15 @@ TENANT-SCOPED TABLES (all have tenant_id, all protected by RLS):
 
 ### 4.1 What Each Hostel Gets
 
-Every hostel on AbrempongHMS is a completely independent branded experience:
+Every hostel on GH Hostels is a completely independent branded experience:
 
 ```
 HOSTEL IDENTITY ELEMENTS:
-  ✓ Custom domain       app.acaciahostel.com (or acacia.abrempong.com)
+  ✓ Custom domain       app.acaciahostel.com (or acacia.gh-hostels.com)
   ✓ Custom logo         Shown in navbar, invoices, receipts, emails
   ✓ Custom favicon      Browser tab icon
   ✓ Brand colours       Primary + secondary — applied via CSS variables
-  ✓ Hostel name         Shown everywhere (not "AbrempongHMS")
+  ✓ Hostel name         Shown everywhere (not "GH Hostels")
   ✓ Tagline             Optional short description
   ✓ Contact info        Address, phone, email — on invoices and portal
   ✓ Social links        Facebook, Instagram, WhatsApp number
@@ -354,7 +354,7 @@ HOSTEL IDENTITY ELEMENTS:
 STEP 1 — Owner enters domain in Settings → Domains
          e.g., "app.acaciahostel.com"
 
-STEP 2 — AbrempongHMS backend calls Vercel Domains API:
+STEP 2 — GH Hostels backend calls Vercel Domains API:
          POST https://api.vercel.com/v10/projects/{projectId}/domains
          Body: { "name": "app.acaciahostel.com" }
          → Vercel returns: CNAME target "cname.vercel-dns.com"
@@ -364,7 +364,7 @@ STEP 3 — Owner is shown DNS instructions:
           Name:  app
           Value: cname.vercel-dns.com"
 
-STEP 4 — AbrempongHMS polls Vercel API every 30 seconds
+STEP 4 — GH Hostels polls Vercel API every 30 seconds
          GET /v10/projects/{id}/domains/app.acaciahostel.com
          When verified: true → mark domain as active in tenant_config
 
@@ -383,7 +383,7 @@ TTL: 1 hour (branding changes propagate within 1 hour)
 
 On cache miss:
   → SELECT * FROM public.tenant_config WHERE custom_domain = {hostname}
-     OR subdomain = {slug} (if using .abrempong.com subdomain)
+     OR subdomain = {slug} (if using .gh-hostels.com subdomain)
   → Cache result for 1 hour
   → Return tenant context
 ```
@@ -501,7 +501,7 @@ export default async function RootLayout({ children }) {
 
 ## PART 4B — PUBLIC WEBSITE INTEGRATION
 
-Every hostel using AbrempongHMS already has a branded management app at their own domain
+Every hostel using GH Hostels already has a branded management app at their own domain
 (e.g., `app.acaciahostel.com`). But their **public marketing website** — where prospective
 occupants discover them — lives separately. This part defines how those two connect.
 
@@ -518,7 +518,7 @@ SCENARIO A — "I have an existing website"
 SCENARIO B — "I have a domain but no website"
   acaciahostel.com exists but points nowhere useful
   Want: A professional online presence with live booking
-  Solution: AbrempongHMS Hosted Booking Page becomes their website
+  Solution: GH Hostels Hosted Booking Page becomes their website
             Point the root domain to app.acaciahostel.com
 
 SCENARIO C — "I have a developer building my website"
@@ -538,14 +538,14 @@ widget on a separate marketing site AND give their developer API access.
 acaciahostel.com (root domain — owned by the hostel)
 │
 ├── www.acaciahostel.com       ← Hostel's existing marketing website
-│     (WordPress, Wix, etc.)    NOT managed by AbrempongHMS
+│     (WordPress, Wix, etc.)    NOT managed by GH Hostels
 │     │
-│     └── Embeds <script> tag   ← AbrempongHMS Widget (hosted on our CDN)
+│     └── Embeds <script> tag   ← GH Hostels Widget (hosted on our CDN)
 │           ↓ API calls to ↓
-│           api.abrempong.com/public/acacia/...
+│           api.gh-hostels.com/public/acacia/...
 │
-├── app.acaciahostel.com       ← AbrempongHMS management app + student portal
-│     (CNAME → Vercel)           Fully managed by AbrempongHMS
+├── app.acaciahostel.com       ← GH Hostels management app + student portal
+│     (CNAME → Vercel)           Fully managed by GH Hostels
 │     │
 │     ├── /dashboard             Staff & management
 │     ├── /portal                Student self-service
@@ -562,8 +562,8 @@ acaciahostel.com (root domain — owned by the hostel)
 
 **Best for:** All hostels. This is the default — every hostel gets this automatically.
 
-When a hostel signs up, AbrempongHMS automatically creates a fully public, SEO-optimised
-booking page at `app.acaciahostel.com/book` (or `acacia.abrempong.com/book` if no custom
+When a hostel signs up, GH Hostels automatically creates a fully public, SEO-optimised
+booking page at `app.acaciahostel.com/book` (or `acacia.gh-hostels.com/book` if no custom
 domain is configured yet).
 
 **What the page contains:**
@@ -601,9 +601,9 @@ domain is configured yet).
 
 **For Scenario B hostels (no website):**
 The owner adds a CNAME for their root domain (`acaciahostel.com`) pointing to Vercel.
-AbrempongHMS serves a full marketing landing page — effectively a website — that the
+GH Hostels serves a full marketing landing page — effectively a website — that the
 owner fills out via their settings: photos, about us text, amenities list, Google Map.
-This means **AbrempongHMS doubles as a website builder for hostel owners who have no site**.
+This means **GH Hostels doubles as a website builder for hostel owners who have no site**.
 
 ---
 
@@ -621,11 +621,11 @@ This means **AbrempongHMS doubles as a website builder for hostel owners who hav
 
 **The snippet:**
 ```html
-<!-- AbrempongHMS Booking Widget -->
+<!-- GH Hostels Booking Widget -->
 <!-- Paste this anywhere in your website's HTML -->
-<div id="abrempong-widget"></div>
+<div id="gh-hostels-widget"></div>
 <script
-  src="https://cdn.abrempong.com/widget/v1/embed.js"
+  src="https://cdn.gh-hostels.com/widget/v1/embed.js"
   data-tenant="acacia-hostel"
   data-key="pk_live_aXXXXXXXXXXXXXXXXXXXXXX"
   data-mode="inline"
@@ -658,14 +658,14 @@ The widget is built as a **completely separate bundle** from the main Next.js ap
 It must be small, self-contained, and safe to run on any third-party website.
 
 ```
-cdn.abrempong.com/widget/v1/embed.js
+cdn.gh-hostels.com/widget/v1/embed.js
   │
   ├── Size target: < 45KB gzipped (Preact instead of React for smaller bundle)
   ├── Zero external dependencies (no jQuery, no Bootstrap)
   ├── Self-scoped CSS (all styles prefixed .abr-widget-* to avoid conflicts)
   ├── No cookies set on the host website
   ├── No access to the host page's DOM outside its container div
-  └── Communicates ONLY with api.abrempong.com (no third-party calls)
+  └── Communicates ONLY with api.gh-hostels.com (no third-party calls)
 
 WIDGET BOOKING FLOW (5 steps):
   Step 1 — Room Type Selection
@@ -687,7 +687,7 @@ WIDGET BOOKING FLOW (5 steps):
     → Paystack popup (handles MTN MoMo / Vodafone Cash / AirtelTigo / Card)
     → Deposit or full payment (configured by hostel)
     → Payment processed directly between occupant and hostel
-    → AbrempongHMS never holds money (payment gateway direct settlement)
+    → GH Hostels never holds money (payment gateway direct settlement)
 
   Step 5 — Confirmation
     → Booking reference displayed (e.g., BK-2024-08421)
@@ -736,7 +736,7 @@ PUBLIC API KEY (data-key="pk_live_xxx"):
 CORS PROTECTION:
   The public API only responds to requests from:
     1. The hostel's registered website domain(s)
-    2. The AbrempongHMS app domain (app.acaciahostel.com)
+    2. The GH Hostels app domain (app.acaciahostel.com)
     3. localhost:* (development)
   Any other origin receives a 403 Forbidden response.
 
@@ -751,15 +751,15 @@ RATE LIMITING (per tenant + per IP):
   → Enforced at Edge Middleware layer (Upstash Redis counter)
 
 PAYMENT SECURITY:
-  AbrempongHMS never touches payment card data.
+  GH Hostels never touches payment card data.
   Paystack handles all PCI-DSS compliance.
   The widget triggers Paystack's hosted popup — card details
   go directly from occupant browser to Paystack servers.
 
 CSP HEADER NOTE:
   If the hostel's website has a Content Security Policy, they must add:
-    script-src: https://cdn.abrempong.com
-    connect-src: https://api.abrempong.com
+    script-src: https://cdn.gh-hostels.com
+    connect-src: https://api.gh-hostels.com
   The widget settings page in the dashboard explains this with
   platform-specific instructions (WordPress, Wix, Squarespace).
 ```
@@ -775,7 +775,7 @@ over the UI and booking experience.
 key, but still restricted to the public booking scope.
 
 ```
-BASE URL: https://api.abrempong.com/public/v1/{tenant-slug}/
+BASE URL: https://api.gh-hostels.com/public/v1/{tenant-slug}/
 
 AUTHENTICATION:
   Header: Authorization: Bearer pk_api_xxxxxxxxxxxxxxxx
@@ -865,7 +865,7 @@ SUPPORTED PLATFORMS (Step-by-step guides in dashboard):
   WordPress
     → Paste widget snippet into Theme Editor → footer.php
     → OR use "Custom HTML" block in any page/post
-    → OR install AbrempongHMS WordPress plugin (Phase 5 roadmap)
+    → OR install GH Hostels WordPress plugin (Phase 5 roadmap)
 
   Wix
     → Wix Editor → Add → Embed → Custom Code
@@ -889,7 +889,7 @@ SUPPORTED PLATFORMS (Step-by-step guides in dashboard):
   No website (Scenario B)
     → Use the hosted booking page directly
     → Share the link: app.acaciahostel.com/book
-    → Or point your domain root to AbrempongHMS
+    → Or point your domain root to GH Hostels
 ```
 
 ---
@@ -953,7 +953,7 @@ In the management app under `Settings → Website Integration`, the owner sees:
 │                                                                  │
 │  BOOKING PAGE                                                    │
 │  Public URL: https://app.acaciahostel.com/book          [Copy]  │
-│  Short URL:  https://acacia.abrempong.com/book          [Copy]  │
+│  Short URL:  https://acacia.gh-hostels.com/book          [Copy]  │
 │  Status:     [● Live]   [Disable]                               │
 │                                                                  │
 │  EMBED WIDGET                                                    │
@@ -966,9 +966,9 @@ In the management app under `Settings → Website Integration`, the owner sees:
 │                                                                  │
 │  YOUR SNIPPET — paste into your website:                         │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │ <div id="abrempong-widget"></div>                        │   │
+│  │ <div id="gh-hostels-widget"></div>                        │   │
 │  │ <script                                                  │   │
-│  │   src="https://cdn.abrempong.com/widget/v1/embed.js"    │   │
+│  │   src="https://cdn.gh-hostels.com/widget/v1/embed.js"    │   │
 │  │   data-tenant="acacia-hostel"                           │   │
 │  │   data-key="pk_live_aXXXXXXXX"                          │   │
 │  │   data-mode="inline"                                     │   │
@@ -982,7 +982,7 @@ In the management app under `Settings → Website Integration`, the owner sees:
 │                                                                  │
 │  DEVELOPER API                                                   │
 │  API Key: pk_api_XXXX••••••••••••••••••    [Show] [Regenerate]  │
-│  API Docs: https://docs.abrempong.com/api  [Open]               │
+│  API Docs: https://docs.gh-hostels.com/api  [Open]               │
 │  Webhook URL: [https://mysite.com/webhooks/hms      ]           │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -1025,7 +1025,7 @@ Best for           All hostels    Has a website   Has a developer
 
 ### 4C.1 Overview
 
-This is a premium add-on service within AbrempongHMS — not just a feature, but a
+This is a premium add-on service within GH Hostels — not just a feature, but a
 **product within the product**. It solves two real problems Ghanaian hostel owners face:
 
 1. Their website (if they have one) is outdated, slow, and does not convert visitors into
@@ -1039,7 +1039,7 @@ PREMIUM WEBSITE:
   ✓ 4 professionally designed, mobile-first, high-converting templates
   ✓ Owner fills in content via guided CMS (no developer, no code)
   ✓ Hosted on hostel's own domain (www.acaciahostel.com)
-  ✓ Live room availability pulled directly from AbrempongHMS data
+  ✓ Live room availability pulled directly from GH Hostels data
   ✓ Integrated booking flow (widget built in, not embedded separately)
   ✓ SEO-optimised out of the box (hostel ranks on Google for "student hostel Kumasi")
   ✓ < 2s load time on 3G (performance-first build)
@@ -1067,7 +1067,7 @@ IDEAL CUSTOMER B: Hostel missing bookings after hours
 
 IDEAL CUSTOMER C: Hostel owner who wants to look premium
   → Competes visually and technologically with the best hostels
-  → "AbrempongHMS makes small hostels look like hotel chains"
+  → "GH Hostels makes small hostels look like hotel chains"
 ```
 
 ---
@@ -1116,7 +1116,7 @@ TEMPLATE 4 — "PRESTIGE"
 ```
 
 **Live availability on the website:**
-Room listing pages show real-time availability pulled from AbrempongHMS data:
+Room listing pages show real-time availability pulled from GH Hostels data:
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  SINGLE ENSUITE ROOM                    GHS 800/semester │
@@ -1140,7 +1140,7 @@ an API call. This is a proven conversion driver.
 
 ### 4C.3 Content Management Interface
 
-Owners edit their website content entirely within the AbrempongHMS dashboard.
+Owners edit their website content entirely within the GH Hostels dashboard.
 No external tools, no code, no developer required.
 
 ```
@@ -1161,7 +1161,7 @@ SECTIONS (each can be toggled on/off):
     About image:      [Upload photo]
 
   ROOMS PREVIEW
-    → Auto-populated from room types in AbrempongHMS
+    → Auto-populated from room types in GH Hostels
     → Owner can reorder and choose which rooms to feature
 
   AMENITIES
@@ -1813,12 +1813,12 @@ they stack on top of each other.
 
 ```
 TIER A: No website integration
-  Hostel uses AbrempongHMS for operations only.
-  No public-facing web presence through AbrempongHMS.
+  Hostel uses GH Hostels for operations only.
+  No public-facing web presence through GH Hostels.
   [Starter plan]
 
 TIER B: Hosted booking page only
-  AbrempongHMS provides a functional booking page at their domain.
+  GH Hostels provides a functional booking page at their domain.
   No marketing content, just book/availability.
   [Starter plan — free]
 
@@ -1827,7 +1827,7 @@ TIER C: JS Embed Widget
   [Growth plan]
 
 TIER D: Premium Website
-  AbrempongHMS provides the entire public-facing website.
+  GH Hostels provides the entire public-facing website.
   Full marketing site + integrated booking + live availability.
   No separate website needed.
   [Growth plan + Website add-on, or Enterprise]
@@ -2204,7 +2204,7 @@ SESSION MANAGEMENT:
 
 ```
 PLATFORM LEVEL
-└── super_admin          (AbrempongHMS platform operators — bypass RLS via service key)
+└── super_admin          (GH Hostels platform operators — bypass RLS via service key)
 
 TENANT LEVEL
 ├── owner                (all data visible, all financials, audit log, settings)
@@ -2503,7 +2503,7 @@ Bank Payroll         GH-INTER format        Payslip bank transfer file export
 ### 9.3 Project Structure
 
 ```
-abrempong-hms/
+gh-hostels/
 ├── apps/
 │   └── web/                              # Next.js 14 (frontend + API)
 │       ├── app/
@@ -2647,7 +2647,7 @@ one active user every 7 days (easy when you have real customers).
 ```
 OWNER VIEW:          "The Control Room"
   → Information-dense dashboards, financial summaries, anomaly alerts
-  → Their hostel brand — logo, colours — not AbrempongHMS branding
+  → Their hostel brand — logo, colours — not GH Hostels branding
   → Real-time live feed via Supabase Realtime
 
 MANAGER VIEW:        "The Operations Desk"
@@ -2788,7 +2788,7 @@ Trigger.dev scheduled job that summarises all notable actions from the previous 
 - [ ] Next.js Edge Middleware (tenant resolution from hostname)
 - [ ] Upstash Redis setup (tenant cache)
 - [ ] White-labeling foundation (tenant_config schema + BrandingProvider)
-- [ ] Vercel deployment + subdomain routing ({slug}.abrempong.com)
+- [ ] Vercel deployment + subdomain routing ({slug}.gh-hostels.com)
 - [ ] Base RLS policies for all core tables
 - [ ] shadcn/ui design system with CSS variable theming
 - [ ] Audit log infrastructure (append-only table + auto-trigger)
@@ -2883,7 +2883,7 @@ Trigger.dev scheduled job that summarises all notable actions from the previous 
 
 - [ ] Super-admin platform console (manage all tenants, billing, support)
 - [ ] Subscription billing (Paystack recurring billing for SaaS plans)
-- [ ] Public hostel directory / marketplace (AbrempongHMS.com listings)
+- [ ] Public hostel directory / marketplace (GH Hostels.com listings)
 - [ ] Native Android app (React Native wrapping PWA core — Android first)
 - [ ] i18n: Twi language pack (Arkesel supports Twi SMS, AI speaks Twi)
 - [ ] GRA e-VAT integration (when API becomes available)
@@ -2918,7 +2918,7 @@ Trigger.dev scheduled job that summarises all notable actions from the previous 
 | SMS credits | 100/mo | 500/mo | 2,000/mo |
 | Custom domain (app) | No | Yes | Yes |
 | Custom branding | Basic (colours) | Full (logo + colours + fonts) | Full + white-label |
-| Hosted booking page | Yes (.abrempong.com) | Yes (custom domain) | Yes (custom domain + SEO) |
+| Hosted booking page | Yes (.gh-hostels.com) | Yes (custom domain) | Yes (custom domain + SEO) |
 | JS embed widget | No | Yes | Yes |
 | Widget allowed domains | N/A | 2 domains | Unlimited |
 | Public REST API | No | Yes | Yes |
@@ -2981,7 +2981,7 @@ Enterprise + Website + AI: GHS 1,399/mo — Premium flagship offering
 
 ---
 
-*AbrempongHMS — Architecture v4.0 — April 2026*
+*GH Hostels — Architecture v4.0 — April 2026*
 *Startup-optimised: Supabase + Vercel + Upstash + Trigger.dev*
 *Website Integration: Hosted Booking Page + JS Embed Widget + Public REST API*
 *AI Website: 4 Premium Templates + Voice/Chat AI Agent (Vapi + Claude + pgvector)*

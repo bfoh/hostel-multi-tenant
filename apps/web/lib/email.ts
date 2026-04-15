@@ -6,17 +6,21 @@
 const RESEND_API = 'https://api.resend.com/emails'
 
 interface SendParams {
-  to:      string | string[]
-  subject: string
-  html:    string
-  replyTo?: string
+  to:         string | string[]
+  subject:    string
+  html:       string
+  replyTo?:   string
+  senderName?: string
 }
 
 export async function sendEmail(params: SendParams): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) return  // silently skip when not configured
 
-  const from = process.env.RESEND_FROM_EMAIL ?? 'no-reply@ghh.com'
+  const address = process.env.RESEND_FROM_EMAIL ?? 'no-reply@updates.gh-hostels.com'
+  const from = params.senderName
+    ? `${params.senderName} via GH Hostels <${address}>`
+    : `GH Hostels <${address}>`
 
   await fetch(RESEND_API, {
     method: 'POST',
