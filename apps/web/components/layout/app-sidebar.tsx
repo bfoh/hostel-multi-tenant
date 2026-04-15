@@ -260,8 +260,8 @@ function NavLink({ item, pathname, collapsed }: { item: NavItem; pathname: strin
         )}
         title={collapsed ? item.label : undefined}
       >
-        <span className="sb-icon relative flex shrink-0 items-center justify-center">
-          <Icon className="h-[18px] w-[18px]" />
+        <span className="sb-icon relative flex shrink-0 items-center justify-center" style={{ perspective: '600px' }}>
+          <Icon className={cn('h-[18px] w-[18px]', !isActive && 'opacity-70')} />
         </span>
         {!collapsed && (
           <span className="truncate tracking-[0.01em]">{item.label}</span>

@@ -271,10 +271,13 @@
     transition: width 400ms var(--ease-standard);
   }
 
-  /* ── Sidebar icon micro-animations (Resend-style) ──────────── */
-  /* Transition-based: smooth in + smooth out. No one-shot keyframes. */
+  /* ── Sidebar icon micro-animations (Resend-style) ──────────────
+   *  Resend pattern: spring overshoot on hover-in, smooth ease on hover-out.
+   *  Each icon gets a semantically meaningful transform.
+   *  Dual cubic-bezier: base = smooth exit, hover = spring enter.
+   * ─────────────────────────────────────────────────────────────── */
 
-  /* Base transition on all sidebar icons */
+  /* Base: smooth ease-out for mouse-leave (no overshoot) */
   .sb-anim-bounce .sb-icon,
   .sb-anim-shake .sb-icon,
   .sb-anim-spin .sb-icon,
@@ -285,57 +288,77 @@
   .sb-anim-flip .sb-icon,
   .sb-anim-tilt .sb-icon,
   .sb-anim-pop .sb-icon {
-    transition: transform 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transition: transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                opacity 300ms ease;
+    will-change: transform;
   }
 
-  /* Bounce — subtle lift */
-  .sb-anim-bounce:hover .sb-icon {
-    transform: translateY(-2px);
-  }
-
-  /* Shake — slight horizontal nudge + tilt */
-  .sb-anim-shake:hover .sb-icon {
-    transform: translateX(-1.5px) rotate(-4deg);
-  }
-
-  /* Spin — partial rotation */
-  .sb-anim-spin:hover .sb-icon {
-    transform: rotate(60deg);
-  }
-
-  /* Pulse — gentle scale up */
-  .sb-anim-pulse:hover .sb-icon {
-    transform: scale(1.15);
-  }
-
-  /* Swing — slight clockwise lean */
-  .sb-anim-swing:hover .sb-icon {
-    transform: rotate(12deg);
-  }
-
-  /* Ring — tilt + slight bounce */
-  .sb-anim-ring:hover .sb-icon {
-    transform: rotate(-12deg) translateY(-1px);
-  }
-
-  /* Slide — nudge right */
-  .sb-anim-slide:hover .sb-icon {
-    transform: translateX(2.5px);
-  }
-
-  /* Flip — subtle Y-axis perspective tilt */
-  .sb-anim-flip:hover .sb-icon {
-    transform: rotateY(20deg) scale(1.05);
-  }
-
-  /* Tilt — lean to side */
-  .sb-anim-tilt:hover .sb-icon {
-    transform: rotate(-6deg) scale(1.05);
-  }
-
-  /* Pop — scale up with slight lift */
+  /* Hover-in: spring with overshoot — applied on ALL hover states */
+  .sb-anim-bounce:hover .sb-icon,
+  .sb-anim-shake:hover .sb-icon,
+  .sb-anim-spin:hover .sb-icon,
+  .sb-anim-pulse:hover .sb-icon,
+  .sb-anim-swing:hover .sb-icon,
+  .sb-anim-ring:hover .sb-icon,
+  .sb-anim-slide:hover .sb-icon,
+  .sb-anim-flip:hover .sb-icon,
+  .sb-anim-tilt:hover .sb-icon,
   .sb-anim-pop:hover .sb-icon {
-    transform: scale(1.18) translateY(-1px);
+    transition: transform 250ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                opacity 250ms ease;
+    opacity: 1;
+  }
+
+  /* ── Per-icon transforms (semantically matched) ─────────────── */
+
+  /* Bounce — people/users hop up */
+  .sb-anim-bounce:hover .sb-icon {
+    transform: translateY(-2.5px) scale(1.04);
+  }
+
+  /* Shake — messages/comms vibrate */
+  .sb-anim-shake:hover .sb-icon {
+    transform: rotate(-8deg);
+  }
+
+  /* Spin — settings cog turns */
+  .sb-anim-spin:hover .sb-icon {
+    transform: rotate(90deg);
+  }
+
+  /* Pulse — dashboard/monitor throb */
+  .sb-anim-pulse:hover .sb-icon {
+    transform: scale(1.18);
+  }
+
+  /* Swing — wrench/tool swings like in use */
+  .sb-anim-swing:hover .sb-icon {
+    transform: rotate(16deg) translateX(1px);
+  }
+
+  /* Ring — bell/notification ring (tilt + lift) */
+  .sb-anim-ring:hover .sb-icon {
+    transform: rotate(-14deg) translateY(-1.5px);
+  }
+
+  /* Slide — search/list slides right (scanning motion) */
+  .sb-anim-slide:hover .sb-icon {
+    transform: translateX(3px);
+  }
+
+  /* Flip — calendar/book page turn */
+  .sb-anim-flip:hover .sb-icon {
+    transform: rotateY(25deg) scale(1.04);
+  }
+
+  /* Tilt — building/package leans (weighted feel) */
+  .sb-anim-tilt:hover .sb-icon {
+    transform: rotate(-8deg) translateY(-1px);
+  }
+
+  /* Pop — sparkle/AI burst outward */
+  .sb-anim-pop:hover .sb-icon {
+    transform: scale(1.22) translateY(-1.5px);
   }
 }
 
