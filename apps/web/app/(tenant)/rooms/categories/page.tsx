@@ -4,6 +4,7 @@ import { ChevronLeft, Plus } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { formatGHS } from '@/lib/utils'
+import { DeleteCategoryButton } from '@/components/rooms/delete-category-button'
 
 export const metadata: Metadata = { title: 'Room Types' }
 
@@ -106,12 +107,15 @@ export default async function RoomCategoriesPage() {
                   </div>
                 )}
               </div>
-              <Link
-                href={`/rooms/categories/${c.id}/edit`}
-                className="ml-4 shrink-0 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-surface-raised transition-colors"
-              >
-                Edit
-              </Link>
+              <div className="ml-4 flex shrink-0 items-center">
+                <Link
+                  href={`/rooms/categories/${c.id}/edit`}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-surface-raised transition-colors"
+                >
+                  Edit
+                </Link>
+                <DeleteCategoryButton id={c.id} name={c.name} />
+              </div>
             </div>
           ))}
         </div>

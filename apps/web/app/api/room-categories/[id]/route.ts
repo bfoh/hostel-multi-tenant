@@ -46,3 +46,28 @@ export async function PUT(
 
   return NextResponse.json(data)
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+
+  const tenantId = await getServerTenantId()
+  if (!tenantId) {
+    return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('room_categories')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
+}
