@@ -60,16 +60,15 @@ export async function DELETE(
 
   const supabase = createAdminClient()
 
-  // Block delete if room has active booking
+  // Block delete if room has any bookings (FK is RESTRICT)
   const { count } = await supabase
     .from('bookings')
     .select('id', { count: 'exact', head: true })
     .eq('room_id', id)
-    .in('status', ['confirmed', 'checked_in'])
 
   if (count && count > 0) {
     return NextResponse.json(
-      { error: `Cannot delete: room has ${count} active booking(s). Cancel or check out first.` },
+      { error: `Cannot delete: room has ${count} booking(s). Remove bookings first.` },
       { status: 409 }
     )
   }
@@ -81,6 +80,12 @@ export async function DELETE(
     .eq('tenant_id', tenantId)
 
   if (error) {
+    if (error.code === '23503') {
+      return NextResponse.json(
+        { error: 'Cannot delete: room is referenced by other records.' },
+        { status: 409 }
+      )
+    }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
