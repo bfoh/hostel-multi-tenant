@@ -2,17 +2,22 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 import { RoomCategoryForm } from '@/components/rooms/room-category-form'
 
 export const metadata: Metadata = { title: 'Edit Room Type' }
 
 async function getCategory(id: string) {
-  const supabase = await createClient()
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return null
+
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('room_categories')
     .select('id, name, type, base_rate, rate_unit, capacity, description, amenities, is_active')
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .single()
   return data
 }

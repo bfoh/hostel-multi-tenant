@@ -1,16 +1,21 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft, Plus } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 import { formatGHS } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Room Types' }
 
 async function getCategories() {
-  const supabase = await createClient()
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('room_categories')
     .select('id, name, type, base_rate, rate_unit, capacity, amenities, description, is_active, sort_order')
+    .eq('tenant_id', tenantId)
     .order('sort_order')
   return data ?? []
 }
