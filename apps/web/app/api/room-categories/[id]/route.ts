@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
   name:        z.string().min(2).max(100).optional(),
@@ -25,11 +26,17 @@ export async function PUT(
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const supabase = await createClient()
+  const tenantId = await getServerTenantId()
+  if (!tenantId) {
+    return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+  }
+
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('room_categories')
     .update(parsed.data)
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .select('id')
     .single()
 
