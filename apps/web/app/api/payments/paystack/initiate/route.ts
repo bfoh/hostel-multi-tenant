@@ -43,6 +43,21 @@ export async function POST(req: NextRequest) {
 
   if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
 
+  // Load the tenant's Paystack subaccount — required to route funds to the hostel bank
+  const { data: tenantRow } = await supabase
+    .from('tenants')
+    .select('paystack_subaccount_code')
+    .eq('id', tenantId)
+    .single()
+
+  const subaccount = tenantRow?.paystack_subaccount_code ?? null
+  if (!subaccount) {
+    return NextResponse.json(
+      { error: 'Online payments are not available yet. Connect a payout bank in Settings → Payouts.' },
+      { status: 409 },
+    )
+  }
+
   // Create a pending payment record
   const { data: payment, error: paymentError } = await supabase
     .from('booking_payments')
@@ -76,7 +91,10 @@ export async function POST(req: NextRequest) {
         booking_id:      parsed.data.booking_id,
         payment_id:      payment.id,
         booking_ref:     booking.booking_ref,
+        source:          'staff_portal',
       },
+      subaccount,
+      bearer: 'subaccount',
     })
 
     // Store the Paystack reference on the payment record

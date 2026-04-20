@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
+import { initializeTransaction } from '@/lib/paystack'
 
 const initSchema = z.object({
   booking_ref: z.string().min(1),
@@ -18,7 +19,7 @@ export async function POST(
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name')
+    .select('id, name, paystack_subaccount_code')
     .eq('slug', slug)
     .single()
 
@@ -51,40 +52,42 @@ export async function POST(
 
   const amount = Math.min(parsed.data.amount, balance)
 
-  const paystackKey = process.env.PAYSTACK_SECRET_KEY
-  if (!paystackKey)
+  if (!process.env.PAYSTACK_SECRET_KEY)
     return NextResponse.json({ error: 'Online payment not configured' }, { status: 503 })
+
+  if (!tenant.paystack_subaccount_code) {
+    return NextResponse.json(
+      { error: 'This hostel has not connected a payout bank yet. Please pay on arrival.' },
+      { status: 409 },
+    )
+  }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host')}`
   const callbackUrl = `${appUrl}/api/public/${slug}/pay/callback?booking_id=${booking.id}&amount=${amount}`
 
-  const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
-    method: 'POST',
-    headers: {
-      Authorization:  `Bearer ${paystackKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email:        occ?.email ?? `${booking.booking_ref.toLowerCase()}@portal.local`,
-      amount,                          // already in pesewas = kobo for NGN but GHS uses same unit
-      currency:     'GHS',
-      reference:    `${booking.booking_ref}-${Date.now()}`,
-      callback_url: callbackUrl,
+  try {
+    const result = await initializeTransaction({
+      email:         occ?.email ?? `${booking.booking_ref.toLowerCase()}@portal.local`,
+      amountPesewas: amount,
+      reference:     `${booking.booking_ref}-${Date.now()}`,
+      callbackUrl,
+      channels:      ['card', 'mobile_money', 'bank', 'bank_transfer'],
       metadata: {
         booking_id:  booking.id,
         booking_ref: booking.booking_ref,
         tenant_id:   tenant.id,
-        source:      'occupant_portal',
+        source:      'public_booking',
       },
-    }),
-  })
+      subaccount: tenant.paystack_subaccount_code,
+      bearer:     'subaccount',
+    })
 
-  const psData = await paystackRes.json()
-  if (!psData.status) return NextResponse.json({ error: psData.message ?? 'Paystack error' }, { status: 502 })
-
-  return NextResponse.json({
-    authorization_url: psData.data.authorization_url,
-    reference:         psData.data.reference,
-    amount,
-  })
+    return NextResponse.json({
+      authorization_url: result.authorizationUrl,
+      reference:         result.reference,
+      amount,
+    })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message ?? 'Paystack error' }, { status: 502 })
+  }
 }

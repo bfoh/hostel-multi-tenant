@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { BootstrapPlansButton } from '@/components/admin/bootstrap-plans-button'
 
 export const metadata: Metadata = { title: 'Platform Overview — Super Admin' }
 
@@ -88,6 +89,16 @@ export default async function AdminOverviewPage() {
             <p className="mt-0.5 text-xs text-white/30">{k.sub}</p>
           </div>
         ))}
+      </div>
+
+      {/* Paystack plan bootstrap */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-2">
+        <h2 className="text-sm font-semibold text-white">Paystack plans</h2>
+        <p className="text-xs text-white/50">
+          One-time: create the 3 platform subscription plans (Starter, Growth, Pro) on Paystack.
+          Idempotent — skips plans whose env code is already set.
+        </p>
+        <BootstrapPlansButton />
       </div>
 
       {/* Recent tenants */}

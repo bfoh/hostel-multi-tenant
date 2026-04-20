@@ -14,6 +14,7 @@ import { LeasePdfButton } from '@/components/bookings/lease-pdf-button'
 import { RoomTransferButton } from '@/components/bookings/room-transfer-button'
 import { DepositCard } from '@/components/bookings/deposit-card'
 import { createClient } from '@/lib/supabase/server'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -59,6 +60,18 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     .select('*')
     .eq('booking_id', id)
     .maybeSingle()
+
+  // Paystack is only live when both the platform key AND the tenant's subaccount are set
+  const tenantId = await getServerTenantId()
+  const { data: tenantRow } = tenantId
+    ? await supabase
+        .from('tenants')
+        .select('paystack_subaccount_code')
+        .eq('id', tenantId)
+        .single()
+    : { data: null }
+  const paystackReady =
+    !!process.env.PAYSTACK_SECRET_KEY && !!tenantRow?.paystack_subaccount_code
 
   const occupant = Array.isArray(booking.occupant) ? booking.occupant[0] : booking.occupant
   const room = Array.isArray(booking.room) ? booking.room[0] : booking.room
@@ -238,7 +251,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   <RecordPaymentForm
                     bookingId={id}
                     balance={balance}
-                    paystackEnabled={!!process.env.PAYSTACK_SECRET_KEY}
+                    paystackEnabled={paystackReady}
                   />
                 </div>
               )}

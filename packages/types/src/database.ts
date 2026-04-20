@@ -41,6 +41,7 @@ type VisitorPurpose     = 'visit_occupant' | 'delivery' | 'maintenance' | 'offic
 type LostFoundType      = 'lost' | 'found'
 type LostFoundStatus    = 'unclaimed' | 'claimed' | 'disposed'
 type SmsBlastStatus     = 'pending' | 'scheduled' | 'sent' | 'failed'
+type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete'
 
 // ── Relationship helper ──────────────────────────────────────────────────────
 
@@ -88,6 +89,12 @@ export type Database = {
           auto_checkout_enabled: boolean
           late_checkout_fee_percent: number
           paystack_customer_id: string | null
+          paystack_subaccount_code: string | null
+          paystack_bank_code: string | null
+          paystack_bank_account_no: string | null
+          paystack_settlement_bank: string | null
+          paystack_account_name: string | null
+          paystack_connected_at: string | null
           billing_email: string | null
           is_active: boolean
           contact_phone: string | null
@@ -138,6 +145,12 @@ export type Database = {
           auto_checkout_enabled?: boolean
           late_checkout_fee_percent?: number
           paystack_customer_id?: string | null
+          paystack_subaccount_code?: string | null
+          paystack_bank_code?: string | null
+          paystack_bank_account_no?: string | null
+          paystack_settlement_bank?: string | null
+          paystack_account_name?: string | null
+          paystack_connected_at?: string | null
           billing_email?: string | null
           contact_phone?: string | null
           contact_email?: string | null
@@ -184,6 +197,12 @@ export type Database = {
           auto_checkout_enabled?: boolean
           late_checkout_fee_percent?: number
           paystack_customer_id?: string | null
+          paystack_subaccount_code?: string | null
+          paystack_bank_code?: string | null
+          paystack_bank_account_no?: string | null
+          paystack_settlement_bank?: string | null
+          paystack_account_name?: string | null
+          paystack_connected_at?: string | null
           billing_email?: string | null
           contact_phone?: string | null
           contact_email?: string | null
@@ -2359,6 +2378,91 @@ export type Database = {
         Relationships: [
           { foreignKeyName: 'visitor_logs_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
         ]
+      }
+
+      tenant_subscriptions: {
+        Row: {
+          id: string
+          tenant_id: string
+          paystack_customer_code: string
+          paystack_plan_code: string
+          paystack_subscription_code: string | null
+          paystack_email_token: string | null
+          plan_name: string
+          amount: number
+          currency: string
+          status: SubscriptionStatus
+          current_period_start: string | null
+          current_period_end: string | null
+          canceled_at: string | null
+          last_payment_at: string | null
+          next_payment_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          paystack_customer_code: string
+          paystack_plan_code: string
+          paystack_subscription_code?: string | null
+          paystack_email_token?: string | null
+          plan_name: string
+          amount: number
+          currency?: string
+          status?: SubscriptionStatus
+          current_period_start?: string | null
+          current_period_end?: string | null
+          canceled_at?: string | null
+          last_payment_at?: string | null
+          next_payment_at?: string | null
+        }
+        Update: {
+          paystack_customer_code?: string
+          paystack_plan_code?: string
+          paystack_subscription_code?: string | null
+          paystack_email_token?: string | null
+          plan_name?: string
+          amount?: number
+          status?: SubscriptionStatus
+          current_period_start?: string | null
+          current_period_end?: string | null
+          canceled_at?: string | null
+          last_payment_at?: string | null
+          next_payment_at?: string | null
+        }
+        Relationships: [
+          { foreignKeyName: 'tenant_subscriptions_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+        ]
+      }
+
+      paystack_events: {
+        Row: {
+          id: string
+          event_id: string | null
+          event_type: string
+          tenant_id: string | null
+          reference: string | null
+          payload: Json
+          processed_at: string | null
+          error: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id?: string | null
+          event_type: string
+          tenant_id?: string | null
+          reference?: string | null
+          payload: Json
+          processed_at?: string | null
+          error?: string | null
+        }
+        Update: {
+          processed_at?: string | null
+          error?: string | null
+        }
+        Relationships: []
       }
 
       waiting_list: {

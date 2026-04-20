@@ -302,6 +302,16 @@ async function runTool(
     const paystackKey = process.env.PAYSTACK_SECRET_KEY
     if (!paystackKey) return 'Payment processing is not configured. Please pay at check-in.'
 
+    // Tenant subaccount required to route funds to the hostel's bank
+    const { data: tenantRow } = await supabase
+      .from('tenants')
+      .select('paystack_subaccount_code')
+      .eq('id', tenantId)
+      .single()
+
+    const tenantSubaccount = tenantRow?.paystack_subaccount_code ?? null
+    if (!tenantSubaccount) return 'This hostel has not connected a payout bank yet. Please pay at check-in.'
+
     // Fetch booking to get amount + ref
     const { data: booking } = await supabase
       .from('bookings')
@@ -315,6 +325,27 @@ async function runTool(
 
     const email = (booking.occupants as any)?.email ?? `${phone}@momo.guest`
     const amountPesewas = booking.final_amount // stored in pesewas
+
+    // Map provider to payment method
+    const providerMethod: Record<string, string> = {
+      mtn: 'momo_mtn', vodafone: 'momo_vodafone', airteltigo: 'momo_airteltigo',
+    }
+
+    // Create pending booking_payments record so webhook can correlate
+    const { data: payment, error: payErr } = await supabase
+      .from('booking_payments')
+      .insert({
+        tenant_id:  tenantId,
+        booking_id,
+        amount:     amountPesewas,
+        method:     (providerMethod[provider] ?? 'mobile_money') as any,
+        status:     'pending',
+        reference:  null,
+      })
+      .select('id')
+      .single()
+
+    if (payErr || !payment) return 'Failed to create payment record. Please try again or pay at check-in.'
 
     // Initiate Paystack MoMo charge
     const chargeRes = await fetch('https://api.paystack.co/charge', {
@@ -335,19 +366,27 @@ async function runTool(
           booking_id:  booking.id,
           booking_ref: booking.booking_ref,
           tenant_id:   tenantId,
+          payment_id:  payment.id,
+          source:      'ai_agent',
         },
+        subaccount: tenantSubaccount,
+        bearer:     'subaccount',
       }),
     })
 
     const chargeData = await chargeRes.json()
 
     if (!chargeRes.ok || chargeData.status === false) {
+      // Clean up pending record on failure
+      await supabase.from('booking_payments').delete().eq('id', payment.id)
       const msg = chargeData.message ?? 'Payment initiation failed'
       return `Payment could not be initiated: ${msg}. Please try again or pay at check-in.`
     }
 
     const reference = chargeData.data?.reference
     if (reference) {
+      // Store reference on both payment record and booking
+      await supabase.from('booking_payments').update({ reference }).eq('id', payment.id)
       await (supabase.from('bookings') as any)
         .update({ paystack_reference: reference, payment_status: 'pending' })
         .eq('id', booking_id)

@@ -47,6 +47,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
   const admin = createAdminClient()
 
+  // Is the hostel able to take online payments? (subaccount connected)
+  const { data: tenantRow } = await admin
+    .from('tenants')
+    .select('paystack_subaccount_code')
+    .eq('id', tenantId)
+    .single()
+  const payEnabled = !!tenantRow?.paystack_subaccount_code
+
   // Fetch bookings + payments
   const { data: bookingsRaw } = await admin
     .from('bookings')
@@ -137,13 +145,21 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 </div>
               </div>
 
-              {featuredBalance > 0 && (
+              {featuredBalance > 0 && payEnabled && (
                 <div className="relative mt-4">
                   <PayNowButton
                     bookingId={featured.id}
                     balance={featuredBalance}
                     color={color}
                   />
+                </div>
+              )}
+              {featuredBalance > 0 && !payEnabled && (
+                <div className="relative mt-4 rounded-xl bg-white/15 px-4 py-3 text-center">
+                  <p className="text-sm font-semibold text-white">Pay at reception</p>
+                  <p className="mt-0.5 text-[11px] text-white/70">
+                    Online payment is not yet enabled for this hostel.
+                  </p>
                 </div>
               )}
               {featuredBalance <= 0 && (

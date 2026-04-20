@@ -7,7 +7,7 @@ import { BrandingForm } from '@/components/settings/branding-form'
 import { NotificationsForm } from '@/components/settings/notifications-form'
 import { PasswordForm } from '@/components/settings/password-form'
 import { PushToggle } from '@/components/settings/push-toggle'
-import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare } from 'lucide-react'
+import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Settings' }
 
@@ -201,6 +201,26 @@ export default async function SettingsPage({
                     <div>
                       <p className="font-medium text-text-primary">Notification Templates</p>
                       <p className="text-xs text-text-secondary">Customise SMS and email messages sent to occupants</p>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/settings/payouts"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <Landmark className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Payouts</p>
+                      <p className="text-xs text-text-secondary">Connect the bank account that receives guest payments</p>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/settings/billing"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <Receipt className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Billing</p>
+                      <p className="text-xs text-text-secondary">Platform subscription, plan, and card on file</p>
                     </div>
                   </Link>
 

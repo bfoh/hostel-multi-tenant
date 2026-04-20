@@ -40,8 +40,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <nav className="border-b border-white/10 bg-[#141414] px-6">
         <div className="flex gap-6">
           {[
-            { href: '/admin', label: 'Overview' },
-            { href: '/admin/tenants', label: 'Tenants' },
+            { href: '/admin',               label: 'Overview' },
+            { href: '/admin/tenants',       label: 'Tenants' },
+            { href: '/admin/subscriptions', label: 'Subscriptions' },
+            { href: '/admin/payouts',       label: 'Payouts' },
           ].map(({ href, label }) => (
             <a
               key={href}

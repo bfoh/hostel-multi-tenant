@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { initializeTransaction } from '@/lib/paystack'
 
 const schema = z.object({
   booking_id: z.string().uuid(),
@@ -50,34 +51,53 @@ export async function POST(req: NextRequest) {
 
   const amount = Math.min(parsed.data.amount, balance)
 
-  const paystackKey = process.env.PAYSTACK_SECRET_KEY
-  if (!paystackKey) return NextResponse.json({ error: 'Online payment not configured' }, { status: 503 })
+  if (!process.env.PAYSTACK_SECRET_KEY) {
+    return NextResponse.json({ error: 'Online payment not configured' }, { status: 503 })
+  }
+
+  // Load tenant subaccount so funds settle to the hostel's bank
+  const { data: tenantRow } = await admin
+    .from('tenants')
+    .select('paystack_subaccount_code')
+    .eq('id', tenantId)
+    .single()
+
+  const subaccount = tenantRow?.paystack_subaccount_code ?? null
+  if (!subaccount) {
+    return NextResponse.json(
+      { error: 'Online payments are not set up for this hostel yet.' },
+      { status: 409 },
+    )
+  }
 
   const host    = req.headers.get('host') ?? 'localhost:3000'
   const proto   = host.includes('localhost') ? 'http' : 'https'
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? `${proto}://${host}`
   const callbackUrl = `${appUrl}/api/occupant/pay/callback?booking_id=${booking.id}&amount=${amount}`
 
-  const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${paystackKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email:        occupant.email ?? `${booking.booking_ref.toLowerCase()}@portal.local`,
-      amount,
-      currency:     'GHS',
-      reference:    `${booking.booking_ref}-${Date.now()}`,
-      callback_url: callbackUrl,
+  try {
+    const result = await initializeTransaction({
+      email:       occupant.email ?? `${booking.booking_ref.toLowerCase()}@portal.local`,
+      amountPesewas: amount,
+      reference:   `${booking.booking_ref}-${Date.now()}`,
+      callbackUrl,
+      channels:    ['card', 'mobile_money', 'bank', 'bank_transfer'],
       metadata: {
         booking_id:  booking.id,
         booking_ref: booking.booking_ref,
         tenant_id:   tenantId,
         source:      'occupant_portal',
       },
-    }),
-  })
+      subaccount,
+      bearer: 'subaccount',
+    })
 
-  const psData = await paystackRes.json()
-  if (!psData.status) return NextResponse.json({ error: psData.message ?? 'Paystack error' }, { status: 502 })
-
-  return NextResponse.json({ authorization_url: psData.data.authorization_url, reference: psData.data.reference, amount })
+    return NextResponse.json({
+      authorization_url: result.authorizationUrl,
+      reference:         result.reference,
+      amount,
+    })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message ?? 'Paystack error' }, { status: 502 })
+  }
 }
