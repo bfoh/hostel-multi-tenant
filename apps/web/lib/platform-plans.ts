@@ -50,7 +50,7 @@ const PLAN_DEFS: Omit<PlatformPlan, 'planCode'>[] = [
     name:          'pro',
     displayName:   'Pro',
     description:   'Unlimited rooms. AI agent, custom domains, SLA.',
-    amountPesewas: 150_000,                  // GHS 1,500 / month
+    amountPesewas: 100_000,                  // GHS 1,000 / month
     planCodeEnv:   'PAYSTACK_PLAN_PRO',
     features: [
       'Unlimited rooms',
