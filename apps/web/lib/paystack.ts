@@ -451,6 +451,36 @@ export async function fetchSubscription(idOrCode: string) {
   }
 }
 
+/**
+ * List subscriptions on the platform merchant. Filter by customer/plan to
+ * find a freshly-created subscription after the initial transaction (useful
+ * in the callback to populate our DB without waiting for the webhook).
+ */
+export async function listSubscriptions(params: {
+  customer?: string | number   // customer_code or numeric id
+  plan?:     string            // plan_code
+  perPage?:  number
+  page?:     number
+} = {}) {
+  const qs = new URLSearchParams()
+  if (params.customer !== undefined) qs.set('customer', String(params.customer))
+  if (params.plan     !== undefined) qs.set('plan',     params.plan)
+  qs.set('perPage', String(params.perPage ?? 50))
+  qs.set('page',    String(params.page    ?? 1))
+  const json = await paystackFetch<any>(`/subscription?${qs.toString()}`)
+  return (json.data ?? []) as Array<{
+    subscription_code: string
+    email_token: string
+    status: string
+    next_payment_date: string
+    amount: number
+    createdAt?: string
+    created_at?: string
+    plan: { plan_code: string; name: string; amount: number; interval: string; currency: string }
+    customer: { customer_code: string; email: string }
+  }>
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Webhook signature verification
 // ═══════════════════════════════════════════════════════════════════════════

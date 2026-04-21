@@ -50,11 +50,20 @@ export default async function SettingsPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Settings</h1>
-        <p className="mt-0.5 text-sm text-text-secondary">
-          Manage your hostel profile, branding, and account preferences.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">Settings</h1>
+          <p className="mt-0.5 text-sm text-text-secondary">
+            Manage your hostel profile, branding, and account preferences.
+          </p>
+        </div>
+        <Link
+          href="/settings/billing"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-sunken transition-colors shrink-0"
+        >
+          <Receipt className="h-4 w-4 text-brand" />
+          Billing
+        </Link>
       </div>
 
       {/* Tab bar */}
