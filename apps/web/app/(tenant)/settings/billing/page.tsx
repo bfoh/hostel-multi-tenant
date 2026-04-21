@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
-import { listPlatformPlans } from '@/lib/platform-plans'
+import { listPlatformPlans, findPlanByCode } from '@/lib/platform-plans'
+import { listSubscriptions } from '@/lib/paystack'
 import { BillingClient } from '@/components/settings/billing-client'
 
 export const metadata: Metadata = { title: 'Billing' }
@@ -22,18 +23,84 @@ export default async function BillingPage() {
   let subscription: any = null
   if (tenantId) {
     const admin = createAdminClient()
-    const { data } = await admin
+    const selectCols = `
+      id, plan_name, amount, currency, status,
+      current_period_start, current_period_end,
+      next_payment_at, last_payment_at, canceled_at
+    `
+
+    const { data: first } = await admin
       .from('tenant_subscriptions')
-      .select(`
-        id, plan_name, amount, currency, status,
-        current_period_start, current_period_end,
-        next_payment_at, last_payment_at, canceled_at
-      `)
+      .select(selectCols)
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-    subscription = data
+    subscription = first
+
+    // Auto-heal: if tenant has a Paystack customer but no subscription row,
+    // the subscription.create webhook likely never arrived. Reconcile inline
+    // so the page renders the current plan on first paint.
+    if (!subscription && process.env.PAYSTACK_SECRET_KEY) {
+      const { data: tenant } = await admin
+        .from('tenants')
+        .select('paystack_customer_id')
+        .eq('id', tenantId)
+        .single()
+
+      if (tenant?.paystack_customer_id) {
+        try {
+          const subs = await listSubscriptions({ customer: tenant.paystack_customer_id })
+          const sorted = [...subs].sort((a, b) => {
+            const ad = new Date(a.createdAt ?? a.created_at ?? 0).getTime()
+            const bd = new Date(b.createdAt ?? b.created_at ?? 0).getTime()
+            return bd - ad
+          })
+          const sub = sorted.find((s) => s.status === 'active') ?? sorted[0]
+
+          if (sub) {
+            const plan = findPlanByCode(sub.plan.plan_code)
+            const status = sub.status === 'attention'
+              ? 'past_due'
+              : sub.status === 'cancelled' || sub.status === 'complete'
+                ? 'canceled'
+                : 'active'
+
+            await admin
+              .from('tenant_subscriptions')
+              .upsert(
+                {
+                  tenant_id:                  tenantId,
+                  paystack_customer_code:     sub.customer.customer_code,
+                  paystack_plan_code:         sub.plan.plan_code,
+                  paystack_subscription_code: sub.subscription_code,
+                  paystack_email_token:       sub.email_token,
+                  plan_name:                  plan?.name ?? sub.plan.name ?? 'starter',
+                  amount:                     sub.amount ?? sub.plan.amount ?? 0,
+                  currency:                   sub.plan.currency ?? 'GHS',
+                  status,
+                  current_period_start:       sub.createdAt ?? sub.created_at ?? new Date().toISOString(),
+                  current_period_end:         sub.next_payment_date ?? null,
+                  next_payment_at:            sub.next_payment_date ?? null,
+                  last_payment_at:            new Date().toISOString(),
+                },
+                { onConflict: 'paystack_subscription_code' },
+              )
+
+            const { data: refreshed } = await admin
+              .from('tenant_subscriptions')
+              .select(selectCols)
+              .eq('tenant_id', tenantId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            subscription = refreshed
+          }
+        } catch {
+          // Non-fatal: plan grid still renders.
+        }
+      }
+    }
   }
 
   return (

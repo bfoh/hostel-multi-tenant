@@ -2,7 +2,16 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { resolveTenant } from '@/lib/tenant/resolve'
 
-const BYPASS_PATHS = ['/widget', '/api/webhooks', '/_next', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/api/debug-env']
+const BYPASS_PATHS = [
+  '/widget',
+  '/api/webhooks',
+  '/api/payments/paystack/webhook',
+  '/_next',
+  '/favicon.ico',
+  '/robots.txt',
+  '/sitemap.xml',
+  '/api/debug-env',
+]
 const NO_AUTH_PATHS = ['/book', '/portal', '/api/public', '/api/widget']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']
 const PORTAL_PATHS  = ['/staff-portal', '/occupant-portal']
@@ -12,6 +21,19 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') ?? ''
 
   if (BYPASS_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next()
+
+  // ── /admin/* must live on the platform domain only ─────────────────────
+  // Super-admin pages should never render on a tenant subdomain or custom
+  // hostel domain. Redirect off-platform hits to the platform root domain.
+  if (pathname.startsWith('/admin')) {
+    const appDomain  = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+    const hostBase   = hostname.split(':')[0].toLowerCase()
+    const isLocalDev = hostBase === 'localhost' || hostBase === '127.0.0.1'
+    const onPlatform = isLocalDev || hostBase === appDomain || hostBase === `app.${appDomain}`
+    if (!onPlatform) {
+      return NextResponse.redirect(`https://${appDomain}${pathname}${request.nextUrl.search}`)
+    }
+  }
 
   const isNoAuth = NO_AUTH_PATHS.some((p) => pathname.startsWith(p))
   const tenant   = await resolveTenant(hostname)
@@ -211,6 +233,7 @@ export async function middleware(request: NextRequest) {
       user && resolvedSlug && onRootDomain &&
       !isAuthPath && !isPortalPath &&
       !pathname.startsWith('/onboarding') &&
+      !pathname.startsWith('/admin') &&
       !pathname.startsWith('/api/')
     ) {
       // Prefer the tenant's custom domain over the slug-based subdomain
