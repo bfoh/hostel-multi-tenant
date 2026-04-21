@@ -15,7 +15,7 @@ type SelectedPlan = typeof VALID_PLANS[number]
 const PLAN_LABEL: Record<SelectedPlan, string> = {
   starter: 'Starter — GH₵ 500 / month',
   growth:  'Growth — GH₵ 800 / month',
-  pro:     'Pro — GH₵ 1,500 / month',
+  pro:     'Pro — GH₵ 1,000 / month',
   trial:   '30-day free trial',
 }
 
