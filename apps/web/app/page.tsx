@@ -121,7 +121,7 @@ export default async function LandingPage() {
         className="sticky top-0 z-50 backdrop-blur-xl"
         style={{ borderBottom: `1px solid ${FROST}` }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
@@ -151,7 +151,7 @@ export default async function LandingPage() {
             </Link>
             <Link
               href="/signup?plan=trial"
-              className="rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-black transition-all hover:bg-white/90"
+              className="hidden rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-black transition-all hover:bg-white/90 sm:inline-flex"
             >
               Get Started
             </Link>
@@ -167,10 +167,10 @@ export default async function LandingPage() {
           <div className="absolute right-0 top-1/4 h-[400px] w-[400px] rounded-full bg-[#ff801f]/[0.03] blur-[100px]" />
         </div>
 
-        <div className="relative mx-auto max-w-5xl px-6 pb-24 pt-28 text-center md:pt-36">
+        <div className="relative mx-auto max-w-5xl px-5 pb-16 pt-20 text-center sm:px-6 sm:pb-24 md:pt-36">
           {/* Announcement pill */}
           <div
-            className="mx-auto mb-10 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[12px] font-medium text-[#a1a4a5] transition-colors hover:text-white"
+            className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-medium text-[#a1a4a5] transition-colors hover:text-white sm:mb-10 sm:px-4 sm:py-1.5 sm:text-[12px]"
             style={{ border: `1px solid ${FROST}` }}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-[#22ff99] animate-pulse" />
@@ -180,7 +180,7 @@ export default async function LandingPage() {
 
           {/* Hero headline — serif display */}
           <h1
-            className="mx-auto max-w-4xl text-[56px] font-normal leading-[1.05] tracking-[-1.5px] text-white md:text-[80px] lg:text-[96px]"
+            className="mx-auto max-w-4xl text-[36px] font-normal leading-[1.08] tracking-[-1px] text-white sm:text-[48px] md:text-[72px] lg:text-[96px]"
             style={{ fontFamily: 'Georgia, "Times New Roman", serif', letterSpacing: '-0.96px' }}
           >
             The smarter way{' '}
@@ -188,7 +188,7 @@ export default async function LandingPage() {
           </h1>
 
           {/* Subtitle */}
-          <p className="mx-auto mt-7 max-w-[520px] text-[17px] leading-relaxed text-[#a1a4a5]">
+          <p className="mx-auto mt-5 max-w-[520px] text-[15px] leading-relaxed text-[#a1a4a5] sm:mt-7 sm:text-[17px]">
             From bookings and payments to housekeeping and full GRA-compliant
             accounting — everything you need, elegantly unified.
           </p>
@@ -197,14 +197,14 @@ export default async function LandingPage() {
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               href="/signup?plan=trial"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-[14px] font-semibold text-black transition-all hover:bg-white/90"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 text-[14px] font-semibold text-black transition-all hover:bg-white/90 sm:w-auto"
             >
               Get Started
               <ArrowRight className="h-4 w-4" />
             </Link>
             <a
               href="#features"
-              className="inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[14px] font-medium text-[#f0f0f0] transition-all hover:bg-white/[0.08]"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[14px] font-medium text-[#f0f0f0] transition-all hover:bg-white/[0.08] sm:w-auto"
               style={{ border: `1px solid ${FROST}` }}
             >
               See features
@@ -216,7 +216,7 @@ export default async function LandingPage() {
           </p>
 
           {/* Dashboard mockup */}
-          <div className="relative mx-auto mt-20 max-w-5xl">
+          <div className="relative mx-auto mt-12 max-w-5xl sm:mt-20">
             {/* Glow */}
             <div className="absolute inset-0 -z-10 translate-y-8">
               <div className="mx-auto h-full w-full max-w-4xl rounded-3xl bg-gradient-to-b from-[#3b9eff]/[0.08] via-[#3b9eff]/[0.03] to-transparent blur-[80px]" />
@@ -256,7 +256,7 @@ export default async function LandingPage() {
 
       {/* ── TRUST BAR ────────────────────────────────────────────────── */}
       <section style={{ borderTop: `1px solid ${FROST}`, borderBottom: `1px solid ${FROST}` }}>
-        <div className="mx-auto grid max-w-5xl grid-cols-2 md:grid-cols-4">
+        <div className="mx-auto grid max-w-5xl grid-cols-2 divide-x divide-y md:grid-cols-4 md:divide-y-0" style={{ borderColor: FROST }}>
           {[
             { value: '500+', label: 'Hostels managed' },
             { value: 'GH₵ 2M+', label: 'Processed monthly' },
@@ -265,39 +265,39 @@ export default async function LandingPage() {
           ].map((s, i) => (
             <div
               key={s.label}
-              className="px-6 py-8 text-center"
-              style={i < 3 ? { borderRight: `1px solid ${FROST}` } : undefined}
+              className="px-4 py-5 text-center sm:px-6 sm:py-8"
+              style={{ borderColor: FROST }}
             >
-              <p className="text-[28px] font-bold text-white tracking-tight">{s.value}</p>
-              <p className="mt-1 text-[13px] text-[#464a4d]">{s.label}</p>
+              <p className="text-[20px] font-bold text-white tracking-tight sm:text-[28px]">{s.value}</p>
+              <p className="mt-1 text-[11px] text-[#464a4d] sm:text-[13px]">{s.label}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────────────────── */}
-      <section id="features" className="py-28">
+      <section id="features" className="py-16 sm:py-28">
         <div className="mx-auto max-w-5xl px-6">
           <div className="text-center">
             <p className="text-[12px] font-medium uppercase tracking-widest text-[#a1a4a5]">Features</p>
             <h2
-              className="mt-4 text-[40px] font-normal leading-[1.15] tracking-[-1px] text-white md:text-[56px]"
+              className="mt-4 text-[28px] font-normal leading-[1.15] tracking-[-0.5px] text-white sm:text-[36px] md:text-[56px]"
               style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
             >
               Everything your hostel needs
             </h2>
-            <p className="mx-auto mt-5 max-w-[440px] text-[16px] text-[#a1a4a5]">
+            <p className="mx-auto mt-4 max-w-[440px] text-[14px] text-[#a1a4a5] sm:mt-5 sm:text-[16px]">
               One login. No spreadsheets. No third-party tools. Just a system that works.
             </p>
           </div>
 
-          <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:mt-16 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => {
               const Icon = f.icon
               return (
                 <div
                   key={f.title}
-                  className="group rounded-2xl p-6 transition-colors hover:bg-white/[0.02]"
+                  className="group rounded-2xl p-5 transition-colors hover:bg-white/[0.02] sm:p-6"
                   style={{ border: `1px solid ${FROST_ALT}` }}
                 >
                   <div
@@ -316,26 +316,26 @@ export default async function LandingPage() {
       </section>
 
       {/* ── PRICING ──────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-28" style={{ borderTop: `1px solid ${FROST}` }}>
+      <section id="pricing" className="py-16 sm:py-28" style={{ borderTop: `1px solid ${FROST}` }}>
         <div className="mx-auto max-w-5xl px-6">
           <div className="text-center">
             <p className="text-[12px] font-medium uppercase tracking-widest text-[#a1a4a5]">Pricing</p>
             <h2
-              className="mt-4 text-[40px] font-normal leading-[1.15] tracking-[-1px] text-white md:text-[56px]"
+              className="mt-4 text-[28px] font-normal leading-[1.15] tracking-[-0.5px] text-white sm:text-[36px] md:text-[56px]"
               style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
             >
               Simple, transparent pricing
             </h2>
-            <p className="mx-auto mt-5 max-w-[420px] text-[16px] text-[#a1a4a5]">
+            <p className="mx-auto mt-4 max-w-[420px] text-[14px] text-[#a1a4a5] sm:mt-5 sm:text-[16px]">
               Start free. Pick a plan when you&apos;re ready.
             </p>
           </div>
 
-          <div className="mt-16 grid gap-5 md:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:mt-16 sm:gap-5 md:grid-cols-3">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
-                className={`relative flex flex-col rounded-2xl p-7 ${plan.highlight ? 'bg-white/[0.03]' : ''}`}
+                className={`relative flex flex-col rounded-2xl p-5 sm:p-7 ${plan.highlight ? 'bg-white/[0.03]' : ''}`}
                 style={{ border: `1px solid ${plan.highlight ? 'rgba(59,158,255,0.3)' : FROST_ALT}` }}
               >
                 {plan.highlight && (
@@ -347,7 +347,7 @@ export default async function LandingPage() {
                 <p className="mt-1 text-[13px] text-[#464a4d]">{plan.desc}</p>
                 <div className="mt-5 flex items-baseline gap-1">
                   <span className="text-[13px] text-[#464a4d]">GH₵</span>
-                  <span className="text-[40px] font-bold tracking-tight text-white">{plan.price}</span>
+                  <span className="text-[32px] font-bold tracking-tight text-white sm:text-[40px]">{plan.price}</span>
                   <span className="text-[14px] text-[#464a4d]">{plan.interval}</span>
                 </div>
                 <ul className="mt-6 flex-1 space-y-3">
@@ -376,7 +376,7 @@ export default async function LandingPage() {
 
           {/* Trial nudge */}
           <div
-            className="mx-auto mt-10 flex max-w-xl flex-col items-center justify-between gap-4 rounded-2xl p-6 sm:flex-row"
+            className="mx-auto mt-8 flex max-w-xl flex-col items-center justify-between gap-4 rounded-2xl p-5 sm:mt-10 sm:flex-row sm:p-6"
             style={{ border: `1px solid ${FROST}` }}
           >
             <div className="flex items-center gap-3">
@@ -388,7 +388,7 @@ export default async function LandingPage() {
             </div>
             <Link
               href="/signup?plan=trial"
-              className="shrink-0 rounded-full bg-white px-5 py-2.5 text-[13px] font-semibold text-black transition-all hover:bg-white/90"
+              className="w-full shrink-0 rounded-full bg-white px-5 py-2.5 text-center text-[13px] font-semibold text-black transition-all hover:bg-white/90 sm:w-auto"
             >
               Start free trial <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
             </Link>
@@ -397,22 +397,22 @@ export default async function LandingPage() {
       </section>
 
       {/* ── FAQ ───────────────────────────────────────────────────────── */}
-      <section id="faq" className="py-28" style={{ borderTop: `1px solid ${FROST}` }}>
-        <div className="mx-auto max-w-2xl px-6">
+      <section id="faq" className="py-16 sm:py-28" style={{ borderTop: `1px solid ${FROST}` }}>
+        <div className="mx-auto max-w-2xl px-5 sm:px-6">
           <div className="text-center">
             <p className="text-[12px] font-medium uppercase tracking-widest text-[#a1a4a5]">FAQ</p>
             <h2
-              className="mt-4 text-[40px] font-normal leading-[1.15] tracking-[-1px] text-white md:text-[48px]"
+              className="mt-4 text-[28px] font-normal leading-[1.15] tracking-[-0.5px] text-white sm:text-[36px] md:text-[48px]"
               style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
             >
               Questions & answers
             </h2>
           </div>
 
-          <div className="mt-14 space-y-0 divide-y" style={{ borderColor: FROST_ALT }}>
+          <div className="mt-10 space-y-0 divide-y sm:mt-14" style={{ borderColor: FROST_ALT }}>
             {FAQS.map((faq) => (
               <details key={faq.q} className="group py-5" style={{ borderColor: FROST_ALT }}>
-                <summary className="flex cursor-pointer items-center justify-between text-[15px] font-medium text-white transition-colors hover:text-white/80 [&::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer items-center justify-between text-[14px] font-medium text-white transition-colors hover:text-white/80 sm:text-[15px] [&::-webkit-details-marker]:hidden">
                   {faq.q}
                   <ChevronDown className="h-4 w-4 shrink-0 text-[#464a4d] transition-transform group-open:rotate-180" />
                 </summary>
@@ -424,32 +424,32 @@ export default async function LandingPage() {
       </section>
 
       {/* ── FINAL CTA ────────────────────────────────────────────────── */}
-      <section className="relative py-28" style={{ borderTop: `1px solid ${FROST}` }}>
+      <section className="relative py-16 sm:py-28" style={{ borderTop: `1px solid ${FROST}` }}>
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-1/2 top-1/2 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3b9eff]/[0.04] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-2xl px-6 text-center">
           <h2
-            className="text-[40px] font-normal leading-[1.15] tracking-[-1px] text-white md:text-[56px]"
+            className="text-[28px] font-normal leading-[1.15] tracking-[-0.5px] text-white sm:text-[36px] md:text-[56px]"
             style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
           >
             Ready to modernize{' '}
             <span className="block">your hostel?</span>
           </h2>
-          <p className="mx-auto mt-5 max-w-[380px] text-[16px] text-[#a1a4a5]">
+          <p className="mx-auto mt-4 max-w-[380px] text-[14px] text-[#a1a4a5] sm:mt-5 sm:text-[16px]">
             Join hundreds of hostel owners who&apos;ve switched to GH Hostels.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               href="/signup?plan=trial"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-[14px] font-semibold text-black transition-all hover:bg-white/90"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 text-[14px] font-semibold text-black transition-all hover:bg-white/90 sm:w-auto"
             >
               Start free trial
               <ArrowRight className="h-4 w-4" />
             </Link>
             <a
               href="#pricing"
-              className="inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-[14px] font-medium text-[#f0f0f0] transition-all hover:bg-white/[0.08]"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[14px] font-medium text-[#f0f0f0] transition-all hover:bg-white/[0.08] sm:w-auto"
               style={{ border: `1px solid ${FROST}` }}
             >
               See pricing
