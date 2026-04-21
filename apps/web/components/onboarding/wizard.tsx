@@ -137,6 +137,7 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState('')
   const [finalSlug,  setFinalSlug]  = useState(initialSlug)
+  const [finalPlan,  setFinalPlan]  = useState<'starter' | 'growth' | 'pro' | 'trial' | null>(null)
 
   // Slug check state
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
@@ -277,6 +278,7 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
         throw new Error(typeof data.error === 'string' ? data.error : 'Setup failed')
       }
       setFinalSlug(data.slug ?? form.slug)
+      setFinalPlan(data.selected_plan ?? null)
       next() // → done
     } catch (e: any) {
       setError(e.message)
@@ -287,9 +289,12 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
 
   const isLocalhost = appDomain === 'localhost' || appDomain === '127.0.0.1'
 
+  const isPaidPlan = finalPlan === 'starter' || finalPlan === 'growth' || finalPlan === 'pro'
+
   function getDashboardUrl() {
-    if (isLocalhost) return '/dashboard'
-    return `https://${finalSlug}.${appDomain}/dashboard`
+    const path = isPaidPlan ? `/settings/billing?autosubscribe=${finalPlan}` : '/dashboard'
+    if (isLocalhost) return path
+    return `https://${finalSlug}.${appDomain}${path}`
   }
 
   function getBookingUrl() {
@@ -711,16 +716,15 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
 
               <button
                 onClick={() => {
-                  if (isLocalhost) {
-                    router.push('/dashboard')
-                  } else {
-                    window.location.href = getDashboardUrl()
-                  }
+                  const url = getDashboardUrl()
+                  if (isLocalhost) router.push(url)
+                  else window.location.href = url
                 }}
                 className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: form.primary_color }}
               >
-                Go to dashboard <ArrowRight className="inline h-4 w-4 ml-1" />
+                {isPaidPlan ? `Subscribe to ${finalPlan}` : 'Go to dashboard'}
+                <ArrowRight className="inline h-4 w-4 ml-1" />
               </button>
             </div>
           )}

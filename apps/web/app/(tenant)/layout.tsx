@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppHeader } from '@/components/layout/app-header'
+import { TrialBanner } from '@/components/layout/trial-banner'
 
 export default async function TenantLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -42,6 +43,7 @@ export default async function TenantLayout({ children }: { children: React.React
       {/* ── Main content area ────────────────────────────────────── */}
       <div className={`flex flex-1 flex-col overflow-hidden ${isImpersonating ? 'mt-8' : ''}`}>
         <AppHeader user={user} />
+        <TrialBanner />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>

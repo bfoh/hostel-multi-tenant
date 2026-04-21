@@ -1,14 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Sparkles } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
+
+const VALID_PLANS = ['starter', 'growth', 'pro', 'trial'] as const
+type SelectedPlan = typeof VALID_PLANS[number]
+const PLAN_LABEL: Record<SelectedPlan, string> = {
+  starter: 'Starter — GH₵ 500 / month',
+  growth:  'Growth — GH₵ 800 / month',
+  pro:     'Pro — GH₵ 1,500 / month',
+  trial:   '30-day free trial',
+}
 
 const schema = z
   .object({
@@ -41,6 +50,12 @@ function toSlug(name: string) {
 
 export default function SignupPage() {
   const router = useRouter()
+  const search = useSearchParams()
+  const selectedPlan = useMemo<SelectedPlan | null>(() => {
+    const p = search.get('plan') as SelectedPlan | null
+    return p && (VALID_PLANS as readonly string[]).includes(p) ? p : null
+  }, [search])
+
   const [serverError, setServerError] = useState<string | null>(null)
   const [success, setSuccess]         = useState(false)
   const [slugPreview, setSlugPreview] = useState('')
@@ -81,7 +96,10 @@ export default function SignupPage() {
       email: values.email,
       password: values.password,
       options: {
-        data: { hostel_name: values.hostelName },
+        data: {
+          hostel_name: values.hostelName,
+          ...(selectedPlan ? { selected_plan: selectedPlan } : {}),
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
@@ -122,11 +140,19 @@ export default function SignupPage() {
 
   return (
     <div className="space-y-7">
-      <div className="space-y-1.5">
-        <h1 className="font-display text-[26px] font-bold text-slate-900 tracking-tight">Start your free trial</h1>
+      <div className="space-y-2">
+        <h1 className="font-display text-[26px] font-bold text-slate-900 tracking-tight">
+          {selectedPlan === 'trial' || !selectedPlan ? 'Start your free trial' : 'Create your account'}
+        </h1>
         <p className="text-[14px] text-slate-500">
-          Set up your hostel in minutes. No credit card required.
+          Set up your hostel in minutes. {selectedPlan === 'trial' || !selectedPlan ? 'No credit card required.' : 'You\u2019ll subscribe after email confirmation.'}
         </p>
+        {selectedPlan && (
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+            <Sparkles className="h-3 w-3" />
+            {PLAN_LABEL[selectedPlan]}
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>

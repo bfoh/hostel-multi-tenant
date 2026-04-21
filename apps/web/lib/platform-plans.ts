@@ -23,7 +23,7 @@ const PLAN_DEFS: Omit<PlatformPlan, 'planCode'>[] = [
     name:          'starter',
     displayName:   'Starter',
     description:   'Up to 50 rooms. Core booking, invoicing, payments.',
-    amountPesewas: 20_000,                   // GHS 200 / month
+    amountPesewas: 50_000,                   // GHS 500 / month
     planCodeEnv:   'PAYSTACK_PLAN_STARTER',
     features: [
       'Up to 50 rooms',
@@ -36,7 +36,7 @@ const PLAN_DEFS: Omit<PlatformPlan, 'planCode'>[] = [
     name:          'growth',
     displayName:   'Growth',
     description:   'Up to 200 rooms. Adds HR, payroll, and multi-property.',
-    amountPesewas: 50_000,                   // GHS 500 / month
+    amountPesewas: 80_000,                   // GHS 800 / month
     planCodeEnv:   'PAYSTACK_PLAN_GROWTH',
     features: [
       'Up to 200 rooms',

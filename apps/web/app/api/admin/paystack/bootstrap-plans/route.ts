@@ -11,8 +11,14 @@ import { listPlatformPlans } from '@/lib/platform-plans'
  * platform Paystack merchant. Returns the generated plan codes — paste them
  * into env vars PAYSTACK_PLAN_STARTER / _GROWTH / _PRO.
  *
- * Guarded by platform super-admin membership. Idempotent: skips any plan
- * whose code is already populated in env.
+ * Guarded by platform super-admin membership.
+ *
+ * Body (optional): { force?: boolean }
+ *   force=true → ignore env codes and create fresh plans (used when plan
+ *                amounts or metadata have changed and we want new Paystack
+ *                records; old plans are orphaned, which is safe because
+ *                nothing references them once env is updated).
+ *   default    → idempotent: skip any plan whose env code is already set.
  */
 export async function POST(req: Request) {
   if (!process.env.PAYSTACK_SECRET_KEY) {
@@ -45,17 +51,20 @@ export async function POST(req: Request) {
 
   if (!admin) return NextResponse.json({ error: 'Platform admin only' }, { status: 403 })
 
+  const body  = await req.json().catch(() => ({}))
+  const force = body?.force === true
+
   const plans   = listPlatformPlans()
   const results: Array<{ name: string; planCode: string; amount: number; created: boolean }> = []
 
   for (const plan of plans) {
-    if (plan.planCode) {
+    if (plan.planCode && !force) {
       results.push({ name: plan.name, planCode: plan.planCode, amount: plan.amountPesewas, created: false })
       continue
     }
     try {
       const created = await createPlan({
-        name:          `GH Hostels — ${plan.displayName}`,
+        name:          `GH Hostels — ${plan.displayName}${force ? ` (${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')})` : ''}`,
         amountPesewas: plan.amountPesewas,
         interval:      'monthly',
         description:   plan.description,
@@ -69,6 +78,9 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     results,
-    note: 'Paste the created plan codes into env vars PAYSTACK_PLAN_STARTER, PAYSTACK_PLAN_GROWTH, PAYSTACK_PLAN_PRO.',
+    force,
+    note: force
+      ? 'Force-recreated. Paste the new plan codes into PAYSTACK_PLAN_STARTER/GROWTH/PRO and redeploy. Old plan codes on Paystack are now orphaned.'
+      : 'Paste the created plan codes into env vars PAYSTACK_PLAN_STARTER, PAYSTACK_PLAN_GROWTH, PAYSTACK_PLAN_PRO.',
   })
 }

@@ -45,24 +45,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  // Resolve tenant
+  // Resolve tenant + user (user needed for selected_plan from metadata)
+  const supabaseAuth = await createClient()
+  const { data: { user } } = await supabaseAuth.auth.getUser()
+
   let tenantId = await getServerTenantId() ?? parsed.data.tenantId ?? null
 
-  if (!tenantId) {
-    const supabaseAuth = await createClient()
-    const { data: { user } } = await supabaseAuth.auth.getUser()
-    if (user) {
-      const admin = createAdminClient()
-      const { data: m } = await admin
-        .from('tenant_members')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle()
-      tenantId = m?.tenant_id ?? null
-    }
+  if (!tenantId && user) {
+    const admin = createAdminClient()
+    const { data: m } = await admin
+      .from('tenant_members')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+    tenantId = m?.tenant_id ?? null
   }
+
+  // Carry the plan the user picked on the landing page into the tenant row.
+  // Billing page autosubscribe flow consumes it.
+  const rawSelected = user?.user_metadata?.selected_plan as string | undefined
+  const selectedPlan =
+    rawSelected && ['starter', 'growth', 'pro', 'trial'].includes(rawSelected)
+      ? rawSelected
+      : null
 
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
@@ -90,8 +97,8 @@ export async function POST(request: NextRequest) {
   }
 
   // 1. Update tenant profile + branding
-  const { error: tenantErr } = await supabase
-    .from('tenants')
+  // Cast to any: generated types lag new columns (selected_plan, trial_ends_at).
+  const { error: tenantErr } = await (supabase.from('tenants') as any)
     .update({
       name:                 d.name,
       slug:                 d.slug,
@@ -106,6 +113,7 @@ export async function POST(request: NextRequest) {
       logo_url:             d.logo_url ?? null,
       custom_domain:        d.custom_domain ?? null,
       onboarding_completed: true,
+      ...(selectedPlan ? { selected_plan: selectedPlan } : {}),
     })
     .eq('id', tenantId)
 
@@ -149,5 +157,5 @@ export async function POST(request: NextRequest) {
   await invalidateTenantCache(`${d.slug}.${appDomain}`)
   if (d.custom_domain) await invalidateTenantCache(d.custom_domain)
 
-  return NextResponse.json({ ok: true, slug: d.slug })
+  return NextResponse.json({ ok: true, slug: d.slug, selected_plan: selectedPlan })
 }

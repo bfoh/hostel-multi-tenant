@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, Check, CreditCard, AlertTriangle } from 'lucide-react'
 
@@ -44,6 +44,21 @@ export function BillingClient({ plans, subscription }: Props) {
 
   const [busy, setBusy]   = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Auto-fire subscribe when user arrives with ?autosubscribe=<plan>
+  // (e.g. from onboarding after picking a paid plan on the landing page).
+  const autosubscribeFired = useRef(false)
+  useEffect(() => {
+    if (autosubscribeFired.current) return
+    const raw = search.get('autosubscribe')
+    if (!raw) return
+    if (subscription && ['trialing', 'active', 'past_due'].includes(subscription.status)) return
+    const target = plans.find((p) => p.name === raw && p.available)
+    if (!target) return
+    autosubscribeFired.current = true
+    subscribe(target.name)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, subscription, plans])
 
   async function subscribe(plan: Plan['name']) {
     setBusy(`subscribe-${plan}`); setError(null)
