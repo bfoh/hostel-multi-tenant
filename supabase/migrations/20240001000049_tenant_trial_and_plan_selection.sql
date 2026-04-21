@@ -76,3 +76,11 @@ create trigger trg_activate_tenant_on_subscription_insert
   for each row
   when (new.status = 'active')
   execute function public.activate_tenant_on_subscription();
+
+-- ── 5. Fix is_active to include trial tenants ─────────────────────────────
+-- The original computed column was: (status = 'active')
+-- This meant trial tenants had is_active = FALSE, causing the middleware to
+-- rewrite all their requests to /maintenance. Trial tenants must be active.
+
+alter table tenants drop column is_active;
+alter table tenants add column is_active boolean not null generated always as (status in ('active', 'trial')) stored;
