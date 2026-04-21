@@ -22,6 +22,11 @@ export async function middleware(request: NextRequest) {
 
   if (BYPASS_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next()
 
+  // Skip static assets (images, fonts, videos served from /public)
+  if (/\.(png|jpe?g|gif|svg|ico|webp|mp4|webm|woff2?|ttf|eot|css|js)$/i.test(pathname)) {
+    return NextResponse.next()
+  }
+
   // ── /admin/* must live on the platform domain only ─────────────────────
   // Super-admin pages should never render on a tenant subdomain or custom
   // hostel domain. Redirect off-platform hits to the platform root domain.
@@ -425,5 +430,5 @@ async function fetchRoleForUser(userId: string, tenantId: string): Promise<strin
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|mp4|webm|woff|woff2|ttf|eot)$).*)'],
 }
