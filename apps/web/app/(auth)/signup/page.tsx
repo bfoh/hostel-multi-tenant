@@ -10,6 +10,8 @@ import { CheckCircle2, XCircle, Loader2, Sparkles } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 
+const FROST = 'rgba(214,235,253,0.19)'
+
 const VALID_PLANS = ['starter', 'growth', 'pro', 'trial'] as const
 type SelectedPlan = typeof VALID_PLANS[number]
 const PLAN_LABEL: Record<SelectedPlan, string> = {
@@ -38,14 +40,11 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 const inputClass =
-  'w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand hover:border-slate-300'
+  `w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] transition-all duration-200 focus:outline-none focus:border-[#3b9eff]/50`
+const inputBorder = { borderColor: FROST }
 
 function toSlug(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40)
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
 }
 
 export default function SignupPage() {
@@ -112,25 +111,34 @@ export default function SignupPage() {
     setSuccess(true)
   }
 
+  /* ── Success state ────────────────────────────────────────────── */
   if (success) {
     return (
       <div className="space-y-5 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 ring-4 ring-emerald-50/50">
-          <svg className="h-7 w-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div
+          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
+          style={{ background: 'rgba(34,255,153,0.08)', border: '1px solid rgba(34,255,153,0.2)' }}
+        >
+          <svg className="h-7 w-7 text-[#22ff99]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <div className="space-y-1.5">
-          <h2 className="font-display text-xl font-bold text-slate-900">Check your email</h2>
-          <p className="text-sm text-slate-500 leading-relaxed max-w-[300px] mx-auto">
-            We&apos;ve sent a confirmation link to your email address. Click it to activate your account.
+        <div className="space-y-2">
+          <h2
+            className="text-[20px] font-normal tracking-[-0.5px] text-white"
+            style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+          >
+            Check your email
+          </h2>
+          <p className="text-[13px] text-[#a1a4a5] leading-relaxed max-w-[300px] mx-auto">
+            We&apos;ve sent a confirmation link. Click it to activate your account and start setting up your hostel.
           </p>
         </div>
         <Link
           href="/login"
-          className="inline-block text-sm font-semibold text-brand hover:text-brand-hover transition-colors"
+          className="inline-block text-[13px] font-semibold text-white transition-colors hover:text-white/80"
         >
-          Back to sign in
+          ← Back to sign in
         </Link>
       </div>
     )
@@ -139,25 +147,33 @@ export default function SignupPage() {
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
 
   return (
-    <div className="space-y-7">
-      <div className="space-y-2">
-        <h1 className="font-display text-[26px] font-bold text-slate-900 tracking-tight">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="space-y-2 text-center">
+        <h1
+          className="text-[24px] font-normal tracking-[-0.5px] text-white"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+        >
           {selectedPlan === 'trial' || !selectedPlan ? 'Start your free trial' : 'Create your account'}
         </h1>
-        <p className="text-[14px] text-slate-500">
+        <p className="text-[14px] text-[#a1a4a5]">
           Set up your hostel in minutes. {selectedPlan === 'trial' || !selectedPlan ? 'No credit card required.' : 'You\u2019ll subscribe after email confirmation.'}
         </p>
         {selectedPlan && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+          <div
+            className="mx-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold text-[#3b9eff]"
+            style={{ border: '1px solid rgba(59,158,255,0.3)', background: 'rgba(59,158,255,0.08)' }}
+          >
             <Sparkles className="h-3 w-3" />
             {PLAN_LABEL[selectedPlan]}
           </div>
         )}
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        {/* Hostel name */}
         <div className="space-y-1.5">
-          <label htmlFor="hostelName" className="text-[13px] font-semibold text-slate-700">
+          <label htmlFor="hostelName" className="text-[13px] font-medium text-[#a1a4a5]">
             Hostel name
           </label>
           <input
@@ -167,33 +183,39 @@ export default function SignupPage() {
             autoFocus
             {...register('hostelName')}
             className={inputClass}
+            style={inputBorder}
             placeholder="Acacia Hostel"
           />
           {errors.hostelName && (
-            <p className="text-xs text-danger font-medium mt-1">{errors.hostelName.message}</p>
+            <p className="text-[12px] text-[#ff2047] mt-1">{errors.hostelName.message}</p>
           )}
 
+          {/* Slug preview */}
           {slugPreview.length >= 2 && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs">
-              <span className="text-slate-500">Your URL:</span>
-              <span className="font-mono text-slate-800 font-medium">
+            <div
+              className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[12px]"
+              style={{ border: `1px solid ${FROST}`, background: 'rgba(255,255,255,0.02)' }}
+            >
+              <span className="text-[#464a4d]">Your URL:</span>
+              <span className="font-mono text-[#a1a4a5] font-medium">
                 {slugPreview}.{appDomain}
               </span>
-              {slugStatus === 'checking' && <Loader2 className="ml-auto h-3 w-3 animate-spin text-slate-400" />}
-              {slugStatus === 'available' && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-emerald-500" />}
+              {slugStatus === 'checking' && <Loader2 className="ml-auto h-3 w-3 animate-spin text-[#464a4d]" />}
+              {slugStatus === 'available' && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-[#22ff99]" />}
               {slugStatus === 'taken' && (
                 <>
-                  <XCircle className="ml-auto h-3.5 w-3.5 text-red-500" />
-                  <span className="text-red-600 font-medium">taken</span>
+                  <XCircle className="ml-auto h-3.5 w-3.5 text-[#ff2047]" />
+                  <span className="text-[#ff2047] font-medium">taken</span>
                 </>
               )}
             </div>
           )}
         </div>
 
+        {/* Email */}
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-[13px] font-semibold text-slate-700">
-            Email address
+          <label htmlFor="email" className="text-[13px] font-medium text-[#a1a4a5]">
+            Email
           </label>
           <input
             id="email"
@@ -201,15 +223,17 @@ export default function SignupPage() {
             autoComplete="email"
             {...register('email')}
             className={inputClass}
+            style={inputBorder}
             placeholder="kwame@acaciahostel.com"
           />
           {errors.email && (
-            <p className="text-xs text-danger font-medium mt-1">{errors.email.message}</p>
+            <p className="text-[12px] text-[#ff2047] mt-1">{errors.email.message}</p>
           )}
         </div>
 
+        {/* Password */}
         <div className="space-y-1.5">
-          <label htmlFor="password" className="text-[13px] font-semibold text-slate-700">
+          <label htmlFor="password" className="text-[13px] font-medium text-[#a1a4a5]">
             Password
           </label>
           <input
@@ -218,15 +242,17 @@ export default function SignupPage() {
             autoComplete="new-password"
             {...register('password')}
             className={inputClass}
+            style={inputBorder}
             placeholder="Min. 8 characters, one uppercase, one number"
           />
           {errors.password && (
-            <p className="text-xs text-danger font-medium mt-1">{errors.password.message}</p>
+            <p className="text-[12px] text-[#ff2047] mt-1">{errors.password.message}</p>
           )}
         </div>
 
+        {/* Confirm password */}
         <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="text-[13px] font-semibold text-slate-700">
+          <label htmlFor="confirmPassword" className="text-[13px] font-medium text-[#a1a4a5]">
             Confirm password
           </label>
           <input
@@ -235,15 +261,19 @@ export default function SignupPage() {
             autoComplete="new-password"
             {...register('confirmPassword')}
             className={inputClass}
+            style={inputBorder}
             placeholder="••••••••"
           />
           {errors.confirmPassword && (
-            <p className="text-xs text-danger font-medium mt-1">{errors.confirmPassword.message}</p>
+            <p className="text-[12px] text-[#ff2047] mt-1">{errors.confirmPassword.message}</p>
           )}
         </div>
 
         {serverError && (
-          <div className="rounded-lg bg-red-50 border border-red-200/60 px-4 py-3 text-sm text-red-700">
+          <div
+            className="rounded-xl px-4 py-3 text-[13px] text-[#ff2047]"
+            style={{ border: '1px solid rgba(255,32,71,0.2)', background: 'rgba(255,32,71,0.06)' }}
+          >
             {serverError}
           </div>
         )}
@@ -251,22 +281,28 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={isSubmitting || slugStatus === 'taken'}
-          className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg shadow-sm transition-all duration-200 hover:bg-brand-hover hover:shadow-md active:scale-[0.98] active:shadow-none focus:outline-none focus:ring-2 focus:ring-brand/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+          className="w-full rounded-full bg-white px-4 py-3 text-[14px] font-semibold text-black transition-all hover:bg-white/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
           {isSubmitting ? 'Creating account\u2026' : 'Create account'}
         </button>
 
-        <p className="text-center text-xs text-slate-400">
+        <p className="text-center text-[11px] text-[#464a4d]">
           By signing up you agree to our{' '}
-          <a href="#" className="text-brand hover:text-brand-hover underline underline-offset-2">Terms of Service</a>
+          <a href="#" className="text-white hover:text-white/80 underline underline-offset-2">Terms</a>
           {' '}and{' '}
-          <a href="#" className="text-brand hover:text-brand-hover underline underline-offset-2">Privacy Policy</a>.
+          <a href="#" className="text-white hover:text-white/80 underline underline-offset-2">Privacy Policy</a>.
         </p>
       </form>
 
-      <p className="text-center text-sm text-slate-500">
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center"><div className="w-full" style={{ borderTop: `1px solid ${FROST}` }} /></div>
+        <div className="relative flex justify-center"><span className="bg-black px-3 text-[12px] text-[#464a4d]">or</span></div>
+      </div>
+
+      <p className="text-center text-[13px] text-[#a1a4a5]">
         Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-brand hover:text-brand-hover transition-colors">
+        <Link href="/login" className="font-semibold text-white transition-colors hover:text-white/80">
           Sign in
         </Link>
       </p>

@@ -9,6 +9,8 @@ import { z } from 'zod'
 
 import { createClient } from '@/lib/supabase/client'
 
+const FROST = 'rgba(214,235,253,0.19)'
+
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
@@ -17,7 +19,8 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 const inputClass =
-  'w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand hover:border-slate-300'
+  `w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] transition-all duration-200 focus:outline-none focus:border-[#3b9eff]/50`
+const inputBorder = { borderColor: FROST }
 
 export default function LoginPage() {
   const router = useRouter()
@@ -74,22 +77,31 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="space-y-7">
-      <div className="space-y-1.5">
-        <h1 className="font-display text-[26px] font-bold text-slate-900 tracking-tight">Welcome back</h1>
-        <p className="text-[14px] text-slate-500">Sign in to your hostel dashboard</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="space-y-2 text-center">
+        <h1
+          className="text-[24px] font-normal tracking-[-0.5px] text-white"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+        >
+          Welcome back
+        </h1>
+        <p className="text-[14px] text-[#a1a4a5]">Sign in to your hostel dashboard</p>
       </div>
 
       {resetSuccess && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200/60 px-4 py-3 text-sm text-emerald-700 font-medium">
+        <div
+          className="rounded-xl px-4 py-3 text-[13px] text-[#22ff99]"
+          style={{ border: '1px solid rgba(34,255,153,0.2)', background: 'rgba(34,255,153,0.06)' }}
+        >
           Password updated successfully. Sign in with your new password.
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-[13px] font-semibold text-slate-700">
-            Email address
+          <label htmlFor="email" className="text-[13px] font-medium text-[#a1a4a5]">
+            Email
           </label>
           <input
             id="email"
@@ -98,23 +110,24 @@ export default function LoginPage() {
             autoFocus
             {...register('email')}
             className={inputClass}
+            style={inputBorder}
             placeholder="kwame@example.com"
           />
           {errors.email && (
-            <p className="text-xs text-danger font-medium mt-1">{errors.email.message}</p>
+            <p className="text-[12px] text-[#ff2047] mt-1">{errors.email.message}</p>
           )}
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label htmlFor="password" className="text-[13px] font-semibold text-slate-700">
+            <label htmlFor="password" className="text-[13px] font-medium text-[#a1a4a5]">
               Password
             </label>
             <Link
               href="/forgot-password"
-              className="text-xs font-medium text-brand hover:text-brand-hover transition-colors"
+              className="text-[12px] font-medium text-white transition-colors hover:text-white/70"
             >
-              Forgot password?
+              Forgot your password?
             </Link>
           </div>
           <input
@@ -123,22 +136,26 @@ export default function LoginPage() {
             autoComplete="current-password"
             {...register('password')}
             className={inputClass}
+            style={inputBorder}
             placeholder="••••••••"
           />
           {errors.password && (
-            <p className="text-xs text-danger font-medium mt-1">{errors.password.message}</p>
+            <p className="text-[12px] text-[#ff2047] mt-1">{errors.password.message}</p>
           )}
         </div>
 
         {serverError && (
-          <div className="rounded-lg bg-red-50 border border-red-200/60 px-4 py-3 text-sm text-red-700 space-y-1.5">
+          <div
+            className="rounded-xl px-4 py-3 text-[13px] text-[#ff2047] space-y-1.5"
+            style={{ border: '1px solid rgba(255,32,71,0.2)', background: 'rgba(255,32,71,0.06)' }}
+          >
             <p>{serverError}</p>
             {emailNotConfirmed && (
               <button
                 type="button"
                 onClick={resendConfirmation}
                 disabled={resendState !== 'idle'}
-                className="text-xs font-semibold underline underline-offset-2 disabled:opacity-60"
+                className="text-[12px] font-semibold underline underline-offset-2 disabled:opacity-60"
               >
                 {resendState === 'sending' ? 'Sending\u2026' : resendState === 'sent' ? 'Sent. Check your inbox.' : 'Resend confirmation email'}
               </button>
@@ -149,37 +166,41 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg shadow-sm transition-all duration-200 hover:bg-brand-hover hover:shadow-md active:scale-[0.98] active:shadow-none focus:outline-none focus:ring-2 focus:ring-brand/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+          className="w-full rounded-full bg-white px-4 py-3 text-[14px] font-semibold text-black transition-all hover:bg-white/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          {isSubmitting ? 'Signing in\u2026' : 'Sign in'}
+          {isSubmitting ? 'Signing in\u2026' : 'Log In'}
         </button>
       </form>
 
+      {/* Divider */}
       <div className="relative">
-        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100" /></div>
-        <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-slate-400">or</span></div>
+        <div className="absolute inset-0 flex items-center"><div className="w-full" style={{ borderTop: `1px solid ${FROST}` }} /></div>
+        <div className="relative flex justify-center"><span className="bg-black px-3 text-[12px] text-[#464a4d]">or</span></div>
       </div>
 
-      <p className="text-center text-sm text-slate-500">
+      <p className="text-center text-[13px] text-[#a1a4a5]">
         Don&apos;t have an account?{' '}
-        <Link href="/signup" className="font-semibold text-brand hover:text-brand-hover transition-colors">
-          Start free trial
+        <Link href="/signup" className="font-semibold text-white transition-colors hover:text-white/80">
+          Sign up
         </Link>
       </p>
 
-      {/* ── Resident / student hint ───────────────────────────── */}
-      <div className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-4 space-y-1.5">
+      {/* Resident hint */}
+      <div
+        className="rounded-xl px-4 py-4 space-y-1.5"
+        style={{ border: `1px solid ${FROST}`, background: 'rgba(255,255,255,0.02)' }}
+      >
         <div className="flex items-center gap-2">
-          <div className="flex h-5 w-5 items-center justify-center rounded-md bg-brand/10">
-            <svg className="h-3 w-3 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="flex h-5 w-5 items-center justify-center rounded-md" style={{ background: 'rgba(59,158,255,0.15)' }}>
+            <svg className="h-3 w-3 text-[#3b9eff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
               <path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/>
             </svg>
           </div>
-          <p className="text-[13px] font-semibold text-slate-700">Student or resident?</p>
+          <p className="text-[13px] font-medium text-white">Student or resident?</p>
         </div>
-        <p className="text-xs text-slate-500 leading-relaxed pl-7">
-          Use this same page to access your resident portal. Your login credentials were sent by your hostel management &mdash; sign in and you&apos;ll be taken to your portal automatically.
+        <p className="text-[12px] text-[#464a4d] leading-relaxed pl-7">
+          Use this same page to sign in. Your credentials were sent by your hostel management &mdash; you&apos;ll be taken to your portal automatically.
         </p>
       </div>
     </div>

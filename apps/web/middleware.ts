@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
     return new NextResponse('Hostel not found', { status: 404 })
   }
   if (tenant && !tenant.isActive && !pathname.startsWith('/api/')) {
-    return NextResponse.rewrite(new URL('/maintenance', request.url))
+    return NextResponse.rewrite(new URL('/suspended', request.url))
   }
 
   // ── Build request headers we'll forward downstream ──────────────────────
