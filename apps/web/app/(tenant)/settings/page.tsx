@@ -7,15 +7,20 @@ import { BrandingForm } from '@/components/settings/branding-form'
 import { NotificationsForm } from '@/components/settings/notifications-form'
 import { PasswordForm } from '@/components/settings/password-form'
 import { PushToggle } from '@/components/settings/push-toggle'
+import { BillingClient } from '@/components/settings/billing-client'
+import { listPlatformPlans, findPlanByCode } from '@/lib/platform-plans'
+import { listSubscriptions } from '@/lib/paystack'
 import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Settings' }
+export const dynamic = 'force-dynamic'
 
 const TABS = [
   { value: 'profile',       label: 'Profile'       },
   { value: 'branding',      label: 'Branding'      },
   { value: 'notifications', label: 'Notifications' },
   { value: 'security',      label: 'Security'      },
+  { value: 'billing',       label: 'Billing'       },
 ]
 
 async function getTenant() {
@@ -39,6 +44,98 @@ async function getTenant() {
   return data
 }
 
+async function getBillingData(tenantId: string) {
+  const plans = listPlatformPlans().map((p) => ({
+    name:          p.name as 'starter' | 'growth' | 'pro',
+    displayName:   p.displayName,
+    description:   p.description,
+    amountPesewas: p.amountPesewas,
+    features:      p.features,
+    available:     !!p.planCode,
+  }))
+
+  let subscription: any = null
+  const admin = createAdminClient()
+  const selectCols = `
+    id, plan_name, amount, currency, status,
+    current_period_start, current_period_end,
+    next_payment_at, last_payment_at, canceled_at
+  `
+
+  const { data: first } = await admin
+    .from('tenant_subscriptions')
+    .select(selectCols)
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  subscription = first
+
+  // Auto-heal: reconcile from Paystack if no local subscription row
+  if (!subscription && process.env.PAYSTACK_SECRET_KEY) {
+    const { data: tenant } = await admin
+      .from('tenants')
+      .select('paystack_customer_id')
+      .eq('id', tenantId)
+      .single()
+
+    if (tenant?.paystack_customer_id) {
+      try {
+        const subs = await listSubscriptions({ customer: tenant.paystack_customer_id })
+        const sorted = [...subs].sort((a, b) => {
+          const ad = new Date(a.createdAt ?? a.created_at ?? 0).getTime()
+          const bd = new Date(b.createdAt ?? b.created_at ?? 0).getTime()
+          return bd - ad
+        })
+        const sub = sorted.find((s) => s.status === 'active') ?? sorted[0]
+
+        if (sub) {
+          const plan = findPlanByCode(sub.plan.plan_code)
+          const status = sub.status === 'attention'
+            ? 'past_due'
+            : sub.status === 'cancelled' || sub.status === 'complete'
+              ? 'canceled'
+              : 'active'
+
+          await admin
+            .from('tenant_subscriptions')
+            .upsert(
+              {
+                tenant_id:                  tenantId,
+                paystack_customer_code:     sub.customer.customer_code,
+                paystack_plan_code:         sub.plan.plan_code,
+                paystack_subscription_code: sub.subscription_code,
+                paystack_email_token:       sub.email_token,
+                plan_name:                  plan?.name ?? sub.plan.name ?? 'starter',
+                amount:                     sub.amount ?? sub.plan.amount ?? 0,
+                currency:                   sub.plan.currency ?? 'GHS',
+                status,
+                current_period_start:       sub.createdAt ?? sub.created_at ?? new Date().toISOString(),
+                current_period_end:         sub.next_payment_date ?? null,
+                next_payment_at:            sub.next_payment_date ?? null,
+                last_payment_at:            new Date().toISOString(),
+              },
+              { onConflict: 'paystack_subscription_code' },
+            )
+
+          const { data: refreshed } = await admin
+            .from('tenant_subscriptions')
+            .select(selectCols)
+            .eq('tenant_id', tenantId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          subscription = refreshed
+        }
+      } catch {
+        // Non-fatal: plan grid still renders.
+      }
+    }
+  }
+
+  return { plans, subscription }
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -46,6 +143,10 @@ export default async function SettingsPage({
 }) {
   const { tab = 'profile' } = await searchParams
   const tenant = await getTenant()
+
+  // Fetch billing data only when the billing tab is active
+  const tenantId = await getServerTenantId()
+  const billingData = tab === 'billing' && tenantId ? await getBillingData(tenantId) : null
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -57,13 +158,6 @@ export default async function SettingsPage({
             Manage your hostel profile, branding, and account preferences.
           </p>
         </div>
-        <Link
-          href="/settings/billing"
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-sunken transition-colors shrink-0"
-        >
-          <Receipt className="h-4 w-4 text-brand" />
-          Billing
-        </Link>
       </div>
 
       {/* Tab bar */}
@@ -145,7 +239,7 @@ export default async function SettingsPage({
                 <PasswordForm />
 
                 {/* Website CMS shortcut */}
-                <div className="border-t border-border pt-6">
+                <div className="border-t border-border pt-6 space-y-2">
                   <Link
                     href="/settings/website"
                     className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
@@ -180,8 +274,6 @@ export default async function SettingsPage({
                       </p>
                     </div>
                   </Link>
-                </div>
-
                   <Link
                     href="/settings/rates"
                     className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
@@ -222,16 +314,7 @@ export default async function SettingsPage({
                       <p className="text-xs text-text-secondary">Connect the bank account that receives guest payments</p>
                     </div>
                   </Link>
-                  <Link
-                    href="/settings/billing"
-                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
-                  >
-                    <Receipt className="h-4 w-4 text-brand shrink-0" />
-                    <div>
-                      <p className="font-medium text-text-primary">Billing</p>
-                      <p className="text-xs text-text-secondary">Platform subscription, plan, and card on file</p>
-                    </div>
-                  </Link>
+                </div>
 
                 {/* Account info */}
                 <div className="border-t border-border pt-6 space-y-3">
@@ -255,6 +338,35 @@ export default async function SettingsPage({
                     </div>
                   </div>
                 </div>
+              </section>
+            )}
+
+            {tab === 'billing' && (
+              <section className="space-y-4">
+                <div>
+                  <h2 className="text-base font-semibold text-text-primary">Billing</h2>
+                  <p className="mt-0.5 text-sm text-text-secondary">
+                    Your GH Hostels platform subscription. This is separate from the payout account that
+                    receives guest payments — configure that under Settings → Payouts.
+                  </p>
+                </div>
+
+                {billingData ? (
+                  <>
+                    <BillingClient plans={billingData.plans} subscription={billingData.subscription} />
+
+                    <div className="rounded-xl border border-border bg-surface-sunken p-5 text-xs text-text-secondary space-y-2">
+                      <p className="font-medium text-text-primary">Billing notes</p>
+                      <ul className="space-y-1 list-disc pl-4">
+                        <li>Subscriptions are billed monthly by card through Paystack.</li>
+                        <li>Cancelling keeps access until the current period ends.</li>
+                        <li>Update your card anytime via the Paystack-hosted manage link — we never see your card details.</li>
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-text-secondary">Loading billing information…</p>
+                )}
               </section>
             )}
           </>

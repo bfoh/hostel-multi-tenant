@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -47,7 +47,7 @@ export function ProfileForm({ tenant }: Props) {
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
-  const { register, handleSubmit, formState: { errors, isSubmitting, isDirty } } = useForm<FormValues>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name:           tenant.name,
@@ -61,6 +61,21 @@ export function ProfileForm({ tenant }: Props) {
       custom_domain:  tenant.custom_domain ?? '',
     },
   })
+
+  // Sync form with fresh server data after save + router.refresh()
+  useEffect(() => {
+    reset({
+      name:           tenant.name,
+      tagline:        tenant.tagline ?? '',
+      contact_phone:  tenant.contact_phone ?? '',
+      contact_email:  tenant.contact_email ?? '',
+      address_line1:  tenant.address_line1 ?? '',
+      address_city:   tenant.address_city ?? '',
+      address_region: tenant.address_region ?? '',
+      website_url:    tenant.website_url ?? '',
+      custom_domain:  tenant.custom_domain ?? '',
+    })
+  }, [tenant, reset])
 
   async function onSubmit(values: FormValues) {
     setServerError(null)
