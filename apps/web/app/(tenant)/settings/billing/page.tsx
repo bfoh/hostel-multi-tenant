@@ -12,7 +12,7 @@ export default async function BillingPage() {
   const tenantId = await getServerTenantId()
 
   const plans = listPlatformPlans().map((p) => ({
-    name:          p.name,
+    name:          p.name as 'starter' | 'growth' | 'pro',
     displayName:   p.displayName,
     description:   p.description,
     amountPesewas: p.amountPesewas,
@@ -20,9 +20,25 @@ export default async function BillingPage() {
     available:     !!p.planCode,
   }))
 
+  // Fetch tenant plan info
+  let tenantPlan = 'starter'
+  let tenantStatus = 'trial'
+  let trialEndsAt: string | null = null
+
   let subscription: any = null
   if (tenantId) {
     const admin = createAdminClient()
+
+    const { data: tenantRow } = await admin
+      .from('tenants')
+      .select('status, plan, trial_ends_at')
+      .eq('id', tenantId)
+      .single()
+    if (tenantRow) {
+      tenantPlan = tenantRow.plan ?? 'starter'
+      tenantStatus = tenantRow.status ?? 'trial'
+      trialEndsAt = tenantRow.trial_ends_at ?? null
+    }
     const selectCols = `
       id, plan_name, amount, currency, status,
       current_period_start, current_period_end,
@@ -113,7 +129,13 @@ export default async function BillingPage() {
         </p>
       </div>
 
-      <BillingClient plans={plans} subscription={subscription} />
+      <BillingClient
+        plans={plans}
+        subscription={subscription}
+        currentPlan={tenantPlan}
+        tenantStatus={tenantStatus}
+        trialEndsAt={trialEndsAt}
+      />
 
       <div className="rounded-xl border border-border bg-surface-sunken p-5 text-xs text-text-secondary space-y-2">
         <p className="font-medium text-text-primary">Billing notes</p>

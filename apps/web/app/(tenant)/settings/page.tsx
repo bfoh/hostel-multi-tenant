@@ -36,7 +36,8 @@ async function getTenant() {
       address_line1, address_city, address_region, website_url,
       primary_color, accent_color, logo_url,
       currency, timezone,
-      sms_enabled, email_enabled, momo_enabled
+      sms_enabled, email_enabled, momo_enabled,
+      status, plan, trial_ends_at
     `)
     .eq('id', tenantId)
     .single()
@@ -147,6 +148,11 @@ export default async function SettingsPage({
   // Fetch billing data only when the billing tab is active
   const tenantId = await getServerTenantId()
   const billingData = tab === 'billing' && tenantId ? await getBillingData(tenantId) : null
+
+  // Derive effective plan label for display
+  const effectivePlan = tenant?.status === 'trial'
+    ? 'trial'
+    : tenant?.plan ?? 'starter'
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -334,7 +340,7 @@ export default async function SettingsPage({
                     </div>
                     <div className="rounded-lg border border-border bg-surface-sunken p-3">
                       <p className="text-xs text-text-tertiary">Plan</p>
-                      <p className="mt-0.5 font-medium capitalize text-text-primary">Starter</p>
+                      <p className="mt-0.5 font-medium capitalize text-text-primary">{effectivePlan}</p>
                     </div>
                   </div>
                 </div>
@@ -353,7 +359,13 @@ export default async function SettingsPage({
 
                 {billingData ? (
                   <>
-                    <BillingClient plans={billingData.plans} subscription={billingData.subscription} />
+                    <BillingClient
+                      plans={billingData.plans}
+                      subscription={billingData.subscription}
+                      currentPlan={tenant?.plan ?? 'starter'}
+                      tenantStatus={tenant?.status ?? 'trial'}
+                      trialEndsAt={tenant?.trial_ends_at ?? null}
+                    />
 
                     <div className="rounded-xl border border-border bg-surface-sunken p-5 text-xs text-text-secondary space-y-2">
                       <p className="font-medium text-text-primary">Billing notes</p>

@@ -75,7 +75,7 @@ export async function TrialBanner() {
         </p>
       </div>
       <Link
-        href="/settings/billing"
+        href="/settings?tab=billing"
         className={[
           'shrink-0 inline-flex items-center rounded-md px-3 py-1 text-xs font-semibold transition-colors',
           expired
