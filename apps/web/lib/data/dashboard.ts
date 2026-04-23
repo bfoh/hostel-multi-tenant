@@ -188,3 +188,32 @@ export async function getSetupChecklist() {
     hasBooking:  (bookings.count ?? 0) > 0,
   }
 }
+
+/**
+ * Revenue breakdown: cash vs digital for the current month.
+ */
+export async function getRevenueBreakdown() {
+  const supabase = createAdminClient()
+
+  const now = new Date()
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+  const { data } = await supabase
+    .from('booking_payments')
+    .select('amount, method')
+    .eq('status', 'success')
+    .gte('paid_at', thisMonthStart)
+
+  const rows = data ?? []
+  const total   = rows.reduce((s, p) => s + p.amount, 0)
+  const cash    = rows.filter(p => p.method === 'cash').reduce((s, p) => s + p.amount, 0)
+  const digital = total - cash
+
+  return {
+    total,
+    cash,
+    digital,
+    cashPct:    total > 0 ? Math.round((cash    / total) * 100) : 0,
+    digitalPct: total > 0 ? Math.round((digital / total) * 100) : 0,
+  }
+}

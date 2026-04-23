@@ -12,6 +12,7 @@ import { OccupancyChart } from '@/components/dashboard/occupancy-chart'
 import { RecentBookings } from '@/components/dashboard/recent-bookings'
 import { StatCardSkeleton } from '@/components/dashboard/stat-card-skeleton'
 import { SetupChecklist } from '@/components/dashboard/setup-checklist'
+import { AuxRevenueCard } from '@/components/dashboard/aux-revenue-card'
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -51,12 +52,15 @@ export default async function DashboardPage() {
       </Suspense>
 
       {/* ── KPI stat cards ───────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Suspense fallback={<StatCardSkeleton />}>
           <OccupancyCard />
         </Suspense>
         <Suspense fallback={<StatCardSkeleton />}>
           <RevenueCard />
+        </Suspense>
+        <Suspense fallback={<StatCardSkeleton />}>
+          <AuxRevenueCard />
         </Suspense>
         <Suspense fallback={<StatCardSkeleton />}>
           <BookingsCard />

@@ -1,10 +1,13 @@
 import { DollarSign } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatGHS } from '@/lib/utils'
-import { getRevenueStats } from '@/lib/data/dashboard'
+import { getRevenueStats, getRevenueBreakdown } from '@/lib/data/dashboard'
 
 export async function RevenueCard() {
-  const { thisMonth, change } = await getRevenueStats()
+  const [{ thisMonth, change }, breakdown] = await Promise.all([
+    getRevenueStats(),
+    getRevenueBreakdown(),
+  ])
   const up = change >= 0
 
   return (
@@ -28,6 +31,32 @@ export async function RevenueCard() {
             <DollarSign className="h-5 w-5 text-success" />
           </div>
         </div>
+
+        {/* Cash vs Digital breakdown */}
+        {breakdown.total > 0 && (
+          <div className="mt-3 border-t border-border pt-3">
+            <div className="flex justify-between text-[11px]">
+              <span className="flex items-center gap-1.5 text-text-secondary">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                Cash {formatGHS(breakdown.cash)}
+              </span>
+              <span className="flex items-center gap-1.5 text-text-secondary">
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+                Digital {formatGHS(breakdown.digital)}
+              </span>
+            </div>
+            <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken">
+              <div
+                className="h-full bg-success transition-all"
+                style={{ width: `${breakdown.cashPct}%` }}
+              />
+              <div
+                className="h-full bg-brand transition-all"
+                style={{ width: `${breakdown.digitalPct}%` }}
+              />
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

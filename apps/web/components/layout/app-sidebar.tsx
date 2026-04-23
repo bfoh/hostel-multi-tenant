@@ -9,7 +9,7 @@ import {
   Settings, ChevronLeft, ChevronRight, HardHat, Shield,
   MessageSquare, UserCog, ClipboardList, BookOpen, Bot,
   Package, Search, Building2, ListOrdered, TrendingDown,
-  Monitor, Lock,
+  Monitor, Lock, Store, ClipboardCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -63,6 +63,7 @@ const OPS_ITEMS: NavItem[] = [
   { label: 'Lost & Found',   href: '/lost-found',      icon: Search,          anim: 'slide'  },
   { label: 'Communications', href: '/communications',  icon: MessageSquare,   anim: 'shake'  },
   { label: 'Security',       href: '/security',        icon: Shield,          anim: 'pop'    },
+  { label: 'Revenue Points', href: '/revenue-points',  icon: Store,           anim: 'tilt'   },
 ]
 
 /** Sensitive management — visible to owner / manager / admin ONLY */
@@ -79,6 +80,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { label: 'Intelligence',   href: '/intelligence',        icon: Sparkles,     anim: 'pop'    },
   { label: 'AI Assistant',   href: '/ai',                  icon: Bot,          anim: 'ring'   },
   { label: 'Activity log',   href: '/activity',            icon: ClipboardList,anim: 'shake'  },
+  { label: 'Shift Close-Out', href: '/shift-closeout',      icon: ClipboardCheck, anim: 'flip' },
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [
