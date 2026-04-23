@@ -103,6 +103,7 @@ export async function POST(
         bookingRef: bkn?.booking_ref ?? id,
         balance:    formatGHS(balance),
         hostelName: ten?.name ?? 'Your Hostel',
+        tenantId,
       }).catch(() => {})
     }
 

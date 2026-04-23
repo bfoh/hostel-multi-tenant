@@ -1,7 +1,13 @@
 /**
  * Arkesel SMS service — server-side only.
  * Gracefully no-ops when ARKESEL_API_KEY is not set.
+ *
+ * When `tenantId` is passed, message bodies are pulled from the
+ * `notification_templates` table (with baked-in fallback) via render.ts.
  */
+
+import { renderNotification, renderTemplate } from '@/lib/notifications/render'
+import type { EventType } from '@/lib/notifications/defaults'
 
 const ARKESEL_BASE = 'https://sms.arkesel.com/api/v2/sms/send'
 
@@ -45,67 +51,215 @@ async function send(to: string | string[], message: string): Promise<void> {
   }
 }
 
+/**
+ * Resolve the SMS body for an event. Uses the tenant template when `tenantId`
+ * is provided; otherwise renders the hardcoded fallback directly.
+ */
+async function resolveSmsBody(
+  event: EventType,
+  fallback: string,
+  vars: Record<string, string | number>,
+  tenantId?: string,
+): Promise<string> {
+  if (tenantId) {
+    const rendered = await renderNotification(tenantId, event, 'sms', vars)
+    if (rendered) return rendered.body
+  }
+  return renderTemplate(fallback, vars)
+}
+
 /* ── Typed message templates ─────────────────────────────────────── */
 
 export async function sendBookingConfirmation(params: {
-  phone: string
-  firstName: string
-  bookingRef: string
-  roomNumber: string
-  checkInDate: string
-  hostelName: string
+  phone:        string
+  firstName:    string
+  bookingRef:   string
+  roomNumber:   string
+  checkInDate:  string
+  hostelName:   string
+  tenantId?:    string
+  amount?:      string
 }) {
-  const msg = `Hi ${params.firstName}, your booking at ${params.hostelName} is confirmed!\n` +
-    `Ref: ${params.bookingRef}\nRoom: ${params.roomNumber}\nCheck-in: ${params.checkInDate}\n` +
-    `Keep this message as your reference.`
+  const fallback =
+    'Hi {{first_name}}, your booking at {{hostel_name}} is confirmed! ' +
+    'Ref: {{booking_ref}} Room: {{room_number}} Check-in: {{check_in_date}}. ' +
+    'Keep this message as reference.'
+
+  const msg = await resolveSmsBody('booking_confirmed', fallback, {
+    first_name:     params.firstName,
+    booking_ref:    params.bookingRef,
+    room_number:    params.roomNumber,
+    check_in_date:  params.checkInDate,
+    hostel_name:    params.hostelName,
+    amount:         params.amount ?? '',
+  }, params.tenantId)
+
   await send(params.phone, msg)
 }
 
 export async function sendPaymentReceipt(params: {
-  phone: string
-  firstName: string
-  amountGHS: string
-  method: string
+  phone:      string
+  firstName:  string
+  amountGHS:  string
+  method:     string
   bookingRef: string
-  balance: string
+  balance:    string
   hostelName: string
+  tenantId?:  string
 }) {
-  const balanceNote = params.balance !== 'GH₵0.00'
-    ? `\nOutstanding balance: ${params.balance}.`
-    : '\nYour account is fully paid. Thank you!'
+  const fallback =
+    'Payment received — {{hostel_name}}. Hi {{first_name}}, we received {{amount}} ' +
+    'via {{method}} for booking {{booking_ref}}. Balance: {{balance}}.'
 
-  const msg = `Payment received — ${params.hostelName}\n` +
-    `Hi ${params.firstName}, we received ${params.amountGHS} via ${params.method}.\n` +
-    `Booking: ${params.bookingRef}${balanceNote}`
+  const msg = await resolveSmsBody('payment_received', fallback, {
+    first_name:  params.firstName,
+    amount:      params.amountGHS,
+    method:      params.method,
+    booking_ref: params.bookingRef,
+    balance:     params.balance,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+
   await send(params.phone, msg)
 }
 
 export async function sendOverdueReminder(params: {
-  phone: string
-  firstName: string
-  balance: string
+  phone:       string
+  firstName:   string
+  balance:     string
   daysOverdue: number
-  bookingRef: string
-  hostelName: string
+  bookingRef:  string
+  hostelName:  string
+  tenantId?:   string
 }) {
-  const msg = `Rent reminder — ${params.hostelName}\n` +
-    `Hi ${params.firstName}, your payment of ${params.balance} is ${params.daysOverdue} day(s) overdue.\n` +
-    `Ref: ${params.bookingRef}. Please pay promptly to avoid losing your room.`
+  const fallback =
+    'Rent reminder — {{hostel_name}}. Hi {{first_name}}, your payment of {{amount}} ' +
+    'is {{days_remaining}} day(s) overdue. Ref: {{booking_ref}}. Please pay promptly.'
+
+  const msg = await resolveSmsBody('payment_reminder', fallback, {
+    first_name:     params.firstName,
+    amount:         params.balance,
+    days_remaining: params.daysOverdue,
+    booking_ref:    params.bookingRef,
+    hostel_name:    params.hostelName,
+    due_date:       '',
+  }, params.tenantId)
+
   await send(params.phone, msg)
 }
 
 export async function sendCheckInReminder(params: {
-  phone: string
-  firstName: string
+  phone:       string
+  firstName:   string
   checkInDate: string
-  roomNumber: string
-  hostelName: string
+  roomNumber:  string
+  hostelName:  string
+  tenantId?:   string
 }) {
-  const msg = `Check-in reminder — ${params.hostelName}\n` +
-    `Hi ${params.firstName}, your check-in is tomorrow (${params.checkInDate}).\n` +
-    `Room: ${params.roomNumber}. See you then!`
+  const fallback =
+    'Check-in reminder — {{hostel_name}}. Hi {{first_name}}, your check-in is on ' +
+    '{{check_in_date}}. Room: {{room_number}}. See you then!'
+
+  const msg = await resolveSmsBody('checkin_reminder', fallback, {
+    first_name:    params.firstName,
+    check_in_date: params.checkInDate,
+    room_number:   params.roomNumber,
+    hostel_name:   params.hostelName,
+  }, params.tenantId)
+
   await send(params.phone, msg)
 }
+
+export async function sendCheckoutReminder(params: {
+  phone:        string
+  firstName:    string
+  checkOutDate: string
+  bookingRef:   string
+  hostelName:   string
+  tenantId?:    string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your stay at {{hostel_name}} ends on {{check_out_date}} ' +
+    '(Ref: {{booking_ref}}). Contact us to renew or arrange checkout.'
+
+  const msg = await resolveSmsBody('checkout_reminder', fallback, {
+    first_name:     params.firstName,
+    check_out_date: params.checkOutDate,
+    booking_ref:    params.bookingRef,
+    hostel_name:    params.hostelName,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
+export async function sendLeaseExpiryReminder(params: {
+  phone:         string
+  firstName:     string
+  checkOutDate:  string
+  daysRemaining: number
+  bookingRef:    string
+  hostelName:    string
+  tenantId?:     string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your lease at {{hostel_name}} expires in {{days_remaining}} days ' +
+    '({{check_out_date}}). Ref: {{booking_ref}}. Contact us to renew.'
+
+  const msg = await resolveSmsBody('lease_expiry_reminder', fallback, {
+    first_name:     params.firstName,
+    check_out_date: params.checkOutDate,
+    days_remaining: params.daysRemaining,
+    booking_ref:    params.bookingRef,
+    hostel_name:    params.hostelName,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
+export async function sendBookingCancelled(params: {
+  phone:      string
+  firstName:  string
+  bookingRef: string
+  hostelName: string
+  tenantId?:  string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your booking {{booking_ref}} at {{hostel_name}} has been cancelled. ' +
+    'Please contact us for refund details.'
+
+  const msg = await resolveSmsBody('booking_cancelled', fallback, {
+    first_name:  params.firstName,
+    booking_ref: params.bookingRef,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
+export async function sendDepositRefund(params: {
+  phone:         string
+  firstName:     string
+  refundAmount:  string
+  bookingRef:    string
+  hostelName:    string
+  tenantId?:     string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your deposit refund of {{refund_amount}} for booking ' +
+    '{{booking_ref}} at {{hostel_name}} has been processed.'
+
+  const msg = await resolveSmsBody('deposit_refund', fallback, {
+    first_name:     params.firstName,
+    refund_amount:  params.refundAmount,
+    booking_ref:    params.bookingRef,
+    hostel_name:    params.hostelName,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
+// Back-compat alias for existing callers
+export { sendOverdueReminder as sendPaymentReminder }
 
 export async function sendPortalCredentials(params: {
   phone: string

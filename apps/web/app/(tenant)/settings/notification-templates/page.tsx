@@ -2,11 +2,37 @@ import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { NotificationTemplatesClient } from '@/components/settings/notification-templates-client'
+import { getServerTenantId } from '@/lib/auth/tenant'
+import { DEFAULT_TEMPLATES } from '@/lib/notifications/defaults'
 
 export const metadata: Metadata = { title: 'Notification Templates' }
 
 export default async function NotificationTemplatesPage() {
-  const supabase = await createClient()
+  const supabase  = await createClient()
+  const tenantId  = await getServerTenantId()
+
+  // Auto-seed defaults on first visit so the page is populated out of the box.
+  if (tenantId) {
+    const { count } = await supabase
+      .from('notification_templates')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+
+    if ((count ?? 0) === 0) {
+      const rows = DEFAULT_TEMPLATES.map((t) => ({
+        tenant_id:  tenantId,
+        event_type: t.event_type,
+        channel:    t.channel,
+        subject:    t.subject ?? null,
+        body:       t.body,
+        is_active:  true,
+      }))
+      await supabase
+        .from('notification_templates')
+        .upsert(rows, { onConflict: 'tenant_id,event_type,channel' })
+    }
+  }
+
   const { data: templates } = await supabase
     .from('notification_templates')
     .select('*')

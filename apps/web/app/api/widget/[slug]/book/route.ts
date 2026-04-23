@@ -146,6 +146,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     roomNumber:  availableRoom.id,
     checkInDate: d.check_in_date,
     hostelName:  tenant.name,
+    tenantId:    tenant.id,
   }).catch(() => {})
 
   return NextResponse.json({

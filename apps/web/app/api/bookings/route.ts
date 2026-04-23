@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
         roomNumber:  roomRes.data?.room_number ?? '—',
         checkInDate: formatDate(d.check_in_date),
         hostelName:  tenantRes.data?.name ?? 'Your Hostel',
+        tenantId,
       }).catch(() => {}) // swallow errors — SMS must never break booking creation
     }
   } catch { /* non-critical */ }

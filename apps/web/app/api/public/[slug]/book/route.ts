@@ -153,6 +153,7 @@ export async function POST(
     roomNumber:  availableRoom.id,
     checkInDate: d.check_in_date,
     hostelName:  tenant.name,
+    tenantId:    tenant.id,
   }).catch(() => {})
 
   // Email confirmation (non-blocking, only if email provided)
