@@ -231,7 +231,8 @@ export async function middleware(request: NextRequest) {
     const appDomain    = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
     const hostBase     = hostname.split(':')[0].toLowerCase()
     const isLocalDev   = hostBase === 'localhost' || hostBase === '127.0.0.1'
-    const onRootDomain = !isLocalDev && (hostBase === appDomain || hostBase === `app.${appDomain}`)
+    const rootDomain   = appDomain.startsWith('app.') ? appDomain.slice(4) : appDomain
+    const onRootDomain = !isLocalDev && (hostBase === rootDomain || hostBase === `app.${rootDomain}` || hostBase === `www.${rootDomain}`)
     const resolvedSlug = reqHeaders.get('x-tenant-slug')
 
     if (
@@ -308,7 +309,15 @@ function decodeJwtPayload(token: string): Record<string, string> | null {
 function isAppDomain(hostname: string): boolean {
   const appDomain = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
   const h = hostname.split(':')[0].toLowerCase()
-  return h === appDomain || h === `app.${appDomain}` || h === 'localhost'
+  // Derive the root domain so this works whether APP_DOMAIN is 'gh-hostels.com'
+  // or 'app.gh-hostels.com' — both should allow the bare root domain through.
+  const rootDomain = appDomain.startsWith('app.') ? appDomain.slice(4) : appDomain
+  return (
+    h === 'localhost' ||
+    h === rootDomain ||
+    h === `app.${rootDomain}` ||
+    h === `www.${rootDomain}`
+  )
 }
 
 interface TenantWithRole {

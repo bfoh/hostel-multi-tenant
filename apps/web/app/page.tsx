@@ -109,7 +109,8 @@ export default async function LandingPage() {
   const headersList = await headers()
   const host = headersList.get('host') ?? ''
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
-  const isAppDomain = host === appDomain || host === `www.${appDomain}` || host.includes('localhost')
+  const rootDomain = appDomain.startsWith('app.') ? appDomain.slice(4) : appDomain
+  const isAppDomain = host === rootDomain || host === `app.${rootDomain}` || host === `www.${rootDomain}` || host.includes('localhost')
 
   if (user && isAppDomain) redirect('/dashboard')
 
