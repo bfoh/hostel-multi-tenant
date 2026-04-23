@@ -34,12 +34,12 @@ export async function getRevenueStats() {
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'paid')
+      .eq('status', 'success')
       .gte('paid_at', thisMonthStart),
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'paid')
+      .eq('status', 'success')
       .gte('paid_at', lastMonthStart)
       .lte('paid_at', lastMonthEnd),
   ])

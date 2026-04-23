@@ -13,6 +13,8 @@ import {
   getBookingSummary,
   getYtdSummary,
 } from '@/lib/data/reports'
+import { getServerTenantId } from '@/lib/auth/tenant'
+import { notFound } from 'next/navigation'
 
 export const metadata: Metadata = { title: 'Reports' }
 
@@ -49,6 +51,15 @@ const HK_LABEL: Record<string, string> = {
   out_of_order: 'Out of Order',
 }
 
+const SOURCE_LABEL: Record<string, string> = {
+  walk_in:  'Walk-in',
+  phone:    'Phone',
+  website:  'Website',
+  widget:   'Booking Widget',
+  voice_ai: 'Voice AI',
+  referral: 'Referral',
+}
+
 const HK_COLOR: Record<string, string> = {
   clean:        'bg-success',
   dirty:        'bg-warning',
@@ -77,14 +88,17 @@ export default async function ReportsPage({
 }) {
   const { report = 'overview' } = await searchParams
 
+  const tenantId = await getServerTenantId()
+  if (!tenantId) notFound()
+
   // Fetch all data in parallel
   const [ytd, revenue6m, methods, occupancy, overdue, bookings] = await Promise.all([
-    getYtdSummary(),
-    getRevenueReport(6),
-    getPaymentMethodBreakdown(),
-    getOccupancyReport(),
-    getOverdueRent(),
-    getBookingSummary(),
+    getYtdSummary(tenantId),
+    getRevenueReport(tenantId, 6),
+    getPaymentMethodBreakdown(tenantId),
+    getOccupancyReport(tenantId),
+    getOverdueRent(tenantId),
+    getBookingSummary(tenantId),
   ])
 
   const maxRevenue = Math.max(...revenue6m.map((m) => m.amount), 1)
@@ -691,10 +705,7 @@ export default async function ReportsPage({
                   .sort((a, b) => b[1] - a[1])
                   .map(([source, count]) => {
                     const pct = bookings.total > 0 ? Math.round((count / bookings.total) * 100) : 0
-                    const label = source === 'walk_in' ? 'Walk-in'
-                      : source === 'phone' ? 'Phone'
-                      : source === 'online' ? 'Online'
-                      : source
+                    const label = SOURCE_LABEL[source] ?? source
                     return (
                       <div key={source}>
                         <div className="mb-1 flex justify-between text-xs">

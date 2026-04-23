@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { ChevronLeft, TrendingUp, BedDouble, DollarSign, Zap, Info } from 'lucide-react'
 
 import { getRevenueMetrics } from '@/lib/data/reports'
+import { getServerTenantId } from '@/lib/auth/tenant'
+import { notFound } from 'next/navigation'
 import { formatGHS } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Revenue Management' }
@@ -15,7 +17,10 @@ export default async function RevenueManagementPage({
   const { months: monthsParam } = await searchParams
   const months = Math.min(12, Math.max(3, parseInt(monthsParam ?? '6') || 6))
 
-  const data = await getRevenueMetrics(months)
+  const tenantId = await getServerTenantId()
+  if (!tenantId) notFound()
+
+  const data = await getRevenueMetrics(tenantId, months)
 
   // Headline KPIs from the most recent full month
   const latest   = data[data.length - 1]

@@ -12,7 +12,7 @@ export async function getIntelligenceKpis() {
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'paid')
+      .eq('status', 'success')
       .gte('paid_at', dayStart),
     supabase
       .from('bookings')

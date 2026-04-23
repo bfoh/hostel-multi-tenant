@@ -14,7 +14,7 @@ function monthEnd(offset = 0) {
 
 /* ── Revenue report ───────────────────────────────────────────────── */
 
-export async function getRevenueReport(months = 6) {
+export async function getRevenueReport(tenantId: string, months = 6) {
   const supabase = createAdminClient()
 
   const results: { month: string; label: string; amount: number }[] = []
@@ -31,7 +31,8 @@ export async function getRevenueReport(months = 6) {
     const { data } = await supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'paid')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'success')
       .gte('paid_at', start)
       .lte('paid_at', end)
 
@@ -44,14 +45,15 @@ export async function getRevenueReport(months = 6) {
 
 /* ── Payment method breakdown ─────────────────────────────────────── */
 
-export async function getPaymentMethodBreakdown() {
+export async function getPaymentMethodBreakdown(tenantId: string) {
   const supabase = createAdminClient()
   const start = monthStart(-11) // last 12 months
 
   const { data } = await supabase
     .from('booking_payments')
     .select('method, amount')
-    .eq('status', 'paid')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'success')
     .gte('paid_at', start)
 
   const map: Record<string, number> = {}
@@ -72,12 +74,13 @@ export async function getPaymentMethodBreakdown() {
 
 /* ── Occupancy report ─────────────────────────────────────────────── */
 
-export async function getOccupancyReport() {
+export async function getOccupancyReport(tenantId: string) {
   const supabase = createAdminClient()
 
   const { data: rooms } = await supabase
     .from('rooms')
     .select('id, status, housekeeping_status, category:room_categories(name)')
+    .eq('tenant_id', tenantId)
 
   const total    = rooms?.length ?? 0
   const occupied = rooms?.filter((r) => r.status === 'occupied').length  ?? 0
@@ -120,7 +123,7 @@ export async function getOccupancyReport() {
 
 /* ── Overdue rent ─────────────────────────────────────────────────── */
 
-export async function getOverdueRent() {
+export async function getOverdueRent(tenantId: string) {
   const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
 
@@ -132,11 +135,11 @@ export async function getOverdueRent() {
       occupant:occupants(first_name, last_name, phone, student_id),
       room:rooms(room_number, block)
     `)
+    .eq('tenant_id', tenantId)
     .in('payment_status', ['unpaid', 'partial'])
     .lt('check_in_date', today)
     .in('status', ['confirmed', 'checked_in'])
     .order('check_in_date', { ascending: true })
-    .limit(50)
 
   return (data ?? []).map((b) => {
     const occupant = Array.isArray(b.occupant) ? b.occupant[0] : b.occupant
@@ -151,12 +154,13 @@ export async function getOverdueRent() {
 
 /* ── Booking summary ──────────────────────────────────────────────── */
 
-export async function getBookingSummary() {
+export async function getBookingSummary(tenantId: string) {
   const supabase = createAdminClient()
 
   const { data } = await supabase
     .from('bookings')
     .select('status, payment_status, final_amount, paid_amount, source')
+    .eq('tenant_id', tenantId)
 
   const rows = data ?? []
   const total = rows.length
@@ -193,13 +197,14 @@ export interface RevenueMetricsMonth {
   yieldPct:     number   // RevPAR / max possible RevPAR × 100
 }
 
-export async function getRevenueMetrics(months = 6): Promise<RevenueMetricsMonth[]> {
+export async function getRevenueMetrics(tenantId: string, months = 6): Promise<RevenueMetricsMonth[]> {
   const supabase = createAdminClient()
 
   // Total rooms (supply denominator)
   const { count: totalRooms } = await supabase
     .from('rooms')
     .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
 
   const supply = totalRooms ?? 0
 
@@ -207,6 +212,7 @@ export async function getRevenueMetrics(months = 6): Promise<RevenueMetricsMonth
   const { data: catRates } = await supabase
     .from('room_categories')
     .select('base_rate, rate_unit')
+    .eq('tenant_id', tenantId)
     .eq('is_active', true)
 
   // Normalise everything to a per-night rate (rough: semester=120d, month=30d, week=7d)
@@ -234,7 +240,8 @@ export async function getRevenueMetrics(months = 6): Promise<RevenueMetricsMonth
     const { data: payments } = await supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'paid')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'success')
       .gte('paid_at', monthStartDt)
       .lte('paid_at', monthEndDt)
 
@@ -244,6 +251,7 @@ export async function getRevenueMetrics(months = 6): Promise<RevenueMetricsMonth
     const { data: bookings } = await supabase
       .from('bookings')
       .select('check_in_date, check_out_date')
+      .eq('tenant_id', tenantId)
       .in('status', ['confirmed', 'checked_in', 'checked_out'])
       .lte('check_in_date', monthEndDt.slice(0, 10))
       .gte('check_out_date', monthStartDt.slice(0, 10))
@@ -271,27 +279,32 @@ export async function getRevenueMetrics(months = 6): Promise<RevenueMetricsMonth
 
 /* ── YTD summary (for headline cards) ────────────────────────────── */
 
-export async function getYtdSummary() {
+export async function getYtdSummary(tenantId: string) {
   const supabase = createAdminClient()
   const ytdStart = new Date(new Date().getFullYear(), 0, 1).toISOString()
   const mtdStart = monthStart(0)
+  const today    = new Date().toISOString().slice(0, 10)
 
   const [ytd, mtd, overdue] = await Promise.all([
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'paid')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'success')
       .gte('paid_at', ytdStart),
     supabase
       .from('booking_payments')
       .select('amount')
-      .eq('status', 'paid')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'success')
       .gte('paid_at', mtdStart),
     supabase
       .from('bookings')
       .select('final_amount, paid_amount')
+      .eq('tenant_id', tenantId)
       .in('payment_status', ['unpaid', 'partial'])
-      .in('status', ['confirmed', 'checked_in']),
+      .in('status', ['confirmed', 'checked_in'])
+      .lt('check_in_date', today),
   ])
 
   const ytdTotal  = (ytd.data ?? []).reduce((s, p) => s + p.amount, 0)
