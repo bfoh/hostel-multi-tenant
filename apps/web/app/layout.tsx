@@ -30,27 +30,43 @@ const fontMono = JetBrains_Mono({
   display: 'swap',
 })
 
-// ── Default metadata (tenant pages override via generateMetadata) ─────────────
-export const metadata: Metadata = {
-  title: {
-    default: 'GH Hostels',
-    template: '%s — GH Hostels',
-  },
-  description: 'Modern hostel management for Ghana.',
-  applicationName: 'GH Hostels',
-  keywords: ['hostel management', 'student accommodation', 'Ghana', 'HMS'],
-  robots: { index: false, follow: false }, // default no-index; tenant pages opt-in
-  manifest: '/manifest.webmanifest',
-  appleWebApp: {
-    capable: true,
-    title: 'GH Hostels',
-    statusBarStyle: 'default',
-  },
-  formatDetection: { telephone: false },
-  icons: {
-    icon: '/icons/icon.svg',
-    apple: '/icons/icon.svg',
-  },
+// ── Metadata ─────────────────────────────────────────────────────────────────
+// When a tenant is resolved (via middleware injecting x-tenant-* headers),
+// rebrand the tab title, applicationName, and favicon to the tenant. Falls
+// back to the platform identity on the marketing / auth / portal pages.
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList  = await headers()
+  const tenantName   = headersList.get('x-tenant-name')
+  const tenantLogo   = headersList.get('x-tenant-logo')
+  const tenantFavicon = headersList.get('x-tenant-favicon')
+
+  const brand = tenantName?.trim() || 'GH Hostels'
+  // Prefer an explicit favicon; fall back to the tenant's logo (browsers
+  // gracefully downscale PNG/SVG for the tab icon); otherwise platform SVG.
+  const iconHref = tenantFavicon || tenantLogo || '/icons/icon.svg'
+  const appleIconHref = tenantLogo || tenantFavicon || '/icons/icon.svg'
+
+  return {
+    title: {
+      default: brand,
+      template: `%s — ${brand}`,
+    },
+    description: tenantName ? `${brand} — hostel management dashboard.` : 'Modern hostel management for Ghana.',
+    applicationName: brand,
+    keywords: ['hostel management', 'student accommodation', 'Ghana', 'HMS'],
+    robots: { index: false, follow: false }, // default no-index; tenant pages opt-in
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+      capable: true,
+      title: brand,
+      statusBarStyle: 'default',
+    },
+    formatDetection: { telephone: false },
+    icons: {
+      icon: iconHref,
+      apple: appleIconHref,
+    },
+  }
 }
 
 export const viewport: Viewport = {
@@ -93,7 +109,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const tenantName = headersList.get('x-tenant-name')
   const tenantColor = headersList.get('x-tenant-color')
   const tenantLogo = headersList.get('x-tenant-logo')
-  const tenantFavicon = headersList.get('x-tenant-favicon')
 
   return (
     <html
@@ -124,14 +139,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <style dangerouslySetInnerHTML={{ __html: `:root { ${css} }` }} />
           )
         })()}
-        {/* Tenant favicon — overrides the default /icons/icon.svg */}
-        {tenantFavicon && (
-          <link rel="icon" href={tenantFavicon} />
-        )}
-        {/* Tenant logo as apple-touch-icon when available */}
-        {tenantLogo && (
-          <link rel="apple-touch-icon" href={tenantLogo} />
-        )}
+        {/*
+         * Favicon + apple-touch-icon are emitted by generateMetadata() above,
+         * which already picks tenant favicon_url / logo_url / platform default.
+         */}
       </head>
       <body>
         <TenantProvider
