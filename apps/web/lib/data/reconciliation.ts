@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 /* ── Types ────────────────────────────────────────────────────────────── */
 
@@ -242,6 +243,7 @@ export async function autoMatchStatements(tenantId: string, uploadId: string): P
           matched_line_id:  candidate.id,
         })
         .eq('id', stmt.id)
+        .eq('tenant_id', tenantId)
       matched++
     }
   }
@@ -256,10 +258,14 @@ export async function getStatementRows(
   status?: string,
   limit = 200,
 ): Promise<StatementRow[]> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
   let q = (supabase as any)
     .from('bank_statements')
     .select('*')
+    .eq('tenant_id', tenantId)
     .order('txn_date', { ascending: false })
     .order('uploaded_at', { ascending: false })
     .limit(limit)
@@ -272,10 +278,14 @@ export async function getStatementRows(
 }
 
 export async function getReconSummary(): Promise<ReconciliationSummary> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { totalRows: 0, matched: 0, unmatched: 0, excluded: 0, totalCredit: 0, totalDebit: 0, unmatchedCredit: 0 }
+
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('bank_statements')
     .select('status, credit, debit')
+    .eq('tenant_id', tenantId)
 
   const rows = data ?? []
   const totalRows        = rows.length
@@ -294,9 +304,13 @@ export async function updateStatementStatus(
   status: 'matched' | 'excluded' | 'manual' | 'unmatched',
   notes?: string,
 ) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return
+
   const supabase = createAdminClient()
   await (supabase as any)
     .from('bank_statements')
     .update({ status, notes: notes ?? null })
     .eq('id', id)
+    .eq('tenant_id', tenantId)
 }

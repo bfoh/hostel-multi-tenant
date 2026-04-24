@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 export type LfStatus = 'unclaimed' | 'claimed' | 'disposed' | 'donated'
 
@@ -21,11 +22,15 @@ export interface LfItem {
 }
 
 export async function getLfItems(filters?: { status?: string; q?: string }): Promise<LfItem[]> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   let q = supabase
     .from('lost_found_items')
     .select('*, occupant:occupants(first_name, last_name), room:rooms(room_number, block)')
+    .eq('tenant_id', tenantId)
     .order('found_date', { ascending: false })
 
   if (filters?.status && filters.status !== 'all') q = q.eq('status', filters.status)
@@ -36,19 +41,26 @@ export async function getLfItems(filters?: { status?: string; q?: string }): Pro
 }
 
 export async function getLfItemById(id: string): Promise<LfItem | null> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return null
+
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('lost_found_items')
     .select('*, occupant:occupants(first_name, last_name), room:rooms(room_number, block)')
     .eq('id', id)
-    .single()
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
   if (!data) return null
   return normalise(data)
 }
 
 export async function getLfStats() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { unclaimed: 0, claimed: 0, total: 0 }
+
   const supabase = createAdminClient()
-  const { data } = await supabase.from('lost_found_items').select('status')
+  const { data } = await supabase.from('lost_found_items').select('status').eq('tenant_id', tenantId)
   const rows = data ?? []
   return {
     unclaimed: rows.filter(r => r.status === 'unclaimed').length,

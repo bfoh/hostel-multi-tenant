@@ -1,11 +1,16 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 export async function getMaintenanceRequests(filter?: { status?: string; priority?: string }) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   let query = supabase
     .from('maintenance_requests')
     .select('*, room:rooms(room_number, block), contractor:contractors(name, phone)')
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
   if (filter?.status && filter.status !== 'all') {
@@ -22,24 +27,32 @@ export async function getMaintenanceRequests(filter?: { status?: string; priorit
 }
 
 export async function getMaintenanceById(id: string) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return null
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('maintenance_requests')
     .select('*, room:rooms(room_number, block), contractor:contractors(name, phone, email)')
     .eq('id', id)
-    .single()
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
 
   if (error) return null
   return data
 }
 
 export async function getContractors() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('contractors')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .order('name')
 
@@ -48,11 +61,15 @@ export async function getContractors() {
 }
 
 export async function getMaintenanceStats() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { open: 0, in_progress: 0, completed: 0, urgent: 0 }
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('maintenance_requests')
     .select('status, priority')
+    .eq('tenant_id', tenantId)
 
   if (error || !data) return { open: 0, in_progress: 0, completed: 0, urgent: 0 }
 

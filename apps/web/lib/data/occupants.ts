@@ -56,7 +56,7 @@ export async function getOccupantById(id: string) {
     `)
     .eq('id', id)
     .eq('tenant_id', tenantId)
-    .single()
+    .maybeSingle()
 
   if (error) return null
   return data

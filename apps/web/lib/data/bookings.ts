@@ -1,6 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 export async function getBookings(filter?: { status?: string; search?: string }) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   let query = supabase
@@ -11,6 +15,7 @@ export async function getBookings(filter?: { status?: string; search?: string })
       occupant:occupants(id, first_name, last_name, phone, student_id, institution),
       room:rooms(id, room_number, block, category:room_categories(name))
     `)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(100)
 
@@ -25,6 +30,9 @@ export async function getBookings(filter?: { status?: string; search?: string })
 }
 
 export async function getBookingById(id: string) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return null
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -48,19 +56,24 @@ export async function getBookingById(id: string) {
       )
     `)
     .eq('id', id)
-    .single()
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
 
   if (error) return null
   return data
 }
 
 export async function getAvailableRooms(checkIn: string, checkOut: string) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   // Count active bookings per room that overlap the requested period
   const { data: activeBookings } = await supabase
     .from('bookings')
     .select('room_id')
+    .eq('tenant_id', tenantId)
     .lte('check_in_date', checkOut)
     .gte('check_out_date', checkIn)
     .in('status', ['pending_payment', 'confirmed', 'checked_in'])
@@ -78,6 +91,7 @@ export async function getAvailableRooms(checkIn: string, checkOut: string) {
       id, room_number, block, floor, status,
       category:room_categories(id, name, type, base_rate, rate_unit, capacity, amenities)
     `)
+    .eq('tenant_id', tenantId)
     .not('status', 'in', '(maintenance,blocked)')
     .order('room_number')
 

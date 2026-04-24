@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 /* ── Types ────────────────────────────────────────────────────────────── */
 
@@ -54,10 +55,14 @@ export interface PnLReport {
 /* ── Chart of accounts ────────────────────────────────────────────────── */
 
 export async function getChartOfAccounts(): Promise<Account[]> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
   const { data } = await (supabase as any)
     .from('chart_of_accounts')
     .select('id, code, name, type, is_system, is_active, sort_order')
+    .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
   return (data ?? []) as Account[]
@@ -66,6 +71,9 @@ export async function getChartOfAccounts(): Promise<Account[]> {
 /* ── Journal entries ──────────────────────────────────────────────────── */
 
 export async function getJournalEntries(limit = 50, offset = 0): Promise<JournalEntry[]> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
   const { data } = await (supabase as any)
     .from('journal_entries')
@@ -76,6 +84,7 @@ export async function getJournalEntries(limit = 50, offset = 0): Promise<Journal
         account:chart_of_accounts(code, name, type)
       )
     `)
+    .eq('tenant_id', tenantId)
     .order('entry_date', { ascending: false })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
@@ -95,6 +104,9 @@ export async function getTrialBalance(
   dateFrom?: string,
   dateTo?: string,
 ): Promise<TrialBalanceLine[]> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   // Fetch all journal lines (optionally filtered by entry date)
@@ -105,6 +117,7 @@ export async function getTrialBalance(
       entry:journal_entries!inner(entry_date),
       account:chart_of_accounts(code, name, type)
     `)
+    .eq('tenant_id', tenantId)
 
   if (dateFrom) q = q.gte('journal_entries.entry_date', dateFrom)
   if (dateTo)   q = q.lte('journal_entries.entry_date', dateTo)
@@ -202,6 +215,9 @@ export interface CashFlowReport {
  * Groups by journal entry source for a meaningful breakdown.
  */
 export async function getCashFlow(dateFrom: string, dateTo: string): Promise<CashFlowReport> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { period_start: dateFrom, period_end: dateTo, operating: [], totalOperating: 0, netChange: 0 }
+
   const supabase = createAdminClient()
 
   const { data } = await supabase
@@ -211,6 +227,7 @@ export async function getCashFlow(dateFrom: string, dateTo: string): Promise<Cas
       entry:journal_entries!inner(source, entry_date),
       account:chart_of_accounts!inner(code)
     `)
+    .eq('tenant_id', tenantId)
     .gte('journal_entries.entry_date', dateFrom)
     .lte('journal_entries.entry_date', dateTo)
 

@@ -1,14 +1,19 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 /**
  * Occupancy summary: total rooms, occupied rooms, pct.
  */
 export async function getOccupancySummary() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { total: 0, occupied: 0, pct: 0 }
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('rooms')
     .select('status')
+    .eq('tenant_id', tenantId)
 
   if (error || !data) return { total: 0, occupied: 0, pct: 0 }
 
@@ -23,6 +28,9 @@ export async function getOccupancySummary() {
  * Revenue this month and last month (in pesewas).
  */
 export async function getRevenueStats() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { thisMonth: 0, lastMonth: 0, change: 0 }
+
   const supabase = createAdminClient()
 
   const now = new Date()
@@ -34,11 +42,13 @@ export async function getRevenueStats() {
     supabase
       .from('booking_payments')
       .select('amount')
+      .eq('tenant_id', tenantId)
       .eq('status', 'success')
       .gte('paid_at', thisMonthStart),
     supabase
       .from('booking_payments')
       .select('amount')
+      .eq('tenant_id', tenantId)
       .eq('status', 'success')
       .gte('paid_at', lastMonthStart)
       .lte('paid_at', lastMonthEnd),
@@ -55,6 +65,9 @@ export async function getRevenueStats() {
  * Booking stats: pending bookings, today's check-ins, today's check-outs.
  */
 export async function getBookingStats() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { pending: 0, todayCheckIns: 0, todayCheckOuts: 0 }
+
   const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
 
@@ -62,15 +75,18 @@ export async function getBookingStats() {
     supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .eq('status', 'pending_payment'),
     supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .eq('check_in_date', today)
       .in('status', ['confirmed', 'checked_in']),
     supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .eq('check_out_date', today)
       .eq('status', 'checked_in'),
   ])
@@ -86,12 +102,16 @@ export async function getBookingStats() {
  * Alert count: overdue bookings (unpaid + check_in_date passed) + pending maintenance.
  */
 export async function getAlertCount() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return 0
+
   const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
 
   const { count } = await supabase
     .from('bookings')
     .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
     .eq('payment_status', 'unpaid')
     .lt('check_in_date', today)
     .in('status', ['confirmed', 'checked_in'])
@@ -103,6 +123,9 @@ export async function getAlertCount() {
  * Recent bookings for the activity list on the dashboard.
  */
 export async function getRecentBookings(limit = 8) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -120,6 +143,7 @@ export async function getRecentBookings(limit = 8) {
       occupant:occupants(first_name, last_name, phone),
       room:rooms(room_number, block, category:room_categories(name))
     `)
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -131,12 +155,16 @@ export async function getRecentBookings(limit = 8) {
  * 7-day occupancy trend for the chart.
  */
 export async function getOccupancyTrend() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   // Get room count first
   const { data: rooms } = await supabase
     .from('rooms')
     .select('status')
+    .eq('tenant_id', tenantId)
 
   const totalRooms = rooms?.length ?? 0
   if (totalRooms === 0) return []
@@ -152,6 +180,7 @@ export async function getOccupancyTrend() {
     const { count } = await supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .lte('check_in_date', dateStr)
       .or(`check_out_date.gt.${dateStr},check_out_date.is.null`)
       .in('status', ['confirmed', 'checked_in', 'checked_out'])
@@ -172,13 +201,16 @@ export async function getOccupancyTrend() {
  * Setup checklist: which onboarding steps the tenant has completed.
  */
 export async function getSetupChecklist() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { hasCategory: false, hasRoom: false, hasOccupant: false, hasBooking: false }
+
   const supabase = createAdminClient()
 
   const [categories, rooms, occupants, bookings] = await Promise.all([
-    supabase.from('room_categories').select('id', { count: 'exact', head: true }),
-    supabase.from('rooms').select('id', { count: 'exact', head: true }),
-    supabase.from('occupants').select('id', { count: 'exact', head: true }),
-    supabase.from('bookings').select('id', { count: 'exact', head: true }),
+    supabase.from('room_categories').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    supabase.from('rooms').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    supabase.from('occupants').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
   ])
 
   return {
@@ -193,6 +225,9 @@ export async function getSetupChecklist() {
  * Revenue breakdown: cash vs digital for the current month.
  */
 export async function getRevenueBreakdown() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { total: 0, cash: 0, digital: 0, cashPct: 0, digitalPct: 0 }
+
   const supabase = createAdminClient()
 
   const now = new Date()
@@ -201,6 +236,7 @@ export async function getRevenueBreakdown() {
   const { data } = await supabase
     .from('booking_payments')
     .select('amount, method')
+    .eq('tenant_id', tenantId)
     .eq('status', 'success')
     .gte('paid_at', thisMonthStart)
 

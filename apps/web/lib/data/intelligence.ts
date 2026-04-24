@@ -1,22 +1,28 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 /* ── Live KPI strip ───────────────────────────────────────────────── */
 
 export async function getIntelligenceKpis() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { total: 0, occupied: 0, available: 0, occupancyPct: 0, todayRevenue: 0, overdueCount: 0 }
+
   const supabase = createAdminClient()
   const today    = new Date().toISOString().slice(0, 10)
   const dayStart = `${today}T00:00:00.000Z`
 
   const [rooms, todayPayments, overdue] = await Promise.all([
-    supabase.from('rooms').select('status'),
+    supabase.from('rooms').select('status').eq('tenant_id', tenantId),
     supabase
       .from('booking_payments')
       .select('amount')
+      .eq('tenant_id', tenantId)
       .eq('status', 'success')
       .gte('paid_at', dayStart),
     supabase
       .from('bookings')
       .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .in('payment_status', ['unpaid', 'partial'])
       .lt('check_in_date', today)
       .in('status', ['confirmed', 'checked_in']),
@@ -42,11 +48,15 @@ export async function getIntelligenceKpis() {
 /* ── Activity feed from audit_log ─────────────────────────────────── */
 
 export async function getActivityFeed(limit = 40) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   const { data } = await supabase
     .from('audit_log')
     .select('id, action, entity_type, entity_id, description, actor_name, actor_role, occurred_at, new_values')
+    .eq('tenant_id', tenantId)
     .order('occurred_at', { ascending: false })
     .limit(limit)
 
@@ -56,6 +66,9 @@ export async function getActivityFeed(limit = 40) {
 /* ── Anomaly alerts (computed from live data) ─────────────────────── */
 
 export async function getAnomalyAlerts() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
   const today    = new Date().toISOString().slice(0, 10)
   const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
@@ -69,6 +82,7 @@ export async function getAnomalyAlerts() {
         occupant:occupants(first_name, last_name),
         room:rooms(room_number)
       `)
+      .eq('tenant_id', tenantId)
       .eq('status', 'confirmed')
       .eq('payment_status', 'unpaid')
       .lt('created_at', fortyEightHoursAgo)
@@ -83,6 +97,7 @@ export async function getAnomalyAlerts() {
         occupant:occupants(first_name, last_name),
         room:rooms(room_number)
       `)
+      .eq('tenant_id', tenantId)
       .in('payment_status', ['unpaid', 'partial'])
       .lt('check_in_date', today)
       .in('status', ['confirmed', 'checked_in'])
@@ -93,6 +108,7 @@ export async function getAnomalyAlerts() {
     supabase
       .from('rooms')
       .select('id, room_number, block, floor')
+      .eq('tenant_id', tenantId)
       .eq('housekeeping_status', 'out_of_order')
       .limit(10),
 
@@ -100,6 +116,7 @@ export async function getAnomalyAlerts() {
     supabase
       .from('rooms')
       .select('id, room_number, block, status')
+      .eq('tenant_id', tenantId)
       .eq('housekeeping_status', 'dirty')
       .limit(10),
   ])
@@ -177,6 +194,9 @@ export async function getAnomalyAlerts() {
 /* ── 30-day cash flow forecast ────────────────────────────────────── */
 
 export async function getCashFlowForecast() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
   const today    = new Date().toISOString().slice(0, 10)
   const in30     = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10)
@@ -189,6 +209,7 @@ export async function getCashFlowForecast() {
       occupant:occupants(first_name, last_name),
       room:rooms(room_number)
     `)
+    .eq('tenant_id', tenantId)
     .gte('check_in_date', today)
     .lte('check_in_date', in30)
     .in('status', ['confirmed', 'pending_payment'])

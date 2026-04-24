@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 export type AssetStatus    = 'active' | 'maintenance' | 'disposed' | 'lost'
 export type AssetCondition = 'excellent' | 'good' | 'fair' | 'poor'
@@ -32,6 +33,9 @@ export async function getAssets(filters?: {
   room_id?:  string
   search?:   string
 }): Promise<Asset[]> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   let q = supabase
@@ -42,6 +46,7 @@ export async function getAssets(filters?: {
       supplier, warranty_expiry, status, condition, notes, created_at, updated_at,
       room:rooms(room_number, block)
     `)
+    .eq('tenant_id', tenantId)
     .order('name', { ascending: true })
 
   if (filters?.status   && filters.status !== 'all')   q = q.eq('status',   filters.status)
@@ -57,6 +62,9 @@ export async function getAssets(filters?: {
 }
 
 export async function getAssetByQr(qrCode: string): Promise<Asset | null> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return null
+
   const supabase = createAdminClient()
   const { data } = await (supabase.from('assets') as any)
     .select(`
@@ -65,8 +73,9 @@ export async function getAssetByQr(qrCode: string): Promise<Asset | null> {
       supplier, warranty_expiry, status, condition, notes, created_at, updated_at,
       room:rooms(room_number, block)
     `)
+    .eq('tenant_id', tenantId)
     .eq('qr_code', qrCode)
-    .single()
+    .maybeSingle()
 
   if (!data) return null
   return {
@@ -76,10 +85,14 @@ export async function getAssetByQr(qrCode: string): Promise<Asset | null> {
 }
 
 export async function getAssetSummary() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { total: 0, active: 0, maintenance: 0, disposed: 0, lost: 0, totalValue: 0, byCategory: {} }
+
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('assets')
     .select('status, condition, purchase_price, category')
+    .eq('tenant_id', tenantId)
 
   const rows = data ?? []
 

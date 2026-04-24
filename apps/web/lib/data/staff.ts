@@ -45,18 +45,22 @@ export async function getStaffById(id: string) {
     `)
     .eq('id', id)
     .eq('tenant_id', tenantId)
-    .single()
+    .maybeSingle()
 
   if (error) return null
   return data
 }
 
 export async function getAttendanceRecords(filter?: { staffId?: string; month?: string }) {
+  const tenantId = await getTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   let query = supabase
     .from('attendance_records')
     .select('*, staff:staff_profiles(first_name, last_name, job_title, photo_url)')
+    .eq('tenant_id', tenantId)
     .order('date', { ascending: false })
     .order('clock_in', { ascending: false })
 
@@ -77,11 +81,15 @@ export async function getAttendanceRecords(filter?: { staffId?: string; month?: 
 }
 
 export async function getLeaveRequests(filter?: { status?: string }) {
+  const tenantId = await getTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   let query = supabase
     .from('leave_requests')
     .select('*, staff:staff_profiles(first_name, last_name, job_title, photo_url)')
+    .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
   if (filter?.status && filter.status !== 'all') {
@@ -94,11 +102,15 @@ export async function getLeaveRequests(filter?: { status?: string }) {
 }
 
 export async function getPayrollRuns() {
+  const tenantId = await getTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('payroll_runs')
     .select('*')
+    .eq('tenant_id', tenantId)
     .order('period_start', { ascending: false })
     .limit(24)
 
@@ -107,6 +119,9 @@ export async function getPayrollRuns() {
 }
 
 export async function getPayrollRunById(id: string) {
+  const tenantId = await getTenantId()
+  if (!tenantId) return null
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -119,7 +134,8 @@ export async function getPayrollRunById(id: string) {
       )
     `)
     .eq('id', id)
-    .single()
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
 
   if (error) return null
   return data
