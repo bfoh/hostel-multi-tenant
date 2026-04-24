@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { invalidateTenantCache } from '@/lib/tenant/resolve'
 
 const schema = z.object({
   custom_domain: z.string()
@@ -26,14 +27,45 @@ export async function PATCH(request: NextRequest) {
 
   const domain = parsed.data.custom_domain
 
-  // Update DB first
-  const supabase = await createClient()
+  // Use the admin client so RLS on the tenants table (which has no UPDATE
+  // policy for authenticated sessions) doesn't silently drop the update.
+  // The middleware has already proven tenant ownership via x-tenant-id.
+  const supabase = createAdminClient()
+
+  // Reject if another tenant already owns this domain
+  if (domain) {
+    const { data: clash } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('custom_domain', domain)
+      .neq('id', tenantId)
+      .maybeSingle()
+    if (clash) {
+      return NextResponse.json(
+        { error: 'domain_taken', message: 'That domain is already registered to another hostel.' },
+        { status: 409 },
+      )
+    }
+  }
+
+  // Capture the previous domain so we can bust its tenant-resolve cache too
+  const { data: prev } = await supabase
+    .from('tenants')
+    .select('custom_domain')
+    .eq('id', tenantId)
+    .maybeSingle()
+
   const { error: dbErr } = await supabase
     .from('tenants')
     .update({ custom_domain: domain })
     .eq('id', tenantId)
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
+
+  // Flush tenant-resolve cache for both old and new hostnames so middleware
+  // picks up the change without waiting for the TTL.
+  if (prev?.custom_domain) await invalidateTenantCache(prev.custom_domain)
+  if (domain)              await invalidateTenantCache(domain)
 
   // If a domain is set, register with Vercel Domains API
   if (domain) {
@@ -75,12 +107,12 @@ export async function GET(_req: NextRequest) {
   const tenantId = await getServerTenantId()
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: tenant } = await supabase
     .from('tenants')
     .select('custom_domain')
     .eq('id', tenantId)
-    .single()
+    .maybeSingle()
 
   if (!tenant?.custom_domain) return NextResponse.json({ verified: false, reason: 'No domain configured' })
 

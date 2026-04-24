@@ -28,7 +28,15 @@ export async function PATCH(req: NextRequest) {
   // user-scoped clients. The middleware already validates tenant ownership
   // via the x-tenant-id header derived from JWT claims.
   const supabase = createAdminClient()
-  const { error } = await supabase.from('tenants').update(parsed.data).eq('id', tenantId)
+
+  // Normalise empty strings to null so optional fields (especially
+  // custom_domain) don't pollute the column with '' and bypass the domain
+  // format check that only fires when the value is truthy.
+  const normalised = Object.fromEntries(
+    Object.entries(parsed.data).map(([k, v]) => [k, v === '' ? null : v]),
+  )
+
+  const { error } = await supabase.from('tenants').update(normalised).eq('id', tenantId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })
