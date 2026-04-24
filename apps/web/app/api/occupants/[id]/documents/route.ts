@@ -11,12 +11,17 @@ export async function GET(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
 
+  const headersList = await headers()
+  const tenantId = headersList.get('x-tenant-id')
+  if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+
   const { id: occupantId } = await params
   const admin = createAdminClient()
 
   const { data } = await admin
     .from('occupant_documents')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('occupant_id', occupantId)
     .order('created_at', { ascending: false })
 

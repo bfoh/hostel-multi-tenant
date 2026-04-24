@@ -31,12 +31,25 @@ export async function GET(
 
   const supabase = createAdminClient()
 
-  // Fetch booking
+  // Resolve tenant from slug so we can verify the booking actually belongs to
+  // the tenant whose public page initiated this payment. Without this check a
+  // caller could record a payment against a booking from any tenant by
+  // replacing the booking_id in the callback URL.
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  if (!tenant) return NextResponse.redirect(new URL(`/book/${slug}?pay=error`, req.url))
+
+  // Fetch booking scoped to this tenant
   const { data: booking } = await supabase
     .from('bookings')
     .select('id, tenant_id, paid_amount, final_amount, status')
     .eq('id', bookingId)
-    .single()
+    .eq('tenant_id', tenant.id)
+    .maybeSingle()
 
   if (!booking) return NextResponse.redirect(new URL(`/book/${slug}?pay=error`, req.url))
 
@@ -62,7 +75,7 @@ export async function GET(
     // Auto-confirm if fully paid
     const newPaid = booking.paid_amount + amount
     if (newPaid >= booking.final_amount && booking.status === 'pending_payment') {
-      await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId)
+      await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId).eq('tenant_id', tenant.id)
     }
   }
 

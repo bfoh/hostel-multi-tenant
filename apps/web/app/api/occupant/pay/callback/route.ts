@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 // GET /api/occupant/pay/callback — Paystack redirects here after payment
 export async function GET(req: NextRequest) {
@@ -31,13 +32,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/occupant-portal/payments?pay=failed', origin))
   }
 
+  // Require an authenticated occupant and verify the booking belongs to
+  // a tenant the caller is a member of. Without this check any authenticated
+  // user could record payments against bookings in other tenants by forging
+  // the booking_id query param.
+  const auth = await createClient()
+  const { data: { user } } = await auth.auth.getUser()
+  if (!user) {
+    return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
+  }
+
   const admin = createAdminClient()
+
+  const { data: occupant } = await admin
+    .from('occupants')
+    .select('tenant_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!occupant) {
+    return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
+  }
 
   const { data: booking } = await admin
     .from('bookings')
     .select('id, tenant_id, paid_amount, final_amount, status')
     .eq('id', bookingId)
-    .single()
+    .eq('tenant_id', occupant.tenant_id)
+    .maybeSingle()
 
   if (!booking) {
     return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
@@ -64,7 +86,7 @@ export async function GET(req: NextRequest) {
 
     const newPaid = booking.paid_amount + amount
     if (newPaid >= booking.final_amount && booking.status === 'pending_payment') {
-      await admin.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId)
+      await admin.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId).eq('tenant_id', booking.tenant_id)
     }
   }
 
