@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Save } from 'lucide-react'
-import { FREQUENCY_LABELS, computeNextDue, type PmFrequency } from '@/lib/data/pm-schedules'
+import { FREQUENCY_LABELS, computeNextDue, type PmFrequency } from '@/lib/data/pm-schedules-shared'
 
 interface Room       { id: string; room_number: string; block: string | null }
 interface Contractor { id: string; name: string }

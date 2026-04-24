@@ -34,9 +34,9 @@ export async function PATCH(req: NextRequest) {
   // format check that only fires when the value is truthy.
   const normalised = Object.fromEntries(
     Object.entries(parsed.data).map(([k, v]) => [k, v === '' ? null : v]),
-  )
+  ) as typeof parsed.data
 
-  const { error } = await supabase.from('tenants').update(normalised).eq('id', tenantId)
+  const { error } = await (supabase.from('tenants') as any).update(normalised).eq('id', tenantId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })
