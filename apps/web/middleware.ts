@@ -115,6 +115,14 @@ export async function middleware(request: NextRequest) {
   if (user && isAuthPath) {
     if (portalRole === 'occupant') return NextResponse.redirect(new URL('/occupant-portal', request.url))
     if (portalRole === 'staff')    return NextResponse.redirect(new URL('/staff-portal', request.url))
+    // Preserve plan intent when an already-logged-in user clicks a Subscribe
+    // link on the landing page (e.g. /signup?plan=growth). Send them directly
+    // to the billing page so autosubscribe fires, rather than discarding the
+    // plan param and dropping them at /dashboard.
+    const plan = request.nextUrl.searchParams.get('plan')
+    if (plan && ['starter', 'growth', 'pro'].includes(plan)) {
+      return NextResponse.redirect(new URL(`/settings/billing?autosubscribe=${plan}`, request.url))
+    }
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

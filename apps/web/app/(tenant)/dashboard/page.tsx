@@ -23,16 +23,32 @@ export default async function DashboardPage() {
   const tenantName = headersList.get('x-tenant-name') ?? 'Your Hostel'
   const tenantId   = headersList.get('x-tenant-id')
 
-  // Redirect new owners to onboarding if they haven't completed it yet
+  // Redirect new owners to onboarding if they haven't completed it yet.
+  // Also catch the case where a user chose a paid plan during signup but closed
+  // the browser before clicking "Subscribe" on the onboarding done screen.
   if (tenantId) {
     const admin = createAdminClient()
     const { data: tenant } = await admin
       .from('tenants')
-      .select('onboarding_completed')
+      .select('onboarding_completed, selected_plan')
       .eq('id', tenantId)
       .single()
+
     if (tenant && !(tenant as any).onboarding_completed) {
       redirect('/onboarding')
+    }
+
+    const pendingPlan = (tenant as any)?.selected_plan as string | null | undefined
+    if (pendingPlan && ['starter', 'growth', 'pro'].includes(pendingPlan)) {
+      const { data: activeSub } = await admin
+        .from('tenant_subscriptions')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .in('status', ['trialing', 'active', 'past_due'])
+        .maybeSingle()
+      if (!activeSub) {
+        redirect(`/settings/billing?autosubscribe=${pendingPlan}`)
+      }
     }
   }
 
