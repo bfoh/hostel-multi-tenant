@@ -1,6 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 export async function getRooms() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -20,6 +24,7 @@ export async function getRooms() {
         id, name, type, base_rate, rate_unit, capacity, amenities, is_active
       )
     `)
+    .eq('tenant_id', tenantId)
     .order('room_number', { ascending: true })
 
   if (error) return []
@@ -27,6 +32,9 @@ export async function getRooms() {
 }
 
 export async function getRoomById(id: string) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return null
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -47,18 +55,23 @@ export async function getRoomById(id: string) {
       )
     `)
     .eq('id', id)
-    .single()
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
 
   if (error) return null
   return data
 }
 
 export async function getRoomCategories() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('room_categories')
     .select('id, name, type, base_rate, rate_unit, capacity, amenities, is_active, sort_order')
+    .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .order('sort_order')
 
@@ -67,6 +80,9 @@ export async function getRoomCategories() {
 }
 
 export async function getRoomsWithCurrentBooking() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return []
+
   const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
 
@@ -91,6 +107,7 @@ export async function getRoomsWithCurrentBooking() {
         occupant:occupants(first_name, last_name, phone)
       )
     `)
+    .eq('tenant_id', tenantId)
     .order('room_number')
 
   if (error) return []

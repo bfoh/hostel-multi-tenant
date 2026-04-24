@@ -29,19 +29,38 @@ export async function PUT(
   }
 
   const supabase = createAdminClient()
+
+  // Validate category_id (if provided) belongs to this tenant so a cross-tenant
+  // id cannot be saved through the API.
+  if (parsed.data.category_id) {
+    const { data: category } = await supabase
+      .from('room_categories')
+      .select('id')
+      .eq('id', parsed.data.category_id)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    if (!category) {
+      return NextResponse.json({ error: 'Invalid room type for this tenant.' }, { status: 400 })
+    }
+  }
+
   const { data, error } = await supabase
     .from('rooms')
     .update(parsed.data)
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .select('id')
-    .single()
+    .maybeSingle()
 
   if (error) {
     if (error.code === '23505') {
       return NextResponse.json({ error: 'A room with this number already exists.' }, { status: 409 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (!data) {
+    return NextResponse.json({ error: 'Room not found.' }, { status: 404 })
   }
 
   return NextResponse.json(data)
