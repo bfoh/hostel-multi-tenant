@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -19,7 +19,7 @@ export async function GET(
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('room_keys')
     .select('*, bookings(booking_ref), occupants(first_name, last_name)')
@@ -45,7 +45,7 @@ export async function POST(
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 422 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await (supabase.from('room_keys') as any)
     .insert({ tenant_id: tenantId, room_id: id, ...parsed.data, status: 'available' })
     .select('*, bookings(booking_ref), occupants(first_name, last_name)')

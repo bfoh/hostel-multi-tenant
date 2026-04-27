@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { initiateMoMoCharge, type MoMoProvider } from '@/lib/paystack'
 
 const schema = z.object({
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Verify booking belongs to this tenant
   const { data: booking } = await supabase

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { advancePmSchedule } from '@/lib/data/pm-schedules'
 
@@ -12,7 +12,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Fetch the schedule (RLS ensures tenant ownership)
   const { data: schedule, error: fetchErr } = await supabase

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 const VALID_EVENTS = [
@@ -23,7 +23,7 @@ export async function GET() {
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: endpoints } = await supabase
     .from('webhook_endpoints')
     .select('id, url, events, description, is_active, created_at')
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 422 })

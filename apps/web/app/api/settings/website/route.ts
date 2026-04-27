@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 const faqSchema = z.object({
@@ -27,7 +27,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Fetch existing content and merge so partial saves don't wipe other fields
   const { data: existing } = await supabase

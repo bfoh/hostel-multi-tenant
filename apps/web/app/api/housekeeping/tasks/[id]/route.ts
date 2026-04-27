@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const updateSchema = z.object({
   status:      z.enum(['pending', 'in_progress', 'done', 'skipped']).optional(),
@@ -17,7 +17,7 @@ export async function PATCH(
   const parsed = updateSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const update: Record<string, unknown> = { ...parsed.data }
   if (parsed.data.status === 'done') update.completed_at = new Date().toISOString()
 

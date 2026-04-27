@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const parsed   = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { error } = await supabase
     .from('pm_schedules')
     .update(parsed.data)
@@ -45,7 +45,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   await supabase.from('pm_schedules').delete().eq('id', id).eq('tenant_id', tenantId)
   return NextResponse.json({ ok: true })
 }

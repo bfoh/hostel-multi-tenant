@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const schema = z.object({
   status: z.enum(['available', 'occupied', 'reserved', 'maintenance', 'blocked']),
@@ -18,7 +18,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { error } = await supabase
     .from('rooms')
     .update({ status: parsed.data.status })

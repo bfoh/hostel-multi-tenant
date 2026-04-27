@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // PATCH /api/blacklist/[id] — lift / deactivate an entry
 export async function PATCH(
@@ -12,7 +12,7 @@ export async function PATCH(
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: entry } = await supabase
     .from('occupant_blacklist')
@@ -64,7 +64,7 @@ export async function DELETE(
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { error } = await supabase
     .from('occupant_blacklist')

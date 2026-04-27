@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -20,7 +20,7 @@ export async function PATCH(
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 422 })
@@ -46,7 +46,7 @@ export async function DELETE(
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { error } = await supabase
     .from('notices')
     .delete()

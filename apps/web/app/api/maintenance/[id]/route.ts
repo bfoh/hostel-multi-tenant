@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const schema = z.object({
   status:         z.enum(['open', 'in_progress', 'on_hold', 'completed', 'cancelled']).optional(),
@@ -26,7 +26,7 @@ export async function PATCH(
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const update = { ...parsed.data }
   if (parsed.data.status === 'completed' && !parsed.data.resolved_at) {
@@ -52,7 +52,7 @@ export async function DELETE(
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { error } = await supabase
     .from('maintenance_requests')
     .delete()

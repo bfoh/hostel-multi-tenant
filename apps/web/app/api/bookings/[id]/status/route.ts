@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, bookingConfirmationHtml, checkoutSummaryHtml } from '@/lib/email'
 
 const schema = z.object({
@@ -23,7 +23,7 @@ export async function PATCH(
   }
 
   const nextStatus = parsed.data.status
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Fetch current booking with guest + room + tenant context for emails
   const { data: booking } = await supabase

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const schema = z.object({
   status: z.enum(['draft', 'approved', 'paid']),
@@ -16,7 +16,7 @@ export async function GET(
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('payroll_runs')
     .select(`
@@ -47,7 +47,7 @@ export async function PATCH(
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid status' }, { status: 422 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const update: { status: 'draft' | 'approved' | 'paid'; paid_at?: string } = { status: parsed.data.status }
   if (parsed.data.status === 'paid') {
     update.paid_at = new Date().toISOString()

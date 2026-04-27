@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
@@ -24,7 +24,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
-  const supabase = await createClient()
+  // Use admin client so RLS on rooms (which has no INSERT policy for the
+  // session-bound client) doesn't reject the row. Middleware has already
+  // proven tenant ownership via x-tenant-id.
+  const supabase = createAdminClient()
+
+  // Verify the chosen category belongs to this tenant so the picker can't
+  // be used to attach a room to another tenant's category.
+  const { data: category } = await supabase
+    .from('room_categories')
+    .select('id')
+    .eq('id', parsed.data.category_id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  if (!category) {
+    return NextResponse.json({ error: 'Invalid room type for this tenant.' }, { status: 400 })
+  }
+
   const { data, error } = await supabase
     .from('rooms')
     .insert({

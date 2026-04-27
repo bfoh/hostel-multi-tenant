@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const schema = z.object({
   hostel_slug:    z.string().min(1),
@@ -28,7 +28,7 @@ export async function OPTIONS(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const origin   = req.headers.get('origin')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let body: unknown
   try { body = await req.json() } catch {

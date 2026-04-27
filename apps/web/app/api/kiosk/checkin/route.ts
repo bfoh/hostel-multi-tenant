@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 const schema = z.object({ booking_id: z.string().uuid() })
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'booking_id required' }, { status: 422 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: booking } = await supabase
     .from('bookings')

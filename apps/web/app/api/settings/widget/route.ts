@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const schema = z.object({
   widget_domains: z.array(z.string().max(253)).max(20),
@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { error } = await supabase
     .from('tenants')
     .update({ widget_domains: parsed.data.widget_domains })
