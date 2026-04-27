@@ -13,29 +13,53 @@ interface SendParams {
   senderName?: string
 }
 
-export async function sendEmail(params: SendParams): Promise<void> {
+/**
+ * Returns `{ ok: true }` on accept, `{ ok: false, error }` on any failure
+ * (missing key, network error, Resend rejection). Errors are also logged
+ * to console so they show up in the Vercel function log.
+ *
+ * Most callers can fire-and-forget by ignoring the result, but invite /
+ * credential routes should check `ok` so they don't lie to the dashboard
+ * about delivery.
+ */
+export async function sendEmail(params: SendParams): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) return  // silently skip when not configured
+  if (!apiKey) {
+    console.warn('[email] RESEND_API_KEY missing — email skipped:', params.subject)
+    return { ok: false, error: 'RESEND_API_KEY missing' }
+  }
 
   const address = process.env.RESEND_FROM_EMAIL ?? 'no-reply@updates.gh-hostels.com'
   const from = params.senderName
     ? `${params.senderName} via GH Hostels <${address}>`
     : `GH Hostels <${address}>`
 
-  await fetch(RESEND_API, {
-    method: 'POST',
-    headers: {
-      Authorization:  `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to:      Array.isArray(params.to) ? params.to : [params.to],
-      subject: params.subject,
-      html:    params.html,
-      reply_to: params.replyTo,
-    }),
-  }).catch(() => {}) // fire-and-forget — never block the main flow
+  try {
+    const res = await fetch(RESEND_API, {
+      method: 'POST',
+      headers: {
+        Authorization:  `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to:      Array.isArray(params.to) ? params.to : [params.to],
+        subject: params.subject,
+        html:    params.html,
+        reply_to: params.replyTo,
+      }),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      console.error('[email] Resend rejected:', res.status, text)
+      return { ok: false, error: `Resend ${res.status}: ${text || 'unknown error'}` }
+    }
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[email] network error:', msg)
+    return { ok: false, error: msg }
+  }
 }
 
 /* ── Email templates ────────────────────────────────────────────────────── */

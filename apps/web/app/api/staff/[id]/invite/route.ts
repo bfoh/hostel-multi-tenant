@@ -99,8 +99,9 @@ export async function POST(
     .update({ invited_at: new Date().toISOString() })
     .eq('id', staff.member_id)
 
-  // Deliver via Resend
-  await sendEmail({
+  // Deliver via Resend — surface failures so the dashboard can show a real
+  // error instead of "invite sent" when the email never went out.
+  const delivery = await sendEmail({
     to:      staff.email,
     subject: `${tenantRow?.name ?? 'Staff portal'} — accept your invitation`,
     html:    inviteHtml({
@@ -111,6 +112,12 @@ export async function POST(
       inviteUrl,
     }),
   })
+
+  if (!delivery.ok) {
+    return NextResponse.json({
+      error: `Email could not be delivered: ${delivery.error ?? 'unknown error'}. The invite link is valid for 1 hour — copy it manually if needed: ${inviteUrl}`,
+    }, { status: 500 })
+  }
 
   return NextResponse.json({
     ok: true,

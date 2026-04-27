@@ -130,7 +130,7 @@ export async function POST(
   }
 
   // ── Deliver via Resend ─────────────────────────────────────────────────────
-  await sendEmail({
+  const delivery = await sendEmail({
     to:      occupant.email,
     subject: `${tenantRow?.name ?? 'Resident portal'} — accept your invitation`,
     html:    inviteHtml({
@@ -142,8 +142,14 @@ export async function POST(
     }),
   })
 
+  if (!delivery.ok) {
+    return NextResponse.json({
+      error: `Email could not be delivered: ${delivery.error ?? 'unknown error'}. The invite link is valid for 1 hour — copy it manually if needed: ${inviteUrl}`,
+    }, { status: 500 })
+  }
+
   return NextResponse.json({
     ok: true,
-    message: `Portal invite sent to ${occupant.email}. The link expires in 24 hours.`,
+    message: `Portal invite sent to ${occupant.email}. The link expires in 1 hour.`,
   }, { status: 200 })
 }
