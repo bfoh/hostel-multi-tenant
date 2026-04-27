@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { IdVerificationClient } from '@/components/occupants/id-verification-client'
 
 export const metadata: Metadata = { title: 'ID Verification Queue' }
 
 export default async function IdVerificationPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Occupants with docs but not yet verified
   const { data: pending } = await supabase

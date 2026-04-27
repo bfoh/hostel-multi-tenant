@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { RenewalClient } from '@/components/bookings/renewal-client'
 
 export const metadata: Metadata = { title: 'Lease Renewals' }
 
 export default async function RenewalsPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const today    = new Date().toISOString().slice(0, 10)
   const in30     = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 

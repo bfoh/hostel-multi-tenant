@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { ChevronLeft, ExternalLink } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { WebsiteCmsForm } from '@/components/settings/website-cms-form'
 
 export const metadata: Metadata = { title: 'Website Content' }
@@ -14,7 +14,7 @@ export default async function WebsiteCmsPage() {
 
   if (!tenantId) return null
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('tenants')
     .select('website_content, slug')

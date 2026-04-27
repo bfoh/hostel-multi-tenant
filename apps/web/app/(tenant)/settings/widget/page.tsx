@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { WidgetSettingsForm } from '@/components/settings/widget-settings-form'
 import { ApiKeyPanel } from '@/components/settings/api-key-panel'
 
@@ -12,7 +12,7 @@ export default async function WidgetSettingsPage() {
   const headersList = await headers()
   const tenantId    = headersList.get('x-tenant-id')
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: tenantRaw } = await supabase
     .from('tenants')
     .select('slug, widget_domains, public_api_key')

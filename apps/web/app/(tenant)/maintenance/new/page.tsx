@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NewMaintenanceForm } from '@/components/maintenance/new-maintenance-form'
 
 export const metadata: Metadata = { title: 'New Maintenance Request' }
 
 export default async function NewMaintenancePage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const [{ data: rooms }, { data: contractors }] = await Promise.all([
     supabase.from('rooms').select('id, room_number, block').order('room_number'),

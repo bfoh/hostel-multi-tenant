@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { RoomHKCard } from '@/components/housekeeping/room-hk-card'
 import { HkTaskRow } from '@/components/housekeeping/hk-task-row'
 
@@ -25,7 +25,7 @@ const PRIORITY_STYLE: Record<string, string> = {
 }
 
 async function getRooms(filter: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('rooms')
@@ -45,7 +45,7 @@ async function getRooms(filter: string) {
 }
 
 async function getPendingTasks(tenantId: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('housekeeping_tasks')
     .select(`
@@ -77,7 +77,7 @@ export default async function HousekeepingPage({
   ])
 
   // Counts for summary bar (always fetch all for counts)
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: allRooms } = await supabase
     .from('rooms')
     .select('housekeeping_status')

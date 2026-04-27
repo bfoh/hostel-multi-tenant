@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const metadata: Metadata = { title: 'Occupancy Calendar' }
 
@@ -67,7 +67,7 @@ interface BookingBar {
 }
 
 async function getCalendarData(tenantId: string, windowStart: Date, days: number) {
-  const supabase    = await createClient()
+  const supabase    = createAdminClient()
   const windowEnd   = addDays(windowStart, days - 1)
   const startStr    = isoDate(windowStart)
   const endStr      = isoDate(windowEnd)

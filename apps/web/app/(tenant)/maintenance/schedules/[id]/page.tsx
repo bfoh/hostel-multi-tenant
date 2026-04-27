@@ -6,13 +6,13 @@ import { getPmScheduleById, FREQUENCY_LABELS } from '@/lib/data/pm-schedules'
 import { formatGHS } from '@/lib/utils'
 import { RunNowButton } from '@/components/maintenance/run-now-button'
 import { PmScheduleForm } from '@/components/maintenance/pm-schedule-form'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const metadata: Metadata = { title: 'PM Schedule' }
 
 export default async function PmScheduleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const [schedule, { data: rooms }, { data: contractors }, { data: workOrders }] = await Promise.all([
     getPmScheduleById(id),

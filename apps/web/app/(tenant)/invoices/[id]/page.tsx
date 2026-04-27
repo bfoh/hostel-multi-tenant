@@ -8,7 +8,7 @@ import { getInvoiceById } from '@/lib/data/invoices'
 import { splitGhanaTax } from '@/lib/tax/ghana'
 import { formatGHS, formatDate } from '@/lib/utils'
 import { PrintButton } from '@/components/invoices/print-button'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const metadata: Metadata = { title: 'Invoice' }
 
@@ -42,7 +42,7 @@ export default async function InvoicePage({
   const tenantName   = headersList.get('x-tenant-name') ?? 'Your Hostel'
 
   // Fetch GRA fields from tenant
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: tenantRaw } = await supabase
     .from('tenants')
     .select('name, tagline, address_line1, address_city, contact_phone, contact_email, logo_url, tin, vat_reg_number, is_vat_registered')

@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { BlacklistClient } from '@/components/security/blacklist-client'
 
 export const metadata: Metadata = { title: 'Blacklist' }
 
 export default async function BlacklistPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: entries } = await supabase
     .from('occupant_blacklist')
     .select('*, occupants(first_name, last_name, phone, email, photo_url)')

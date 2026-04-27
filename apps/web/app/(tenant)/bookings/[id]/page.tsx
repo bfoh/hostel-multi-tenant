@@ -13,7 +13,7 @@ import { InvoicePdfButton } from '@/components/bookings/invoice-pdf-button'
 import { LeasePdfButton } from '@/components/bookings/lease-pdf-button'
 import { RoomTransferButton } from '@/components/bookings/room-transfer-button'
 import { DepositCard } from '@/components/bookings/deposit-card'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -48,7 +48,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   if (!booking) notFound()
 
   // Fetch payment plan (if any)
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: paymentPlan } = await supabase
     .from('payment_plans')
     .select('*, payment_plan_installments(*)')

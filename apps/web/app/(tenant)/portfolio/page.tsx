@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Building2, Users, BedDouble, TrendingUp, AlertTriangle, ExternalLink } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const metadata: Metadata = { title: 'Portfolio Overview' }
@@ -101,7 +100,7 @@ function OccupancyBar({ rate }: { rate: number }) {
 }
 
 export default async function PortfolioPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return null

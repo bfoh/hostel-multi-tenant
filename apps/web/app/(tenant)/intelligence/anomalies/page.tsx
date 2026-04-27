@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft, AlertTriangle, AlertCircle, Info, Settings2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { headers } from 'next/headers'
 
 export const metadata: Metadata = { title: 'Anomaly Alerts' }
@@ -16,7 +16,7 @@ export default async function AnomalyAlertsPage() {
   const headersList = await headers()
   const tenantId    = headersList.get('x-tenant-id')
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const [{ data: alerts }, { data: rules }] = await Promise.all([
     supabase

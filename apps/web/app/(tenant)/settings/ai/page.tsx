@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { ChevronLeft, Bot } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { AiConfigForm } from '@/components/settings/ai-config-form'
 
 export const metadata: Metadata = { title: 'AI Agent Settings' }
@@ -13,7 +13,7 @@ export default async function AiSettingsPage() {
 
   if (!tenantId) return null
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('tenants')
     .select('name, ai_config')

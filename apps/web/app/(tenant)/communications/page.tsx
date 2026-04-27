@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { MessageSquare, CheckCircle2, XCircle, Clock } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { formatDate } from '@/lib/utils'
 import { BroadcastForm } from '@/components/communications/broadcast-form'
 
@@ -14,7 +14,7 @@ const STATUS_STYLES: Record<string, { icon: React.ReactNode; style: string }> = 
 }
 
 export default async function CommunicationsPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: blasts } = await supabase
     .from('sms_blasts')
     .select('*')

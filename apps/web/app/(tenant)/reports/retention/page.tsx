@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Retention Analytics' }
 
 async function getRetentionData(tenantId: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Fetch all bookings with occupant info (non-cancelled/no_show)
   const { data: bookings } = await supabase

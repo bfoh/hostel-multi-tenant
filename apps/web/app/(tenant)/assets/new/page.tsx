@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { AssetForm } from '@/components/assets/asset-form'
 
 export const metadata: Metadata = { title: 'Add Asset' }
 
 export default async function NewAssetPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: rooms } = await supabase
     .from('rooms')
     .select('id, room_number, block')

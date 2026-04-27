@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft, TrendingUp, Clock, Calendar, CheckCircle2, AlertCircle } from 'lucide-react'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { initials } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Staff Performance' }
@@ -49,7 +49,7 @@ export default async function StaffPerformancePage({
 
   const headersList = await headers()
   const tenantId    = headersList.get('x-tenant-id') ?? ''
-  const supabase    = await createClient()
+  const supabase    = createAdminClient()
 
   const [{ data: staff }, { data: attendance }, { data: leaves }] = await Promise.all([
     supabase

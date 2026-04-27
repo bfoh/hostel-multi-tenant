@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NoticesClient } from '@/components/communications/notices-client'
 
 export const metadata: Metadata = { title: 'Notice Board' }
 
 export default async function NoticesPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data: notices } = await supabase
     .from('notices')
     .select('*')

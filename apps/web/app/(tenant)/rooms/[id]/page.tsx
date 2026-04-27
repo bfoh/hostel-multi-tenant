@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ChevronLeft, Pencil, BedDouble } from 'lucide-react'
 
 import { getRoomById } from '@/lib/data/rooms'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS, formatDate } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { RoomStatusActions } from '@/components/rooms/room-status-actions'
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 async function getRoomBookings(roomId: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('bookings')
     .select(`
@@ -41,7 +41,7 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 async function getRoomInspections(roomId: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('room_inspections')
     .select('*')

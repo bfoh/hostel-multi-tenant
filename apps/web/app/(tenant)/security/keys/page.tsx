@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { KeysClient } from '@/components/security/keys-client'
 
 export const metadata: Metadata = { title: 'Key Management' }
 
 export default async function KeysPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const [{ data: keys }, { data: rooms }] = await Promise.all([
     supabase

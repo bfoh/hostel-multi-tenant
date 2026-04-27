@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS, formatDate } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Payments' }
@@ -31,7 +31,7 @@ const FILTERS = [
 ]
 
 async function getPayments(status: string, search: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   let query = supabase
     .from('booking_payments')

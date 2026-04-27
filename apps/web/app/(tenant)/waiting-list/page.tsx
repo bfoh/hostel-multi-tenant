@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { WaitingListClient } from '@/components/waiting-list/waiting-list-client'
 
 export const metadata: Metadata = { title: 'Waiting List' }
 
 export default async function WaitingListPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const [{ data: entries }, { data: categories }] = await Promise.all([
     supabase

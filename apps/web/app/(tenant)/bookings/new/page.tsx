@@ -2,22 +2,29 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { BookingForm } from '@/components/bookings/booking-form'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
 
 export const metadata: Metadata = { title: 'New Booking' }
+export const dynamic = 'force-dynamic'
 
 async function getFormData() {
-  const supabase = await createClient()
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return { rooms: [], occupants: [] }
+
+  const supabase = createAdminClient()
 
   const [roomsRes, occupantsRes, activeBookingsRes] = await Promise.all([
     supabase
       .from('rooms')
       .select('id, room_number, block, floor, status, category:room_categories(id, name, type, base_rate, rate_unit, capacity)')
+      .eq('tenant_id', tenantId)
       .not('status', 'in', '(maintenance,blocked)')
       .order('room_number'),
     supabase
       .from('occupants')
       .select('id, first_name, last_name, phone, student_id, institution, status')
+      .eq('tenant_id', tenantId)
       .neq('status', 'blacklisted')
       .order('first_name')
       .limit(500),
@@ -25,6 +32,7 @@ async function getFormData() {
     supabase
       .from('bookings')
       .select('room_id')
+      .eq('tenant_id', tenantId)
       .in('status', ['pending_payment', 'confirmed', 'checked_in']),
   ])
 

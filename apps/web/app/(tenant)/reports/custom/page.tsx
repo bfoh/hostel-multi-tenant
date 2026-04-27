@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft, Download } from 'lucide-react'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const metadata: Metadata = { title: 'Custom Report Builder' }
 
@@ -76,7 +76,7 @@ async function runReport(
   to: string,
   groupBy: string,
 ): Promise<Row[]> {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   if (metric === 'revenue') {
     const { data } = await supabase

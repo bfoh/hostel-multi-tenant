@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { WebhooksClient } from '@/components/settings/webhooks-client'
 
 export const metadata: Metadata = { title: 'Webhooks' }
 
 export default async function WebhooksPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: endpoints } = await supabase
     .from('webhook_endpoints')
