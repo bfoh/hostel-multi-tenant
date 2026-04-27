@@ -1,17 +1,21 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
-import { sendEmail, inviteHtml } from '@/lib/email'
+import { sendEmail, portalCredentialsHtml } from '@/lib/email'
 
 /**
  * POST /api/staff/[id]/invite
  *
- * Issues a magic-link sign-in for an existing staff member and emails it via
- * Resend. The auth user + tenant_members row already exist (POST /api/staff
- * creates them eagerly because tenant_members.user_id is NOT NULL), but the
- * "portal active" signal — staff_profiles.user_id — stays null until this
- * endpoint runs, so the dashboard badge only flips after the owner explicitly
- * sends the invite.
+ * Sets a strong temporary password on the staff member's existing auth user
+ * and emails them the credentials. We deliberately do NOT use a Supabase
+ * magic-link / OTP — Gmail and Outlook safe-link scanners pre-fetch any URL
+ * in an email, and Supabase's email tokens are single-use, so the scanner
+ * burns the token before the human can click. A username + password pair
+ * survives that prefetch because the password is just text in the body of
+ * the email.
+ *
+ * The owner can resend the invite at any time; that just rotates the
+ * temporary password.
  */
 export async function POST(
   _req: NextRequest,
@@ -36,9 +40,6 @@ export async function POST(
   if (!staff.email) {
     return NextResponse.json({ error: 'Staff member has no email address' }, { status: 422 })
   }
-  if (staff.user_id) {
-    return NextResponse.json({ error: 'Invite already sent for this staff member.' }, { status: 409 })
-  }
 
   const member = Array.isArray(staff.member) ? staff.member[0] : staff.member
   const authUserId: string | null = (member as any)?.user_id ?? null
@@ -49,52 +50,38 @@ export async function POST(
     )
   }
 
+  // Resolve tenant URLs
   const { data: tenantRow } = await admin
     .from('tenants')
     .select('name, slug, custom_domain, primary_color')
     .eq('id', tenantId)
     .maybeSingle()
 
-  // The invite link MUST point at a URL whitelisted in Supabase Auth → Redirect
-  // URLs. Tenant subdomains and custom domains are not in that allow list, so
-  // Supabase silently swaps any non-whitelisted redirect_to for the project's
-  // Site URL, and the user lands on the platform homepage instead of the
-  // /auth/invite handler. We send them to the root domain instead — the
-  // /auth/invite page reads tenant_domain / tenant_slug from the refreshed
-  // JWT and forwards them to the right hostel host.
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
-    ?? `https://${process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'}`
-  const redirectTo = `${appUrl}/auth/invite`
+  const appDomain  = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+  const tenantBase = tenantRow?.custom_domain
+    ? `https://${tenantRow.custom_domain}`
+    : tenantRow?.slug
+      ? `https://${tenantRow.slug}.${appDomain}`
+      : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
 
-  // The auth user already exists (created by POST /api/staff), so we use a
-  // magic-link rather than a fresh "invite" link, which would error with
-  // "User already registered". The magic link signs them in immediately;
-  // they can set a password from Settings → Security after.
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type:  'magiclink',
-    email: staff.email,
-    options: { redirectTo },
+  const loginUrl          = `${tenantBase}/login?next=/staff-portal`
+  const changePasswordUrl = `${tenantBase}/auth/set-password?next=/staff-portal`
+
+  // Generate a strong temporary password
+  const tempPassword = generatePassword(14)
+
+  // Set the password on the existing auth user. This both lets them log in
+  // and confirms the email so they can sign in immediately.
+  const { error: updateAuthErr } = await admin.auth.admin.updateUserById(authUserId, {
+    password:      tempPassword,
+    email_confirm: true,
   })
 
-  if (linkError || !linkData) {
-    return NextResponse.json({ error: linkError?.message ?? 'Failed to create invite link' }, { status: 500 })
+  if (updateAuthErr) {
+    return NextResponse.json({ error: `Failed to set temporary password: ${updateAuthErr.message}` }, { status: 500 })
   }
 
-  const otpCode = (linkData.properties as any)?.email_otp as string | undefined
-  if (!otpCode) {
-    return NextResponse.json({ error: 'Invite code missing from Supabase response' }, { status: 500 })
-  }
-
-  // We send the user to OUR /auth/verify-otp page (with the email prefilled)
-  // instead of the raw Supabase action_link. Email-client safe-link scanners
-  // pre-fetch URLs and burn single-use Supabase tokens before the human
-  // clicks. Code-entry pages survive that prefetch because bots don't type
-  // codes into forms.
-  const verifyUrl = `${appUrl}/auth/verify-otp?email=${encodeURIComponent(staff.email)}`
-
-  // Mark portal access active by linking the auth user to the staff profile,
-  // and stamp the membership invited_at so we can distinguish "just created"
-  // from "invite sent" in the future.
+  // Mark portal access active and stamp the membership invited_at
   await admin
     .from('staff_profiles')
     .update({ user_id: authUserId })
@@ -106,24 +93,25 @@ export async function POST(
     .update({ invited_at: new Date().toISOString() })
     .eq('id', staff.member_id)
 
-  // Deliver via Resend — surface failures so the dashboard can show a real
-  // error instead of "invite sent" when the email never went out.
   const delivery = await sendEmail({
     to:      staff.email,
-    subject: `${tenantRow?.name ?? 'Staff portal'} — accept your invitation`,
-    html:    inviteHtml({
-      hostelName:   tenantRow?.name ?? 'Hostel',
-      primaryColor: tenantRow?.primary_color ?? '#1B4F72',
-      firstName:    staff.first_name,
-      portalLabel:  'staff dashboard',
-      verifyUrl,
-      otpCode,
+    subject: `${tenantRow?.name ?? 'Staff portal'} — your access details`,
+    html:    portalCredentialsHtml({
+      hostelName:        tenantRow?.name ?? 'Hostel',
+      primaryColor:      tenantRow?.primary_color ?? '#1B4F72',
+      firstName:         staff.first_name,
+      email:             staff.email,
+      password:          tempPassword,
+      loginUrl,
+      changePasswordUrl,
     }),
   })
 
   if (!delivery.ok) {
     return NextResponse.json({
-      error: `Email could not be delivered: ${delivery.error ?? 'unknown error'}. Code (valid 1 hour): ${otpCode}`,
+      error:
+        `Email could not be delivered: ${delivery.error ?? 'unknown error'}. ` +
+        `Share these credentials manually — Email: ${staff.email}, Temporary password: ${tempPassword}`,
     }, { status: 500 })
   }
 
@@ -131,4 +119,13 @@ export async function POST(
     ok: true,
     message: `Invite sent to ${staff.email}.`,
   }, { status: 200 })
+}
+
+/** URL-safe-ish password using readable charset (no 0/O/1/I/l confusion). */
+function generatePassword(length: number): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#%&*'
+  const arr = new Uint32Array(length)
+  // Node 20+ has globalThis.crypto.getRandomValues
+  globalThis.crypto.getRandomValues(arr)
+  return Array.from(arr, n => chars[n % chars.length]).join('')
 }
