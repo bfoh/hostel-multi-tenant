@@ -80,10 +80,17 @@ export async function POST(
     return NextResponse.json({ error: linkError?.message ?? 'Failed to create invite link' }, { status: 500 })
   }
 
-  const inviteUrl = linkData.properties?.action_link
-  if (!inviteUrl) {
-    return NextResponse.json({ error: 'Invite link missing from Supabase response' }, { status: 500 })
+  const otpCode = (linkData.properties as any)?.email_otp as string | undefined
+  if (!otpCode) {
+    return NextResponse.json({ error: 'Invite code missing from Supabase response' }, { status: 500 })
   }
+
+  // We send the user to OUR /auth/verify-otp page (with the email prefilled)
+  // instead of the raw Supabase action_link. Email-client safe-link scanners
+  // pre-fetch URLs and burn single-use Supabase tokens before the human
+  // clicks. Code-entry pages survive that prefetch because bots don't type
+  // codes into forms.
+  const verifyUrl = `${appUrl}/auth/verify-otp?email=${encodeURIComponent(staff.email)}`
 
   // Mark portal access active by linking the auth user to the staff profile,
   // and stamp the membership invited_at so we can distinguish "just created"
@@ -109,13 +116,14 @@ export async function POST(
       primaryColor: tenantRow?.primary_color ?? '#1B4F72',
       firstName:    staff.first_name,
       portalLabel:  'staff dashboard',
-      inviteUrl,
+      verifyUrl,
+      otpCode,
     }),
   })
 
   if (!delivery.ok) {
     return NextResponse.json({
-      error: `Email could not be delivered: ${delivery.error ?? 'unknown error'}. The invite link is valid for 1 hour — copy it manually if needed: ${inviteUrl}`,
+      error: `Email could not be delivered: ${delivery.error ?? 'unknown error'}. Code (valid 1 hour): ${otpCode}`,
     }, { status: 500 })
   }
 

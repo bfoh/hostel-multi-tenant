@@ -106,12 +106,16 @@ export async function POST(
     return NextResponse.json({ error: linkError?.message ?? 'Invite failed' }, { status: 500 })
   }
 
-  const inviteUrl  = linkData.properties?.action_link
+  const otpCode    = (linkData.properties as any)?.email_otp as string | undefined
   const authUserId = linkData.user?.id
 
-  if (!inviteUrl || !authUserId) {
-    return NextResponse.json({ error: 'Invite link missing from Supabase response' }, { status: 500 })
+  if (!otpCode || !authUserId) {
+    return NextResponse.json({ error: 'Invite code missing from Supabase response' }, { status: 500 })
   }
+
+  // Send to our scanner-safe code-entry page rather than the raw Supabase
+  // action_link, which gets burned by Gmail/Outlook safe-link prefetchers.
+  const verifyUrl = `${appUrl}/auth/verify-otp?email=${encodeURIComponent(occupant.email)}`
 
   // ── Link auth user to occupant record ─────────────────────────────────────
   const { error: updateError } = await admin
@@ -138,13 +142,14 @@ export async function POST(
       primaryColor: tenantRow?.primary_color ?? '#1B4F72',
       firstName:    occupant.first_name,
       portalLabel:  'resident portal',
-      inviteUrl,
+      verifyUrl,
+      otpCode,
     }),
   })
 
   if (!delivery.ok) {
     return NextResponse.json({
-      error: `Email could not be delivered: ${delivery.error ?? 'unknown error'}. The invite link is valid for 1 hour — copy it manually if needed: ${inviteUrl}`,
+      error: `Email could not be delivered: ${delivery.error ?? 'unknown error'}. Code (valid 1 hour): ${otpCode}`,
     }, { status: 500 })
   }
 

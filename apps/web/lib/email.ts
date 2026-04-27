@@ -250,22 +250,36 @@ export function inviteHtml(opts: {
   primaryColor:   string
   firstName:      string
   portalLabel:    string  // e.g. "staff dashboard" / "resident portal"
-  inviteUrl:      string  // action_link from supabase generateLink
+  verifyUrl:      string  // /auth/verify-otp?email=...
+  otpCode?:       string  // 6-digit code from supabase generateLink
 }) {
-  const { hostelName, primaryColor, firstName, portalLabel, inviteUrl } = opts
+  const { hostelName, primaryColor, firstName, portalLabel, verifyUrl, otpCode } = opts
+
+  // Prefer the OTP code over a clickable link because Gmail/Outlook safe-link
+  // scanners pre-fetch URLs and burn single-use Supabase magic links before
+  // the user can click. Codes are scanner-safe — bots don't type them.
+  const codeBlock = otpCode
+    ? `
+      <div style="margin:24px 0;border:1px solid #e5e7eb;border-radius:12px;padding:20px 16px;background:#f9fafb;text-align:center;">
+        <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.08em;color:#6b7280;text-transform:uppercase;">Your code</p>
+        <p style="margin:0;font-family:'Menlo',Consolas,monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#111827;">${otpCode}</p>
+      </div>
+    `
+    : ''
 
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">You're invited</p>
-    <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">
+    <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
       Hi ${firstName}, you've been invited to access the <strong>${hostelName}</strong> ${portalLabel}.
-      Click the button below to set your password and sign in.
+      Use the button below to enter your code and finish setup.
     </p>
-    ${button(inviteUrl, 'Accept invitation', primaryColor)}
-    <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;">
-      This link expires in 24 hours. If you didn't expect this invitation, you can safely ignore this email.
+    ${button(verifyUrl, 'Accept invitation', primaryColor)}
+    ${codeBlock}
+    <p style="margin:0;font-size:12px;color:#9ca3af;">
+      The code is valid for 1 hour. If you didn't expect this invitation, ignore this email.
     </p>
     <p style="margin:8px 0 0;font-size:11px;color:#9ca3af;word-break:break-all;">
-      Or paste this URL into your browser: ${inviteUrl}
+      Or paste this URL into your browser: ${verifyUrl}
     </p>
   `
 
