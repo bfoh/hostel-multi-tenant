@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
@@ -27,6 +27,20 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/dashboard'
   const resetSuccess = searchParams.get('reset') === 'success'
+
+  // If Supabase bounced an expired/invalid auth link to the login page, forward
+  // the hash to /auth/invite which already renders a friendly "invite expired"
+  // screen instead of leaving the user staring at a regular login form with
+  // a confusing URL fragment.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const hash = window.location.hash
+    if (!hash || hash.length < 2) return
+    const params = new URLSearchParams(hash.slice(1))
+    if (params.has('error') || params.has('error_code')) {
+      window.location.replace(`/auth/invite${hash}`)
+    }
+  }, [])
 
   const [serverError, setServerError] = useState<string | null>(null)
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false)

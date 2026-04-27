@@ -22,10 +22,24 @@ export default function InvitePage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const hash = window.location.hash.substring(1)
+    const fullHash = window.location.hash
+    const hash     = fullHash.substring(1)
     const params       = new URLSearchParams(hash)
     const accessToken  = params.get('access_token')
     const refreshToken = params.get('refresh_token')
+
+    // Surface Supabase auth-error hashes (#error=access_denied&...) instead of
+    // leaving the user staring at a stuck spinner.
+    if (params.has('error') || params.has('error_code')) {
+      const code = params.get('error_code') ?? params.get('error') ?? ''
+      const desc = params.get('error_description')?.replace(/\+/g, ' ')
+      if (code === 'otp_expired' || /expired/i.test(desc ?? '')) {
+        setError('This invite link has expired. Ask your hostel manager to resend it (links are valid for 1 hour).')
+      } else {
+        setError(desc ?? 'This invite link is invalid or has already been used. Please ask your hostel manager to resend it.')
+      }
+      return
+    }
 
     if (!accessToken || !refreshToken) {
       setError('This invite link is missing required tokens. Please ask your hostel manager to resend the invite.')
@@ -78,15 +92,37 @@ export default function InvitePage() {
           }
         }
 
-        // Use a hard navigation so the browser sends a fresh HTTP request,
-        // ensuring middleware reads the newly-set session cookies.
-        if (portalType === 'occupant') {
-          window.location.href = `${tenantBase}/occupant-portal/settings/update-password`
-        } else if (portalType === 'staff') {
-          window.location.href = `${tenantBase}/staff-portal`
-        } else {
-          window.location.href = `${tenantBase}/dashboard`
+        // The session cookie Supabase wrote during setSession() is bound to
+        // the host this page is currently served from. If the tenant lives
+        // on a different host (custom domain or slug subdomain) and we just
+        // redirect to it, the next request arrives without a session cookie
+        // and middleware bounces the user to /login. To fix that we replay
+        // the same hash on the tenant host — this page re-runs there,
+        // re-establishes the session against THAT origin, and only then
+        // forwards to the password-set screen.
+        const targetHost = tenantBase ? new URL(tenantBase).host : currentHost
+        const needsCrossDomain = tenantBase && targetHost !== currentHost
+
+        const finalDest =
+          portalType === 'occupant' ? '/occupant-portal'
+          : portalType === 'staff'  ? '/staff-portal'
+          : '/dashboard'
+
+        if (needsCrossDomain) {
+          // Bounce to tenant host with the same hash so setSession runs on the
+          // correct origin. We keep ?xfer=1 so the destination knows it's
+          // already been refreshed and skips the redundant cross-domain hop.
+          window.location.href = `${tenantBase}/auth/invite?xfer=1${window.location.hash}`
+          return
         }
+
+        // Use a hard navigation so the browser sends a fresh HTTP request,
+        // ensuring middleware reads the newly-set session cookies. After they
+        // pick a password we forward to their actual portal — the magic-link
+        // sign-in puts them in a session WITHOUT a password set, so the next
+        // login attempt would fail until they set one.
+        const baseForFinal = tenantBase || ''
+        window.location.href = `${baseForFinal}/auth/set-password?next=${encodeURIComponent(finalDest)}`
       })
   }, [router])
 
