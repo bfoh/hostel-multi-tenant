@@ -124,12 +124,17 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Create (or update) staff profile — upsert on (tenant_id, member_id)
+    //
+    // Note: we deliberately do NOT set staff_profiles.user_id here. The dashboard
+    // treats `user_id` as the "portal access active" signal, and we don't want
+    // that flag to flip on until the owner explicitly clicks "Send invite".
+    // The invite endpoint sets staff_profiles.user_id once the magic link has
+    // been generated and the email sent.
     const { data: profile, error: profileError } = await admin
       .from('staff_profiles')
       .upsert({
         tenant_id:           tenantId,
         member_id:           memberId,
-        user_id:             authUserId,
         first_name:          d.first_name,
         last_name:           d.last_name,
         other_names:         d.other_names,
