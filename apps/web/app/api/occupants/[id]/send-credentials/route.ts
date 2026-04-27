@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { sendEmail, inviteHtml } from '@/lib/email'
 
 // POST /api/occupants/[id]/send-credentials
-// Sends an invite email via Supabase's built-in email system.
-// The occupant clicks the link, gets signed in, and is redirected to
-// change their password before accessing the portal.
+// Generates a Supabase invite link and emails it through Resend.
+// We deliver the email ourselves so delivery doesn't depend on Supabase's
+// built-in mailer (which is heavily rate-limited and almost always unwired
+// in production projects).
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -22,7 +24,7 @@ export async function POST(
     .select('id, first_name, last_name, email, phone, user_id')
     .eq('id', id)
     .eq('tenant_id', tenantId)
-    .single()
+    .maybeSingle()
 
   if (occError || !occupant) {
     return NextResponse.json({ error: 'Occupant not found' }, { status: 404 })
@@ -34,13 +36,12 @@ export async function POST(
     return NextResponse.json({ error: 'Occupant already has a portal account' }, { status: 409 })
   }
 
-  // Resolve the tenant's own domain so the invite link lands on their portal,
-  // not the generic platform login page.
+  // Resolve the tenant's own domain so the invite link lands on their portal
   const { data: tenantRow } = await admin
     .from('tenants')
-    .select('slug, custom_domain')
+    .select('name, slug, custom_domain, primary_color')
     .eq('id', tenantId)
-    .single()
+    .maybeSingle()
 
   const appDomain  = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
   const tenantBase = tenantRow?.custom_domain
@@ -49,34 +50,31 @@ export async function POST(
       ? `https://${tenantRow.slug}.${appDomain}`
       : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
 
-  const invitePayload = {
+  const redirectTo = `${tenantBase}/auth/invite`
+
+  const linkOptions = {
     data: {
       first_name:  occupant.first_name,
       last_name:   occupant.last_name,
       portal_type: 'occupant',
       tenant_id:   tenantId,
     },
-    // After accepting the invite the user is taken to set their password
-    redirectTo: `${tenantBase}/auth/invite`,
+    redirectTo,
   }
 
-  // ── Send invite (Supabase handles the email) ───────────────────────────────
-  let { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
-    occupant.email,
-    invitePayload,
-  )
+  let { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: 'invite', email: occupant.email, options: linkOptions,
+  })
 
   // ── Ghost-user recovery ────────────────────────────────────────────────────
-  // A previous invite left a dangling auth.users record. Find it, clean it up,
-  // and re-send.
-  if (inviteError?.message?.toLowerCase().includes('already')) {
+  if (linkError?.message?.toLowerCase().includes('already')) {
     const { data: { users } } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
     const ghost = users.find(u => u.email?.toLowerCase() === occupant.email!.toLowerCase())
 
     if (!ghost) {
       return NextResponse.json(
         { error: 'An account with this email exists but could not be located. Contact support.' },
-        { status: 409 }
+        { status: 409 },
       )
     }
 
@@ -91,26 +89,35 @@ export async function POST(
       }, { status: 200 })
     }
 
-    // Unconfirmed ghost — delete and re-invite cleanly
+    // Unconfirmed ghost — delete and re-issue cleanly
     await admin.auth.admin.deleteUser(ghost.id)
 
-    const retry = await admin.auth.admin.inviteUserByEmail(occupant.email, invitePayload)
+    const retry = await admin.auth.admin.generateLink({
+      type: 'invite', email: occupant.email, options: linkOptions,
+    })
     if (retry.error || !retry.data) {
-      return NextResponse.json({ error: retry.error?.message ?? 'Failed to send invite' }, { status: 500 })
+      return NextResponse.json({ error: retry.error?.message ?? 'Failed to create invite link' }, { status: 500 })
     }
-    invited = retry.data
-    inviteError = null
+    linkData = retry.data
+    linkError = null
   }
 
-  if (inviteError || !invited) {
-    return NextResponse.json({ error: inviteError?.message ?? 'Invite failed' }, { status: 500 })
+  if (linkError || !linkData) {
+    return NextResponse.json({ error: linkError?.message ?? 'Invite failed' }, { status: 500 })
+  }
+
+  const inviteUrl  = linkData.properties?.action_link
+  const authUserId = linkData.user?.id
+
+  if (!inviteUrl || !authUserId) {
+    return NextResponse.json({ error: 'Invite link missing from Supabase response' }, { status: 500 })
   }
 
   // ── Link auth user to occupant record ─────────────────────────────────────
   const { error: updateError } = await admin
     .from('occupants')
     .update({
-      user_id:               invited.user!.id,
+      user_id:               authUserId,
       portal_enabled:        true,
       portal_invite_sent_at: new Date().toISOString(),
     })
@@ -118,12 +125,25 @@ export async function POST(
     .eq('tenant_id', tenantId)
 
   if (updateError) {
-    await admin.auth.admin.deleteUser(invited.user!.id)
+    await admin.auth.admin.deleteUser(authUserId)
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
+  // ── Deliver via Resend ─────────────────────────────────────────────────────
+  await sendEmail({
+    to:      occupant.email,
+    subject: `${tenantRow?.name ?? 'Resident portal'} — accept your invitation`,
+    html:    inviteHtml({
+      hostelName:   tenantRow?.name ?? 'Hostel',
+      primaryColor: tenantRow?.primary_color ?? '#1B4F72',
+      firstName:    occupant.first_name,
+      portalLabel:  'resident portal',
+      inviteUrl,
+    }),
+  })
+
   return NextResponse.json({
     ok: true,
-    message: `Portal invite sent to ${occupant.email}. They will be asked to set their password when they open the email.`,
+    message: `Portal invite sent to ${occupant.email}. The link expires in 24 hours.`,
   }, { status: 200 })
 }

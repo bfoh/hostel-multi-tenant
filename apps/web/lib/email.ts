@@ -219,6 +219,35 @@ export function portalCredentialsHtml(opts: {
   return baseTemplate(hostelName, primaryColor, content)
 }
 
+/* ── Magic-link invite email ────────────────────────────────────────────── */
+
+export function inviteHtml(opts: {
+  hostelName:     string
+  primaryColor:   string
+  firstName:      string
+  portalLabel:    string  // e.g. "staff dashboard" / "resident portal"
+  inviteUrl:      string  // action_link from supabase generateLink
+}) {
+  const { hostelName, primaryColor, firstName, portalLabel, inviteUrl } = opts
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">You're invited</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">
+      Hi ${firstName}, you've been invited to access the <strong>${hostelName}</strong> ${portalLabel}.
+      Click the button below to set your password and sign in.
+    </p>
+    ${button(inviteUrl, 'Accept invitation', primaryColor)}
+    <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;">
+      This link expires in 24 hours. If you didn't expect this invitation, you can safely ignore this email.
+    </p>
+    <p style="margin:8px 0 0;font-size:11px;color:#9ca3af;word-break:break-all;">
+      Or paste this URL into your browser: ${inviteUrl}
+    </p>
+  `
+
+  return baseTemplate(hostelName, primaryColor, content)
+}
+
 /* ── Check-out summary email ────────────────────────────────────────────── */
 
 export function checkoutSummaryHtml(opts: {
