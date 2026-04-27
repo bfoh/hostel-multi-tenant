@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
+import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
 
 export const metadata: Metadata = {
   title: 'GH Hostels — The smarter way to run your hostel',
@@ -116,6 +117,9 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-black text-[#f0f0f0] selection:bg-white/20">
+      {/* If Supabase bounced an expired/invalid auth link to the root, forward
+         the hash to /auth/invite so the user gets a proper error UI. */}
+      <AuthErrorRedirect />
 
       {/* ── NAVIGATION ──────────────────────────────────────────────── */}
       <nav

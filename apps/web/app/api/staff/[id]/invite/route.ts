@@ -49,21 +49,22 @@ export async function POST(
     )
   }
 
-  // Resolve the tenant URL so the link lands on their domain
   const { data: tenantRow } = await admin
     .from('tenants')
     .select('name, slug, custom_domain, primary_color')
     .eq('id', tenantId)
     .maybeSingle()
 
-  const appDomain  = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
-  const tenantBase = tenantRow?.custom_domain
-    ? `https://${tenantRow.custom_domain}`
-    : tenantRow?.slug
-      ? `https://${tenantRow.slug}.${appDomain}`
-      : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
-
-  const redirectTo = `${tenantBase}/auth/invite`
+  // The invite link MUST point at a URL whitelisted in Supabase Auth → Redirect
+  // URLs. Tenant subdomains and custom domains are not in that allow list, so
+  // Supabase silently swaps any non-whitelisted redirect_to for the project's
+  // Site URL, and the user lands on the platform homepage instead of the
+  // /auth/invite handler. We send them to the root domain instead — the
+  // /auth/invite page reads tenant_domain / tenant_slug from the refreshed
+  // JWT and forwards them to the right hostel host.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    ?? `https://${process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'}`
+  const redirectTo = `${appUrl}/auth/invite`
 
   // The auth user already exists (created by POST /api/staff), so we use a
   // magic-link rather than a fresh "invite" link, which would error with

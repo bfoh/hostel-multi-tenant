@@ -36,21 +36,21 @@ export async function POST(
     return NextResponse.json({ error: 'Occupant already has a portal account' }, { status: 409 })
   }
 
-  // Resolve the tenant's own domain so the invite link lands on their portal
   const { data: tenantRow } = await admin
     .from('tenants')
     .select('name, slug, custom_domain, primary_color')
     .eq('id', tenantId)
     .maybeSingle()
 
-  const appDomain  = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
-  const tenantBase = tenantRow?.custom_domain
-    ? `https://${tenantRow.custom_domain}`
-    : tenantRow?.slug
-      ? `https://${tenantRow.slug}.${appDomain}`
-      : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
-
-  const redirectTo = `${tenantBase}/auth/invite`
+  // Always use the platform root domain — tenant subdomains / custom domains
+  // are not in Supabase's "Redirect URLs" allow list, so passing them as
+  // redirect_to causes Supabase to silently fall back to the Site URL and
+  // bounces the user to the platform marketing page instead of /auth/invite.
+  // The /auth/invite client component reads the tenant from the refreshed
+  // JWT and forwards to the correct hostel host.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    ?? `https://${process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'}`
+  const redirectTo = `${appUrl}/auth/invite`
 
   const linkOptions = {
     data: {
