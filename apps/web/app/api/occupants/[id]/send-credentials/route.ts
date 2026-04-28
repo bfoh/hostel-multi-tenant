@@ -55,8 +55,8 @@ export async function POST(
       ? `https://${tenantRow.slug}.${appDomain}`
       : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
 
-  const loginUrl          = `${tenantBase}/login?next=/occupant-portal`
-  const changePasswordUrl = `${tenantBase}/auth/set-password?next=/occupant-portal`
+  const loginUrl          = `${tenantBase}/login?next=${encodeURIComponent('/occupant-portal/profile')}`
+  const changePasswordUrl = `${tenantBase}/auth/set-password?next=/occupant-portal/profile`
 
   // Find or create the auth user for this occupant
   let authUserId: string | null = occupant.user_id ?? null
@@ -76,6 +76,7 @@ export async function POST(
           last_name:   occupant.last_name,
           portal_type: 'occupant',
           tenant_id:   tenantId,
+          must_change_password: true,
         },
       })
       if (createErr || !created.user) {
@@ -90,6 +91,7 @@ export async function POST(
   const { error: updateAuthErr } = await admin.auth.admin.updateUserById(authUserId, {
     password:      tempPassword,
     email_confirm: true,
+    user_metadata: { must_change_password: true },
   })
 
   if (updateAuthErr) {

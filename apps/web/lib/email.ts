@@ -231,13 +231,46 @@ export function portalCredentialsHtml(opts: {
     </div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:24px;">
       <p style="margin:0;font-size:13px;color:#92400e;">
-        <strong>Important:</strong> This is a temporary password. Please change it immediately after your first login.
+        <strong>Important:</strong> You must set your own personal password before you can access the resident portal. Click the button below to log in and choose your new password.
       </p>
     </div>
-    ${button(loginUrl, 'Sign in to your portal', primaryColor)}
-    <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;">
-      After signing in, go to <a href="${changePasswordUrl}" style="color:${primaryColor};">Settings → Change password</a> to set a personal password.
+    ${button(loginUrl, 'Sign in and set password', primaryColor)}
+  `
+
+  return baseTemplate(hostelName, primaryColor, content)
+}
+
+/* ── Staff credentials email ────────────────────────────────────────────── */
+
+export function staffCredentialsHtml(opts: {
+  hostelName:        string
+  primaryColor:      string
+  firstName:         string
+  email:             string
+  password:          string
+  loginUrl:          string
+  changePasswordUrl: string
+}) {
+  const { hostelName, primaryColor, firstName, email, password, loginUrl } = opts
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Your Staff Portal Access</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">
+      Hi ${firstName}, your staff account has been set up for <strong>${hostelName}</strong>.
+      Use the temporary credentials below to sign in.
     </p>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:24px;">
+      <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+        ${row('Email', email)}
+        ${row('Password', `<span style="font-family:monospace;font-size:15px;font-weight:700;color:#111827;letter-spacing:0.05em;">${password}</span>`)}
+      </table>
+    </div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:24px;">
+      <p style="margin:0;font-size:13px;color:#92400e;">
+        <strong>Important:</strong> You must set your own personal password before you can access the staff portal. Click the button below to log in and choose your new password.
+      </p>
+    </div>
+    ${button(loginUrl, 'Sign in and set password', primaryColor)}
   `
 
   return baseTemplate(hostelName, primaryColor, content)

@@ -56,7 +56,7 @@ export default function LoginPage() {
     setServerError(null)
     const supabase = createClient()
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     })
@@ -77,7 +77,11 @@ export default function LoginPage() {
       return
     }
 
-    router.push(next)
+    if (data.user?.user_metadata?.must_change_password) {
+      router.push(`/auth/set-password?next=${encodeURIComponent(next)}`)
+    } else {
+      router.push(next)
+    }
     router.refresh()
   }
 

@@ -212,10 +212,13 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
         )}
 
         {/* User avatar */}
-        <div className={cn(
-          'mt-2 flex items-center gap-2.5 rounded-lg px-2 py-2',
-          collapsed && 'justify-center'
-        )}>
+        <Link 
+          href="/my-account"
+          className={cn(
+            'mt-2 flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-[rgba(255,255,255,0.06)]',
+            collapsed && 'justify-center'
+          )}
+        >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgba(255,255,255,0.08)] ring-1 ring-[rgba(214,235,253,0.15)] text-xs font-medium text-[#a1a4a5]">
             {initials(user.email ?? 'U')}
           </div>
@@ -225,7 +228,7 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
               <p className="truncate text-[10px] text-[#464a4d] capitalize">{tenantRole}</p>
             </div>
           )}
-        </div>
+        </Link>
 
         {/* Expand toggle — show when collapsed */}
         {collapsed && (

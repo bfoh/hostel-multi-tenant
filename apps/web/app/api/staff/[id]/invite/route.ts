@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
-import { sendEmail, portalCredentialsHtml } from '@/lib/email'
+import { sendEmail, staffCredentialsHtml } from '@/lib/email'
 
 /**
  * POST /api/staff/[id]/invite
@@ -64,8 +64,8 @@ export async function POST(
       ? `https://${tenantRow.slug}.${appDomain}`
       : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000')
 
-  const loginUrl          = `${tenantBase}/login?next=/staff-portal`
-  const changePasswordUrl = `${tenantBase}/auth/set-password?next=/staff-portal`
+  const loginUrl          = `${tenantBase}/login?next=/dashboard`
+  const changePasswordUrl = `${tenantBase}/auth/set-password?next=/dashboard`
 
   // Generate a strong temporary password
   const tempPassword = generatePassword(14)
@@ -75,6 +75,7 @@ export async function POST(
   const { error: updateAuthErr } = await admin.auth.admin.updateUserById(authUserId, {
     password:      tempPassword,
     email_confirm: true,
+    user_metadata: { must_change_password: true },
   })
 
   if (updateAuthErr) {
@@ -96,7 +97,7 @@ export async function POST(
   const delivery = await sendEmail({
     to:      staff.email,
     subject: `${tenantRow?.name ?? 'Staff portal'} — your access details`,
-    html:    portalCredentialsHtml({
+    html:    staffCredentialsHtml({
       hostelName:        tenantRow?.name ?? 'Hostel',
       primaryColor:      tenantRow?.primary_color ?? '#1B4F72',
       firstName:         staff.first_name,

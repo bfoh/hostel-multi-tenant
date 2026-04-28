@@ -57,7 +57,10 @@ export default function SetPasswordPage() {
     setBusy(true)
     try {
       const supabase = createClient()
-      const { error: updateErr } = await supabase.auth.updateUser({ password })
+      const { error: updateErr } = await supabase.auth.updateUser({ 
+        password,
+        data: { must_change_password: false }
+      })
       if (updateErr) throw updateErr
       // Hard navigation so middleware re-reads the session cookies fresh.
       window.location.href = next

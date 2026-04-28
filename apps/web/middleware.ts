@@ -114,7 +114,7 @@ export async function middleware(request: NextRequest) {
   // ── Auth path redirect ─────────────────────────────────────────────────────
   if (user && isAuthPath) {
     if (portalRole === 'occupant') return NextResponse.redirect(new URL('/occupant-portal', request.url))
-    if (portalRole === 'staff')    return NextResponse.redirect(new URL('/staff-portal', request.url))
+    if (portalRole === 'staff')    return NextResponse.redirect(new URL('/dashboard', request.url))
     // Preserve plan intent when an already-logged-in user clicks a Subscribe
     // link on the landing page (e.g. /signup?plan=growth). Send them directly
     // to the billing page so autosubscribe fires, rather than discarding the
@@ -132,10 +132,14 @@ export async function middleware(request: NextRequest) {
     '/reports', '/accounting', '/maintenance', '/assets', '/settings',
     '/portfolio', '/invoices', '/payments', '/intelligence', '/ai',
     '/activity', '/waiting-list', '/housekeeping', '/security', '/lost-found',
-    '/kiosk', '/communications']
+    '/kiosk', '/communications', '/my-account']
   if (!isPortalPath && !isAuthPath && ADMIN_APP_PATHS.some(p => pathname.startsWith(p))) {
     if (portalRole === 'occupant') return NextResponse.redirect(new URL('/occupant-portal', request.url))
-    if (portalRole === 'staff')    return NextResponse.redirect(new URL('/staff-portal', request.url))
+  }
+
+  // ── Backward compatibility for old staff portal links ──────────────────────
+  if (pathname.startsWith('/staff-portal')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   // ── Admin-only route guard (within the admin app) ──────────────────────────
@@ -149,7 +153,7 @@ export async function middleware(request: NextRequest) {
   const isAdminRole = ['owner', 'manager', 'admin'].includes(tenantRole)
   if (
     !isPortalPath && !isAuthPath &&
-    portalRole !== 'occupant' && portalRole !== 'staff' &&  // already handled above
+    portalRole !== 'occupant' && // already handled above
     !isAdminRole && tenantRole &&                            // has a role but not admin
     ADMIN_ONLY_PATHS.some(p => pathname.startsWith(p))
   ) {
