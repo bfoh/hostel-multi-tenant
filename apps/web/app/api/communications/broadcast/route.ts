@@ -10,13 +10,20 @@ import { sendPushToTenant } from '@/lib/push'
  * Send a message to a filtered set of occupants via SMS, email, and/or push.
  */
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Authenticate the caller via the user-bound client, then switch to the
+  // admin client for tenant data reads. RLS on the user-bound client depends
+  // on tenant_id being present in the JWT claims, which is brittle right
+  // after onboarding — the rest of the tenant data layer also uses the admin
+  // client and scopes queries explicitly with .eq('tenant_id', tenantId).
+  const userClient = await createClient()
+  const { data: { user } } = await userClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
 
   const headersList = await headers()
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
+
+  const supabase = createAdminClient()
 
   const body = await req.json()
   const { target, channels, subject, message } = body as {
