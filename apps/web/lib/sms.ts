@@ -15,7 +15,7 @@ function isEnabled() {
   return !!process.env.ARKESEL_API_KEY
 }
 
-function formatPhone(phone: string): string {
+export function formatPhone(phone: string): string {
   // Normalise to international format for Ghana: 0244... → 233244...
   const digits = phone.replace(/\D/g, '')
   if (digits.startsWith('0') && digits.length === 10) return `233${digits.slice(1)}`

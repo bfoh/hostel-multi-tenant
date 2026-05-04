@@ -28,7 +28,10 @@ export function BroadcastForm({ hasSms, hasEmail, hasPush }: {
   const [subject,  setSubject]  = useState('')
   const [message,  setMessage]  = useState('')
   const [sending,  setSending]  = useState(false)
-  const [result,   setResult]   = useState<{ recipients: number; results: Record<string, number> } | null>(null)
+  const [result,   setResult]   = useState<{
+    recipients: number
+    results: { sms: number; email: number; push: number; errors: string[] }
+  } | null>(null)
   const [error,    setError]    = useState<string | null>(null)
 
   function toggleChannel(ch: string) {
@@ -157,15 +160,31 @@ export function BroadcastForm({ hasSms, hasEmail, hasPush }: {
           <p className="rounded-lg bg-danger/5 border border-danger/20 px-3 py-2 text-sm text-danger">{error}</p>
         )}
 
-        {result && (
-          <div className="rounded-lg bg-success/5 border border-success/20 px-4 py-3 text-sm text-success">
-            Sent to {result.recipients} recipients
-            {Object.entries(result.results)
-              .filter(([k]) => ['sms', 'email', 'push'].includes(k))
-              .map(([k, v]) => v > 0 ? ` · ${v} ${k}` : '')
-              .join('')}
-          </div>
-        )}
+        {result && (() => {
+          const { sms, email, push, errors } = result.results
+          const delivered = (sms || 0) + (email || 0) + (push || 0)
+          const hasErrors = (errors?.length ?? 0) > 0
+          const tone = delivered === 0
+            ? 'bg-danger/5 border-danger/20 text-danger'
+            : hasErrors
+              ? 'bg-warning/10 border-warning/30 text-warning-fg'
+              : 'bg-success/5 border-success/20 text-success'
+          return (
+            <div className={`rounded-lg border px-4 py-3 text-sm space-y-1 ${tone}`}>
+              <p>
+                Reached {result.recipients} recipient{result.recipients !== 1 ? 's' : ''}
+                {sms   > 0 ? ` · ${sms} sms` : ''}
+                {email > 0 ? ` · ${email} email` : ''}
+                {push  > 0 ? ` · ${push} push` : ''}
+              </p>
+              {hasErrors && (
+                <ul className="text-xs opacity-90 list-disc list-inside">
+                  {errors.map((e, i) => <li key={i}>{e}</li>)}
+                </ul>
+              )}
+            </div>
+          )
+        })()}
 
         <button
           onClick={send}

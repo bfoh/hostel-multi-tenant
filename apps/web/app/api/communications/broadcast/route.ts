@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, baseTemplate, button } from '@/lib/email'
 import { sendPushToTenant } from '@/lib/push'
+import { formatPhone } from '@/lib/sms'
 
 /**
  * POST /api/communications/broadcast
@@ -110,8 +111,21 @@ export async function POST(req: NextRequest) {
 
   // ── SMS via Arkesel ────────────────────────────────────────────────────────
   if (channels.includes('sms') && process.env.ARKESEL_API_KEY) {
-    const phones = targets.map((t) => t.phone).filter(Boolean) as string[]
-    if (phones.length > 0) {
+    // Normalise phones to Arkesel's expected format (233XXXXXXXXX). Local
+    // 0244-prefixed numbers were silently rejected before because the API
+    // returns 200 OK with per-recipient errors that we never inspected.
+    const phones = targets
+      .map((t) => t.phone)
+      .filter((p): p is string => !!p && p.trim().length > 0)
+      .map(formatPhone)
+      .filter((p) => p.length >= 11)
+
+    if (phones.length === 0) {
+      results.errors.push('SMS: no recipients with a valid phone number')
+    } else {
+      // Sender ID must be pre-registered with Arkesel. Tenant names are not,
+      // so default to ARKESEL_SENDER_ID like every other SMS path in the app.
+      const sender = process.env.ARKESEL_SENDER_ID || 'GH Hostels'
       try {
         const res = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
           method: 'POST',
@@ -119,14 +133,28 @@ export async function POST(req: NextRequest) {
             'api-key': process.env.ARKESEL_API_KEY,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            sender: tenant?.name?.slice(0, 11) ?? 'HMS',
-            message,
-            recipients: phones,
-          }),
+          body: JSON.stringify({ sender, message, recipients: phones }),
         })
-        if (res.ok) results.sms = phones.length
-        else results.errors.push(`SMS: ${(await res.json())?.message ?? 'failed'}`)
+        const body = await res.json().catch(() => null) as
+          | { status?: string; message?: string; data?: Array<{ recipient: string; status: string }> }
+          | null
+
+        if (!res.ok || body?.status !== 'success') {
+          results.errors.push(`SMS: ${body?.message ?? `HTTP ${res.status}`}`)
+        } else {
+          // Arkesel reports per-recipient status. Count only the ones it
+          // actually queued for delivery.
+          const delivered = body.data?.filter((d) => d.status === 'success').length ?? phones.length
+          const failed    = (body.data?.length ?? 0) - delivered
+          results.sms = delivered
+          if (failed > 0) {
+            const reasons = Array.from(new Set(body.data!
+              .filter((d) => d.status !== 'success')
+              .map((d) => d.status)))
+              .join(', ')
+            results.errors.push(`SMS: ${failed} recipient(s) failed (${reasons})`)
+          }
+        }
       } catch (e) {
         results.errors.push(`SMS: ${e instanceof Error ? e.message : 'failed'}`)
       }
