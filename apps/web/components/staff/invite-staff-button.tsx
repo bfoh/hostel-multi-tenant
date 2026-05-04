@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Loader2, CheckCircle2 } from 'lucide-react'
+import { Mail, Loader2, CheckCircle2, RefreshCw } from 'lucide-react'
 
 export function InviteStaffButton({ staffId, hasEmail, hasAccount, compact }: {
   staffId: string
@@ -11,15 +11,6 @@ export function InviteStaffButton({ staffId, hasEmail, hasAccount, compact }: {
 }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
-
-  if (hasAccount) {
-    return (
-      <span className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success-subtle px-3 py-1.5 text-xs font-medium text-success">
-        <CheckCircle2 className="h-3.5 w-3.5" />
-        {compact ? 'Active' : 'Portal access active'}
-      </span>
-    )
-  }
 
   async function invite() {
     if (!hasEmail) {
@@ -49,22 +40,35 @@ export function InviteStaffButton({ staffId, hasEmail, hasAccount, compact }: {
     )
   }
 
+  const label = hasAccount
+    ? (compact ? 'Resend' : 'Resend portal access')
+    : (compact ? 'Invite' : 'Send portal access')
+
+  const Icon = status === 'loading'
+    ? Loader2
+    : (hasAccount ? RefreshCw : Mail)
+
   return (
-    <div className="flex flex-col items-end gap-1">
-      <button
-        onClick={invite}
-        disabled={status === 'loading'}
-        className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-raised transition-colors disabled:opacity-60"
-      >
-        {status === 'loading'
-          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          : <Mail className="h-3.5 w-3.5" />
-        }
-        {compact ? 'Invite' : 'Send staff login'}
-      </button>
-      {status === 'error' && (
-        <p className="text-[11px] text-danger">{message}</p>
+    <div className="flex items-center gap-2">
+      {hasAccount && (
+        <span className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success-subtle px-3 py-1.5 text-xs font-medium text-success">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          {compact ? 'Active' : 'Portal access active'}
+        </span>
       )}
+      <div className="flex flex-col items-end gap-1">
+        <button
+          onClick={invite}
+          disabled={status === 'loading'}
+          className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-raised transition-colors disabled:opacity-60"
+        >
+          <Icon className={`h-3.5 w-3.5 ${status === 'loading' ? 'animate-spin' : ''}`} />
+          {label}
+        </button>
+        {status === 'error' && (
+          <p className="text-[11px] text-danger">{message}</p>
+        )}
+      </div>
     </div>
   )
 }
