@@ -29,40 +29,62 @@ export async function POST(req: NextRequest) {
   if (!message?.trim()) return NextResponse.json({ error: 'message is required' }, { status: 400 })
   if (!channels?.length) return NextResponse.json({ error: 'at least one channel required' }, { status: 400 })
 
-  // Resolve occupants based on target
-  let bookingQuery = supabase
-    .from('bookings')
-    .select('occupant_id, payment_status, paid_amount, final_amount, occupants(first_name, last_name, phone, email)')
-    .eq('tenant_id', tenantId)
-
-  if (target === 'checked_in') {
-    bookingQuery = bookingQuery.eq('status', 'checked_in')
-  } else if (target === 'confirmed') {
-    bookingQuery = bookingQuery.in('status', ['confirmed', 'checked_in'])
-  } else if (target === 'overdue_balance') {
-    bookingQuery = bookingQuery
-      .in('status', ['confirmed', 'checked_in'])
-      .eq('payment_status', 'unpaid')
-  } else {
-    // all — active occupants
-    bookingQuery = bookingQuery.in('status', ['pending_payment', 'confirmed', 'checked_in'])
-  }
-
-  const { data: bookings } = await bookingQuery.limit(500)
-
-  // Deduplicate by occupant_id
-  const seen = new Set<string>()
+  // Resolve occupants based on target.
+  //
+  // The booking-based filters (checked_in / confirmed / overdue_balance) need
+  // booking state, so they go through the bookings table. The "all" filter is
+  // about active people on file — query occupants directly so tenants whose
+  // residents don't have an open booking row (e.g. fresh imports, or anyone
+  // whose only booking is in 'enquiry' state) still receive broadcasts.
+  const seen    = new Set<string>()
   const targets: { name: string; phone: string | null; email: string | null }[] = []
-  for (const b of bookings ?? []) {
-    if (!b.occupant_id || seen.has(b.occupant_id)) continue
-    seen.add(b.occupant_id)
-    const occ = Array.isArray(b.occupants) ? b.occupants[0] : b.occupants
-    if (occ) {
+
+  if (target === 'all') {
+    const { data: occs } = await supabase
+      .from('occupants')
+      .select('id, first_name, last_name, phone, email, status')
+      .eq('tenant_id', tenantId)
+      .in('status', ['active', 'pending'])
+      .limit(500)
+
+    for (const occ of occs ?? []) {
+      if (seen.has(occ.id)) continue
+      seen.add(occ.id)
       targets.push({
         name:  `${occ.first_name} ${occ.last_name}`,
         phone: occ.phone ?? null,
         email: occ.email ?? null,
       })
+    }
+  } else {
+    let bookingQuery = supabase
+      .from('bookings')
+      .select('occupant_id, payment_status, paid_amount, final_amount, occupants(first_name, last_name, phone, email)')
+      .eq('tenant_id', tenantId)
+
+    if (target === 'checked_in') {
+      bookingQuery = bookingQuery.eq('status', 'checked_in')
+    } else if (target === 'confirmed') {
+      bookingQuery = bookingQuery.in('status', ['confirmed', 'checked_in'])
+    } else if (target === 'overdue_balance') {
+      bookingQuery = bookingQuery
+        .in('status', ['confirmed', 'checked_in'])
+        .eq('payment_status', 'unpaid')
+    }
+
+    const { data: bookings } = await bookingQuery.limit(500)
+
+    for (const b of bookings ?? []) {
+      if (!b.occupant_id || seen.has(b.occupant_id)) continue
+      seen.add(b.occupant_id)
+      const occ = Array.isArray(b.occupants) ? b.occupants[0] : b.occupants
+      if (occ) {
+        targets.push({
+          name:  `${occ.first_name} ${occ.last_name}`,
+          phone: occ.phone ?? null,
+          email: occ.email ?? null,
+        })
+      }
     }
   }
 
