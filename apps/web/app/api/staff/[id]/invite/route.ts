@@ -82,6 +82,10 @@ export async function POST(
     return NextResponse.json({ error: `Failed to set temporary password: ${updateAuthErr.message}` }, { status: 500 })
   }
 
+  // Kill any existing sessions so a lingering cookie can't bypass the
+  // forced-password-change guard in middleware.
+  try { await admin.auth.admin.signOut(authUserId, 'global') } catch { /* best-effort */ }
+
   // Mark portal access active and stamp the membership invited_at
   await admin
     .from('staff_profiles')

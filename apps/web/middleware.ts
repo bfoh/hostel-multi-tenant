@@ -111,6 +111,26 @@ export async function middleware(request: NextRequest) {
     if (isOccupant) portalRole = 'occupant'
   }
 
+  // ── Forced password change guard ───────────────────────────────────────────
+  // When an admin (re)sends portal credentials, the API stamps
+  // user_metadata.must_change_password = true and rotates the password.
+  // Block every page except /auth/set-password until the user picks a fresh
+  // password — otherwise a lingering session would let them skip the prompt.
+  // /api/* is allowed so signout, set-password's updateUser call, and any
+  // background fetches continue to work.
+  const mustChangePw = user?.user_metadata?.must_change_password === true
+  if (
+    user && mustChangePw &&
+    !pathname.startsWith('/auth/set-password') &&
+    !pathname.startsWith('/api/')
+  ) {
+    const fallback = portalRole === 'occupant' ? '/occupant-portal/profile' : '/dashboard'
+    const target   = (isAuthPath || pathname === '/') ? fallback : pathname
+    const url      = new URL('/auth/set-password', request.url)
+    url.searchParams.set('next', target)
+    return NextResponse.redirect(url)
+  }
+
   // ── Auth path redirect ─────────────────────────────────────────────────────
   if (user && isAuthPath) {
     if (portalRole === 'occupant') return NextResponse.redirect(new URL('/occupant-portal', request.url))

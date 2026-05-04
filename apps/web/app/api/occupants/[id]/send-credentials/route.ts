@@ -98,6 +98,11 @@ export async function POST(
     return NextResponse.json({ error: `Failed to set temporary password: ${updateAuthErr.message}` }, { status: 500 })
   }
 
+  // Kill any existing sessions so a lingering cookie can't bypass the
+  // forced-password-change guard in middleware. The user must re-login with
+  // the new temp password and will then be routed through /auth/set-password.
+  try { await admin.auth.admin.signOut(authUserId, 'global') } catch { /* best-effort */ }
+
   // Link auth user to occupant + flag portal active
   const { error: updateError } = await admin
     .from('occupants')
