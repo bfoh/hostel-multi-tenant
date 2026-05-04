@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { PasswordInput } from '@/components/ui/password-input'
 
 const FROST = 'rgba(214,235,253,0.19)'
 
@@ -96,9 +97,8 @@ export default function SetPasswordPage() {
         <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
           <div className="space-y-1.5">
             <label htmlFor="password" className="text-[13px] font-medium text-[#a1a4a5]">New password</label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="new-password"
               autoFocus
               value={password}
@@ -106,20 +106,21 @@ export default function SetPasswordPage() {
               placeholder="Min. 8 characters, one uppercase, one number"
               className="w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] focus:outline-none focus:border-[#3b9eff]/50"
               style={{ borderColor: FROST }}
+              tone="dark"
             />
           </div>
 
           <div className="space-y-1.5">
             <label htmlFor="confirm" className="text-[13px] font-medium text-[#a1a4a5]">Confirm password</label>
-            <input
+            <PasswordInput
               id="confirm"
-              type="password"
               autoComplete="new-password"
               value={confirm}
               onChange={e => setConfirm(e.target.value)}
               placeholder="••••••••"
               className="w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] focus:outline-none focus:border-[#3b9eff]/50"
               style={{ borderColor: FROST }}
+              tone="dark"
             />
           </div>
 

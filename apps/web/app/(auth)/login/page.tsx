@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
 import { createClient } from '@/lib/supabase/client'
+import { PasswordInput } from '@/components/ui/password-input'
 
 const FROST = 'rgba(214,235,253,0.19)'
 
@@ -148,14 +149,14 @@ export default function LoginPage() {
               Forgot your password?
             </Link>
           </div>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             {...register('password')}
             className={inputClass}
             style={inputBorder}
             placeholder="••••••••"
+            tone="dark"
           />
           {errors.password && (
             <p className="text-[12px] text-[#ff2047] mt-1">{errors.password.message}</p>

@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
 import { createClient } from '@/lib/supabase/client'
+import { PasswordInput } from '@/components/ui/password-input'
 
 const FROST = 'rgba(214,235,253,0.19)'
 
@@ -78,15 +79,15 @@ export default function ResetPasswordPage() {
           <label htmlFor="password" className="text-[13px] font-medium text-[#a1a4a5]">
             New password
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             autoFocus
             {...register('password')}
             className={inputClass}
             style={inputBorder}
             placeholder="Min. 8 characters, one uppercase, one number"
+            tone="dark"
           />
           {errors.password && (
             <p className="text-[12px] text-[#ff2047] mt-1">{errors.password.message}</p>
@@ -97,14 +98,14 @@ export default function ResetPasswordPage() {
           <label htmlFor="confirmPassword" className="text-[13px] font-medium text-[#a1a4a5]">
             Confirm new password
           </label>
-          <input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             autoComplete="new-password"
             {...register('confirmPassword')}
             className={inputClass}
             style={inputBorder}
             placeholder="••••••••"
+            tone="dark"
           />
           {errors.confirmPassword && (
             <p className="text-[12px] text-[#ff2047] mt-1">{errors.confirmPassword.message}</p>

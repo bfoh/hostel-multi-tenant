@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
+import { PasswordInput } from '@/components/ui/password-input'
 
 const schema = z
   .object({
@@ -58,9 +59,8 @@ export function PasswordForm() {
             <label htmlFor="newPassword" className="text-sm font-medium text-text-primary">
               New password
             </label>
-            <input
+            <PasswordInput
               id="newPassword"
-              type="password"
               autoComplete="new-password"
               {...register('newPassword')}
               className="input-base"
@@ -72,9 +72,8 @@ export function PasswordForm() {
             <label htmlFor="confirmPassword" className="text-sm font-medium text-text-primary">
               Confirm new password
             </label>
-            <input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
               autoComplete="new-password"
               {...register('confirmPassword')}
               className="input-base"
