@@ -28,24 +28,41 @@ export async function DELETE(
   if (row.method !== 'bank_draft')        return NextResponse.json({ error: 'Not a bank draft' }, { status: 400 })
   if (row.status !== 'pending')           return NextResponse.json({ error: 'Only pending drafts can be cancelled' }, { status: 400 })
 
-  // 1. Delete the file first. If this fails, keep the row (retryable).
-  if ((row as any).draft_file_path) {
-    const { error: storageErr } = await admin.storage
-      .from(BANK_DRAFTS_BUCKET)
-      .remove([(row as any).draft_file_path])
-    if (storageErr) {
-      return NextResponse.json({ error: 'Could not delete file. Try again.' }, { status: 503 })
-    }
-  }
-
-  // 2. Then delete the row (optimistic lock — only if still pending).
-  const { error: deleteErr } = await admin
+  // 1. Delete the row FIRST with an optimistic lock that returns the
+  //    affected row(s). If admin approved between our status check above
+  //    and now, the .eq('status','pending') filter matches zero rows and
+  //    we 409 — without touching the storage object that's now evidence
+  //    for an approved payment.
+  //
+  //    (Doing the file delete first, as an earlier draft of this route did,
+  //    introduces a race where a successful approval ends up with a payment
+  //    row whose draft_file_path points to a file we already removed.)
+  const { data: deleted, error: deleteErr } = await admin
     .from('booking_payments')
     .delete()
     .eq('id', id)
     .eq('status', 'pending')
+    .select('id')
 
   if (deleteErr) return NextResponse.json({ error: deleteErr.message }, { status: 500 })
+  if (!deleted || deleted.length === 0) {
+    return NextResponse.json(
+      { error: 'Draft was just processed by reception. Refresh to see the latest status.' },
+      { status: 409 },
+    )
+  }
+
+  // 2. Best-effort file delete. Failure here only leaves an orphaned blob
+  //    (no DB row references it), which is safe and cleanable later. We
+  //    still log so cleanup can be verified.
+  if (row.draft_file_path) {
+    const { error: storageErr } = await admin.storage
+      .from(BANK_DRAFTS_BUCKET)
+      .remove([row.draft_file_path])
+    if (storageErr) {
+      console.error('[bank-draft] orphan file after cancel:', row.draft_file_path, storageErr.message)
+    }
+  }
 
   return NextResponse.json({ ok: true })
 }

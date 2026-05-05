@@ -136,11 +136,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Upload failed: ${uploadErr.message}` }, { status: 500 })
   }
 
-  // 3. Update row with file path.
-  await admin
+  // 3. Update row with file path. If this fails, roll back BOTH the row
+  //    and the just-uploaded file — otherwise we're left with a payment
+  //    row that can never be reviewed by admin (no file path) and an
+  //    orphan blob in storage.
+  const { error: pathUpdateErr } = await admin
     .from('booking_payments')
     .update({ draft_file_path: path } as any)
     .eq('id', payment.id)
+
+  if (pathUpdateErr) {
+    await admin.from('booking_payments').delete().eq('id', payment.id)
+    await admin.storage.from(BANK_DRAFTS_BUCKET).remove([path])
+    return NextResponse.json({ error: 'Failed to record file path. Try again.' }, { status: 500 })
+  }
 
   // 4. Fire-and-forget notifications.
   after(async () => {
