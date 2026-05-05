@@ -13,8 +13,11 @@ values (
   'bank-drafts',
   false,
   5242880,  -- 5 MB
-  array['application/pdf', 'image/jpeg', 'image/png', 'image/heic']
+  -- image/heic-sequence covers iPhone Live Photos (default capture mode on iPhone 12+).
+  array['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heic-sequence']
 )
+-- Note: `do update` re-asserts bucket config on every redeploy, so any
+-- bucket changes made via Supabase Studio will be overwritten on the next push.
 on conflict (id) do update set
   file_size_limit    = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types,
@@ -23,6 +26,11 @@ on conflict (id) do update set
 -- Path convention: {tenant_id}/{booking_id}/{payment_id}.{ext}
 -- (storage.foldername(name) returns the path segments as text[])
 
+-- Policies use drop-then-create so this migration is re-runnable.
+-- (CREATE POLICY ... IF NOT EXISTS isn't reliably supported across the
+-- Postgres versions Supabase ships, so drop-first is the portable pattern.)
+
+drop policy if exists "occupant uploads own bank draft" on storage.objects;
 create policy "occupant uploads own bank draft"
   on storage.objects for insert
   to authenticated
@@ -38,6 +46,7 @@ create policy "occupant uploads own bank draft"
     )
   );
 
+drop policy if exists "occupant reads own bank draft" on storage.objects;
 create policy "occupant reads own bank draft"
   on storage.objects for select
   to authenticated
@@ -53,6 +62,7 @@ create policy "occupant reads own bank draft"
     )
   );
 
+drop policy if exists "owner or accountant reads tenant bank drafts" on storage.objects;
 create policy "owner or accountant reads tenant bank drafts"
   on storage.objects for select
   to authenticated
