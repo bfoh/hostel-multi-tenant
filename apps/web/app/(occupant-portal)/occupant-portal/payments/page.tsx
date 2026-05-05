@@ -7,6 +7,7 @@ import {
   Banknote, Wallet, Smartphone, ArrowUpRight,
 } from 'lucide-react'
 import { PayNowButton } from '@/components/occupant-portal/pay-now-button'
+import { BankDepositSection } from '@/components/occupant-portal/bank-deposit-section'
 
 export const metadata: Metadata = { title: 'Payments · My Portal' }
 
@@ -48,12 +49,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const admin = createAdminClient()
 
   // Is the hostel able to take online payments? (subaccount connected)
+  // Also fetch bank deposit details for the BankDepositSection.
   const { data: tenantRow } = await admin
     .from('tenants')
-    .select('paystack_subaccount_code')
+    .select('paystack_subaccount_code, bank_name, bank_branch, bank_account_name, bank_account_number, bank_swift_code, bank_instructions, bank_deposits_enabled')
     .eq('id', tenantId)
     .single()
-  const payEnabled = !!tenantRow?.paystack_subaccount_code
+  const payEnabled = !!(tenantRow as any)?.paystack_subaccount_code
+  const bankDepositsEnabled = !!(tenantRow as any)?.bank_deposits_enabled
 
   // Fetch bookings + payments
   const { data: bookingsRaw } = await admin
@@ -61,7 +64,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     .select(`
       id, booking_ref, status, final_amount, paid_amount, check_in_date, check_out_date,
       rooms(room_number, block),
-      booking_payments(id, amount, method, reference, paystack_reference, paid_at, status, notes)
+      booking_payments(id, amount, method, reference, paystack_reference, paid_at, status, notes, draft_file_path, draft_number, draft_bank_name, rejected_reason, created_at)
     `)
     .eq('occupant_id', occupantId)
     .eq('tenant_id', tenantId)
@@ -79,11 +82,25 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const featuredBalance = featured ? featured.final_amount - featured.paid_amount : 0
   const room = featured ? (Array.isArray(featured.rooms) ? featured.rooms[0] : featured.rooms) as any : null
 
-  // Flatten all payments sorted by date desc
+  // Pending bank-draft on the featured booking (at most one per booking — DB-enforced)
+  const featuredPayments = featured
+    ? (Array.isArray(featured.booking_payments) ? featured.booking_payments : (featured.booking_payments ? [featured.booking_payments] : []))
+    : []
+  const pendingDraft = (featuredPayments as any[]).find(
+    (p) => p.method === 'bank_draft' && p.status === 'pending',
+  ) ?? null
+
+  // Flatten all payments sorted by date desc.
+  // Use paid_at when available (success rows); fall back to created_at for
+  // pending/rejected bank drafts which have no paid_at yet.
   const allPayments = bookings.flatMap(b => {
     const pmts = Array.isArray(b.booking_payments) ? b.booking_payments : (b.booking_payments ? [b.booking_payments] : [])
     return pmts.map((p: any) => ({ ...p, booking_ref: b.booking_ref }))
-  }).sort((a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime())
+  }).sort((a, b) => {
+    const ta = new Date(a.paid_at ?? a.created_at ?? 0).getTime()
+    const tb = new Date(b.paid_at ?? b.created_at ?? 0).getTime()
+    return tb - ta
+  })
 
   return (
     <div className="space-y-4">
@@ -179,6 +196,29 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
+      {/* ── Bank deposit section (collapsed by default) ──────────── */}
+      {featured && bankDepositsEnabled && (
+        <BankDepositSection
+          bookingId={featured.id}
+          balance={featuredBalance}
+          bankDetails={{
+            bank_name:           (tenantRow as any)?.bank_name           ?? null,
+            bank_branch:         (tenantRow as any)?.bank_branch         ?? null,
+            bank_account_name:   (tenantRow as any)?.bank_account_name   ?? null,
+            bank_account_number: (tenantRow as any)?.bank_account_number ?? null,
+            bank_swift_code:     (tenantRow as any)?.bank_swift_code     ?? null,
+            bank_instructions:   (tenantRow as any)?.bank_instructions   ?? null,
+          }}
+          pending={pendingDraft ? {
+            id:           pendingDraft.id,
+            amount:       pendingDraft.amount,
+            draft_number: pendingDraft.draft_number ?? null,
+            created_at:   pendingDraft.created_at,
+          } : null}
+          color={color}
+        />
+      )}
+
       {/* ── All bookings breakdown ───────────────────────────────── */}
       {bookings.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -239,15 +279,20 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         ) : (
           <div className="divide-y divide-slate-100">
             {allPayments.map((p: any) => {
-              const Icon = METHOD_ICON[p.method] ?? CreditCard
-              const isSuccess = p.status === 'success'
+              const Icon       = METHOD_ICON[p.method] ?? CreditCard
+              const isSuccess  = p.status === 'success'
+              const isPending  = p.status === 'pending'
+              const isRejected = p.status === 'failed'
+              const tint       = isSuccess ? `${color}18` : isPending ? '#fef3c7' : '#fee2e2'
+              const iconColor  = isSuccess ? color : isPending ? '#b45309' : '#dc2626'
+              const tsLabel    = p.paid_at ? dateTime(p.paid_at) : (p.created_at ? dateTime(p.created_at) : '—')
               return (
                 <div key={p.id} className="flex items-center gap-3.5 px-5 py-3.5">
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                    style={{ backgroundColor: isSuccess ? `${color}18` : '#fee2e218' }}
+                    style={{ backgroundColor: tint }}
                   >
-                    <Icon className="h-4 w-4" style={{ color: isSuccess ? color : '#ef4444' }} />
+                    <Icon className="h-4 w-4" style={{ color: iconColor }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-800">{METHOD_LABEL[p.method] ?? p.method}</p>
@@ -255,17 +300,28 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                       {p.booking_ref}
                       {(p.reference || p.paystack_reference) && ` · ${(p.reference ?? p.paystack_reference).slice(0, 16)}`}
                     </p>
-                    <p className="text-[10px] text-slate-400">{dateTime(p.paid_at)}</p>
+                    <p className="text-[10px] text-slate-400">{tsLabel}</p>
+                    {isRejected && p.rejected_reason && (
+                      <p className="mt-0.5 truncate text-[11px] text-red-600" title={p.rejected_reason}>
+                        Rejected — {p.rejected_reason}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-slate-900">{ghs(p.amount)}</p>
-                    {isSuccess ? (
+                    {isSuccess && (
                       <span className="flex items-center justify-end gap-0.5 text-[10px] text-emerald-600">
                         <CheckCircle2 className="h-3 w-3" /> Confirmed
                       </span>
-                    ) : (
-                      <span className="flex items-center justify-end gap-0.5 text-[10px] text-amber-500">
-                        <Clock className="h-3 w-3" /> {p.status}
+                    )}
+                    {isPending && (
+                      <span className="flex items-center justify-end gap-0.5 text-[10px] text-amber-600">
+                        <Clock className="h-3 w-3" /> Awaiting verification
+                      </span>
+                    )}
+                    {isRejected && (
+                      <span className="flex items-center justify-end gap-0.5 text-[10px] text-red-600">
+                        <XCircle className="h-3 w-3" /> Rejected
                       </span>
                     )}
                   </div>
