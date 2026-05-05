@@ -1,8 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { invalidateTenantCache } from '@/lib/tenant/resolve'
+
+const BANK_FIELDS = [
+  'bank_name',
+  'bank_branch',
+  'bank_account_name',
+  'bank_account_number',
+  'bank_swift_code',
+  'bank_instructions',
+  'bank_deposits_enabled',
+] as const
 
 const schema = z.object({
   name:          z.string().min(2).max(200).optional(),
@@ -37,6 +48,16 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
+  // Bank deposit fields are owner-only. Other branding fields stay open
+  // to anyone the page-level role gate already trusts.
+  const touchesBankFields = BANK_FIELDS.some((f) => f in (parsed.data as Record<string, unknown>))
+  if (touchesBankFields) {
+    const callerRole = (await headers()).get('x-tenant-role')
+    if (callerRole !== 'owner') {
+      return NextResponse.json({ error: 'Owner role required to change bank deposit details' }, { status: 403 })
+    }
+  }
+
   const admin = createAdminClient()
 
   // Fetch slug so we can bust the right cache key
@@ -55,13 +76,16 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Auto-enable bank deposits the first time all required fields are saved
-  // together. After that, owner can toggle freely via the explicit boolean.
+  // Auto-enable bank deposits when the required fields just became complete
+  // and the owner hasn't explicitly set the toggle in this request. The form
+  // only sends `bank_deposits_enabled` after the user actually clicks the
+  // checkbox; otherwise it omits the key.
   const requiredFilled =
     parsed.data.bank_name           &&
     parsed.data.bank_account_name   &&
     parsed.data.bank_account_number
-  if (requiredFilled && parsed.data.bank_deposits_enabled === undefined) {
+  const userDidNotSetToggle = !('bank_deposits_enabled' in (parsed.data as Record<string, unknown>))
+  if (requiredFilled && userDidNotSetToggle) {
     await admin
       .from('tenants')
       .update({ bank_deposits_enabled: true } as any)

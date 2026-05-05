@@ -23,26 +23,37 @@ const INPUT_CLS =
 
 export function BankDepositForm({ tenantId: _tenantId, initial, canEdit }: Props) {
   const [form, setForm] = useState(initial)
+  const [enabledTouched, setEnabledTouched] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm(prev => ({ ...prev, [key]: value }))
+    if (error) setError(null)
   }
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true); setError(null); setSaved(false)
     try {
+      // Omit `bank_deposits_enabled` from the body unless the user actually
+      // clicked the checkbox; this lets the route's auto-enable-on-first-save
+      // logic fire (it checks for the absence of that key).
+      const { bank_deposits_enabled, ...rest } = form
+      const body = enabledTouched
+        ? { ...rest, bank_deposits_enabled }
+        : rest
+
       const res = await fetch('/api/settings/branding', {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(form),
+        body:    JSON.stringify(body),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error ?? 'Save failed')
       setSaved(true)
+      setEnabledTouched(false)
       setTimeout(() => setSaved(false), 2000)
     } catch (e: any) {
       setError(e.message)
@@ -71,7 +82,7 @@ export function BankDepositForm({ tenantId: _tenantId, initial, canEdit }: Props
             type="checkbox"
             checked={form.bank_deposits_enabled}
             disabled={!canEdit || requiredMissing}
-            onChange={e => update('bank_deposits_enabled', e.target.checked)}
+            onChange={e => { update('bank_deposits_enabled', e.target.checked); setEnabledTouched(true) }}
             className="h-4 w-4"
           />
           Enabled

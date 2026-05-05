@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
@@ -154,22 +155,11 @@ export default async function SettingsPage({
   const tenantId = await getServerTenantId()
   const billingData = tab === 'billing' && tenantId ? await getBillingData(tenantId) : null
 
-  // Derive owner-only edit permission for bank deposit details
-  let canEditBank = false
-  if (tenant && tenantId) {
-    const supabase = await createServerSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const admin = createAdminClient()
-      const { data: member } = await admin
-        .from('tenant_members')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('tenant_id', tenant.id)
-        .single()
-      canEditBank = member?.role === 'owner'
-    }
-  }
+  // Bank deposit details are owner-only. Read the role from the
+  // x-tenant-role request header injected by middleware (the standard pattern
+  // used everywhere else in (tenant)/).
+  const callerRole = (await headers()).get('x-tenant-role')
+  const canEditBank = callerRole === 'owner'
 
   // Derive effective plan label for display
   const effectivePlan = tenant?.status === 'trial'
