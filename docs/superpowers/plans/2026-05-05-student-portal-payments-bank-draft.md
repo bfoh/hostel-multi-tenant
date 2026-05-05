@@ -174,9 +174,11 @@ create policy "occupant inserts own pending bank draft"
       select 1
         from bookings b
         join occupants o on o.id = b.occupant_id
+        join tenants  t on t.id = b.tenant_id
        where b.id = booking_payments.booking_id
          and b.tenant_id = booking_payments.tenant_id
          and o.user_id = auth.uid()
+         and t.bank_deposits_enabled = true
     )
   );
 
@@ -191,6 +193,7 @@ create policy "occupant cancels own pending bank draft"
         from bookings b
         join occupants o on o.id = b.occupant_id
        where b.id = booking_payments.booking_id
+         and b.tenant_id = booking_payments.tenant_id
          and o.user_id = auth.uid()
     )
   );
