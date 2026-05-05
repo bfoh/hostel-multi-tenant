@@ -12,6 +12,9 @@ export type EventType =
   | 'checkout_reminder'
   | 'lease_expiry_reminder'
   | 'deposit_refund'
+  | 'bank_draft_submitted'
+  | 'bank_draft_approved'
+  | 'bank_draft_rejected'
 
 export type Channel = 'sms' | 'email'
 
@@ -185,5 +188,34 @@ export const DEFAULT_TEMPLATES: TemplateDefault[] = [
       '{{hostel_name}} has been processed.\n\n' +
       'Please allow 3–5 business days for the funds to arrive in your account.\n\n' +
       'Thank you for staying with us.',
+  },
+
+  // ── Bank draft submitted (admin-facing) ───────────────────────────────────
+  {
+    event_type: 'bank_draft_submitted',
+    channel:    'sms',
+    body:
+      'New bank draft on {{hostel_name}}: {{student_name}} uploaded ' +
+      'GHS {{amount}} for {{booking_ref}}. Review: {{review_url}}',
+  },
+
+  // ── Bank draft approved (student-facing) ──────────────────────────────────
+  {
+    event_type: 'bank_draft_approved',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, your bank draft of GHS {{amount}} for booking ' +
+      '{{booking_ref}} at {{hostel_name}} has been confirmed. ' +
+      'Outstanding balance: GHS {{balance}}. Thank you.',
+  },
+
+  // ── Bank draft rejected (student-facing) ──────────────────────────────────
+  {
+    event_type: 'bank_draft_rejected',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, we couldn\'t confirm your bank draft of GHS ' +
+      '{{amount}} for {{booking_ref}} ({{hostel_name}}). Reason: {{reason}}. ' +
+      'Please re-upload via the resident portal.',
   },
 ]

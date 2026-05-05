@@ -9,13 +9,14 @@ import {
   Settings, ChevronLeft, ChevronRight, HardHat, Shield,
   MessageSquare, UserCog, ClipboardList, BookOpen, Bot,
   Package, Search, Building2, ListOrdered, TrendingDown,
-  Monitor, Lock, Store, ClipboardCheck,
+  Monitor, Lock, Store, ClipboardCheck, Banknote,
 } from 'lucide-react'
 import { useState } from 'react'
 
 import { cn } from '@/lib/utils'
 import { useTenant } from '@/components/providers/tenant-provider'
 import { initials } from '@/lib/utils'
+import { SidebarDraftBadge } from '@/components/payments/sidebar-draft-badge'
 
 // ── Role helpers ─────────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ interface NavItem {
   href:  string
   icon:  React.ElementType
   anim:  IconAnim
-  badge?: string
+  badge?: React.ReactNode
 }
 
 /** Day-to-day operations — visible to ALL authenticated roles (staff + admin) */
@@ -90,16 +91,28 @@ const BOTTOM_ITEMS: NavItem[] = [
 // ── Component ────────────────────────────────────────────────────────────────
 
 interface AppSidebarProps {
-  user:       User
-  tenantRole: string
+  user:              User
+  tenantRole:        string
+  tenantId:          string
+  initialDraftCount: number
 }
 
-export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
+export function AppSidebar({ user, tenantRole, tenantId, initialDraftCount }: AppSidebarProps) {
   const pathname   = usePathname()
   const { tenantName, tenantLogo } = useTenant()
   const [collapsed, setCollapsed] = useState(false)
 
-  const isAdmin = isAdminRole(tenantRole)
+  const isAdmin       = isAdminRole(tenantRole)
+  const canSeeDrafts  = tenantRole === 'owner' || tenantRole === 'accountant'
+  const draftsItem: NavItem = {
+    label: 'Bank Drafts',
+    href:  '/payments/drafts',
+    icon:  Banknote,
+    anim:  'bounce',
+    badge: tenantId
+      ? <SidebarDraftBadge tenantId={tenantId} initialCount={initialDraftCount} compact={collapsed} />
+      : null,
+  }
 
   return (
     <aside
@@ -167,6 +180,24 @@ export function AppSidebar({ user, tenantRole }: AppSidebarProps) {
             ))}
           </ul>
         </section>
+
+        {/* Finance — owner / accountant only. Lives outside the standard
+            Admin block because accountants are not in isAdminRole. */}
+        {canSeeDrafts && (
+          <section>
+            {!collapsed && (
+              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#464a4d]">
+                Finance
+              </p>
+            )}
+            {collapsed && (
+              <div className="my-2 mx-2 border-t border-[rgba(214,235,253,0.12)]" />
+            )}
+            <ul className="space-y-0.5">
+              <NavLink item={draftsItem} pathname={pathname} collapsed={collapsed} />
+            </ul>
+          </section>
+        )}
 
         {/* Admin — owner / manager only */}
         {isAdmin ? (
@@ -257,7 +288,7 @@ function NavLink({ item, pathname, collapsed }: { item: NavItem; pathname: strin
         href={item.href}
         className={cn(
           ANIM_CLASS[item.anim],
-          'flex items-center gap-3 rounded-md px-2 py-[7px] text-[13px] transition-all duration-200',
+          'relative flex items-center gap-3 rounded-md px-2 py-[7px] text-[13px] transition-all duration-200',
           collapsed && 'justify-center px-2',
           isActive
             ? 'bg-[rgba(255,255,255,0.08)] text-[#f0f0f0] font-medium shadow-[inset_0_0_0_1px_rgba(214,235,253,0.12)]'
@@ -271,10 +302,19 @@ function NavLink({ item, pathname, collapsed }: { item: NavItem; pathname: strin
         {!collapsed && (
           <span className="truncate tracking-[0.01em]">{item.label}</span>
         )}
-        {!collapsed && item.badge && (
-          <span className="ml-auto rounded-full bg-[rgba(255,128,31,0.15)] px-1.5 py-0.5 text-[10px] font-medium text-[#ff801f]">
-            {item.badge}
-          </span>
+        {/*
+          Badge renders ALWAYS so live components (e.g. SidebarDraftBadge)
+          keep their realtime subscription alive across collapse toggles.
+          Static-string badges only render when expanded.
+        */}
+        {item.badge != null && (
+          typeof item.badge === 'string'
+            ? !collapsed && (
+                <span className="ml-auto rounded-full bg-[rgba(255,128,31,0.15)] px-1.5 py-0.5 text-[10px] font-medium text-[#ff801f]">
+                  {item.badge}
+                </span>
+              )
+            : item.badge
         )}
       </Link>
     </li>

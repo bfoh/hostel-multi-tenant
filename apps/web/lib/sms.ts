@@ -261,6 +261,82 @@ export async function sendDepositRefund(params: {
 // Back-compat alias for existing callers
 export { sendOverdueReminder as sendPaymentReminder }
 
+/* ── Bank draft notifications (migration 055) ────────────────────── */
+
+export async function sendBankDraftSubmittedToAdmin(params: {
+  phone:        string
+  studentName:  string
+  amountGHS:    string
+  bookingRef:   string
+  hostelName:   string
+  reviewUrl:    string
+  tenantId?:    string
+}) {
+  const fallback =
+    'New bank draft on {{hostel_name}}: {{student_name}} uploaded ' +
+    'GHS {{amount}} for {{booking_ref}}. Review: {{review_url}}'
+
+  const msg = await resolveSmsBody('bank_draft_submitted', fallback, {
+    student_name: params.studentName,
+    amount:       params.amountGHS,
+    booking_ref:  params.bookingRef,
+    hostel_name:  params.hostelName,
+    review_url:   params.reviewUrl,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
+export async function sendBankDraftApproved(params: {
+  phone:       string
+  firstName:   string
+  amountGHS:   string
+  bookingRef:  string
+  balanceGHS:  string
+  hostelName:  string
+  tenantId?:   string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your bank draft of GHS {{amount}} for booking ' +
+    '{{booking_ref}} at {{hostel_name}} has been confirmed. ' +
+    'Outstanding balance: GHS {{balance}}. Thank you.'
+
+  const msg = await resolveSmsBody('bank_draft_approved', fallback, {
+    first_name:  params.firstName,
+    amount:      params.amountGHS,
+    booking_ref: params.bookingRef,
+    balance:     params.balanceGHS,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
+export async function sendBankDraftRejected(params: {
+  phone:       string
+  firstName:   string
+  amountGHS:   string
+  bookingRef:  string
+  reason:      string
+  hostelName:  string
+  tenantId?:   string
+}) {
+  const fallback =
+    'Hi {{first_name}}, we couldn\'t confirm your bank draft of GHS ' +
+    '{{amount}} for {{booking_ref}} ({{hostel_name}}). Reason: {{reason}}. ' +
+    'Please re-upload via the resident portal.'
+
+  const msg = await resolveSmsBody('bank_draft_rejected', fallback, {
+    first_name:  params.firstName,
+    amount:      params.amountGHS,
+    booking_ref: params.bookingRef,
+    reason:      params.reason,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
 export async function sendPortalCredentials(params: {
   phone: string
   firstName: string

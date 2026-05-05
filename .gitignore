@@ -57,3 +57,4 @@ coverage/
 # Package lock files (keeping only package-lock.json)
 yarn.lock
 pnpm-lock.yaml
+.superpowers/
