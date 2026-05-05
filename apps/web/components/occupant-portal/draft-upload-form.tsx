@@ -11,8 +11,6 @@ interface Props {
   color:         string
 }
 
-const TODAY = new Date().toISOString().slice(0, 10)
-
 function ghsString(pesewas: number) {
   return (pesewas / 100).toFixed(2)
 }
@@ -30,7 +28,7 @@ export function DraftUploadForm({ bookingId, defaultAmount, defaultBank, color }
   const [amountInput,  setAmountInput]  = useState(ghsString(defaultAmount))
   const [draftNumber,  setDraftNumber]  = useState('')
   const [bankName,     setBankName]     = useState(defaultBank)
-  const [depositDate,  setDepositDate]  = useState(TODAY)
+  const [depositDate,  setDepositDate]  = useState(() => new Date().toISOString().slice(0, 10))
   const [note,         setNote]         = useState('')
   const [submitting,   setSubmitting]   = useState(false)
   const [error,        setError]        = useState<string | null>(null)
