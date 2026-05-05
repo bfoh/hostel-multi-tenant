@@ -47,8 +47,9 @@ KPI cards (occupancy rate, revenue, pending payments, active bookings), recent a
 - Tax line items support
 
 **Payments**
-- Record payments against bookings (cash, MoMo, bank transfer)
-- Paystack integration for online card/MoMo payments
+- Record payments against bookings (cash, MoMo, bank transfer, cheque)
+- Paystack integration for online card/MoMo payments (resident portal)
+- **Bank drafts** — residents upload deposit drafts from the portal; owners/accountants verify in a real-time queue at `/payments/drafts`; approval auto-updates the booking balance and posts to the journal. Sidebar shows a live pending count.
 
 ---
 

@@ -194,3 +194,67 @@ Once all phases pass locally, do the following before going live:
 | Onboarding | `http://localhost:3000/onboarding` |
 | Login | `http://localhost:3000/login` |
 | Signup | `http://localhost:3000/signup` |
+
+---
+
+## Phase — Bank Draft Submissions
+
+Pre-requisites:
+- Migrations 055 + 056 applied.
+- Test tenant has bank deposit details saved in `/settings` and "Enabled" toggle ON.
+- A test occupant with an active booking that has outstanding balance.
+- (Optional) `ARKESEL_API_KEY` set to test SMS; otherwise SMS is no-op'd with a console log.
+- (Optional) Push subscription registered for an admin browser to test web push.
+
+### Student side
+
+- [ ] On `/occupant-portal/payments`, the "Pay by bank deposit" card appears below the balance card.
+- [ ] Tap to expand: hostel's bank details show; "Copy" buttons work on account number.
+- [ ] Submit form requires: file (≤5 MB, PDF/JPG/PNG/HEIC/HEIC-sequence), amount, draft #, bank, deposit date.
+- [ ] Reject too-large file (>5 MB) — friendly error, no upload attempted.
+- [ ] Reject wrong format (e.g. .docx) — friendly error.
+- [ ] Successful submission — section collapses to amber pending card.
+- [ ] Pending row also appears in payment history with amber clock pill.
+- [ ] "View draft" opens the file in a new tab via signed URL.
+- [ ] "Cancel submission" requires double-tap; row + file disappear.
+- [ ] Trying to submit a second draft while one is pending — server returns 409.
+
+### Admin side
+
+- [ ] Sidebar shows a red "1" badge next to Bank Drafts (Finance section) when a pending draft exists.
+- [ ] Sidebar collapsed: red dot overlays the Banknote icon when count > 0.
+- [ ] `/payments/drafts` lists the pending draft with all metadata.
+- [ ] Click row → slide-over opens with file preview, balance, and Approve/Reject buttons.
+- [ ] Approve — row disappears, `bookings.paid_amount` reflects the payment, journal entry posts.
+- [ ] Approve again on the same row → 409 "Already processed".
+- [ ] Reject without reason → 422.
+- [ ] Reject with reason → row moves to "Recently processed" with red badge + reason.
+- [ ] Within 5 min of approval, Undo link reverts the row to pending and decrements paid_amount.
+- [ ] After 5 min, Undo returns 410.
+- [ ] Stale warning: a row older than 24h shows red "Stale" indicator.
+
+### Realtime
+
+- [ ] Open `/payments/drafts` in two admin browsers. Upload a draft from a third browser as the occupant.
+- [ ] Both admin browsers show the new row WITHOUT refresh, within ~1s.
+- [ ] First admin clicks Approve. Second admin's view removes the row WITHOUT refresh.
+- [ ] Sidebar badge counts decrement in both windows.
+
+### Notifications
+
+- [ ] Web push fires to subscribed admin browsers on upload.
+- [ ] (If Arkesel configured) Admin SMS arrives within ~5s of upload.
+- [ ] (If Arkesel configured) Student SMS arrives within ~5s of approval.
+- [ ] (If Arkesel configured) Student SMS includes rejection reason on reject.
+- [ ] Push provider unavailable — upload still succeeds; warning in server logs only.
+
+### Settings interactions
+
+- [ ] Owner sets bank fields, saves. `bank_deposits_enabled` auto-flips to true (form omits the toggle when user hasn't touched it).
+- [ ] Owner toggles "Enabled" off. Student portal: "Pay by bank deposit" card hides immediately on next page load. Existing pending drafts still visible to admin.
+- [ ] Non-owner role attempting PATCH to `/api/settings/branding` with bank fields → 403.
+- [ ] Receptionist / housekeeper / manager: Finance sidebar section is hidden; direct GET to `/payments/drafts` redirects to `/dashboard`.
+
+### Booking cancellation interaction
+
+- [ ] Submit a draft (status=pending). Cancel the underlying booking from `/bookings/[id]`. Migration 055 trigger flips the draft to status=failed with rejected_reason='booking cancelled'.
