@@ -81,35 +81,39 @@ export async function dispatchDraftSubmitted(args: DispatchSubmittedArgs): Promi
     tag:   `draft-${args.paymentId}`,
   })
 
-  // SMS to active owner/accountant staff with a phone on file
-  const { data: staff } = await admin
-    .from('staff_profiles')
-    .select('phone, tenant_members!inner(role, is_active, tenant_id)')
+  // SMS to active owner/accountant staff with a phone on file.
+  // Anchor filters on tenant_members so PostgREST applies them as SQL WHERE
+  // clauses (filtering on joined-table columns via dot notation isn't reliable).
+  const { data: members } = await admin
+    .from('tenant_members')
+    .select('staff_profiles!inner(phone, is_active)')
+    .eq('tenant_id', args.tenantId)
     .eq('is_active', true)
-    .not('phone', 'is', null)
-    .eq('tenant_members.tenant_id', args.tenantId)
-    .eq('tenant_members.is_active', true)
-    .in('tenant_members.role', ['owner', 'accountant'])
+    .in('role', ['owner', 'accountant'])
 
   const phones = new Set<string>()
-  for (const row of (staff ?? []) as Array<{ phone: string | null }>) {
-    if (row.phone) phones.add(row.phone)
+  for (const row of (members ?? []) as Array<{ staff_profiles: { phone: string | null; is_active: boolean } | null }>) {
+    const sp = row.staff_profiles
+    if (sp?.is_active && sp.phone) phones.add(sp.phone)
   }
   if (phones.size === 0 && tenant?.contact_phone) {
     phones.add(tenant.contact_phone)
   }
 
-  for (const phone of phones) {
-    await sendBankDraftSubmittedToAdmin({
-      phone,
-      studentName: args.studentName,
-      amountGHS,
-      bookingRef:  args.bookingRef,
-      hostelName,
-      reviewUrl,
-      tenantId:    args.tenantId,
-    })
-  }
+  // Send all SMS in parallel — `send()` swallows errors so Promise.all won't reject.
+  await Promise.all(
+    [...phones].map((phone) =>
+      sendBankDraftSubmittedToAdmin({
+        phone,
+        studentName: args.studentName,
+        amountGHS,
+        bookingRef:  args.bookingRef,
+        hostelName,
+        reviewUrl,
+        tenantId:    args.tenantId,
+      }),
+    ),
+  )
 }
 
 interface DispatchDecisionArgs {
