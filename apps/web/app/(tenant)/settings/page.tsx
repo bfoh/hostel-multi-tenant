@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { ProfileForm } from '@/components/settings/profile-form'
 import { BrandingForm } from '@/components/settings/branding-form'
+import { BankDepositForm } from '@/components/settings/bank-deposit-form'
 import { NotificationsForm } from '@/components/settings/notifications-form'
 import { PasswordForm } from '@/components/settings/password-form'
 import { PushToggle } from '@/components/settings/push-toggle'
@@ -28,8 +30,8 @@ async function getTenant() {
   if (!tenantId) return null
 
   const supabase = createAdminClient()
-  const { data } = await supabase
-    .from('tenants')
+  const { data } = await (supabase
+    .from('tenants') as any)
     .select(`
       id, name, slug, custom_domain,
       tagline, contact_phone, contact_email,
@@ -37,12 +39,15 @@ async function getTenant() {
       primary_color, accent_color, logo_url,
       currency, timezone,
       sms_enabled, email_enabled, momo_enabled,
-      status, plan, trial_ends_at
+      status, plan, trial_ends_at,
+      bank_name, bank_branch, bank_account_name, bank_account_number,
+      bank_swift_code, bank_instructions, bank_deposits_enabled,
+      paystack_subaccount_code
     `)
     .eq('id', tenantId)
     .single()
 
-  return data
+  return data as any
 }
 
 async function getBillingData(tenantId: string) {
@@ -149,6 +154,23 @@ export default async function SettingsPage({
   const tenantId = await getServerTenantId()
   const billingData = tab === 'billing' && tenantId ? await getBillingData(tenantId) : null
 
+  // Derive owner-only edit permission for bank deposit details
+  let canEditBank = false
+  if (tenant && tenantId) {
+    const supabase = await createServerSupabase()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const admin = createAdminClient()
+      const { data: member } = await admin
+        .from('tenant_members')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenant.id)
+        .single()
+      canEditBank = member?.role === 'owner'
+    }
+  }
+
   // Derive effective plan label for display
   const effectivePlan = tenant?.status === 'trial'
     ? 'trial'
@@ -211,6 +233,26 @@ export default async function SettingsPage({
                 </div>
 
                 <BrandingForm tenant={tenant} />
+
+                {(tenant as any).paystack_subaccount_code && !(tenant as any).bank_name && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800">
+                    Add bank deposit details to give residents a second way to pay.
+                  </div>
+                )}
+
+                <BankDepositForm
+                  tenantId={tenant.id}
+                  initial={{
+                    bank_name:             (tenant as any).bank_name             ?? null,
+                    bank_branch:           (tenant as any).bank_branch           ?? null,
+                    bank_account_name:     (tenant as any).bank_account_name     ?? null,
+                    bank_account_number:   (tenant as any).bank_account_number   ?? null,
+                    bank_swift_code:       (tenant as any).bank_swift_code       ?? null,
+                    bank_instructions:     (tenant as any).bank_instructions     ?? null,
+                    bank_deposits_enabled: (tenant as any).bank_deposits_enabled ?? false,
+                  }}
+                  canEdit={canEditBank}
+                />
               </section>
             )}
 

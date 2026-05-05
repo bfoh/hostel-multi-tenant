@@ -14,6 +14,14 @@ const schema = z.object({
   sms_enabled:   z.boolean().optional(),
   email_enabled: z.boolean().optional(),
   momo_enabled:  z.boolean().optional(),
+  // Bank deposit details (migration 055)
+  bank_name:             z.string().max(120).optional().nullable(),
+  bank_branch:           z.string().max(120).optional().nullable(),
+  bank_account_name:     z.string().max(120).optional().nullable(),
+  bank_account_number:   z.string().regex(/^[0-9 -]{6,40}$/, 'Account number must be 6+ digits').optional().nullable(),
+  bank_swift_code:       z.string().regex(/^[A-Z0-9]{8}([A-Z0-9]{3})?$/, 'Invalid SWIFT/BIC').optional().nullable(),
+  bank_instructions:     z.string().max(280).optional().nullable(),
+  bank_deposits_enabled: z.boolean().optional(),
 })
 
 export async function PATCH(request: NextRequest) {
@@ -40,11 +48,25 @@ export async function PATCH(request: NextRequest) {
 
   const { error } = await admin
     .from('tenants')
-    .update(parsed.data)
+    .update(parsed.data as any)
     .eq('id', tenantId)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Auto-enable bank deposits the first time all required fields are saved
+  // together. After that, owner can toggle freely via the explicit boolean.
+  const requiredFilled =
+    parsed.data.bank_name           &&
+    parsed.data.bank_account_name   &&
+    parsed.data.bank_account_number
+  if (requiredFilled && parsed.data.bank_deposits_enabled === undefined) {
+    await admin
+      .from('tenants')
+      .update({ bank_deposits_enabled: true } as any)
+      .eq('id', tenantId)
+      .eq('bank_deposits_enabled' as any, false)
   }
 
   // Bust Redis cache so branding changes take effect immediately
