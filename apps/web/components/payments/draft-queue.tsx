@@ -61,7 +61,7 @@ function isStale(iso: string) {
 
 export function DraftQueue({ tenantId, initialPending, initialRecentlyProcessed }: Props) {
   const [pending, setPending] = useState<PendingRow[]>(initialPending)
-  const [processed] = useState<ProcessedRow[]>(initialRecentlyProcessed)
+  const [processed, setProcessed] = useState<ProcessedRow[]>(initialRecentlyProcessed)
   const [showProcessed, setShowProcessed] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [reconnecting, setReconnecting] = useState(false)
@@ -69,22 +69,39 @@ export function DraftQueue({ tenantId, initialPending, initialRecentlyProcessed 
 
   const refreshAll = useCallback(async () => {
     const sb = supabaseRef.current
-    const { data: fresh } = await sb
-      .from('booking_payments')
-      .select(`
-        id, amount, draft_number, draft_bank_name, draft_deposit_date, draft_note,
-        draft_file_path, created_at,
-        booking:bookings!inner(
-          id, booking_ref, final_amount, paid_amount,
-          occupant:occupants(id, first_name, last_name, phone),
-          room:rooms(room_number, block)
-        )
-      `)
-      .eq('tenant_id', tenantId)
-      .eq('method', 'bank_draft' as any)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const [{ data: fresh }, { data: freshProcessed }] = await Promise.all([
+      sb.from('booking_payments')
+        .select(`
+          id, amount, draft_number, draft_bank_name, draft_deposit_date, draft_note,
+          draft_file_path, created_at,
+          booking:bookings!inner(
+            id, booking_ref, final_amount, paid_amount,
+            occupant:occupants(id, first_name, last_name, phone),
+            room:rooms(room_number, block)
+          )
+        `)
+        .eq('tenant_id', tenantId)
+        .eq('method', 'bank_draft' as any)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true }),
+      sb.from('booking_payments')
+        .select(`
+          id, amount, status, draft_number, draft_bank_name,
+          approved_at, approved_by, rejected_at, rejected_by, rejected_reason, created_at,
+          booking:bookings!inner(booking_ref, occupant:occupants(first_name, last_name))
+        `)
+        .eq('tenant_id', tenantId)
+        .eq('method', 'bank_draft' as any)
+        .in('status', ['success', 'failed'])
+        // Filter on the action timestamp, not submission time — a draft
+        // submitted long ago and just approved should still appear here.
+        .or(`approved_at.gte.${cutoff},rejected_at.gte.${cutoff}`)
+        .order('created_at', { ascending: false })
+        .limit(50),
+    ])
     setPending((fresh as unknown as PendingRow[]) ?? [])
+    setProcessed((freshProcessed as unknown as ProcessedRow[]) ?? [])
   }, [tenantId])
 
   useEffect(() => {
@@ -236,13 +253,20 @@ function UndoLink({ id, approvedAt, onUndo }: { id: string; approvedAt: string; 
   const [busy,      setBusy]      = useState(false)
   const [error,     setError]     = useState<string | null>(null)
 
+  // Single mount-time interval; the functional updater drains remaining and
+  // self-clears at zero. Putting `remaining` in the dep array would
+  // re-create the interval on every tick (resets the 1s clock on any
+  // unrelated re-render).
   useEffect(() => {
-    if (remaining <= 0) return
     const t = setInterval(() => {
-      setRemaining(r => Math.max(0, r - 1000))
+      setRemaining(r => {
+        const next = Math.max(0, r - 1000)
+        if (next === 0) clearInterval(t)
+        return next
+      })
     }, 1000)
     return () => clearInterval(t)
-  }, [remaining])
+  }, [])
 
   if (remaining <= 0) return null
 

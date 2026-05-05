@@ -38,6 +38,10 @@ export default async function BankDraftsPage() {
     .eq('status', 'pending')
     .order('created_at', { ascending: true })
 
+  // Filter on the action timestamp (approved_at OR rejected_at), not
+  // created_at — a draft submitted days ago and just processed should
+  // still appear in the last-24h window.
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data: recentlyProcessed } = await admin
     .from('booking_payments')
     .select(`
@@ -48,7 +52,7 @@ export default async function BankDraftsPage() {
     .eq('tenant_id', tenantId)
     .eq('method', 'bank_draft' as any)
     .in('status', ['success', 'failed'])
-    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .or(`approved_at.gte.${cutoff},rejected_at.gte.${cutoff}`)
     .order('created_at', { ascending: false })
     .limit(50)
 
