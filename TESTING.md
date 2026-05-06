@@ -425,3 +425,83 @@ Pre-requisites:
 - [ ] Cancel an online+paid order → Paystack dashboard shows refund request created.
 - [ ] Cancel a cash order before pickup → no Paystack call (no money moved).
 - [ ] Cancel an online+unpaid order → no Paystack call.
+
+---
+
+## Phase — Public Food Ordering Channels (Walk-in QR + Online)
+
+Pre-requisites:
+- Migration 062 applied.
+- Tenant has `food_orders_enabled = true` and seeded menu (from Phase — Food Ordering pre-reqs).
+- Paystack test keys for online channel UAT.
+
+### Public menu page
+
+- [ ] Open `/order/<slug>` in incognito → menu renders with tenant logo + brand color, no auth required.
+- [ ] Item cards show photos, prices, sold-out state.
+- [ ] Add 2 items → cart pill at bottom right shows count + total.
+- [ ] LocalStorage persists cart across reload (same browser).
+- [ ] Different browser / incognito has empty cart (per-browser state).
+- [ ] If `food_orders_enabled = false` → "Online ordering not available" empty state (no menu fetch).
+
+### Walk-in cash flow
+
+- [ ] On menu, add items → click cart pill → land on `/order/<slug>/cart`.
+- [ ] Cart shows lines + total. Sold-out items shown dimmed with "Sold out" hint.
+- [ ] Pick "Dine-in / pickup at restaurant" → table_label input visible.
+- [ ] Fill name, phone, table "T5" → pick "Pay on pickup (cash)" → Place order.
+- [ ] Redirected to `/order/<slug>/orders/<id>?token=<...>` tracker showing `placed`.
+- [ ] Order_ref `F-XXXX` displayed.
+- [ ] SMS received with tracking URL (if Arkesel configured).
+- [ ] Refresh tracker → still works (token in URL).
+
+### Walk-in online flow
+
+- [ ] Same form, pick "Pay online" → redirected to Paystack test page.
+- [ ] Test card `4084 0840 8408 4081` → success → returns to tracker.
+- [ ] Webhook stamps `paid_at` + `paystack_reference`. Kitchen receives push.
+
+### Online channel
+
+- [ ] On cart, pick "Order ahead online" → cash radio hidden / disabled.
+- [ ] Submit with cash forced server-side fails with 400 "Online channel requires online payment".
+- [ ] Online → Paystack flow same as walk-in but order shows `[Online]` pill on kitchen card.
+
+### Kitchen view differentiation
+
+- [ ] In owner browser at `/food/orders` → guest order card shows pill:
+  - Walk-in cash → `[Walk-in · T5]` (amber)
+  - Online → `[Online]` (blue)
+  - Resident orders → no pill
+- [ ] Order_ref + items + total + payment line all render.
+- [ ] Kitchen can advance status normally (no walk-in/online specific actions).
+
+### Cross-tenant isolation
+
+- [ ] Guest places order on tenant A. Open tenant B's `/food/orders` queue → does not see tenant A's order.
+- [ ] Direct GET `/api/public/<wrong-slug>/food/orders/<id>?token=...` → 404.
+- [ ] Token mismatch → 404 instead of order data.
+
+### Repeat customer dedup
+
+- [ ] Same phone number used twice on same tenant's `/order/<slug>` → second order links to the same `occupants.id` row.
+  Verify via SQL: `select count(*) from occupants where tenant_id = '<id>' and phone = '0244000000';` → 1.
+
+### Tenant admin QR section
+
+- [ ] Open `/food/menu` as owner → QR section above menu editor.
+- [ ] URL displayed matches `${app_url}/order/<slug>` (or custom_domain if set).
+- [ ] "Copy" button puts URL on clipboard.
+- [ ] "Download QR" downloads PNG. Scanning the PNG opens the public menu in a phone browser.
+
+### Cancellation & refund
+
+- [ ] Kitchen cancels a walk-in cash order → tracker shows red "Cancelled" banner; SMS with reason fires.
+- [ ] Kitchen cancels an online+paid order → tracker shows cancelled; Paystack refund call logged in server logs.
+- [ ] Online+unpaid abandoned >30 min → cron sweep flips to `cancelled` with reason "Payment not completed within 30 minutes".
+
+### Realtime polling fallback
+
+- [ ] Tracker poll every ~4s while order not in terminal state.
+- [ ] Stop polling once `picked_up` or `cancelled`.
+

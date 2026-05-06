@@ -15,11 +15,21 @@ interface PlaceArgs {
   bookingId:      string | null
   paymentMethod:  'online' | 'cash_on_pickup'
   notes:          string | null
+  channel?:       'resident' | 'walk_in' | 'online'   // defaults to 'resident'
+  tableLabel?:    string | null
+  trackingToken?: string | null
+  /**
+   * Optional cart override. Resident path leaves this undefined and the
+   * server-persisted cart in `food_carts` is loaded. Guest channels pass
+   * lines directly from the client's localStorage cart and skip the
+   * server-cart fetch + clear.
+   */
+  cartLines?:     CartLine[]
 }
 
 export async function placeOrder(args: PlaceArgs) {
   const admin = createAdminClient() as any
-  const cart  = await getCart(args.occupantId)
+  const cart  = args.cartLines ?? await getCart(args.occupantId)
   if (cart.length === 0) return { error: 'Cart is empty' as const }
 
   const ids = cart.map(c => c.menu_item_id)
@@ -68,8 +78,11 @@ export async function placeOrder(args: PlaceArgs) {
         total_pesewas:  total,
         payment_method: args.paymentMethod,
         notes:          args.notes,
+        customer_kind:  args.channel       ?? 'resident',
+        table_label:    args.tableLabel    ?? null,
+        tracking_token: args.trackingToken ?? null,
       })
-      .select('id, order_ref, total_pesewas, payment_method')
+      .select('id, order_ref, total_pesewas, payment_method, customer_kind, tracking_token')
       .single()
     if (!error) { order = data; break }
     if ((error as any).code !== '23505') return { error: error.message }
@@ -83,7 +96,11 @@ export async function placeOrder(args: PlaceArgs) {
     return { error: itemErr.message }
   }
 
-  await clearCart(args.occupantId)
+  // Only clear the server-persisted cart for the resident channel.
+  // Guests don't have a server cart — their cart was passed via cartLines.
+  if (!args.cartLines) {
+    await clearCart(args.occupantId)
+  }
   return { ok: true as const, order }
 }
 

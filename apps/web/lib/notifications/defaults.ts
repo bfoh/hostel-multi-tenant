@@ -20,6 +20,7 @@ export type EventType =
   | 'maintenance_reopened'
   | 'food_order_ready'
   | 'food_order_cancelled'
+  | 'food_order_placed_guest'
 
 export type Channel = 'sms' | 'email'
 
@@ -267,5 +268,14 @@ export const DEFAULT_TEMPLATES: TemplateDefault[] = [
     body:
       'Hi {{first_name}}, your food order {{order_ref}} at {{hostel_name}} ' +
       'was cancelled. Reason: {{reason}}.',
+  },
+
+  // ── Food order — placed (guest channels: walk-in QR + online) ────────────
+  {
+    event_type: 'food_order_placed_guest',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, your order {{order_ref}} at {{hostel_name}} is placed. ' +
+      'Track it: {{tracking_url}}',
   },
 ]
