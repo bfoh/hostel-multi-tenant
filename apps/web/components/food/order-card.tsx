@@ -13,8 +13,15 @@ interface Order {
   paid_at:          string | null
   placed_at:        string
   notes:            string | null
+  customer_kind?:   'resident' | 'walk_in' | 'online' | null
+  table_label?:     string | null
   occupant?:        { first_name: string; last_name: string; phone: string | null } | null
   food_order_items: OrderItem[]
+}
+
+const CHANNEL_PILL: Record<'walk_in' | 'online', { label: string; cls: string }> = {
+  walk_in: { label: 'Walk-in', cls: 'bg-amber-100 text-amber-700' },
+  online:  { label: 'Online',  cls: 'bg-blue-100 text-blue-700' },
 }
 
 const NEXT_STATUS: Record<string, string | null> = {
@@ -70,7 +77,15 @@ export function OrderCard({ order }: { order: Order }) {
     <div className="rounded-xl border border-border bg-surface p-3 shadow-sm">
       <div className="flex items-start justify-between">
         <div>
-          <p className="font-mono text-sm font-bold">{order.order_ref}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-mono text-sm font-bold">{order.order_ref}</p>
+            {order.customer_kind && order.customer_kind !== 'resident' && (
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${CHANNEL_PILL[order.customer_kind].cls}`}>
+                {CHANNEL_PILL[order.customer_kind].label}
+                {order.customer_kind === 'walk_in' && order.table_label ? ` · ${order.table_label}` : ''}
+              </span>
+            )}
+          </div>
           <p className="text-[11px] text-text-secondary">
             {timeOf(order.placed_at)} · {occName}
           </p>

@@ -432,6 +432,26 @@ export async function sendFoodOrderCancelled(params: {
   await send(params.phone, msg)
 }
 
+export async function sendFoodOrderPlacedGuest(params: {
+  phone:        string
+  firstName:    string
+  orderRef:     string
+  trackingUrl:  string
+  hostelName:   string
+  tenantId?:    string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your order {{order_ref}} at {{hostel_name}} is placed. ' +
+    'Track it: {{tracking_url}}'
+  const msg = await resolveSmsBody('food_order_placed_guest', fallback, {
+    first_name:   params.firstName,
+    order_ref:    params.orderRef,
+    tracking_url: params.trackingUrl,
+    hostel_name:  params.hostelName,
+  }, params.tenantId)
+  await send(params.phone, msg)
+}
+
 export async function sendPortalCredentials(params: {
   phone: string
   firstName: string

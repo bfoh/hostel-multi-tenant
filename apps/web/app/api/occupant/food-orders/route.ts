@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
     bookingId:     booking?.id ?? null,
     paymentMethod: parsed.data.payment_method,
     notes:         parsed.data.notes ?? null,
+    channel:       'resident',
   })
   if ('error' in result) {
     const status = (result as any).failed ? 409 : 400
