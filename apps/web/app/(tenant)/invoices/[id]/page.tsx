@@ -53,7 +53,8 @@ export default async function InvoicePage({
   const occupant = Array.isArray(inv.occupant) ? inv.occupant[0] : inv.occupant
   const room     = Array.isArray(inv.room)     ? inv.room[0]     : inv.room
   const cat      = Array.isArray(room?.category) ? room?.category[0] : room?.category
-  const payments = (inv.booking_payments ?? []).filter((p: any) => p.status === 'paid' || p.paid_at)
+  // booking_payments.status enum: 'pending' | 'success' | 'failed' | 'reversed'
+  const payments = (inv.booking_payments ?? []).filter((p: any) => p.status === 'success')
   const balance  = Math.max(0, inv.final_amount - inv.paid_amount)
 
   // Tax breakdown — prefer stored itemised fields; fall back to splitting combined tax_amount

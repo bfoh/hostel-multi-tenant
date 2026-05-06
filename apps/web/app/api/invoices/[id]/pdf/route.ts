@@ -53,7 +53,8 @@ export async function GET(
   const occupant = Array.isArray(inv.occupant) ? inv.occupant[0] : inv.occupant
   const room     = Array.isArray(inv.room)     ? inv.room[0]     : inv.room
   const cat      = Array.isArray(room?.category) ? room?.category[0] : room?.category
-  const payments = (inv.booking_payments ?? []).filter((p: any) => p.status === 'paid')
+  // booking_payments.status enum: 'pending' | 'success' | 'failed' | 'reversed'
+  const payments = (inv.booking_payments ?? []).filter((p: any) => p.status === 'success')
 
   try {
     const pdfBuffer = await renderToBuffer(
