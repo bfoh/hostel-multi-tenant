@@ -121,6 +121,46 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
   // subscription.create event owns the tenant_subscriptions row.
   if (source === 'platform_subscription') return
 
+  // Food orders — tenant-side ledger, not booking_payments. Branch first so
+  // the booking_payments fallback below never accidentally matches.
+  if (source === 'food_order') {
+    const orderId  = (metadata as any)?.order_id as string | undefined
+    const tenantId = (metadata as any)?.tenant_id as string | undefined
+    if (!orderId || !tenantId) return
+
+    const adminAny = supabase as any
+    await adminAny
+      .from('food_orders')
+      .update({
+        paid_at:            new Date().toISOString(),
+        paystack_reference: reference,
+      })
+      .eq('id', orderId)
+      .eq('tenant_id', tenantId)
+
+    // Notify kitchen now that payment is confirmed
+    const { data: members } = await adminAny
+      .from('tenant_members')
+      .select('user_id')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .in('role', ['owner','manager','housekeeper','receptionist'])
+    const userIds = ((members ?? []) as any[]).map((m: any) => m.user_id as string)
+    if (userIds.length > 0) {
+      try {
+        const { sendPushToUsers } = await import('@/lib/push')
+        await sendPushToUsers(userIds, {
+          title: 'New paid food order',
+          body:  `Order ${(metadata as any)?.order_ref ?? orderId.slice(0, 8)} · paid online`,
+          url:   '/food/orders',
+        })
+      } catch (err) {
+        console.error('[food order webhook push]', err)
+      }
+    }
+    return
+  }
+
   // Otherwise: guest/occupant payment against a booking.
   let paymentId: string | undefined = metadata?.payment_id
 
