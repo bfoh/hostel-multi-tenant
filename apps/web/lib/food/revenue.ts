@@ -11,26 +11,42 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const FOOD_POINT_NAME = 'Food orders'
+const FALLBACK_NAME = 'Restaurant'
 
+/**
+ * Resolve the tenant's restaurant revenue point.
+ *
+ * Prefers any existing active `type='restaurant'` row (whatever its name).
+ * If none exists, auto-creates one named "Restaurant" so admins can rename
+ * later from /revenue-points without breaking the food integration.
+ *
+ * Cleanup of the legacy auto-created "Food orders" row (from the first cut
+ * of this integration) — admins can delete or rename it; future picked-up
+ * orders will collapse onto whichever restaurant-type point is left.
+ */
 async function getOrCreateFoodRevenuePoint(tenantId: string): Promise<string | null> {
   const admin = createAdminClient() as any
 
+  // Pick any existing restaurant point first
   const { data: existing } = await admin
     .from('revenue_points')
-    .select('id')
+    .select('id, name')
     .eq('tenant_id', tenantId)
-    .eq('name', FOOD_POINT_NAME)
+    .eq('type', 'restaurant')
+    .eq('is_active', true)
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle()
   if (existing?.id) return existing.id as string
 
+  // None — create a generic Restaurant point
   const { data: created, error } = await admin
     .from('revenue_points')
     .insert({
       tenant_id:   tenantId,
-      name:        FOOD_POINT_NAME,
+      name:        FALLBACK_NAME,
       type:        'restaurant',
-      description: 'Auto-managed point for resident-portal + walk-in + online food orders.',
+      description: 'Auto-managed point for food orders (resident portal, walk-in, online). Rename from /revenue-points if desired.',
       is_active:   true,
     })
     .select('id')
