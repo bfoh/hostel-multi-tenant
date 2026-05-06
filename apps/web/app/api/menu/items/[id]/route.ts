@@ -52,7 +52,26 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params
   const admin = createAdminClient() as any
+
+  // Try hard delete first. After migration 063 the FK is ON DELETE SET NULL
+  // so this always succeeds. Pre-migration, fall back to soft-delete (mark
+  // unavailable) if the FK to food_order_items blocks the delete.
   const { error } = await admin.from('menu_items').delete().eq('id', id).eq('tenant_id', tenantId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  if (!error) {
+    return NextResponse.json({ ok: true })
+  }
+
+  const isFkViolation = (error as any).code === '23503'
+  if (!isFkViolation) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Fallback: soft-delete by hiding from menu. Past orders remain intact.
+  const { error: softErr } = await admin.from('menu_items')
+    .update({ is_available: false, is_sold_out: true, updated_at: new Date().toISOString() })
+    .eq('id', id).eq('tenant_id', tenantId)
+  if (softErr) {
+    return NextResponse.json({ error: softErr.message }, { status: 500 })
+  }
+  return NextResponse.json({ ok: true, soft_deleted: true })
 }
