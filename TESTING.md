@@ -353,3 +353,75 @@ Pre-requisites:
 
 - [ ] Disconnect network 30s → reconnect → in-flight staff messages appear.
 - [ ] Two browser tabs → message in tab A appears in tab B within ~1s.
+
+---
+
+## Phase — Food Ordering
+
+Pre-requisites:
+- `food_orders_enabled = true` for the test tenant.
+- At least 3 `menu_items` published for today.
+- Test occupant has an active booking.
+- Paystack test keys + `paystack_subaccount_code` configured for online path.
+- VAPID + Arkesel for push + SMS UAT (else silently no-op).
+
+### Menu management
+
+- [ ] Owner creates a category → appears on tenant `/food/menu` page.
+- [ ] Owner creates an item with photo upload → photo URL renders on occupant menu.
+- [ ] Manager can toggle `is_sold_out` → item shows greyed-out card on occupant menu.
+- [ ] Item with `publish_date = yesterday` does NOT appear on occupant menu.
+- [ ] Item with `publish_date = today` appears.
+- [ ] Item with `publish_date = null` (always-on) appears.
+- [ ] Item with `is_available = false` does NOT appear on occupant menu.
+
+### Cart
+
+- [ ] Add item from occupant menu → cart pill at bottom shows count + total.
+- [ ] Quantity stepper enforces 1–10.
+- [ ] Cart persists across logout / login (server-side `food_carts`).
+- [ ] Setting quantity to 0 (minus) removes line.
+- [ ] Cart page shows unavailable items dimmed with "no longer available".
+
+### Order placement — online
+
+- [ ] Submit cart with online → redirected to Paystack test page.
+- [ ] Paystack test success → webhook stamps `paid_at` + `paystack_reference`. Kitchen queue receives order in <2s.
+- [ ] Abandon payment (close tab) → after 30 min cron sweep marks order `cancelled` with reason "Payment not completed within 30 minutes".
+- [ ] Manual `curl -X POST /api/cron/food-orders-sweep -H "Authorization: Bearer $CRON_SECRET"` reports `{swept: N}`.
+
+### Order placement — cash on pickup
+
+- [ ] Submit cart with cash → kitchen queue receives order immediately, no Paystack redirect.
+- [ ] Tracker page lands at `placed`.
+
+### Kitchen queue
+
+- [ ] Three columns (Placed / Preparing / Ready) populate from initial fetch.
+- [ ] New order appears in Placed column within 1s of placement.
+- [ ] "Start preparing" → moves to Preparing column live in all open browsers.
+- [ ] "Mark ready" → moves to Ready; resident push fires; SMS fires (if `food_ready_sms` + Arkesel).
+- [ ] "Mark picked up" → order disappears from queue.
+- [ ] Cancel with reason → order disappears; resident push + SMS fire; refund attempt logged for online+paid.
+
+### Tracker
+
+- [ ] Tracker page loads with current status pill stepper.
+- [ ] Status changes from kitchen reflect live (no refresh).
+- [ ] Cancel button visible only at `placed`.
+- [ ] Cancel from tracker → moves to cancelled; refund attempt for online+paid.
+
+### Auth & access
+
+- [ ] Direct GET `/api/occupant/food-orders/<another-occupant's-id>` → 404.
+- [ ] Receptionist → 403 on POST `/api/menu/items` (owner/manager only).
+- [ ] Housekeeper → 200 on PATCH `/api/menu/items/[id]` toggling `is_sold_out` only.
+- [ ] Housekeeper → 403 on PATCH `/api/menu/items/[id]` changing price.
+- [ ] Logged-out user → /login redirect on `/occupant-portal/food`.
+- [ ] When `food_orders_enabled = false`: bottom-nav Food tab hidden; `/occupant-portal/food` shows "Food ordering not enabled" empty state; sidebar Food entries hidden via role-irrelevant route 404.
+
+### Refunds
+
+- [ ] Cancel an online+paid order → Paystack dashboard shows refund request created.
+- [ ] Cancel a cash order before pickup → no Paystack call (no money moved).
+- [ ] Cancel an online+unpaid order → no Paystack call.
