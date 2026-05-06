@@ -28,65 +28,117 @@ export function MenuEditor({ initialCategories, initialItems }: {
   const [items, setItems] = useState(initialItems)
   const [busy, setBusy]   = useState<string | null>(null)
   const [newCat, setNewCat] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  async function readError(res: Response): Promise<string> {
+    try {
+      const j = await res.json()
+      if (typeof j?.error === 'string') return j.error
+      if (j?.error) return JSON.stringify(j.error)
+      return `${res.status} ${res.statusText}`
+    } catch {
+      return `${res.status} ${res.statusText}`
+    }
+  }
 
   async function addCat() {
     if (!newCat.trim()) return
-    setBusy('add-cat')
-    const res = await fetch('/api/menu/categories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newCat.trim(), sort_order: cats.length }),
-    })
-    setBusy(null)
-    if (res.ok) { setNewCat(''); router.refresh() }
+    setBusy('add-cat'); setError(null)
+    try {
+      const res = await fetch('/api/menu/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCat.trim(), sort_order: cats.length }),
+      })
+      if (!res.ok) {
+        setError(`Add category failed: ${await readError(res)}`)
+        return
+      }
+      setNewCat('')
+      router.refresh()
+    } catch (err) {
+      setError(`Add category network error: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setBusy(null)
+    }
   }
 
   async function delCat(id: string) {
     if (!confirm('Delete this category? Items keep their data but lose category.')) return
-    setBusy(`cat-${id}`)
-    await fetch(`/api/menu/categories/${id}`, { method: 'DELETE' })
-    setBusy(null)
-    setCats(cats.filter(c => c.id !== id))
-    setItems(items.map(i => i.category_id === id ? { ...i, category_id: null } : i))
+    setBusy(`cat-${id}`); setError(null)
+    try {
+      const res = await fetch(`/api/menu/categories/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        setError(`Delete category failed: ${await readError(res)}`)
+        return
+      }
+      setCats(cats.filter(c => c.id !== id))
+      setItems(items.map(i => i.category_id === id ? { ...i, category_id: null } : i))
+    } finally {
+      setBusy(null)
+    }
   }
 
   async function patchItem(id: string, body: any) {
-    const res = await fetch(`/api/menu/items/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    if (res.ok) {
+    setError(null)
+    try {
+      const res = await fetch(`/api/menu/items/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        setError(`Update item failed: ${await readError(res)}`)
+        return
+      }
       setItems(items.map(i => i.id === id ? { ...i, ...body } : i))
+    } catch (err) {
+      setError(`Update item network error: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
   async function delItem(id: string) {
     if (!confirm('Delete this item permanently?')) return
-    setBusy(`item-${id}`)
-    await fetch(`/api/menu/items/${id}`, { method: 'DELETE' })
-    setBusy(null)
-    setItems(items.filter(i => i.id !== id))
+    setBusy(`item-${id}`); setError(null)
+    try {
+      const res = await fetch(`/api/menu/items/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        setError(`Delete item failed: ${await readError(res)}`)
+        return
+      }
+      setItems(items.filter(i => i.id !== id))
+    } finally {
+      setBusy(null)
+    }
   }
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-danger/30 bg-red-50 px-3 py-2 text-xs text-red-800">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} className="font-semibold">×</button>
+        </div>
+      )}
+
       <section className="rounded-xl border border-border bg-surface p-4">
         <h3 className="text-sm font-semibold text-text-primary">Categories</h3>
         <ul className="mt-3 space-y-2">
           {cats.map(c => (
             <li key={c.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
               <span className="text-sm">{c.name}</span>
-              <button onClick={() => delCat(c.id)} disabled={busy === `cat-${c.id}`} className="text-text-secondary hover:text-danger">
+              <button type="button" onClick={() => delCat(c.id)} disabled={busy === `cat-${c.id}`} className="text-text-secondary hover:text-danger">
                 {busy === `cat-${c.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               </button>
             </li>
           ))}
         </ul>
         <div className="mt-3 flex items-center gap-2">
-          <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="New category name"
+          <input value={newCat} onChange={e => setNewCat(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCat() } }}
+            placeholder="New category name"
             className="flex-1 rounded-lg border border-border px-3 py-2 text-sm" />
-          <button onClick={addCat} disabled={busy === 'add-cat'}
+          <button type="button" onClick={addCat} disabled={busy === 'add-cat' || !newCat.trim()}
             className="inline-flex items-center gap-1 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-brand-fg disabled:opacity-50">
             {busy === 'add-cat' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add
           </button>
@@ -96,7 +148,7 @@ export function MenuEditor({ initialCategories, initialItems }: {
       <section className="rounded-xl border border-border bg-surface p-4">
         <h3 className="text-sm font-semibold text-text-primary">Items</h3>
         <p className="mt-0.5 text-xs text-text-secondary">Toggle Sold out / Available without leaving the page. Edit price + name inline. Use the new-item form to add.</p>
-        <NewItemForm cats={cats} onCreated={() => router.refresh()} />
+        <NewItemForm cats={cats} onCreated={() => router.refresh()} onError={setError} />
         <ul className="mt-3 divide-y divide-border">
           {items.map(it => (
             <li key={it.id} className="grid grid-cols-12 items-center gap-3 py-3">
@@ -133,7 +185,7 @@ export function MenuEditor({ initialCategories, initialItems }: {
                   className="w-full rounded border border-border px-2 py-0.5 text-[11px]" />
               </div>
               <div className="col-span-1 text-right">
-                <button onClick={() => delItem(it.id)} disabled={busy === `item-${it.id}`}
+                <button type="button" onClick={() => delItem(it.id)} disabled={busy === `item-${it.id}`}
                   className="text-text-secondary hover:text-danger">
                   {busy === `item-${it.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 </button>
@@ -146,7 +198,11 @@ export function MenuEditor({ initialCategories, initialItems }: {
   )
 }
 
-function NewItemForm({ cats, onCreated }: { cats: Category[]; onCreated: () => void }) {
+function NewItemForm({ cats, onCreated, onError }: {
+  cats: Category[]
+  onCreated: () => void
+  onError:   (msg: string) => void
+}) {
   const [name,  setName]  = useState('')
   const [price, setPrice] = useState('')
   const [cat,   setCat]   = useState<string>('')
@@ -155,20 +211,44 @@ function NewItemForm({ cats, onCreated }: { cats: Category[]; onCreated: () => v
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     const cents = Math.round(parseFloat(price || '0') * 100)
-    if (!name.trim() || cents <= 0) return
+    if (!name.trim()) {
+      onError('Item name is required')
+      return
+    }
+    if (cents <= 0) {
+      onError('Price must be greater than 0')
+      return
+    }
     setBusy(true)
-    const res = await fetch('/api/menu/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name:          name.trim(),
-        price_pesewas: cents,
-        category_id:   cat || null,
-        is_available:  true,
-      }),
-    })
-    setBusy(false)
-    if (res.ok) { setName(''); setPrice(''); onCreated() }
+    try {
+      const res = await fetch('/api/menu/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:          name.trim(),
+          price_pesewas: cents,
+          category_id:   cat || null,
+          is_available:  true,
+        }),
+      })
+      if (!res.ok) {
+        let msg: string
+        try {
+          const j = await res.json()
+          msg = typeof j?.error === 'string' ? j.error : JSON.stringify(j?.error ?? `${res.status} ${res.statusText}`)
+        } catch {
+          msg = `${res.status} ${res.statusText}`
+        }
+        onError(`Add item failed: ${msg}`)
+        return
+      }
+      setName(''); setPrice('')
+      onCreated()
+    } catch (err) {
+      onError(`Add item network error: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
