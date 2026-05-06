@@ -33,6 +33,10 @@ const schema = z.object({
   bank_swift_code:       z.string().regex(/^[A-Z0-9]{8}([A-Z0-9]{3})?$/, 'Invalid SWIFT/BIC').optional().nullable(),
   bank_instructions:     z.string().max(280).optional().nullable(),
   bank_deposits_enabled: z.boolean().optional(),
+  // Food ordering settings (migration 060)
+  food_orders_enabled:   z.boolean().optional(),
+  food_cutoff_time:      z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).nullable().optional(),
+  food_ready_sms:        z.boolean().optional(),
 })
 
 export async function PATCH(request: NextRequest) {

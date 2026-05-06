@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, CreditCard, FileText, Wrench, Bell, User } from 'lucide-react'
+import { Home, CreditCard, FileText, Utensils, Wrench, Bell, User } from 'lucide-react'
 
 type IconAnim = 'bounce' | 'shake' | 'spin' | 'pulse' | 'swing' | 'ring' | 'slide' | 'flip' | 'tilt' | 'pop'
 
@@ -19,17 +19,32 @@ const ANIM_CLASS: Record<IconAnim, string> = {
   pop:    'sb-anim-pop',
 }
 
-const TABS = [
-  { href: '/occupant-portal',             label: 'Home',       Icon: Home,       anim: 'pulse'  as IconAnim },
-  { href: '/occupant-portal/payments',    label: 'Payments',   Icon: CreditCard, anim: 'flip'   as IconAnim },
-  { href: '/occupant-portal/invoices',    label: 'Invoices',   Icon: FileText,   anim: 'slide'  as IconAnim },
-  { href: '/occupant-portal/maintenance', label: 'Requests',   Icon: Wrench,     anim: 'swing'  as IconAnim },
-  { href: '/occupant-portal/notices',     label: 'Notices',    Icon: Bell,       anim: 'ring'   as IconAnim },
-  { href: '/occupant-portal/profile',     label: 'Profile',    Icon: User,       anim: 'bounce' as IconAnim },
+interface TabDef {
+  href:  string
+  label: string
+  Icon:  React.ComponentType<{ className?: string; style?: React.CSSProperties; strokeWidth?: number }>
+  anim:  IconAnim
+}
+
+const BASE_TABS: TabDef[] = [
+  { href: '/occupant-portal',             label: 'Home',       Icon: Home,       anim: 'pulse'  },
+  { href: '/occupant-portal/payments',    label: 'Payments',   Icon: CreditCard, anim: 'flip'   },
+  { href: '/occupant-portal/invoices',    label: 'Invoices',   Icon: FileText,   anim: 'slide'  },
+  { href: '/occupant-portal/maintenance', label: 'Requests',   Icon: Wrench,     anim: 'swing'  },
+  { href: '/occupant-portal/notices',     label: 'Notices',    Icon: Bell,       anim: 'ring'   },
+  { href: '/occupant-portal/profile',     label: 'Profile',    Icon: User,       anim: 'bounce' },
 ]
 
-export function BottomNav({ color }: { color: string }) {
+const FOOD_TAB: TabDef = {
+  href: '/occupant-portal/food', label: 'Food', Icon: Utensils, anim: 'pop',
+}
+
+export function BottomNav({ color, foodEnabled = false }: { color: string; foodEnabled?: boolean }) {
   const pathname = usePathname()
+  // Insert Food between Invoices and Requests when enabled
+  const TABS: TabDef[] = foodEnabled
+    ? [...BASE_TABS.slice(0, 3), FOOD_TAB, ...BASE_TABS.slice(3)]
+    : BASE_TABS
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md">

@@ -10,6 +10,7 @@ import {
   MessageSquare, UserCog, ClipboardList, BookOpen, Bot,
   Package, Search, Building2, ListOrdered, TrendingDown,
   Monitor, Lock, Store, ClipboardCheck, Banknote,
+  Utensils, ShoppingBag,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -60,6 +61,8 @@ const OPS_ITEMS: NavItem[] = [
   { label: 'Bookings',       href: '/bookings',        icon: CalendarCheck,   anim: 'flip'   },
   { label: 'Housekeeping',   href: '/housekeeping',    icon: Wrench,          anim: 'swing'  },
   { label: 'Maintenance',    href: '/maintenance',     icon: HardHat,         anim: 'bounce' },
+  { label: 'Food Menu',      href: '/food/menu',       icon: Utensils,        anim: 'pop'    },
+  { label: 'Food Orders',    href: '/food/orders',     icon: ShoppingBag,     anim: 'pulse'  },
   { label: 'Kiosk',          href: '/kiosk',           icon: Monitor,         anim: 'pulse'  },
   { label: 'Lost & Found',   href: '/lost-found',      icon: Search,          anim: 'slide'  },
   { label: 'Communications', href: '/communications',  icon: MessageSquare,   anim: 'shake'  },

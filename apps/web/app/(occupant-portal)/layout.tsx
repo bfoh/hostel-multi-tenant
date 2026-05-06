@@ -15,14 +15,15 @@ export default async function OccupantPortalLayout({ children }: { children: Rea
   const admin = createAdminClient()
   const { data: occupant } = await admin
     .from('occupants')
-    .select('tenant_id, tenants(name, primary_color, logo_url)')
+    .select('tenant_id, tenants(name, primary_color, logo_url, food_orders_enabled)')
     .eq('user_id' as any, user.id)
     .single()
 
   const tenant     = Array.isArray(occupant?.tenants) ? occupant.tenants[0] : occupant?.tenants
   const tenantName  = tenant?.name         ?? 'Resident Portal'
-  const tenantColor = tenant?.primary_color ?? '#2563EB'
-  const tenantLogo  = tenant?.logo_url      ?? null
+  const tenantColor = (tenant as any)?.primary_color ?? '#2563EB'
+  const tenantLogo  = (tenant as any)?.logo_url      ?? null
+  const foodEnabled = !!(tenant as any)?.food_orders_enabled
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -65,7 +66,7 @@ export default async function OccupantPortalLayout({ children }: { children: Rea
       </main>
 
       {/* ── Bottom navigation ─────────────────────────────────── */}
-      <BottomNav color={tenantColor} />
+      <BottomNav color={tenantColor} foodEnabled={foodEnabled} />
     </div>
   )
 }

@@ -18,6 +18,8 @@ export type EventType =
   | 'maintenance_first_staff_reply'
   | 'maintenance_status_change'
   | 'maintenance_reopened'
+  | 'food_order_ready'
+  | 'food_order_cancelled'
 
 export type Channel = 'sms' | 'email'
 
@@ -247,5 +249,23 @@ export const DEFAULT_TEMPLATES: TemplateDefault[] = [
     body:
       'Hi {{first_name}}, hostel staff reopened your request {{request_id}} ' +
       'at {{hostel_name}}.',
+  },
+
+  // ── Food order — ready for pickup ─────────────────────────────────────────
+  {
+    event_type: 'food_order_ready',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, your food order {{order_ref}} at {{hostel_name}} ' +
+      'is ready for pickup.',
+  },
+
+  // ── Food order — cancelled ────────────────────────────────────────────────
+  {
+    event_type: 'food_order_cancelled',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, your food order {{order_ref}} at {{hostel_name}} ' +
+      'was cancelled. Reason: {{reason}}.',
   },
 ]
