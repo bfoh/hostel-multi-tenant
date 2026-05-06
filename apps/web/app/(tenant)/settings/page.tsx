@@ -255,13 +255,6 @@ export default async function SettingsPage({
                 </div>
                 <NotificationsForm tenant={tenant} />
                 <PushToggle />
-
-                {/* API key hints */}
-                <div className="mt-4 rounded-lg border border-border bg-surface-sunken p-4 text-xs text-text-secondary space-y-1">
-                  <p className="font-medium text-text-primary">Required environment variables</p>
-                  <p><code className="font-mono">ARKESEL_API_KEY</code> — for SMS (get from arkesel.com)</p>
-                  <p><code className="font-mono">NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY</code> + <code className="font-mono">PAYSTACK_SECRET_KEY</code> — for MoMo payments (paystack.com)</p>
-                </div>
               </section>
             )}
 
