@@ -1,0 +1,41 @@
+import { NextResponse, type NextRequest } from 'next/server'
+import { z } from 'zod'
+import { getServerTenantId } from '@/lib/auth/tenant'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+const createSchema = z.object({
+  name:       z.string().min(1).max(80),
+  sort_order: z.number().int().min(0).max(9999).default(0),
+})
+
+export async function GET() {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
+  const ctx = await requireTenantRole(tenantId, ['owner','manager','housekeeper','receptionist','accountant'])
+  if (ctx instanceof NextResponse) return ctx
+
+  const admin = createAdminClient() as any
+  const { data } = await admin.from('menu_categories')
+    .select('id, name, sort_order, is_active, created_at')
+    .eq('tenant_id', tenantId).order('sort_order')
+  return NextResponse.json(data ?? [])
+}
+
+export async function POST(req: NextRequest) {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
+  const ctx = await requireTenantRole(tenantId, ['owner','manager'])
+  if (ctx instanceof NextResponse) return ctx
+
+  const json   = await req.json().catch(() => null)
+  const parsed = createSchema.safeParse(json)
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 422 })
+
+  const admin = createAdminClient() as any
+  const { data, error } = await admin.from('menu_categories')
+    .insert({ tenant_id: tenantId, ...parsed.data })
+    .select('id').single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ id: data.id }, { status: 201 })
+}
