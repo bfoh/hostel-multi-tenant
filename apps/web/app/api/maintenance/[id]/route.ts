@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { insertSystemMessage } from '@/lib/maintenance/messages'
+import { sendPushToUsers } from '@/lib/push'
+import { sendMaintenanceStatusChange } from '@/lib/sms'
 
 const schema = z.object({
   status:         z.enum(['open', 'in_progress', 'on_hold', 'completed', 'cancelled']).optional(),
@@ -26,7 +29,16 @@ export async function PATCH(
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
 
-  const supabase = createAdminClient()
+  const supabase = createAdminClient() as any
+
+  // Capture previous status for system-message + notification logic
+  const { data: existing } = await supabase
+    .from('maintenance_requests')
+    .select('status, occupant_id')
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const update = { ...parsed.data }
   if (parsed.data.status === 'completed' && !parsed.data.resolved_at) {
@@ -40,6 +52,49 @@ export async function PATCH(
     .eq('tenant_id', tenantId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Status changed → log system message + notify resident
+  if (parsed.data.status && parsed.data.status !== existing.status) {
+    await insertSystemMessage({
+      tenantId,
+      requestId: id,
+      body:      `Status changed: ${existing.status} → ${parsed.data.status}`,
+    })
+
+    if (existing.occupant_id) {
+      const { data: occ } = await supabase
+        .from('occupants')
+        .select('user_id, phone, first_name')
+        .eq('id', existing.occupant_id)
+        .maybeSingle()
+      const { data: tenantRow } = await supabase
+        .from('tenants')
+        .select('name')
+        .eq('id', tenantId)
+        .maybeSingle()
+      const hostelName = tenantRow?.name ?? 'Hostel'
+
+      if (occ?.user_id) {
+        sendPushToUsers([occ.user_id], {
+          title: `Request ${String(parsed.data.status).replace('_', ' ')}`,
+          body:  'Status updated by hostel staff',
+          url:   `/occupant-portal/maintenance/${id}`,
+        }).catch(err => console.error('[status push]', err))
+      }
+      if (occ?.phone && occ?.first_name) {
+        sendMaintenanceStatusChange({
+          phone:     occ.phone,
+          firstName: occ.first_name,
+          requestId: id.slice(0, 8),
+          from:      String(existing.status),
+          to:        String(parsed.data.status),
+          hostelName,
+          tenantId,
+        }).catch(err => console.error('[status sms]', err))
+      }
+    }
+  }
+
   return NextResponse.json({ ok: true })
 }
 
