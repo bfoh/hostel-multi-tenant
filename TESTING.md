@@ -258,3 +258,49 @@ Pre-requisites:
 ### Booking cancellation interaction
 
 - [ ] Submit a draft (status=pending). Cancel the underlying booking from `/bookings/[id]`. Migration 055 trigger flips the draft to status=failed with rejected_reason='booking cancelled'.
+
+---
+
+## Phase — Invoice Viewing & Download
+
+Pre-requisites:
+- A test occupant logged into `/occupant-portal` with at least one booking.
+- (Optional, for cancelled-state coverage) Cancel one of the test occupant's bookings via `/bookings/[id]`.
+
+### Listing
+
+- [ ] Bottom nav shows "Invoices" tab between Payments and Requests.
+- [ ] `/occupant-portal/invoices` renders an Invoices header + list of card per booking, sorted most recent first.
+- [ ] Status pill on each card matches expected color:
+  - Paid (emerald) when `paid_amount >= final_amount`
+  - Partial (amber) when 0 < paid_amount < final_amount
+  - Unpaid (red) when paid_amount = 0
+  - Cancelled (slate) when booking status = 'cancelled' (overrides above)
+- [ ] Each card shows invoice number (or booking_ref fallback for legacy rows), room/block, booking_ref, stay dates, total amount.
+- [ ] Empty state appears for an occupant with no bookings.
+- [ ] Home page (`/occupant-portal`) quick-links section shows "View invoices · Download tax-compliant receipts".
+
+### Detail
+
+- [ ] Tap a card → `/occupant-portal/invoices/[id]` loads.
+- [ ] Header shows invoice number, issue date, resident name, booking ref, room, stay dates.
+- [ ] Cancelled booking shows slate "Cancelled" pill on detail header.
+- [ ] Line items section lists accommodation + tax breakdown; only non-zero tax lines appear.
+- [ ] Discount line appears with reason when `discount_amount > 0`.
+- [ ] Payments section lists only payments with `status = 'success'`.
+- [ ] Bank-draft payments (from sub-project 1) show as "Bank Draft · ..." in the payments list once approved.
+- [ ] Totals: Paid + Balance match `bookings.paid_amount` and `final_amount - paid_amount`.
+
+### PDF download
+
+- [ ] Tap "Download PDF" → file downloads as `invoice-<invoice_number>.pdf` (or `invoice-<booking_ref>.pdf` if no invoice_number).
+- [ ] PDF opens correctly: hostel letterhead, resident, room, line items, taxes, payment history, totals.
+- [ ] Tax fields show only if non-zero; matches detail page.
+- [ ] PDF includes paid bank-draft payments in the payments section.
+
+### Auth & access
+
+- [ ] Direct GET to `/occupant-portal/invoices/<some-other-occupant's-id>` shows the Next.js 404 page (not detail view).
+- [ ] Direct GET to `/api/occupant/invoices/<some-other-occupant's-id>/pdf` returns 404 JSON.
+- [ ] Logged-out user navigating to `/occupant-portal/invoices` redirects to `/login`.
+- [ ] An occupant who has been checked out can still see + download invoices for past bookings.
