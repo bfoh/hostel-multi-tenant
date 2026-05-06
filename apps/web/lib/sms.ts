@@ -395,6 +395,43 @@ export async function sendMaintenanceReopened(params: {
   await send(params.phone, msg)
 }
 
+export async function sendFoodOrderReady(params: {
+  phone:      string
+  firstName:  string
+  orderRef:   string
+  hostelName: string
+  tenantId?:  string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your food order {{order_ref}} at {{hostel_name}} is ready for pickup.'
+  const msg = await resolveSmsBody('food_order_ready', fallback, {
+    first_name:  params.firstName,
+    order_ref:   params.orderRef,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+  await send(params.phone, msg)
+}
+
+export async function sendFoodOrderCancelled(params: {
+  phone:      string
+  firstName:  string
+  orderRef:   string
+  reason:     string
+  hostelName: string
+  tenantId?:  string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your food order {{order_ref}} at {{hostel_name}} was cancelled. ' +
+    'Reason: {{reason}}.'
+  const msg = await resolveSmsBody('food_order_cancelled', fallback, {
+    first_name:  params.firstName,
+    order_ref:   params.orderRef,
+    reason:      params.reason,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+  await send(params.phone, msg)
+}
+
 export async function sendPortalCredentials(params: {
   phone: string
   firstName: string
