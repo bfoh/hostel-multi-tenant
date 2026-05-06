@@ -337,6 +337,64 @@ export async function sendBankDraftRejected(params: {
   await send(params.phone, msg)
 }
 
+export async function sendMaintenanceFirstStaffReply(params: {
+  phone:      string
+  firstName:  string
+  requestId:  string
+  hostelName: string
+  tenantId?:  string
+}) {
+  const fallback =
+    'Hi {{first_name}}, hostel staff replied to your maintenance request ' +
+    '{{request_id}} at {{hostel_name}}. Open the resident portal to view.'
+  const msg = await resolveSmsBody('maintenance_first_staff_reply', fallback, {
+    first_name:  params.firstName,
+    request_id:  params.requestId,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+  await send(params.phone, msg)
+}
+
+export async function sendMaintenanceStatusChange(params: {
+  phone:      string
+  firstName:  string
+  requestId:  string
+  from:       string
+  to:         string
+  hostelName: string
+  tenantId?:  string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your request {{request_id}} at {{hostel_name}} ' +
+    'moved from {{from}} to {{to}}.'
+  const msg = await resolveSmsBody('maintenance_status_change', fallback, {
+    first_name:  params.firstName,
+    request_id:  params.requestId,
+    from:        params.from,
+    to:          params.to,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+  await send(params.phone, msg)
+}
+
+export async function sendMaintenanceReopened(params: {
+  phone:      string
+  firstName:  string
+  requestId:  string
+  hostelName: string
+  tenantId?:  string
+}) {
+  const fallback =
+    'Hi {{first_name}}, hostel staff reopened your request {{request_id}} ' +
+    'at {{hostel_name}}.'
+  const msg = await resolveSmsBody('maintenance_reopened', fallback, {
+    first_name:  params.firstName,
+    request_id:  params.requestId,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+  await send(params.phone, msg)
+}
+
 export async function sendPortalCredentials(params: {
   phone: string
   firstName: string

@@ -67,3 +67,46 @@ export async function sendPushToTenant(tenantId: string, payload: PushPayload) {
     await supabase.from('push_subscriptions').delete().in('id', expiredIds)
   }
 }
+
+/**
+ * Send a push to one or more specific user_ids. Used for direct addressing
+ * (e.g. resident getting a reply). Silently no-ops when VAPID isn't configured
+ * or the users have no subscriptions.
+ */
+export async function sendPushToUsers(userIds: string[], payload: PushPayload) {
+  if (userIds.length === 0) return
+  const { publicKey, privateKey, email } = getVapid()
+  if (!publicKey || !privateKey) return
+
+  webpush.setVapidDetails(email, publicKey, privateKey)
+
+  const supabase = createAdminClient()
+  const { data: subs } = await supabase
+    .from('push_subscriptions')
+    .select('id, endpoint, p256dh, auth_key')
+    .in('user_id', userIds)
+
+  if (!subs || subs.length === 0) return
+
+  const body = JSON.stringify(payload)
+  const expiredIds: string[] = []
+
+  await Promise.allSettled(
+    subs.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
+          body,
+        )
+      } catch (err: any) {
+        if (err?.statusCode === 410 || err?.statusCode === 404) {
+          expiredIds.push(sub.id)
+        }
+      }
+    }),
+  )
+
+  if (expiredIds.length > 0) {
+    await supabase.from('push_subscriptions').delete().in('id', expiredIds)
+  }
+}
