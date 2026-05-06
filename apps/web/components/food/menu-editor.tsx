@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
 import { PhotoUpload } from './photo-upload'
 
@@ -23,9 +22,8 @@ export function MenuEditor({ initialCategories, initialItems }: {
   initialCategories: Category[]
   initialItems:      Item[]
 }) {
-  const router = useRouter()
-  const [cats, setCats]   = useState(initialCategories)
-  const [items, setItems] = useState(initialItems)
+  const [cats, setCats]   = useState<Category[]>(initialCategories)
+  const [items, setItems] = useState<Item[]>(initialItems)
   const [busy, setBusy]   = useState<string | null>(null)
   const [newCat, setNewCat] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -42,20 +40,35 @@ export function MenuEditor({ initialCategories, initialItems }: {
   }
 
   async function addCat() {
-    if (!newCat.trim()) return
+    const trimmed = newCat.trim()
+    if (!trimmed) return
     setBusy('add-cat'); setError(null)
     try {
       const res = await fetch('/api/menu/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCat.trim(), sort_order: cats.length }),
+        body: JSON.stringify({ name: trimmed, sort_order: cats.length }),
       })
       if (!res.ok) {
         setError(`Add category failed: ${await readError(res)}`)
         return
       }
+      const j = await res.json().catch(() => ({})) as { id?: string }
+      if (!j.id) {
+        setError('Add category: server returned no id')
+        return
+      }
+      // Append to local state — `useState(initialCategories)` doesn't re-seed
+      // when the server component re-renders, so we have to track new rows
+      // ourselves.
+      const newRow: Category = {
+        id:         j.id,
+        name:       trimmed,
+        sort_order: cats.length,
+        is_active:  true,
+      }
+      setCats(prev => [...prev, newRow])
       setNewCat('')
-      router.refresh()
     } catch (err) {
       setError(`Add category network error: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
@@ -72,8 +85,8 @@ export function MenuEditor({ initialCategories, initialItems }: {
         setError(`Delete category failed: ${await readError(res)}`)
         return
       }
-      setCats(cats.filter(c => c.id !== id))
-      setItems(items.map(i => i.category_id === id ? { ...i, category_id: null } : i))
+      setCats(prev => prev.filter(c => c.id !== id))
+      setItems(prev => prev.map(i => i.category_id === id ? { ...i, category_id: null } : i))
     } finally {
       setBusy(null)
     }
@@ -91,7 +104,7 @@ export function MenuEditor({ initialCategories, initialItems }: {
         setError(`Update item failed: ${await readError(res)}`)
         return
       }
-      setItems(items.map(i => i.id === id ? { ...i, ...body } : i))
+      setItems(prev => prev.map(i => i.id === id ? { ...i, ...body } : i))
     } catch (err) {
       setError(`Update item network error: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -106,10 +119,14 @@ export function MenuEditor({ initialCategories, initialItems }: {
         setError(`Delete item failed: ${await readError(res)}`)
         return
       }
-      setItems(items.filter(i => i.id !== id))
+      setItems(prev => prev.filter(i => i.id !== id))
     } finally {
       setBusy(null)
     }
+  }
+
+  function appendItem(it: Item) {
+    setItems(prev => [...prev, it])
   }
 
   return (
@@ -132,6 +149,11 @@ export function MenuEditor({ initialCategories, initialItems }: {
               </button>
             </li>
           ))}
+          {cats.length === 0 && (
+            <li className="rounded-lg border border-dashed border-border px-3 py-2 text-center text-xs text-text-tertiary">
+              No categories yet — add one below.
+            </li>
+          )}
         </ul>
         <div className="mt-3 flex items-center gap-2">
           <input value={newCat} onChange={e => setNewCat(e.target.value)}
@@ -148,15 +170,15 @@ export function MenuEditor({ initialCategories, initialItems }: {
       <section className="rounded-xl border border-border bg-surface p-4">
         <h3 className="text-sm font-semibold text-text-primary">Items</h3>
         <p className="mt-0.5 text-xs text-text-secondary">Toggle Sold out / Available without leaving the page. Edit price + name inline. Use the new-item form to add.</p>
-        <NewItemForm cats={cats} onCreated={() => router.refresh()} onError={setError} />
+        <NewItemForm cats={cats} nextSortOrder={items.length} onCreated={appendItem} onError={setError} />
         <ul className="mt-3 divide-y divide-border">
           {items.map(it => (
             <li key={it.id} className="grid grid-cols-12 items-center gap-3 py-3">
-              <div className="col-span-2"><PhotoUpload itemId={it.id} currentUrl={it.photo_url} onUploaded={url => setItems(items.map(i => i.id === it.id ? { ...i, photo_url: url } : i))} /></div>
+              <div className="col-span-2"><PhotoUpload itemId={it.id} currentUrl={it.photo_url} onUploaded={url => setItems(prev => prev.map(i => i.id === it.id ? { ...i, photo_url: url } : i))} /></div>
               <div className="col-span-4">
                 <input defaultValue={it.name} onBlur={e => e.target.value !== it.name && patchItem(it.id, { name: e.target.value })}
                   className="w-full rounded border border-border px-2 py-1 text-sm font-medium" />
-                <select defaultValue={it.category_id ?? ''} onChange={e => patchItem(it.id, { category_id: e.target.value || null })}
+                <select value={it.category_id ?? ''} onChange={e => patchItem(it.id, { category_id: e.target.value || null })}
                   className="mt-1 w-full rounded border border-border px-2 py-1 text-xs">
                   <option value="">— No category —</option>
                   {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -173,14 +195,14 @@ export function MenuEditor({ initialCategories, initialItems }: {
               </div>
               <div className="col-span-3 space-y-1 text-xs">
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" defaultChecked={it.is_available} onChange={e => patchItem(it.id, { is_available: e.target.checked })} />
+                  <input type="checkbox" checked={it.is_available} onChange={e => patchItem(it.id, { is_available: e.target.checked })} />
                   Available
                 </label>
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" defaultChecked={it.is_sold_out} onChange={e => patchItem(it.id, { is_sold_out: e.target.checked })} />
+                  <input type="checkbox" checked={it.is_sold_out} onChange={e => patchItem(it.id, { is_sold_out: e.target.checked })} />
                   Sold out
                 </label>
-                <input type="date" defaultValue={it.publish_date ?? ''}
+                <input type="date" value={it.publish_date ?? ''}
                   onChange={e => patchItem(it.id, { publish_date: e.target.value || null })}
                   className="w-full rounded border border-border px-2 py-0.5 text-[11px]" />
               </div>
@@ -198,10 +220,11 @@ export function MenuEditor({ initialCategories, initialItems }: {
   )
 }
 
-function NewItemForm({ cats, onCreated, onError }: {
-  cats: Category[]
-  onCreated: () => void
-  onError:   (msg: string) => void
+function NewItemForm({ cats, nextSortOrder, onCreated, onError }: {
+  cats:           Category[]
+  nextSortOrder:  number
+  onCreated:      (item: Item) => void
+  onError:        (msg: string) => void
 }) {
   const [name,  setName]  = useState('')
   const [price, setPrice] = useState('')
@@ -210,22 +233,18 @@ function NewItemForm({ cats, onCreated, onError }: {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    const trimmedName = name.trim()
     const cents = Math.round(parseFloat(price || '0') * 100)
-    if (!name.trim()) {
-      onError('Item name is required')
-      return
-    }
-    if (cents <= 0) {
-      onError('Price must be greater than 0')
-      return
-    }
+    if (!trimmedName) { onError('Item name is required'); return }
+    if (cents <= 0)   { onError('Price must be greater than 0'); return }
+
     setBusy(true)
     try {
       const res = await fetch('/api/menu/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name:          name.trim(),
+          name:          trimmedName,
           price_pesewas: cents,
           category_id:   cat || null,
           is_available:  true,
@@ -242,8 +261,24 @@ function NewItemForm({ cats, onCreated, onError }: {
         onError(`Add item failed: ${msg}`)
         return
       }
+      const j = await res.json().catch(() => ({})) as { id?: string }
+      if (!j.id) {
+        onError('Add item: server returned no id')
+        return
+      }
+      onCreated({
+        id:            j.id,
+        category_id:   cat || null,
+        name:          trimmedName,
+        description:   null,
+        price_pesewas: cents,
+        photo_url:     null,
+        is_available:  true,
+        is_sold_out:   false,
+        publish_date:  null,
+        sort_order:    nextSortOrder,
+      })
       setName(''); setPrice('')
-      onCreated()
     } catch (err) {
       onError(`Add item network error: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
@@ -259,7 +294,7 @@ function NewItemForm({ cats, onCreated, onError }: {
         <option value="">— Category —</option>
         {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
-      <button type="submit" disabled={busy} className="col-span-2 rounded bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg disabled:opacity-50">
+      <button type="submit" disabled={busy || !name.trim() || !price.trim()} className="col-span-2 rounded bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg disabled:opacity-50">
         {busy ? '…' : 'Add item'}
       </button>
     </form>
