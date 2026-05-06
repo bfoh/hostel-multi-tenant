@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, CreditCard, Wrench, Bell, User } from 'lucide-react'
+import { Home, CreditCard, FileText, Wrench, Bell, User } from 'lucide-react'
 
 type IconAnim = 'bounce' | 'shake' | 'spin' | 'pulse' | 'swing' | 'ring' | 'slide' | 'flip' | 'tilt' | 'pop'
 
@@ -22,6 +22,7 @@ const ANIM_CLASS: Record<IconAnim, string> = {
 const TABS = [
   { href: '/occupant-portal',             label: 'Home',       Icon: Home,       anim: 'pulse'  as IconAnim },
   { href: '/occupant-portal/payments',    label: 'Payments',   Icon: CreditCard, anim: 'flip'   as IconAnim },
+  { href: '/occupant-portal/invoices',    label: 'Invoices',   Icon: FileText,   anim: 'slide'  as IconAnim },
   { href: '/occupant-portal/maintenance', label: 'Requests',   Icon: Wrench,     anim: 'swing'  as IconAnim },
   { href: '/occupant-portal/notices',     label: 'Notices',    Icon: Bell,       anim: 'ring'   as IconAnim },
   { href: '/occupant-portal/profile',     label: 'Profile',    Icon: User,       anim: 'bounce' as IconAnim },

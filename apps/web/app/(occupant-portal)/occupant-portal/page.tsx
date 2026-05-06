@@ -4,7 +4,7 @@ import { getOccupantSession } from '@/lib/auth/occupant-session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
-  BedDouble, CreditCard, Wrench, AlertCircle,
+  BedDouble, CreditCard, FileText, Wrench, AlertCircle,
   CheckCircle2, Clock, XCircle, ChevronRight,
   Bell, ArrowRight, Calendar,
 } from 'lucide-react'
@@ -225,6 +225,7 @@ export default async function OccupantPortalHome() {
         <div className="divide-y divide-slate-100">
           {[
             { href: '/occupant-portal/payments',    icon: CreditCard, label: 'View payment history',    sub: 'Fees paid and outstanding balance'  },
+            { href: '/occupant-portal/invoices',    icon: FileText,   label: 'View invoices',           sub: 'Download tax-compliant receipts'    },
             { href: '/occupant-portal/maintenance',  icon: Wrench,     label: 'Maintenance requests',    sub: 'Track submitted issues'              },
             { href: '/occupant-portal/notices',      icon: Bell,       label: 'Hostel notices',          sub: 'Announcements from management'       },
             { href: '/occupant-portal/profile',      icon: AlertCircle,label: 'My profile',              sub: 'Update your personal information'    },
