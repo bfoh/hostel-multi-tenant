@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { listMaintenanceStaffUserIds } from '@/lib/maintenance/messages'
+import { sendPushToUsers } from '@/lib/push'
 
 const createSchema = z.object({
   title:       z.string().min(3).max(200),
@@ -95,5 +97,17 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Notify maintenance staff (owner/manager/housekeeper) of the new request.
+  // Fire-and-forget so push failures never block the response.
+  const recipients = await listMaintenanceStaffUserIds(tenantId)
+  if (recipients.length > 0) {
+    sendPushToUsers(recipients, {
+      title: 'New maintenance request',
+      body:  `${parsed.data.priority.toUpperCase()} · ${parsed.data.title.slice(0, 80)}`,
+      url:   `/maintenance/${request.id}`,
+    }).catch(err => console.error('[new request push]', err))
+  }
+
   return NextResponse.json({ ok: true, request }, { status: 201 })
 }
