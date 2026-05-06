@@ -304,3 +304,52 @@ Pre-requisites:
 - [ ] Direct GET to `/api/occupant/invoices/<some-other-occupant's-id>/pdf` returns 404 JSON.
 - [ ] Logged-out user navigating to `/occupant-portal/invoices` redirects to `/login`.
 - [ ] An occupant who has been checked out can still see + download invoices for past bookings.
+
+---
+
+## Phase — Real-Time Issue Reporting
+
+Pre-requisites:
+- Test occupant logged in with at least one open `maintenance_request`.
+- A staff account with `manager` or `housekeeper` role for replies.
+
+### Threading
+
+- [ ] Occupant `/occupant-portal/maintenance/[id]` loads with empty thread (or pre-existing messages).
+- [ ] Occupant sends text message → appears in staff `/maintenance/[id]` view within ~1s.
+- [ ] Staff replies → appears in occupant view in ~1s without page refresh.
+- [ ] Both sides see attachments rendered as filename pills; click opens signed URL in new tab.
+- [ ] Body > 2000 chars rejected.
+- [ ] >5 files in single message rejected.
+- [ ] File >5 MB rejected.
+- [ ] Wrong MIME (e.g. .exe renamed .pdf) rejected by bucket policy.
+
+### System messages
+
+- [ ] Staff changes status open → in_progress → system message renders centered as pill in both views.
+- [ ] Status change triggers occupant push notification.
+- [ ] Status change sends SMS to occupant (if Arkesel configured).
+- [ ] Admin priority bump renders system message; push only (no SMS).
+- [ ] Resident "Mark as resolved" → confirm modal → status flips to completed; system message; staff get push.
+- [ ] Admin reopens completed request → status back to open; system message; resident gets push + SMS.
+
+### Notification volume
+
+- [ ] First-ever staff reply: occupant push + SMS.
+- [ ] Subsequent staff replies: push only.
+- [ ] First occupant reply since latest staff message: push to all owner/manager/housekeeper.
+- [ ] Subsequent occupant replies before staff replies: no staff push.
+
+### Auth & access
+
+- [ ] Direct GET `/occupant-portal/maintenance/<another-occupant's-request>` → 404.
+- [ ] Direct POST `/api/occupant/maintenance/<another-occupant's-id>/messages` → 404.
+- [ ] Logged-out → redirect to /login.
+- [ ] Receptionist / accountant / security → 403 on PATCH `/api/maintenance/[id]/priority`.
+- [ ] Resident on a checked-out booking → POST messages 403.
+- [ ] Closed request occupant POST → 409.
+
+### Realtime resilience
+
+- [ ] Disconnect network 30s → reconnect → in-flight staff messages appear.
+- [ ] Two browser tabs → message in tab A appears in tab B within ~1s.

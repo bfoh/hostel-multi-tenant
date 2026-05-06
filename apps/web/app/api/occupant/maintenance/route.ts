@@ -78,10 +78,11 @@ export async function POST(req: NextRequest) {
   if (!ctx.booking) return NextResponse.json({ error: 'No active booking found' }, { status: 400 })
 
   const admin = createAdminClient()
-  const { data: request, error } = await admin
+  const { data: request, error } = await (admin as any)
     .from('maintenance_requests')
     .insert({
       tenant_id:   tenantId,
+      occupant_id: ctx.occupant.id,
       title:       parsed.data.title,
       category:    parsed.data.category,
       priority:    parsed.data.priority,

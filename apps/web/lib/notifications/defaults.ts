@@ -15,6 +15,9 @@ export type EventType =
   | 'bank_draft_submitted'
   | 'bank_draft_approved'
   | 'bank_draft_rejected'
+  | 'maintenance_first_staff_reply'
+  | 'maintenance_status_change'
+  | 'maintenance_reopened'
 
 export type Channel = 'sms' | 'email'
 
@@ -217,5 +220,32 @@ export const DEFAULT_TEMPLATES: TemplateDefault[] = [
       'Hi {{first_name}}, we couldn\'t confirm your bank draft of GHS ' +
       '{{amount}} for {{booking_ref}} ({{hostel_name}}). Reason: {{reason}}. ' +
       'Please re-upload via the resident portal.',
+  },
+
+  // ── Maintenance — first staff reply ───────────────────────────────────────
+  {
+    event_type: 'maintenance_first_staff_reply',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, hostel staff replied to your maintenance request ' +
+      '{{request_id}} at {{hostel_name}}. Open the resident portal to view.',
+  },
+
+  // ── Maintenance — status change ───────────────────────────────────────────
+  {
+    event_type: 'maintenance_status_change',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, your request {{request_id}} at {{hostel_name}} ' +
+      'moved from {{from}} to {{to}}.',
+  },
+
+  // ── Maintenance — reopened ────────────────────────────────────────────────
+  {
+    event_type: 'maintenance_reopened',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, hostel staff reopened your request {{request_id}} ' +
+      'at {{hostel_name}}.',
   },
 ]

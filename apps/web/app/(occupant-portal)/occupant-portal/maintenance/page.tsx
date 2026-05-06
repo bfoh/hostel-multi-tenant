@@ -161,7 +161,7 @@ export default async function MaintenancePage() {
               const status = STATUS_CONFIG[r.status] ?? STATUS_CONFIG.open
               const StatusIcon = status.Icon
               return (
-                <div key={r.id} className="px-5 py-4">
+                <Link key={r.id} href={`/occupant-portal/maintenance/${r.id}`} className="block px-5 py-4 hover:bg-slate-50">
                   <div className="flex items-start gap-3">
                     <div
                       className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
@@ -191,7 +191,7 @@ export default async function MaintenancePage() {
                       )}
                     </div>
                   </div>
-                </div>
+                </Link>
               )
             })}
           </div>
