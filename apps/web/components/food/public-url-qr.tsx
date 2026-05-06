@@ -1,20 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import QRCode from 'qrcode'
+import { useState } from 'react'
 import { Copy, Download, Check } from 'lucide-react'
 
-export function PublicUrlQR({ url, hostelName }: { url: string; hostelName: string }) {
-  const [dataUrl, setDataUrl] = useState<string | null>(null)
-  const [copied,  setCopied]  = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    QRCode.toDataURL(url, { errorCorrectionLevel: 'M', margin: 2, width: 320 })
-      .then(d => { if (!cancelled) setDataUrl(d) })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [url])
+/**
+ * QR data URL is generated server-side (in the page) and passed in as a prop.
+ * Avoids pulling the `qrcode` lib into the client bundle, which had been
+ * blowing up at hydration on /food/menu and breaking every button on the page.
+ */
+export function PublicUrlQR({ url, qrDataUrl, hostelName }: {
+  url:        string
+  qrDataUrl:  string | null
+  hostelName: string
+}) {
+  const [copied, setCopied] = useState(false)
 
   const copy = async () => {
     try {
@@ -32,9 +31,9 @@ export function PublicUrlQR({ url, hostelName }: { url: string; hostelName: stri
       </p>
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">
         <div className="rounded-lg border border-border bg-white p-2">
-          {dataUrl
-            ? <img src={dataUrl} alt={`Order at ${hostelName}`} className="h-40 w-40" />
-            : <div className="h-40 w-40 animate-pulse rounded bg-surface-sunken" />}
+          {qrDataUrl
+            ? <img src={qrDataUrl} alt={`Order at ${hostelName}`} className="h-40 w-40" />
+            : <div className="flex h-40 w-40 items-center justify-center text-[10px] text-text-tertiary">QR unavailable</div>}
         </div>
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2">
@@ -45,8 +44,8 @@ export function PublicUrlQR({ url, hostelName }: { url: string; hostelName: stri
               {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
-          {dataUrl && (
-            <a href={dataUrl} download={`order-qr-${hostelName.replace(/\s+/g, '-').toLowerCase()}.png`}
+          {qrDataUrl && (
+            <a href={qrDataUrl} download={`order-qr-${hostelName.replace(/\s+/g, '-').toLowerCase()}.png`}
               className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-fg hover:bg-brand-hover">
               <Download className="h-3.5 w-3.5" /> Download QR (PNG)
             </a>

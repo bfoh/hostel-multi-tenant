@@ -1,11 +1,20 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import QRCode from 'qrcode'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MenuEditor } from '@/components/food/menu-editor'
 import { PublicUrlQR } from '@/components/food/public-url-qr'
 
 export const metadata: Metadata = { title: 'Menu · Food' }
+
+async function buildQrDataUrl(url: string): Promise<string | null> {
+  try {
+    return await QRCode.toDataURL(url, { errorCorrectionLevel: 'M', margin: 2, width: 320 })
+  } catch {
+    return null
+  }
+}
 
 export default async function FoodMenuPage() {
   const headersList = await headers()
@@ -33,6 +42,9 @@ export default async function FoodMenuPage() {
   const slug     = tenant?.slug ?? ''
   const baseUrl  = tenant?.custom_domain ? `https://${tenant.custom_domain}` : appUrl
   const orderUrl = slug ? `${baseUrl}/order/${slug}` : ''
+  const qrDataUrl = orderUrl && tenant?.food_orders_enabled
+    ? await buildQrDataUrl(orderUrl)
+    : null
 
   return (
     <div className="space-y-4">
@@ -42,7 +54,7 @@ export default async function FoodMenuPage() {
       </header>
 
       {tenant?.food_orders_enabled && orderUrl && (
-        <PublicUrlQR url={orderUrl} hostelName={tenant.name ?? 'Hostel'} />
+        <PublicUrlQR url={orderUrl} qrDataUrl={qrDataUrl} hostelName={tenant.name ?? 'Hostel'} />
       )}
 
       <MenuEditor initialCategories={cats ?? []} initialItems={items ?? []} />
