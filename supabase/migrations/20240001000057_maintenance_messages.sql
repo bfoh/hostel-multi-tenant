@@ -22,11 +22,24 @@ create index if not exists idx_mm_request
 create index if not exists idx_mm_tenant_recent
   on maintenance_messages (tenant_id, created_at desc);
 
--- 2. Denormalized columns on parent
+-- 2. Denormalized columns on parent + explicit occupant link
 alter table maintenance_requests
+  add column if not exists occupant_id     uuid references occupants(id) on delete set null,
   add column if not exists last_message_at timestamptz,
   add column if not exists message_count   int  not null default 0,
   add column if not exists closed_by_kind  text check (closed_by_kind in ('occupant','staff'));
+
+create index if not exists idx_mr_occupant on maintenance_requests (tenant_id, occupant_id);
+
+-- Backfill occupant_id from active booking on the same room
+update maintenance_requests mr
+   set occupant_id = b.occupant_id
+  from bookings b
+ where b.tenant_id = mr.tenant_id
+   and b.room_id   = mr.room_id
+   and b.status in ('checked_in', 'confirmed')
+   and mr.occupant_id is null
+   and mr.room_id is not null;
 
 -- 3. Trigger to maintain last_message_at + message_count
 create or replace function bump_maintenance_request_on_message()
