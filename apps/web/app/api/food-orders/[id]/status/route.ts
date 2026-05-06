@@ -5,6 +5,7 @@ import { requireTenantRole } from '@/lib/auth/tenant-role'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { advanceStatus } from '@/lib/food/orders'
 import { refundFoodOrder } from '@/lib/food/refund'
+import { recordFoodSale, reverseFoodSale } from '@/lib/food/revenue'
 import { sendPushToUsers } from '@/lib/push'
 import { sendFoodOrderReady, sendFoodOrderCancelled } from '@/lib/sms'
 
@@ -84,6 +85,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       refundFoodOrder(order.paystack_reference, order.total_pesewas)
         .catch((err: unknown) => console.error('[food refund]', err))
     }
+    // Defensive — state machine prevents cancel-after-picked-up but keeps the
+    // accounting path clean if a future flow allows it.
+    reverseFoodSale(id, tenantId)
+      .catch((err: unknown) => console.error('[food revenue reverse]', err))
+  }
+
+  if (parsed.data.status === 'picked_up') {
+    recordFoodSale({
+      id,
+      tenant_id:      tenantId,
+      occupant_id:    order.occupant_id ?? null,
+      order_ref:      order.order_ref ?? null,
+      total_pesewas:  order.total_pesewas,
+      payment_method: order.payment_method,
+      customer_kind:  (order.customer_kind ?? 'resident') as 'resident' | 'walk_in' | 'online',
+      picked_up_at:   new Date().toISOString(),
+    }).catch((err: unknown) => console.error('[food revenue record]', err))
   }
 
   return NextResponse.json({ ok: true })

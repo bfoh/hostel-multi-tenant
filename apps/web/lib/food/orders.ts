@@ -116,7 +116,7 @@ export async function advanceStatus(orderId: string, tenantId: string, next: str
   const admin = createAdminClient() as any
   const { data: order } = await admin
     .from('food_orders')
-    .select('id, status, occupant_id, payment_method, paid_at, total_pesewas, paystack_reference, order_ref')
+    .select('id, status, occupant_id, payment_method, paid_at, total_pesewas, paystack_reference, order_ref, customer_kind')
     .eq('id', orderId)
     .eq('tenant_id', tenantId)
     .maybeSingle()
