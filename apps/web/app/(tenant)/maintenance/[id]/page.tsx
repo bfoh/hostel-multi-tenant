@@ -4,8 +4,10 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft, HardHat, MapPin, Clock, Calendar, DollarSign, AlertTriangle } from 'lucide-react'
 
 import { getMaintenanceById, getContractors } from '@/lib/data/maintenance'
+import { getThread } from '@/lib/maintenance/messages'
 import { formatDate, formatGHS } from '@/lib/utils'
 import { MaintenanceEditPanel } from '@/components/maintenance/maintenance-edit-panel'
+import { ConversationView } from '@/components/maintenance/conversation-view'
 
 export const metadata: Metadata = { title: 'Work Order' }
 
@@ -50,6 +52,8 @@ export default async function MaintenanceDetailPage({
 
   if (!req) notFound()
 
+  const thread = await getThread(req.id, req.tenant_id)
+
   const room       = Array.isArray(req.room)       ? req.room[0]       : req.room
   const contractor = Array.isArray(req.contractor) ? req.contractor[0] : req.contractor
 
@@ -88,6 +92,14 @@ export default async function MaintenanceDetailPage({
           )}
         </div>
       </div>
+
+      {/* ── Conversation thread ──────────────────────────────────── */}
+      <ConversationView
+        requestId={req.id}
+        tenantId={req.tenant_id}
+        initialThread={thread}
+        initialStatus={req.status}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ── Left — details ───────────────────────────────────────── */}
