@@ -80,19 +80,23 @@ export default async function MaintenancePage() {
 
   const room = booking ? (Array.isArray(booking.rooms) ? booking.rooms[0] : booking.rooms) as any : null
 
-  // Fetch maintenance requests for this room
-  const { data: requestsRaw } = booking?.room_id ? await admin
+  // Fetch maintenance requests scoped to this occupant.
+  // After migration 057, requests carry occupant_id directly; we no longer
+  // gate on active booking so residents keep visibility into past tickets
+  // even after checkout. Creating new requests still requires an active
+  // booking (enforced on POST /api/occupant/maintenance).
+  const { data: requestsRaw } = await (admin as any)
     .from('maintenance_requests')
     .select('id, title, category, priority, status, description, created_at, resolved_at')
     .eq('tenant_id', tenantId)
-    .eq('room_id', booking.room_id)
+    .eq('occupant_id', occupantId)
     .order('created_at', { ascending: false })
-    .limit(50) : { data: [] }
+    .limit(50)
 
-  const requests = requestsRaw ?? []
-  const open        = requests.filter(r => r.status === 'open').length
-  const in_progress = requests.filter(r => r.status === 'in_progress').length
-  const resolved    = requests.filter(r => r.status === 'completed' || r.status === 'cancelled').length
+  const requests = (requestsRaw ?? []) as any[]
+  const open        = requests.filter((r: any) => r.status === 'open').length
+  const in_progress = requests.filter((r: any) => r.status === 'in_progress').length
+  const resolved    = requests.filter((r: any) => r.status === 'completed' || r.status === 'cancelled').length
 
   return (
     <div className="space-y-4">
@@ -132,16 +136,23 @@ export default async function MaintenancePage() {
         </div>
       )}
 
-      {/* ── No booking state ─────────────────────────────────────── */}
-      {!booking && (
+      {/* ── No booking + no past records ─────────────────────────── */}
+      {!booking && requests.length === 0 && (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
           <Wrench className="mx-auto h-8 w-8 text-slate-300 mb-2" />
           <p className="text-sm font-medium text-slate-500">No active booking</p>
-          <p className="text-xs text-slate-400 mt-0.5">Maintenance requests are linked to your room.</p>
+          <p className="text-xs text-slate-400 mt-0.5">New maintenance requests require an active booking.</p>
         </div>
       )}
 
-      {/* ── Request list ─────────────────────────────────────────── */}
+      {/* ── No booking but past records exist ────────────────────── */}
+      {!booking && requests.length > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-amber-50 px-4 py-2.5 text-[11px] text-amber-700">
+          No active booking — showing past request history. New requests need an active booking.
+        </div>
+      )}
+
+      {/* ── Active booking, no requests yet ──────────────────────── */}
       {booking && requests.length === 0 && (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
           <CheckCircle2 className="mx-auto h-8 w-8 text-slate-300 mb-2" />
@@ -156,7 +167,7 @@ export default async function MaintenancePage() {
             <h2 className="text-sm font-semibold text-slate-800">Your Requests</h2>
           </div>
           <div className="divide-y divide-slate-100">
-            {requests.map(r => {
+            {requests.map((r: any) => {
               const Icon   = CATEGORY_ICON[r.category] ?? MoreHorizontal
               const status = STATUS_CONFIG[r.status] ?? STATUS_CONFIG.open
               const StatusIcon = status.Icon
