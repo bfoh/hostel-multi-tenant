@@ -38,7 +38,7 @@ export async function GET(
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, phone, email, address')
+    .select('name, tagline, contact_phone, contact_email, address_line1, address_city, address_region, website_url, logo_url, primary_color')
     .eq('id', tenantId)
     .single()
 

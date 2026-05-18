@@ -1,7 +1,9 @@
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 
 const styles = StyleSheet.create({
   page:        { fontFamily: 'Helvetica', fontSize: 10, color: '#1a1a1a', padding: 56 },
+  headerBlock: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 4 },
+  logo:        { width: 56, height: 56, objectFit: 'contain' },
   title:       { fontSize: 18, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginBottom: 4 },
   subtitle:    { fontSize: 10, textAlign: 'center', color: '#6b7280', marginBottom: 28 },
   divider:     { borderBottomWidth: 1, borderBottomColor: '#d1d5db', marginVertical: 14 },
@@ -29,19 +31,29 @@ export function LeaseDocument({ booking, tenant }: Props) {
   const today = new Date().toLocaleDateString('en-GH', { dateStyle: 'long' })
   const occName = occ ? `${occ.first_name} ${occ.other_names ? occ.other_names + ' ' : ''}${occ.last_name}` : 'Occupant'
 
+  const tenantAddress = [tenant?.address_line1, tenant?.address_city, tenant?.address_region]
+    .filter(Boolean)
+    .join(', ')
+  const tenantContact = [tenant?.contact_phone, tenant?.contact_email]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
     <Document title={`Tenancy Agreement — ${booking.booking_ref}`} author={tenant?.name ?? 'Hostel'}>
       <Page size="A4" style={styles.page}>
         {/* Header */}
-        <Text style={styles.title}>{tenant?.name ?? 'HOSTEL'}</Text>
+        <View style={styles.headerBlock}>
+          {tenant?.logo_url && <Image src={tenant.logo_url} style={styles.logo} />}
+          <Text style={styles.title}>{tenant?.name ?? 'HOSTEL'}</Text>
+        </View>
         <Text style={styles.subtitle}>TENANCY AGREEMENT / ACCOMMODATION CONTRACT</Text>
         <View style={styles.divider} />
 
         {/* Parties */}
         <Text style={styles.sectionHead}>PARTIES</Text>
         <View style={styles.row}><Text style={styles.label}>Landlord / Manager</Text><Text style={styles.value}>{tenant?.name ?? '—'}</Text></View>
-        <View style={styles.row}><Text style={styles.label}>Contact</Text><Text style={styles.value}>{[tenant?.phone, tenant?.email].filter(Boolean).join(' · ') || '—'}</Text></View>
-        <View style={styles.row}><Text style={styles.label}>Address</Text><Text style={styles.value}>{tenant?.address ?? '—'}</Text></View>
+        <View style={styles.row}><Text style={styles.label}>Contact</Text><Text style={styles.value}>{tenantContact || '—'}</Text></View>
+        <View style={styles.row}><Text style={styles.label}>Address</Text><Text style={styles.value}>{tenantAddress || '—'}</Text></View>
 
         <View style={styles.divider} />
         <View style={styles.row}><Text style={styles.label}>Tenant / Occupant</Text><Text style={styles.value}>{occName}</Text></View>

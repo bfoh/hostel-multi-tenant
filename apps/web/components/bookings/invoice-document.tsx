@@ -1,5 +1,5 @@
 import {
-  Document, Page, Text, View, StyleSheet, Font,
+  Document, Page, Text, View, StyleSheet, Font, Image,
 } from '@react-pdf/renderer'
 
 const GHS = (p: number) => `GH₵ ${(p / 100).toFixed(2)}`
@@ -7,7 +7,10 @@ const GHS = (p: number) => `GH₵ ${(p / 100).toFixed(2)}`
 const styles = StyleSheet.create({
   page:        { fontFamily: 'Helvetica', fontSize: 10, color: '#1a1a1a', padding: 48 },
   header:      { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32 },
-  hostelName:  { fontSize: 20, fontFamily: 'Helvetica-Bold', color: '#1d4ed8', marginBottom: 4 },
+  hostelBlock: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  logo:        { width: 56, height: 56, objectFit: 'contain' },
+  hostelName:  { fontSize: 20, fontFamily: 'Helvetica-Bold', marginBottom: 4 },
+  hostelTagline:{ fontSize: 9, color: '#6b7280', marginBottom: 4 },
   hostelMeta:  { fontSize: 9, color: '#6b7280', lineHeight: 1.5 },
   invoiceTag:  { fontSize: 28, fontFamily: 'Helvetica-Bold', color: '#e5e7eb', textAlign: 'right' },
   invoiceRef:  { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#374151', textAlign: 'right', marginTop: 4 },
@@ -46,21 +49,51 @@ export function InvoiceDocument({ booking, tenant }: Props) {
   const balance = booking.final_amount - booking.paid_amount
 
   const METHOD: Record<string, string> = {
-    momo_mtn: 'MTN MoMo', momo_vodafone: 'Vodafone Cash',
-    momo_airteltigo: 'AirtelTigo Money', cash: 'Cash',
-    bank_transfer: 'Bank Transfer', card: 'Card', cheque: 'Cheque',
+    momo_mtn:        'MTN Mobile Money',
+    momo_vodafone:   'Telecel Cash',
+    momo_airteltigo: 'AirtelTigo Money',
+    cash:            'Cash',
+    bank_transfer:   'Bank Transfer',
+    card:            'Card',
+    cheque:          'Cheque',
   }
+
+  function methodLabel(raw: string | null | undefined): string {
+    if (!raw) return 'Payment'
+    return METHOD[raw] ?? raw.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  }
+
+  const tenantAddress = [tenant?.address_line1, tenant?.address_city, tenant?.address_region]
+    .filter(Boolean)
+    .join(', ')
+  const brandColor = tenant?.primary_color
+    && /^#?[0-9a-fA-F]{6}$/.test(tenant.primary_color.replace('#', ''))
+    ? (tenant.primary_color.startsWith('#') ? tenant.primary_color : `#${tenant.primary_color}`)
+    : '#1d4ed8'
 
   return (
     <Document title={`Invoice ${booking.booking_ref}`} author={tenant?.name ?? 'GH Hostels'}>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.hostelName}>{tenant?.name ?? 'Hostel'}</Text>
-            <Text style={styles.hostelMeta}>
-              {[tenant?.phone, tenant?.email, tenant?.address].filter(Boolean).join('\n')}
-            </Text>
+          <View style={styles.hostelBlock}>
+            {tenant?.logo_url && (
+              // @react-pdf supports remote URLs for Image
+              <Image src={tenant.logo_url} style={styles.logo} />
+            )}
+            <View>
+              <Text style={[styles.hostelName, { color: brandColor }]}>
+                {tenant?.name ?? 'Hostel'}
+              </Text>
+              {tenant?.tagline && (
+                <Text style={styles.hostelTagline}>{tenant.tagline}</Text>
+              )}
+              <Text style={styles.hostelMeta}>
+                {[tenant?.contact_phone, tenant?.contact_email, tenantAddress, tenant?.website_url]
+                  .filter(Boolean)
+                  .join('\n')}
+              </Text>
+            </View>
           </View>
           <View>
             <Text style={styles.invoiceTag}>INVOICE</Text>
@@ -142,8 +175,12 @@ export function InvoiceDocument({ booking, tenant }: Props) {
             {payments.map((p: any, i: number) => (
               <View key={i} style={styles.paymentRow}>
                 <View>
-                  <Text>{METHOD[p.method] ?? p.method}</Text>
-                  {p.reference && <Text style={{ color: '#9ca3af', fontSize: 8 }}>{p.reference}</Text>}
+                  <Text>{methodLabel(p.method)}</Text>
+                  {p.reference && (
+                    <Text style={{ color: '#9ca3af', fontSize: 8 }}>
+                      Ref: {p.reference}
+                    </Text>
+                  )}
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={{ color: '#16a34a', fontFamily: 'Helvetica-Bold' }}>{GHS(p.amount)}</Text>
