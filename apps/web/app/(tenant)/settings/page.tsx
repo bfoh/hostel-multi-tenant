@@ -12,7 +12,7 @@ import { PushToggle } from '@/components/settings/push-toggle'
 import { BillingClient } from '@/components/settings/billing-client'
 import { listPlatformPlans, findPlanByCode } from '@/lib/platform-plans'
 import { listSubscriptions } from '@/lib/paystack'
-import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode } from 'lucide-react'
+import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode, ChevronRight, AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Settings' }
 export const dynamic = 'force-dynamic'
@@ -176,6 +176,40 @@ export default async function SettingsPage({
           </p>
         </div>
       </div>
+
+      {/* Payouts CTA — surfaces the /settings/payouts page (it is not a tab
+          because subaccount setup is a multi-step flow on its own route).
+          Style turns warning when no subaccount is connected so guest
+          payments fall back to "pay at front desk" until fixed. */}
+      <Link
+        href="/settings/payouts"
+        className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${
+          tenant?.paystack_subaccount_code
+            ? 'border-border bg-surface hover:bg-surface-raised'
+            : 'border-warning/30 bg-warning-subtle hover:bg-warning-subtle/80'
+        }`}
+      >
+        <div
+          className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+            tenant?.paystack_subaccount_code ? 'bg-success-subtle text-success' : 'bg-warning text-warning-fg'
+          }`}
+        >
+          {tenant?.paystack_subaccount_code ? (
+            <CheckCircle2 className="h-5 w-5" />
+          ) : (
+            <AlertTriangle className="h-5 w-5" />
+          )}
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-text-primary">Payouts</p>
+          <p className="text-xs text-text-secondary">
+            {tenant?.paystack_subaccount_code
+              ? 'Bank account connected. Online payments settle to your account.'
+              : 'Connect your bank account to accept online payments and enable Paystack checkout.'}
+          </p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-text-tertiary" />
+      </Link>
 
       {/* Tab bar */}
       <div className="flex gap-1 rounded-xl border border-border bg-surface-sunken p-1">
