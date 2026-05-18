@@ -4,6 +4,9 @@ import { Plus, CalendarCheck, LayoutGrid, Upload } from 'lucide-react'
 
 import { getBookings } from '@/lib/data/bookings'
 import { BookingsBulkList } from '@/components/bookings/bookings-bulk-list'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getServerTenantId } from '@/lib/auth/tenant'
+import { Inbox } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Bookings' }
 
@@ -25,6 +28,20 @@ export default async function BookingsPage({
   const bookings = await getBookings({ status })
 
   const activeStatus = status ?? 'all'
+
+  // Self check-in pending count
+  let pendingSelfCheckins = 0
+  const tenantId = await getServerTenantId()
+  if (tenantId) {
+    const admin = createAdminClient()
+    const { count } = await admin
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .not('self_checkin_submitted_at', 'is', null)
+      .is('self_checkin_confirmed_at', null)
+    pendingSelfCheckins = count ?? 0
+  }
 
   // Normalise bookings for client component
   const rows = bookings.map((b) => {
@@ -64,6 +81,18 @@ export default async function BookingsPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/bookings/self-checkins"
+            className="relative flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
+          >
+            <Inbox className="h-4 w-4" />
+            Self check-ins
+            {pendingSelfCheckins > 0 && (
+              <span className="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-semibold text-white">
+                {pendingSelfCheckins}
+              </span>
+            )}
+          </Link>
           <Link
             href="/bookings/calendar"
             className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"

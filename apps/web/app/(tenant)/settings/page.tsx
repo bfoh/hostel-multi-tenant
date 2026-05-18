@@ -12,7 +12,7 @@ import { PushToggle } from '@/components/settings/push-toggle'
 import { BillingClient } from '@/components/settings/billing-client'
 import { listPlatformPlans, findPlanByCode } from '@/lib/platform-plans'
 import { listSubscriptions } from '@/lib/paystack'
-import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt } from 'lucide-react'
+import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Settings' }
 export const dynamic = 'force-dynamic'
@@ -332,6 +332,16 @@ export default async function SettingsPage({
                     <div>
                       <p className="font-medium text-text-primary">Notification Templates</p>
                       <p className="text-xs text-text-secondary">Customise SMS and email messages sent to occupants</p>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/settings/self-checkin"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <QrCode className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Self Check-in QR</p>
+                      <p className="text-xs text-text-secondary">Print a QR code so guests can self check-in at the front desk</p>
                     </div>
                   </Link>
                   <Link
