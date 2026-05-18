@@ -80,42 +80,62 @@ export async function POST(req: NextRequest) {
 
   if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
 
+  const input = parsed.data
+  const t     = tenant
+
+  async function createFresh() {
+    const sa = await createSubaccount({
+      businessName:         t.name,
+      bankCode:             input.bank_code,
+      accountNumber:        input.account_number,
+      percentageCharge:     0,
+      primaryContactEmail:  (t as any).contact_email ?? undefined,
+      primaryContactPhone:  (t as any).contact_phone ?? undefined,
+      primaryContactName:   t.name,
+      description:          `GH Hostels payouts for ${t.name}`,
+      metadata:             { tenant_id: tenantId },
+    })
+    return sa.subaccount_code
+  }
+
   try {
     let subaccountCode: string
 
-    if (tenant.paystack_subaccount_code) {
-      // Update existing subaccount (bank change)
-      const sa = await updateSubaccount(tenant.paystack_subaccount_code, {
-        bankCode:         parsed.data.bank_code,
-        accountNumber:    parsed.data.account_number,
-        percentageCharge: 0,
-        active:           true,
-      })
-      subaccountCode = sa.subaccount_code
+    if (t.paystack_subaccount_code) {
+      // Update existing subaccount (bank change). Subaccount codes are
+      // key-scoped in Paystack: a code minted with sk_test_ doesn't exist
+      // under sk_live_ and vice versa. If the update fails because the
+      // stored code isn't recognised by the current key, fall back to
+      // creating a fresh subaccount.
+      try {
+        const sa = await updateSubaccount(t.paystack_subaccount_code, {
+          bankCode:         input.bank_code,
+          accountNumber:    input.account_number,
+          percentageCharge: 0,
+          active:           true,
+        })
+        subaccountCode = sa.subaccount_code
+      } catch (err: any) {
+        const msg = String(err?.message ?? '').toLowerCase()
+        const stale = msg.includes('not found')
+                   || msg.includes('invalid subaccount')
+                   || msg.includes('does not exist')
+                   || msg.includes('no record')
+        if (!stale) throw err
+        subaccountCode = await createFresh()
+      }
     } else {
-      // Create fresh
-      const sa = await createSubaccount({
-        businessName:         tenant.name,
-        bankCode:             parsed.data.bank_code,
-        accountNumber:        parsed.data.account_number,
-        percentageCharge:     0,
-        primaryContactEmail:  (tenant as any).contact_email ?? undefined,
-        primaryContactPhone:  (tenant as any).contact_phone ?? undefined,
-        primaryContactName:   tenant.name,
-        description:          `GH Hostels payouts for ${tenant.name}`,
-        metadata:             { tenant_id: tenantId },
-      })
-      subaccountCode = sa.subaccount_code
+      subaccountCode = await createFresh()
     }
 
     const { error: updateErr } = await admin
       .from('tenants')
       .update({
         paystack_subaccount_code:  subaccountCode,
-        paystack_bank_code:        parsed.data.bank_code,
-        paystack_bank_account_no:  parsed.data.account_number,
-        paystack_settlement_bank:  parsed.data.settlement_bank,
-        paystack_account_name:     parsed.data.account_name,
+        paystack_bank_code:        input.bank_code,
+        paystack_bank_account_no:  input.account_number,
+        paystack_settlement_bank:  input.settlement_bank,
+        paystack_account_name:     input.account_name,
         paystack_connected_at:     new Date().toISOString(),
       })
       .eq('id', tenantId)
