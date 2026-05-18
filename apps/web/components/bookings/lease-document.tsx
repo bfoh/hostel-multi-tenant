@@ -20,7 +20,10 @@ const styles = StyleSheet.create({
   footer:      { position: 'absolute', bottom: 32, left: 56, right: 56, textAlign: 'center', fontSize: 8, color: '#9ca3af' },
 })
 
-function GHS(p: number) { return `GH₵ ${(p / 100).toFixed(2)}` }
+// ISO 4217 code — see InvoiceDocument for full rationale.
+function GHS(p: number) {
+  return `GHS ${(p / 100).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
 interface Props { booking: any; tenant: any }
 

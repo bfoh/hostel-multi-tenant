@@ -108,8 +108,12 @@ const s = StyleSheet.create({
 
 /* ── Helpers ──────────────────────────────────────────────────────────── */
 
+// ISO 4217 code (GHS) — the U+20B5 cedi sign is not in @react-pdf's
+// standard fonts (Helvetica/Times/Courier) and renders as a fallback
+// glyph (e.g. "GHµ ..."). Plain "GHS" is the standard form on Ghana
+// commercial invoices.
 function ghs(p: number) {
-  return `GH₵ ${(p / 100).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `GHS ${(p / 100).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function dt(d: string) {

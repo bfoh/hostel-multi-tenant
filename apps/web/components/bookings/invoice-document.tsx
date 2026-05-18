@@ -2,7 +2,12 @@ import {
   Document, Page, Text, View, StyleSheet, Font, Image,
 } from '@react-pdf/renderer'
 
-const GHS = (p: number) => `GH₵ ${(p / 100).toFixed(2)}`
+// Use ISO 4217 code (GHS) on PDFs — the U+20B5 cedi sign is not in
+// any of @react-pdf's standard fonts (Helvetica/Times/Courier) and
+// renders as a fallback glyph ("GHµ ..."). Plain "GHS" is the
+// standard form on Ghanaian commercial invoices.
+const GHS = (p: number) =>
+  `GHS ${(p / 100).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const styles = StyleSheet.create({
   page:        { fontFamily: 'Helvetica', fontSize: 10, color: '#1a1a1a', padding: 48 },
