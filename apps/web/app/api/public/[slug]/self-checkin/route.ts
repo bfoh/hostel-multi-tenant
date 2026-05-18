@@ -234,7 +234,7 @@ export async function POST(
   // ── Category + available room ──────────────────────────────────
   const { data: category } = await admin
     .from('room_categories')
-    .select('id, name, base_rate, rate_unit, rooms(id, status)')
+    .select('id, name, base_rate, rate_unit')
     .eq('id', d.category_id)
     .eq('tenant_id', tenant.id)
     .eq('is_active', true)
@@ -244,8 +244,20 @@ export async function POST(
     return NextResponse.json({ error: 'Selected room type not available' }, { status: 404 })
   }
 
-  const rooms = Array.isArray(category.rooms) ? category.rooms : []
-  const availableRoom = rooms.find((r: { id: string; status: string }) => r.status === 'available')
+  // Pick a room with at least one free bed in this category. Bed availability
+  // is derived from active bookings vs category capacity (room_occupancy_v),
+  // not from rooms.status — rooms.status is now a manual override only.
+  const { data: candidates } = await admin
+    .from('room_occupancy_v')
+    .select('room_id, free_beds, manual_status')
+    .eq('tenant_id', tenant.id)
+    .eq('category_id', d.category_id)
+    .gt('free_beds', 0)
+    .order('beds_taken', { ascending: false })
+    .order('room_id',    { ascending: true })
+    .limit(1)
+
+  const availableRoom = candidates?.[0]
   if (!availableRoom) {
     return NextResponse.json({ error: 'No rooms available in this category' }, { status: 409 })
   }
@@ -261,7 +273,7 @@ export async function POST(
     .insert({
       tenant_id:                 tenant.id,
       occupant_id:               occupantId,
-      room_id:                   availableRoom.id,
+      room_id:                   availableRoom.room_id,
       booking_ref:               bookingRef,
       check_in_date:             d.check_in_date,
       check_out_date:            d.check_out_date,
@@ -284,8 +296,9 @@ export async function POST(
     return NextResponse.json({ error: bookErr?.message ?? 'Failed to create booking' }, { status: 500 })
   }
 
-  // Reserve the room so it doesn't get double-booked
-  await admin.from('rooms').update({ status: 'reserved' }).eq('id', availableRoom.id)
+  // No rooms.status mutation: the booking row itself holds the bed. Effective
+  // occupancy is derived (room_occupancy_v). Reserving the room would mask
+  // remaining free beds in 2/3/4-in-a-room categories.
 
   // ── Paystack hosted redirect ───────────────────────────────────
   if (!process.env.PAYSTACK_SECRET_KEY) {

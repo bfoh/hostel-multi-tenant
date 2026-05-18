@@ -11,6 +11,7 @@ export const metadata: Metadata = { title: 'Rooms' }
 
 const ROOM_STATUS_STYLES: Record<string, string> = {
   available:   'bg-success-subtle text-success border-success/20',
+  partial:     'bg-warning-subtle text-warning-fg border-warning/20',
   occupied:    'bg-brand-subtle text-brand border-brand/20',
   reserved:    'bg-warning-subtle text-warning-fg border-warning/20',
   maintenance: 'bg-danger-subtle text-danger border-danger/20',
@@ -29,9 +30,9 @@ export default async function RoomsPage() {
 
   const summary = {
     total:       rooms.length,
-    available:   rooms.filter((r) => r.status === 'available').length,
-    occupied:    rooms.filter((r) => r.status === 'occupied').length,
-    maintenance: rooms.filter((r) => r.status === 'maintenance').length,
+    available:   rooms.filter((r) => r.effectiveStatus === 'available' || r.effectiveStatus === 'partial').length,
+    occupied:    rooms.filter((r) => r.effectiveStatus === 'occupied').length,
+    maintenance: rooms.filter((r) => r.effectiveStatus === 'maintenance').length,
   }
 
   return (
@@ -135,10 +136,12 @@ export default async function RoomsPage() {
                     <DeleteRoomButton id={room.id} label={`Room ${room.room_number}`} />
                     <span
                       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-                        ROOM_STATUS_STYLES[room.status] ?? 'bg-surface-sunken text-text-secondary border-border'
+                        ROOM_STATUS_STYLES[room.effectiveStatus] ?? 'bg-surface-sunken text-text-secondary border-border'
                       }`}
                     >
-                      {room.status.replace('_', ' ')}
+                      {room.effectiveStatus === 'partial'
+                        ? `${room.bedsTaken}/${room.capacity} filled`
+                        : room.effectiveStatus.replace('_', ' ')}
                     </span>
                   </div>
                 </div>

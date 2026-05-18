@@ -41,27 +41,37 @@ export default async function SelfCheckinPage({
     p_max_age_minutes: 30,
   })
 
-  // Categories with at least one available room
+  // Categories with at least one free bed. Bed counts are derived from
+  // room_occupancy_v (active bookings vs category capacity), not from
+  // rooms.status, so 2/3/4-in-a-room categories report correctly when
+  // partially filled.
   const { data: cats } = await admin
     .from('room_categories')
-    .select('id, name, description, base_rate, rate_unit, rooms(id, status)')
+    .select('id, name, description, base_rate, rate_unit')
     .eq('tenant_id', tenant.id)
     .eq('is_active', true)
     .order('base_rate', { ascending: true })
 
+  const { data: occupancy } = await admin
+    .from('room_occupancy_v')
+    .select('category_id, free_beds')
+    .eq('tenant_id', tenant.id)
+
+  const freeByCategory = new Map<string, number>()
+  for (const row of occupancy ?? []) {
+    const key = row.category_id as string
+    freeByCategory.set(key, (freeByCategory.get(key) ?? 0) + (row.free_beds as number))
+  }
+
   const categories = (cats ?? [])
-    .map((c) => {
-      const rooms = Array.isArray(c.rooms) ? c.rooms : []
-      const available = rooms.filter((r: { status: string }) => r.status === 'available').length
-      return {
-        id:          c.id,
-        name:        c.name,
-        description: c.description as string | null,
-        base_rate:   c.base_rate as number,
-        rate_unit:   c.rate_unit as string,
-        available,
-      }
-    })
+    .map((c) => ({
+      id:          c.id,
+      name:        c.name,
+      description: c.description as string | null,
+      base_rate:   c.base_rate as number,
+      rate_unit:   c.rate_unit as string,
+      available:   freeByCategory.get(c.id) ?? 0,
+    }))
     .filter((c) => c.available > 0)
 
   return (

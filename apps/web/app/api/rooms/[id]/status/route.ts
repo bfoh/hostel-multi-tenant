@@ -3,8 +3,12 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
+// Manual overrides only. 'occupied' and 'reserved' are derived from
+// active bookings vs category capacity (room_occupancy_v) and must not
+// be set by hand — that would lie about bed availability for
+// multi-occupancy rooms (2/3/4-in-a-room).
 const schema = z.object({
-  status: z.enum(['available', 'occupied', 'reserved', 'maintenance', 'blocked']),
+  status: z.enum(['available', 'maintenance', 'blocked']),
 })
 
 export async function PATCH(

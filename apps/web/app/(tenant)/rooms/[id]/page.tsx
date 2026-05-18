@@ -100,19 +100,23 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
               <Row label="Status">
                 <span
                   className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${
-                    room.status === 'available' ? 'bg-success-subtle text-success border-success/20'
-                    : room.status === 'occupied' ? 'bg-brand-subtle text-brand border-brand/20'
-                    : room.status === 'maintenance' ? 'bg-danger-subtle text-danger border-danger/20'
+                    room.effectiveStatus === 'available' ? 'bg-success-subtle text-success border-success/20'
+                    : room.effectiveStatus === 'partial' ? 'bg-warning-subtle text-warning-fg border-warning/20'
+                    : room.effectiveStatus === 'occupied' ? 'bg-brand-subtle text-brand border-brand/20'
+                    : room.effectiveStatus === 'maintenance' ? 'bg-danger-subtle text-danger border-danger/20'
                     : 'bg-surface-sunken text-text-secondary border-border'
                   }`}
                 >
-                  {room.status}
+                  {room.effectiveStatus === 'partial'
+                    ? `${room.bedsTaken}/${category?.capacity ?? 0} filled`
+                    : room.effectiveStatus}
                 </span>
               </Row>
               {category && (
                 <>
                   <Row label="Type">{category.name}</Row>
-                  <Row label="Capacity">{category.capacity} person{category.capacity !== 1 ? 's' : ''}</Row>
+                  <Row label="Capacity">{category.capacity} bed{category.capacity !== 1 ? 's' : ''}</Row>
+                  <Row label="Beds taken">{room.bedsTaken} / {category.capacity}</Row>
                   <Row label="Rate">
                     <span className="currency-amount">
                       {formatGHS(category.base_rate)}/{category.rate_unit}
@@ -144,7 +148,7 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
           </Card>
 
           {/* Quick status actions */}
-          <RoomStatusActions roomId={id} currentStatus={room.status} />
+          <RoomStatusActions roomId={id} currentStatus={room.effectiveStatus} />
 
           {/* Amenities */}
           {category?.amenities && category.amenities.length > 0 && (

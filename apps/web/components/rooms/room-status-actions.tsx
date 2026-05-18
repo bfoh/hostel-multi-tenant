@@ -4,12 +4,21 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
+// 'occupied' and 'reserved' are derived from bookings, not toggled here.
+// Only manual-override transitions are exposed.
 const TRANSITIONS: Record<string, { label: string; next: string; style: string }[]> = {
-  available:   [{ label: 'Mark as Maintenance', next: 'maintenance', style: 'border border-border text-text-primary hover:bg-surface-raised' }],
-  occupied:    [{ label: 'Mark Checkout Pending', next: 'available', style: 'border border-border text-text-primary hover:bg-surface-raised' }],
-  reserved:    [{ label: 'Mark Available', next: 'available', style: 'border border-border text-text-primary hover:bg-surface-raised' }],
+  available:   [
+    { label: 'Mark as Maintenance', next: 'maintenance', style: 'border border-border text-text-primary hover:bg-surface-raised' },
+    { label: 'Block Room',          next: 'blocked',     style: 'border border-border text-text-primary hover:bg-surface-raised' },
+  ],
+  partial:     [
+    { label: 'Mark as Maintenance', next: 'maintenance', style: 'border border-border text-text-primary hover:bg-surface-raised' },
+  ],
+  occupied:    [
+    { label: 'Mark as Maintenance', next: 'maintenance', style: 'border border-border text-text-primary hover:bg-surface-raised' },
+  ],
   maintenance: [{ label: 'Mark Available', next: 'available', style: 'bg-success text-success-fg hover:opacity-90' }],
-  blocked:     [{ label: 'Unblock Room', next: 'available', style: 'bg-brand text-brand-fg hover:bg-brand-hover' }],
+  blocked:     [{ label: 'Unblock Room',   next: 'available', style: 'bg-brand text-brand-fg hover:bg-brand-hover' }],
 }
 
 interface Props {
