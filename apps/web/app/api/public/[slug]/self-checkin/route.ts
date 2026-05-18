@@ -149,17 +149,43 @@ export async function POST(
   }
 
   // ── Upload Ghana Card images ───────────────────────────────────
-  async function uploadCard(file: File, side: 'front' | 'back'): Promise<string | null> {
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+  function extFor(file: File): string {
+    const fromName = file.name.includes('.') ? file.name.split('.').pop()?.toLowerCase() : null
+    if (fromName && /^[a-z0-9]{2,5}$/.test(fromName)) return fromName
+    // Fallback from MIME type
+    if (file.type === 'image/png') return 'png'
+    if (file.type === 'image/webp') return 'webp'
+    return 'jpg'
+  }
+
+  async function uploadCard(
+    file: File,
+    side: 'front' | 'back',
+  ): Promise<{ id: string } | { error: string }> {
+    const ext  = extFor(file)
     const path = `${tenant!.id}/${occupantId}/ghana-card-${side}-${Date.now()}.${ext}`
+
+    // Storage upload: pass an ArrayBuffer so we don't depend on Node fetch
+    // streaming the File body cleanly (some runtimes choke on raw File here).
+    const buffer = Buffer.from(await file.arrayBuffer())
+
     const { error: upErr } = await admin.storage
       .from('occupant-documents')
-      .upload(path, file, { contentType: file.type, upsert: false })
-    if (upErr) return null
+      .upload(path, buffer, {
+        contentType: file.type || 'image/jpeg',
+        upsert: false,
+      })
+    if (upErr) {
+      console.error('[self-checkin] storage upload failed', { side, path, error: upErr })
+      return { error: `Storage upload failed: ${upErr.message}` }
+    }
 
-    const { data: signed } = await admin.storage
+    const { data: signed, error: signErr } = await admin.storage
       .from('occupant-documents')
       .createSignedUrl(path, 60 * 60 * 24 * 365)
+    if (signErr) {
+      console.error('[self-checkin] signed url failed', { side, path, error: signErr })
+    }
 
     const { data: doc, error: docErr } = await (admin.from('occupant_documents') as any)
       .insert({
@@ -169,24 +195,35 @@ export async function POST(
         file_name:     `ghana-card-${side}.${ext}`,
         file_url:      signed?.signedUrl ?? path,
         file_size:     file.size,
-        mime_type:     file.type,
+        mime_type:     file.type || 'image/jpeg',
         notes:         `Self check-in upload (${side})`,
       })
       .select('id')
       .single()
 
-    if (docErr || !doc) return null
-    return doc.id as string
+    if (docErr || !doc) {
+      console.error('[self-checkin] occupant_documents insert failed', { side, error: docErr })
+      return { error: `Document record insert failed: ${docErr?.message ?? 'unknown'}` }
+    }
+
+    return { id: doc.id as string }
   }
 
-  const [frontId, backId] = await Promise.all([
+  const [frontResult, backResult] = await Promise.all([
     uploadCard(front, 'front'),
     uploadCard(back, 'back'),
   ])
 
-  if (!frontId || !backId) {
-    return NextResponse.json({ error: 'Failed to upload Ghana Card images' }, { status: 500 })
+  if ('error' in frontResult || 'error' in backResult) {
+    const detail = 'error' in frontResult ? frontResult.error : (backResult as { error: string }).error
+    return NextResponse.json(
+      { error: `Failed to upload Ghana Card images. ${detail}` },
+      { status: 500 },
+    )
   }
+
+  const frontId = frontResult.id
+  const backId  = backResult.id
 
   // ── Category + available room ──────────────────────────────────
   const { data: category } = await admin
