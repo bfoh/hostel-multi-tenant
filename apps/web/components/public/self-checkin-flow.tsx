@@ -140,8 +140,15 @@ export function SelfCheckinFlow({ tenant, categories }: Props) {
         return
       }
 
-      // No online payment configured — go straight to success
-      router.push(`/checkin/${tenant.slug}/success?ref=${encodeURIComponent(json.booking_ref)}`)
+      // Paystack URL missing — surface reason before sending to success page
+      const reason = typeof json.message === 'string'
+        ? json.message
+        : 'Online payment unavailable. Pay at the front desk.'
+      const params = new URLSearchParams({
+        ref: json.booking_ref,
+        notice: reason,
+      })
+      router.push(`/checkin/${tenant.slug}/success?${params.toString()}`)
     } catch {
       setError('Network error. Please try again.')
       setSubmitting(false)

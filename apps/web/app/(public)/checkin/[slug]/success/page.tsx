@@ -8,10 +8,10 @@ export default async function SelfCheckinSuccessPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ ref?: string; reference?: string }>
+  searchParams: Promise<{ ref?: string; reference?: string; notice?: string }>
 }) {
   const { slug } = await params
-  const { ref, reference } = await searchParams
+  const { ref, reference, notice } = await searchParams
 
   const admin = createAdminClient()
   const { data: tenant } = await admin
@@ -56,6 +56,12 @@ export default async function SelfCheckinSuccessPage({
         <p className="mt-1 text-sm text-text-secondary">
           Show this code to the front desk to complete check-in at {tenant?.name ?? 'the hostel'}.
         </p>
+
+        {notice && paymentStatus !== 'paid' && (
+          <div className="mt-4 rounded-lg border border-warning/20 bg-warning-subtle p-3 text-left text-xs text-warning-fg">
+            {notice}
+          </div>
+        )}
 
         <div className="mt-6 rounded-xl border border-border bg-surface p-6">
           <p className="text-xs text-text-tertiary">Booking code</p>
