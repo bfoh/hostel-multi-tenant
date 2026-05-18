@@ -489,10 +489,10 @@ export async function listSubscriptions(params: {
  * Verify a webhook event signature.
  * Paystack sends X-Paystack-Signature header (HMAC-SHA512 of raw body).
  */
+import { createHmac } from 'node:crypto'
+
 export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
-  const crypto = require('crypto') // eslint-disable-line @typescript-eslint/no-var-requires
-  const hash = crypto
-    .createHmac('sha512', getSecretKey())
+  const hash = createHmac('sha512', getSecretKey())
     .update(rawBody)
     .digest('hex')
   return hash === signature
