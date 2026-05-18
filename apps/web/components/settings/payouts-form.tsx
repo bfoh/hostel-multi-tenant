@@ -33,6 +33,10 @@ export function PayoutsForm({ initial }: { initial: PayoutsState }) {
   const [resolving, setResolving]       = useState(false)
   const [resolvedName, setResolvedName] = useState<string | null>(initial.account_name)
   const [resolveError, setResolveError] = useState<string | null>(null)
+  // Paystack's /bank/resolve only works reliably for Nigerian banks and Ghana
+  // mobile money. Most Ghanaian commercial bank accounts can't be auto-verified,
+  // so we let the user type the holder name by hand when resolution fails.
+  const [manualName, setManualName]     = useState<string>(initial.account_name ?? '')
 
   const [saving, setSaving]             = useState(false)
   const [saveError, setSaveError]       = useState<string | null>(null)
@@ -91,13 +95,18 @@ export function PayoutsForm({ initial }: { initial: PayoutsState }) {
     return () => { cancelled = true; clearTimeout(t) }
   }, [bankCode, accountNumber])
 
+  // Use the auto-resolved name if Paystack returned one, otherwise the name
+  // the user typed manually. Paystack creates the subaccount based on
+  // bank_code + account_number — the name is just stored locally for display.
+  const effectiveName = (resolvedName ?? manualName).trim()
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaveError(null)
     setSaveSuccess(false)
 
-    if (!bankCode || !accountNumber || !resolvedName) {
-      setSaveError('Select a bank and enter a valid account number first.')
+    if (!bankCode || !accountNumber || effectiveName.length < 2) {
+      setSaveError('Select a bank, enter the account number, and provide the account holder name.')
       return
     }
 
@@ -110,7 +119,7 @@ export function PayoutsForm({ initial }: { initial: PayoutsState }) {
         body: JSON.stringify({
           bank_code:       bankCode,
           account_number:  accountNumber,
-          account_name:    resolvedName,
+          account_name:    effectiveName,
           settlement_bank: bank?.name ?? '',
         }),
       })
@@ -201,9 +210,32 @@ export function PayoutsForm({ initial }: { initial: PayoutsState }) {
           </p>
         )}
         {resolveError && !resolving && (
-          <p className="text-xs text-danger">{resolveError}</p>
+          <p className="text-xs text-text-secondary">
+            Couldn&apos;t auto-verify with the bank. Type the account holder name below and continue.
+          </p>
         )}
       </div>
+
+      {/* Manual account-name input — only shown when auto-resolution failed.
+          Paystack's /bank/resolve mostly covers Nigerian banks + Ghana MoMo;
+          for Ghanaian commercial bank accounts the user types the name. */}
+      {resolveError && !resolving && bankCode && accountNumber.length >= 8 && (
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-text-primary">
+            Account holder name
+          </label>
+          <input
+            type="text"
+            value={manualName}
+            onChange={(e) => setManualName(e.target.value)}
+            placeholder="As it appears on the bank statement"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+          <p className="text-xs text-text-tertiary">
+            Used for display only. Paystack will verify the account when funds are settled.
+          </p>
+        </div>
+      )}
 
       {/* Submit */}
       <div className="flex items-center justify-between pt-2">
@@ -213,7 +245,7 @@ export function PayoutsForm({ initial }: { initial: PayoutsState }) {
         </div>
         <button
           type="submit"
-          disabled={saving || !resolvedName}
+          disabled={saving || !bankCode || accountNumber.length < 8 || effectiveName.length < 2}
           className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
