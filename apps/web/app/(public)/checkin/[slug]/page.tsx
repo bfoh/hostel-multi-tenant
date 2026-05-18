@@ -34,6 +34,13 @@ export default async function SelfCheckinPage({
 
   if (!tenant || !tenant.is_active) notFound()
 
+  // Free up rooms held by abandoned self-checkin submissions so the
+  // category list reflects what's actually bookable right now.
+  await admin.rpc('release_stale_self_checkin_reservations', {
+    p_tenant_id: tenant.id,
+    p_max_age_minutes: 30,
+  })
+
   // Categories with at least one available room
   const { data: cats } = await admin
     .from('room_categories')

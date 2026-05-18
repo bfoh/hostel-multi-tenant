@@ -42,6 +42,12 @@ export async function POST(
     return NextResponse.json({ error: 'Hostel not found' }, { status: 404 })
   }
 
+  // Release rooms held by abandoned submissions before we check availability.
+  await admin.rpc('release_stale_self_checkin_reservations', {
+    p_tenant_id: tenant.id,
+    p_max_age_minutes: 30,
+  })
+
   let formData: FormData
   try {
     formData = await req.formData()
