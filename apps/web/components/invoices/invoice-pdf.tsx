@@ -117,9 +117,18 @@ function dt(d: string) {
 }
 
 const METHOD: Record<string, string> = {
-  momo_mtn: 'MTN MoMo', momo_vodafone: 'Vodafone Cash',
-  momo_airteltigo: 'AirtelTigo Money', cash: 'Cash',
-  bank_transfer: 'Bank Transfer', card: 'Card', cheque: 'Cheque',
+  momo_mtn:        'MTN Mobile Money',
+  momo_vodafone:   'Telecel Cash',
+  momo_airteltigo: 'AirtelTigo Money',
+  cash:            'Cash',
+  bank_transfer:   'Bank Transfer',
+  card:            'Card',
+  cheque:          'Cheque',
+}
+
+function methodLabel(raw: string | null | undefined): string {
+  if (!raw) return 'Payment'
+  return METHOD[raw] ?? raw.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 const BADGE: Record<string, { bg: string; text: string }> = {
@@ -338,7 +347,7 @@ export function InvoicePDF({
             {paidPayments.map((p) => (
               <View key={p.id} style={s.pmtRow}>
                 <Text style={{ color: '#718096' }}>{p.paid_at ? dt(p.paid_at) : '—'}</Text>
-                <Text>{METHOD[p.method] ?? p.method}</Text>
+                <Text>{methodLabel(p.method)}</Text>
                 {p.reference
                   ? <Text style={{ color: '#a0aec0', fontSize: 8 }}>Ref: {p.reference}</Text>
                   : <Text> </Text>}
