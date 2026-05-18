@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, CalendarCheck, LayoutGrid } from 'lucide-react'
+import { Plus, CalendarCheck, LayoutGrid, Upload } from 'lucide-react'
 
 import { getBookings } from '@/lib/data/bookings'
 import { BookingsBulkList } from '@/components/bookings/bookings-bulk-list'
@@ -70,6 +70,13 @@ export default async function BookingsPage({
           >
             <LayoutGrid className="h-4 w-4" />
             Calendar
+          </Link>
+          <Link
+            href="/bookings/bulk-import"
+            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            Import
           </Link>
           <Link
             href="/bookings/new"
