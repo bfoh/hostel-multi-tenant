@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { sendPaymentReceipt } from '@/lib/sms'
 import { formatGHS } from '@/lib/utils'
@@ -30,14 +31,23 @@ export async function POST(
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
-  const supabase = await createClient()
+  // Authenticate caller (RLS-bound client just for auth.getUser)
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  // Verify booking exists and belongs to this tenant (RLS handles this)
+  // Use admin client + explicit tenant scope so RLS can't 404 a valid booking
+  // when JWT claims are stale (same pattern as POST /api/occupants).
+  const supabase = createAdminClient()
+
   const { data: booking } = await supabase
     .from('bookings')
     .select('id, occupant_id, final_amount, paid_amount, status')
     .eq('id', id)
-    .single()
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
 
   if (!booking) {
     return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
@@ -46,8 +56,6 @@ export async function POST(
   if (booking.status === 'cancelled') {
     return NextResponse.json({ error: 'Cannot record payment on a cancelled booking.' }, { status: 409 })
   }
-
-  const { data: user } = await supabase.auth.getUser()
 
   const { data, error } = await supabase
     .from('booking_payments')
@@ -60,7 +68,7 @@ export async function POST(
       notes:        parsed.data.notes ?? null,
       status:       'success',
       paid_at:      new Date().toISOString(),
-      received_by:  user.user?.id ?? null,
+      received_by:  user.id,
     })
     .select('id')
     .single()
