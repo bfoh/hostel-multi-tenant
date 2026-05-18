@@ -6,20 +6,33 @@ import { ChevronLeft, Download, Printer } from 'lucide-react'
 
 import { getInvoiceById } from '@/lib/data/invoices'
 import { splitGhanaTax } from '@/lib/tax/ghana'
-import { formatGHS, formatDate } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import { PrintButton } from '@/components/invoices/print-button'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const metadata: Metadata = { title: 'Invoice' }
 
+// Match the PDF: "GHS 8,000.00" (ISO 4217 code, no cedi glyph).
+function ghs(pesewas: number): string {
+  return `GHS ${(pesewas / 100).toLocaleString('en-GH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}
+
 const METHOD_LABEL: Record<string, string> = {
-  momo_mtn:        'MTN MoMo',
-  momo_vodafone:   'Vodafone Cash',
+  momo_mtn:        'MTN Mobile Money',
+  momo_vodafone:   'Telecel Cash',
   momo_airteltigo: 'AirtelTigo Money',
   cash:            'Cash',
   bank_transfer:   'Bank Transfer',
   card:            'Card',
   cheque:          'Cheque',
+}
+
+function methodLabel(raw: string | null | undefined): string {
+  if (!raw) return 'Payment'
+  return METHOD_LABEL[raw] ?? raw.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 const PAYMENT_BADGE: Record<string, string> = {
@@ -101,22 +114,36 @@ export default async function InvoicePage({
 
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-200 pb-6">
-          <div>
-            <p className="text-2xl font-bold text-[#1B4F72]">{tenant?.name ?? tenantName}</p>
-            {tenant?.tagline    && <p className="text-sm text-gray-500 mt-0.5">{tenant.tagline}</p>}
-            {tenant?.address_line1 && (
-              <p className="text-sm text-gray-500 mt-1">
-                {[tenant.address_line1, tenant.address_city].filter(Boolean).join(', ')}
-              </p>
+          <div className="flex items-start gap-4">
+            {tenant?.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={tenant.logo_url}
+                alt=""
+                className="h-14 w-14 shrink-0 rounded-full object-contain bg-white"
+              />
+            ) : (
+              <div className="h-14 w-14 shrink-0 rounded-lg bg-[#1B4F72] flex items-center justify-center text-white text-xl font-bold">
+                {(tenant?.name ?? tenantName).charAt(0)}
+              </div>
             )}
-            {tenant?.contact_phone && <p className="text-sm text-gray-500">{tenant.contact_phone}</p>}
-            {tenant?.contact_email && <p className="text-sm text-gray-500">{tenant.contact_email}</p>}
-            {tenant?.tin && (
-              <p className="text-xs text-gray-400 mt-1">TIN: {tenant.tin}</p>
-            )}
-            {isVatReg && tenant?.vat_reg_number && (
-              <p className="text-xs text-gray-400">VAT Reg: {tenant.vat_reg_number}</p>
-            )}
+            <div>
+              <p className="text-2xl font-bold text-[#1B4F72]">{tenant?.name ?? tenantName}</p>
+              {tenant?.tagline    && <p className="text-sm text-gray-500 mt-0.5">{tenant.tagline}</p>}
+              {tenant?.address_line1 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  {[tenant.address_line1, tenant.address_city].filter(Boolean).join(', ')}
+                </p>
+              )}
+              {tenant?.contact_phone && <p className="text-sm text-gray-500">{tenant.contact_phone}</p>}
+              {tenant?.contact_email && <p className="text-sm text-gray-500">{tenant.contact_email}</p>}
+              {tenant?.tin && (
+                <p className="text-xs text-gray-400 mt-1">TIN: {tenant.tin}</p>
+              )}
+              {isVatReg && tenant?.vat_reg_number && (
+                <p className="text-xs text-gray-400">VAT Reg: {tenant.vat_reg_number}</p>
+              )}
+            </div>
           </div>
           <div className="text-right">
             <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">
@@ -164,7 +191,7 @@ export default async function InvoicePage({
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="pb-2 text-left text-[10px] font-semibold uppercase tracking-widest text-gray-400">Description</th>
-                <th className="pb-2 text-right text-[10px] font-semibold uppercase tracking-widest text-gray-400 w-36">Amount</th>
+                <th className="pb-2 text-right text-[10px] font-semibold uppercase tracking-widest text-gray-400 w-36">Amount (GHS)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -176,7 +203,7 @@ export default async function InvoicePage({
                     ({formatDate(inv.check_in_date)} → {formatDate(inv.check_out_date)})
                   </span>
                 </td>
-                <td className="py-3 text-right font-mono">{formatGHS(inv.total_amount)}</td>
+                <td className="py-3 text-right font-mono">{ghs(inv.total_amount)}</td>
               </tr>
 
               {/* Discount */}
@@ -185,7 +212,7 @@ export default async function InvoicePage({
                   <td className="py-3 text-gray-500">
                     Discount{inv.discount_reason ? ` — ${inv.discount_reason}` : ''}
                   </td>
-                  <td className="py-3 text-right font-mono text-green-700">−{formatGHS(inv.discount_amount)}</td>
+                  <td className="py-3 text-right font-mono text-green-700">−{ghs(inv.discount_amount)}</td>
                 </tr>
               )}
             </tbody>
@@ -197,23 +224,23 @@ export default async function InvoicePage({
           <div className="mt-4 ml-auto w-72 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 space-y-1.5 text-sm">
             <div className="flex justify-between text-gray-500">
               <span>Subtotal (excl. taxes)</span>
-              <span className="font-mono">{formatGHS(inv.total_amount - inv.discount_amount)}</span>
+              <span className="font-mono">{ghs(inv.total_amount - inv.discount_amount)}</span>
             </div>
             <div className="flex justify-between text-gray-500">
               <span>VAT (15%)</span>
-              <span className="font-mono">{formatGHS(vatAmt)}</span>
+              <span className="font-mono">{ghs(vatAmt)}</span>
             </div>
             <div className="flex justify-between text-gray-500">
               <span>NHIL (2.5%)</span>
-              <span className="font-mono">{formatGHS(nhilAmt)}</span>
+              <span className="font-mono">{ghs(nhilAmt)}</span>
             </div>
             <div className="flex justify-between text-gray-500">
               <span>GETFund (2.5%)</span>
-              <span className="font-mono">{formatGHS(getfundAmt)}</span>
+              <span className="font-mono">{ghs(getfundAmt)}</span>
             </div>
             <div className="flex justify-between border-t border-gray-200 pt-1.5 font-semibold text-gray-900">
               <span>Total</span>
-              <span className="font-mono">{formatGHS(inv.final_amount)}</span>
+              <span className="font-mono">{ghs(inv.final_amount)}</span>
             </div>
           </div>
         )}
@@ -226,12 +253,12 @@ export default async function InvoicePage({
                 {inv.discount_amount > 0 && (
                   <tr>
                     <td className="pr-8 text-gray-500">Subtotal</td>
-                    <td className="text-right font-mono">{formatGHS(inv.total_amount)}</td>
+                    <td className="text-right font-mono">{ghs(inv.total_amount)}</td>
                   </tr>
                 )}
                 <tr className="border-t border-gray-300">
                   <td className="pr-8 pt-2 font-bold text-gray-900 text-base">Total</td>
-                  <td className="pt-2 text-right font-mono font-bold text-base">{formatGHS(inv.final_amount)}</td>
+                  <td className="pt-2 text-right font-mono font-bold text-base">{ghs(inv.final_amount)}</td>
                 </tr>
               </tbody>
             </table>
@@ -244,12 +271,12 @@ export default async function InvoicePage({
             <tbody>
               <tr>
                 <td className="pr-8 text-green-700">Amount paid</td>
-                <td className="text-right font-mono text-green-700">{formatGHS(inv.paid_amount)}</td>
+                <td className="text-right font-mono text-green-700">{ghs(inv.paid_amount)}</td>
               </tr>
               {balance > 0 && (
                 <tr>
                   <td className="pr-8 font-semibold text-red-600">Balance due</td>
-                  <td className="text-right font-mono font-bold text-red-600">{formatGHS(balance)}</td>
+                  <td className="text-right font-mono font-bold text-red-600">{ghs(balance)}</td>
                 </tr>
               )}
             </tbody>
@@ -265,12 +292,12 @@ export default async function InvoicePage({
                 <div key={p.id} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-3">
                     <span className="text-gray-400">{p.paid_at ? formatDate(p.paid_at) : '—'}</span>
-                    <span className="text-gray-700">{METHOD_LABEL[p.method] ?? p.method}</span>
+                    <span className="text-gray-700">{methodLabel(p.method)}</span>
                     {p.reference && (
                       <span className="font-mono text-xs text-gray-400">Ref: {p.reference}</span>
                     )}
                   </div>
-                  <span className="font-mono font-medium text-green-700">{formatGHS(p.amount)}</span>
+                  <span className="font-mono font-medium text-green-700">{ghs(p.amount)}</span>
                 </div>
               ))}
             </div>
