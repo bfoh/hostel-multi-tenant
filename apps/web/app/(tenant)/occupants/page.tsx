@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, Users, Search, Pencil } from 'lucide-react'
+import { Plus, Users, Search, Pencil, Upload } from 'lucide-react'
 
 import { getOccupants } from '@/lib/data/occupants'
 import { initials } from '@/lib/utils'
@@ -40,6 +40,13 @@ export default async function OccupantsPage({
             className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors whitespace-nowrap"
           >
             ID Verification
+          </Link>
+          <Link
+            href="/occupants/bulk-import"
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors whitespace-nowrap"
+          >
+            <Upload className="h-4 w-4" />
+            Import
           </Link>
           <Link
             href="/occupants/new"
