@@ -35,6 +35,7 @@ export async function PATCH(
       tenants(name, primary_color, contact_phone, slug)
     `)
     .eq('id', id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!booking) {

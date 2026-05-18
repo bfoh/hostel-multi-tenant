@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createElement } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { InvoiceDocument } from '@/components/bookings/invoice-document'
 
 export async function GET(
@@ -14,7 +15,14 @@ export async function GET(
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createClient()
+  // Auth check via RLS-bound client
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Data fetch via admin client + explicit tenant_id filter so stale JWT
+  // claims can't make a valid booking 404.
+  const supabase = createAdminClient()
 
   const { data: booking } = await supabase
     .from('bookings')

@@ -1,21 +1,28 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+
+  const headersList = await headers()
+  const tenantId = headersList.get('x-tenant-id')
+  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const { id: bookingId } = await params
 
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('payment_plans')
     .select('*, payment_plan_installments(*)')
     .eq('booking_id', bookingId)
+    .eq('tenant_id', tenantId)
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -26,8 +33,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
 
   const headersList = await headers()
@@ -35,6 +42,8 @@ export async function POST(
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const { id: bookingId } = await params
+
+  const supabase = createAdminClient()
   const body = await req.json()
   const { name, installments_count, start_date, interval_days } = body
 
