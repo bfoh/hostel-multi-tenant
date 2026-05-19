@@ -68,7 +68,8 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const { data: staff } = await staffQ
+    const { data: staff, error: staffErr } = await staffQ
+    if (staffErr) console.error('messages/users/search staff:', staffErr)
     for (const s of (staff ?? []) as any[]) {
       const profile = Array.isArray(s.profile) ? s.profile[0] : s.profile
       const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ')
@@ -91,10 +92,7 @@ export async function GET(req: NextRequest) {
   if (occupantSearchAllowed) {
     let occQ = admin
       .from('occupants')
-      .select(`
-        user_id, first_name, last_name, phone,
-        rooms:rooms(room_number, block)
-      `)
+      .select('id, user_id, first_name, last_name, phone, status')
       .eq('tenant_id', tenantId)
       .not('user_id', 'is', null)
       .neq('user_id', user.id)
@@ -104,12 +102,28 @@ export async function GET(req: NextRequest) {
       occQ = occQ.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,phone.ilike.%${q}%`)
     }
 
-    const { data: occs } = await occQ
+    const { data: occs, error: occErr } = await occQ
+    if (occErr) console.error('messages/users/search occupants:', occErr)
+
+    const occIds = (occs ?? []).map((o: any) => o.id)
+    const roomByOccId = new Map<string, { room_number: string; block: string | null }>()
+    if (occIds.length) {
+      const { data: bks } = await admin
+        .from('bookings')
+        .select('occupant_id, rooms:rooms(room_number, block)')
+        .in('occupant_id', occIds)
+        .in('status', ['checked_in', 'confirmed'])
+      for (const b of (bks ?? []) as any[]) {
+        const r = Array.isArray(b.rooms) ? b.rooms[0] : b.rooms
+        if (r) roomByOccId.set(b.occupant_id, r)
+      }
+    }
+
     for (const o of (occs ?? []) as any[]) {
-      const r = Array.isArray(o.rooms) ? o.rooms[0] : o.rooms
+      const r = roomByOccId.get(o.id)
       const subtitle = r
         ? `Room ${r.room_number}${r.block ? ` · Block ${r.block}` : ''}`
-        : 'Occupant'
+        : (o.phone ? `Occupant · ${o.phone}` : 'Occupant')
       results.push({
         user_id:  o.user_id,
         display:  [o.first_name, o.last_name].filter(Boolean).join(' ') || 'Occupant',
