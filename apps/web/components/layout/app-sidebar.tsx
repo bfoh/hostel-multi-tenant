@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, BedDouble, CalendarCheck,
   FileText, Sparkles, Wrench, DollarSign, BarChart3,
   Settings, ChevronLeft, ChevronRight, HardHat, Shield,
-  MessageSquare, UserCog, ClipboardList, BookOpen, Bot,
+  MessageSquare, MessageCircle, UserCog, ClipboardList, BookOpen, Bot,
   Package, Search, Building2, ListOrdered, TrendingDown,
   Monitor, Lock, Store, ClipboardCheck, Banknote,
   Utensils, ShoppingBag,
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { useTenant } from '@/components/providers/tenant-provider'
 import { initials } from '@/lib/utils'
 import { SidebarDraftBadge } from '@/components/payments/sidebar-draft-badge'
+import { UnreadBadge } from '@/components/messages/unread-badge'
 
 // ── Role helpers ─────────────────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ const OPS_ITEMS: NavItem[] = [
   { label: 'Food Orders',    href: '/food/orders',     icon: ShoppingBag,     anim: 'pulse'  },
   { label: 'Kiosk',          href: '/kiosk',           icon: Monitor,         anim: 'pulse'  },
   { label: 'Lost & Found',   href: '/lost-found',      icon: Search,          anim: 'slide'  },
+  { label: 'Messages',       href: '/messages',        icon: MessageCircle,   anim: 'shake'  },
   { label: 'Communications', href: '/communications',  icon: MessageSquare,   anim: 'shake'  },
   { label: 'Security',       href: '/security',        icon: Shield,          anim: 'pop'    },
   { label: 'Revenue Points', href: '/revenue-points',  icon: Store,           anim: 'tilt'   },
@@ -107,6 +109,12 @@ export function AppSidebar({ user, tenantRole, tenantId, initialDraftCount }: Ap
 
   const isAdmin       = isAdminRole(tenantRole)
   const canSeeDrafts  = tenantRole === 'owner' || tenantRole === 'accountant'
+
+  const opsItems: NavItem[] = OPS_ITEMS.map((it) =>
+    it.href === '/messages'
+      ? { ...it, badge: <UnreadBadge userId={user.id} /> }
+      : it
+  )
   const draftsItem: NavItem = {
     label: 'Bank Drafts',
     href:  '/payments/drafts',
@@ -178,7 +186,7 @@ export function AppSidebar({ user, tenantRole, tenantId, initialDraftCount }: Ap
             </p>
           )}
           <ul className="space-y-0.5">
-            {OPS_ITEMS.map((item) => (
+            {opsItems.map((item) => (
               <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
             ))}
           </ul>
