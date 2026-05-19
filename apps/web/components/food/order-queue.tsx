@@ -17,6 +17,9 @@ interface Order {
   occupant_id:      string
   occupant?:        { first_name: string; last_name: string; phone: string | null } | null
   food_order_items: OrderItem[]
+  customer_kind?:   'walk_in' | 'online' | null
+  table_label?:     string | null
+  channel?:         'walk_in' | 'online' | null
 }
 
 const COLUMNS: { key: string; label: string }[] = [

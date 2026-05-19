@@ -13,8 +13,12 @@ interface Props {
   slug:           string
   color:          string
   onlineEnabled:  boolean
-  items:          ItemLite[]   // today's menu (for line rendering)
+  items:          ItemLite[]                // today's menu (for line rendering)
+  tables?:        string[]                  // restaurant table list from public_config
+  pickupAllowed?: boolean                   // restaurant allows takeaway from same QR
 }
+
+type Mode = 'dine_in' | 'takeaway' | 'online'
 
 const CART_KEY = (slug: string) => `food-cart:${slug}`
 
@@ -22,12 +26,14 @@ function ghs(pesewas: number) {
   return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(pesewas / 100)
 }
 
-export function GuestCheckoutForm({ slug, color, onlineEnabled, items }: Props) {
+export function GuestCheckoutForm({
+  slug, color, onlineEnabled, items, tables = [], pickupAllowed = true,
+}: Props) {
   const [cart, setCart]     = useState<CartLine[]>([])
   const [loaded, setLoaded] = useState(false)
 
   // Form state
-  const [channel, setChannel] = useState<'walk_in' | 'online'>('walk_in')
+  const [mode,    setMode]    = useState<Mode>('dine_in')
   const [first,   setFirst]   = useState('')
   const [last,    setLast]    = useState('')
   const [phone,   setPhone]   = useState('')
@@ -47,10 +53,13 @@ export function GuestCheckoutForm({ slug, color, onlineEnabled, items }: Props) 
     setLoaded(true)
   }, [slug])
 
-  // Online channel must use online payment
+  // Online channel always pays online
   useEffect(() => {
-    if (channel === 'online') setPaymentMethod('online')
-  }, [channel])
+    if (mode === 'online') setPaymentMethod('online')
+  }, [mode])
+
+  // Channel sent to API: dine_in + takeaway both = walk_in
+  const channel: 'walk_in' | 'online' = mode === 'online' ? 'online' : 'walk_in'
 
   const lines = cart.map(c => {
     const it = items.find(i => i.id === c.menu_item_id)
@@ -77,7 +86,16 @@ export function GuestCheckoutForm({ slug, color, onlineEnabled, items }: Props) 
     if (cart.length === 0 || total === 0) {
       setErr('Cart is empty'); return
     }
+    if (mode === 'dine_in' && tables.length > 0 && !tableLabel.trim()) {
+      setErr('Pick a table to dine in.'); return
+    }
     setErr(null); setBusy(true)
+    const tableForSubmit =
+      mode === 'dine_in'
+        ? (tableLabel.trim() || null)
+        : mode === 'takeaway'
+        ? 'Takeaway'
+        : null
     const res = await fetch(`/api/public/${slug}/food/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -90,7 +108,7 @@ export function GuestCheckoutForm({ slug, color, onlineEnabled, items }: Props) 
         items:          cart,
         payment_method: paymentMethod,
         notes:          notes.trim() || null,
-        table_label:    channel === 'walk_in' && tableLabel.trim() ? tableLabel.trim() : null,
+        table_label:    tableForSubmit,
       }),
     })
     setBusy(false)
@@ -146,23 +164,71 @@ export function GuestCheckoutForm({ slug, color, onlineEnabled, items }: Props) 
         </div>
       </div>
 
-      {/* Channel */}
+      {/* Order mode */}
       <section className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
         <h2 className="text-sm font-semibold text-slate-700">Order type</h2>
+
         <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 cursor-pointer">
-          <input type="radio" checked={channel === 'walk_in'} onChange={() => setChannel('walk_in')} className="mt-0.5" />
-          <div>
-            <p className="text-sm font-medium">Dine-in / pickup at restaurant</p>
-            <p className="mt-0.5 text-xs text-slate-500">You're at the restaurant. Cash or online.</p>
+          <input type="radio" checked={mode === 'dine_in'} onChange={() => setMode('dine_in')} className="mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">Dine in</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {tables.length > 0 ? 'Pick your table below.' : 'Eat at the restaurant.'}
+            </p>
           </div>
         </label>
+
+        {pickupAllowed && (
+          <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 cursor-pointer">
+            <input type="radio" checked={mode === 'takeaway'} onChange={() => setMode('takeaway')} className="mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">Takeaway</p>
+              <p className="mt-0.5 text-xs text-slate-500">Pack it up — pick up at the counter.</p>
+            </div>
+          </label>
+        )}
+
         <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 cursor-pointer">
-          <input type="radio" checked={channel === 'online'} onChange={() => setChannel('online')} className="mt-0.5" />
+          <input type="radio" checked={mode === 'online'} onChange={() => setMode('online')} className="mt-0.5" />
           <div>
-            <p className="text-sm font-medium">Order ahead online</p>
+            <p className="text-sm font-medium">Order ahead (pay online)</p>
             <p className="mt-0.5 text-xs text-slate-500">Pay online and pick up later. No on-site cash.</p>
           </div>
         </label>
+
+        {mode === 'dine_in' && tables.length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            <p className="text-xs font-medium text-slate-600">Your table</p>
+            <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-6">
+              {tables.map((t) => {
+                const active = t === tableLabel
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTableLabel(t)}
+                    className={`rounded-lg border px-2 py-2 text-center text-xs font-semibold transition-colors ${
+                      active ? 'border-transparent text-white' : 'border-slate-200 text-slate-700 hover:border-slate-400'
+                    }`}
+                    style={active ? { backgroundColor: color } : undefined}
+                  >
+                    {t}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {mode === 'dine_in' && tables.length === 0 && (
+          <input
+            value={tableLabel}
+            onChange={(e) => setTableLabel(e.target.value)}
+            maxLength={40}
+            placeholder="Table or seat (optional, e.g. T5)"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          />
+        )}
       </section>
 
       {/* Contact */}
@@ -180,11 +246,6 @@ export function GuestCheckoutForm({ slug, color, onlineEnabled, items }: Props) 
         <input value={email} onChange={e => setEmail(e.target.value)} maxLength={200}
           placeholder="Email (optional)" type="email"
           className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-        {channel === 'walk_in' && (
-          <input value={tableLabel} onChange={e => setTableLabel(e.target.value)} maxLength={40}
-            placeholder="Table or seat (optional, e.g. T5)"
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-        )}
         <textarea value={notes} onChange={e => setNotes(e.target.value)} maxLength={280} rows={2}
           placeholder="Note for kitchen (optional)"
           className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm" />
@@ -211,9 +272,9 @@ export function GuestCheckoutForm({ slug, color, onlineEnabled, items }: Props) 
             </div>
           </label>
         ) : (
-          channel === 'online' && (
+          mode === 'online' && (
             <p className="rounded bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              This restaurant has not enabled online payment. Switch to "Dine-in / pickup".
+              This restaurant has not enabled online payment. Choose Dine-in or Takeaway.
             </p>
           )
         )}

@@ -121,6 +121,138 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
   // subscription.create event owns the tenant_subscriptions row.
   if (source === 'platform_subscription') return
 
+  // Walk-in sale — QR-driven payment at gym / sports / laundry / etc.
+  // Inserts a revenue_point_sales row + upserts the visitor (auto-linked
+  // to an occupant when the phone matches). Idempotent by reference.
+  if (source === 'walkin_sale') {
+    const md = metadata as any
+    const tenantId = md?.tenant_id as string | undefined
+    if (!tenantId || !md?.revenue_point_id || !md?.amount) return
+
+    const adminAny = supabase as any
+
+    const { data: existing } = await adminAny
+      .from('revenue_point_sales')
+      .select('id')
+      .eq('reference', reference)
+      .maybeSingle()
+    if (existing) return
+
+    // 1) Upsert visitor by (tenant_id, phone). Link to occupant when phone matches.
+    let visitorId: string | null = null
+    if (md.phone) {
+      const { data: occ } = await adminAny
+        .from('occupants')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('phone', md.phone)
+        .maybeSingle()
+
+      const { data: visitor } = await adminAny
+        .from('revenue_point_visitors')
+        .upsert(
+          {
+            tenant_id:   tenantId,
+            phone:       md.phone,
+            first_name:  md.first_name ?? null,
+            last_name:   md.last_name ?? null,
+            email:       md.email ?? null,
+            occupant_id: occ?.id ?? null,
+            last_seen_at: new Date().toISOString(),
+          },
+          { onConflict: 'tenant_id,phone' },
+        )
+        .select('id, visit_count, total_spend')
+        .single()
+
+      if (visitor) {
+        visitorId = visitor.id
+        await adminAny
+          .from('revenue_point_visitors')
+          .update({
+            visit_count: (visitor.visit_count ?? 0) + 1,
+            total_spend: (visitor.total_spend ?? 0) + (md.amount as number),
+          })
+          .eq('id', visitor.id)
+      }
+    }
+
+    // 2) Map Paystack channel → payment_method enum used by ledger trigger
+    const channel = event.data.channel
+    const paymentMethod =
+      channel === 'mobile_money' ? 'momo_mtn' :
+      channel === 'card'         ? 'card'     :
+      channel === 'bank' || channel === 'bank_transfer' ? 'bank_transfer' :
+      'card'
+
+    // 3) Initial status — laundry tracks fulfilment, others auto-complete
+    const initialStatus =
+      md.revenue_point_type === 'laundry' ? 'received' : 'completed'
+
+    await adminAny
+      .from('revenue_point_sales')
+      .insert({
+        tenant_id:        tenantId,
+        revenue_point_id: md.revenue_point_id,
+        item_id:          null,
+        description:      md.description ?? 'Walk-in sale',
+        quantity:         1,
+        unit_price:       md.amount,
+        total_amount:     md.amount,
+        payment_method:   paymentMethod,
+        reference,
+        customer_name:    [md.first_name, md.last_name].filter(Boolean).join(' ') || null,
+        visitor_id:       visitorId,
+        duration_minutes: md.duration_minutes ?? null,
+        weight_kg:        md.weight_kg ?? null,
+        court_id:         md.court_id ?? null,
+        entry_token:      md.entry_token ?? null,
+        status:           initialStatus,
+      })
+
+    // Fire SMS receipt (non-blocking).
+    if (md.phone && md.entry_token) {
+      try {
+        const { sendWalkinReceipt } = await import('@/lib/sms')
+        const { data: t } = await adminAny
+          .from('tenants').select('name').eq('id', tenantId).single()
+        const hostelName = t?.name ?? 'Your hostel'
+        const amountGHS  = `GH₵ ${((md.amount as number) / 100).toLocaleString('en-GH', { minimumFractionDigits: 2 })}`
+
+        // Laundry pickup window
+        let readyAt: string | undefined
+        if (md.revenue_point_type === 'laundry') {
+          const { data: rp } = await adminAny
+            .from('revenue_points').select('public_config').eq('id', md.revenue_point_id).single()
+          const hours = Number(rp?.public_config?.turnaround_hours ?? 24)
+          const ready = new Date(Date.now() + hours * 3600_000)
+          readyAt = ready.toLocaleString('en-GH', { dateStyle: 'medium', timeStyle: 'short' })
+        }
+
+        const flowType: 'gym' | 'sports' | 'laundry' =
+          md.revenue_point_type === 'sports'  ? 'sports'  :
+          md.revenue_point_type === 'laundry' ? 'laundry' :
+                                                'gym'
+
+        await sendWalkinReceipt({
+          phone:       md.phone,
+          firstName:   md.first_name ?? 'there',
+          hostelName,
+          type:        flowType,
+          amountGHS,
+          token:       md.entry_token,
+          description: md.description,
+          weightKg:    md.weight_kg != null ? String(md.weight_kg) : undefined,
+          readyAt,
+          tenantId,
+        })
+      } catch (err) {
+        console.error('[walkin_sale sms]', err)
+      }
+    }
+    return
+  }
+
   // POS sale — pay link issued at a revenue point. Insert sale row on
   // success. Idempotent by reference unique check.
   if (source === 'pos_sale') {

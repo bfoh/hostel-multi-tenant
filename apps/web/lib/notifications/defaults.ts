@@ -22,6 +22,9 @@ export type EventType =
   | 'food_order_ready'
   | 'food_order_cancelled'
   | 'food_order_placed_guest'
+  | 'walkin_receipt_gym'
+  | 'walkin_receipt_sports'
+  | 'walkin_receipt_laundry'
 
 export type Channel = 'sms' | 'email'
 
@@ -299,5 +302,28 @@ export const DEFAULT_TEMPLATES: TemplateDefault[] = [
     body:
       'Hi {{first_name}}, your order {{order_ref}} at {{hostel_name}} is placed. ' +
       'Track it: {{tracking_url}}',
+  },
+
+  // ── Walk-in receipts ──────────────────────────────────────────────────────
+  {
+    event_type: 'walkin_receipt_gym',
+    channel:    'sms',
+    body:
+      'Welcome to {{hostel_name}}! Gym day pass paid · {{amount}}. ' +
+      'Entry code: {{token}}. Valid for 24 hours.',
+  },
+  {
+    event_type: 'walkin_receipt_sports',
+    channel:    'sms',
+    body:
+      '{{hostel_name}}: {{description}} paid · {{amount}}. ' +
+      'Show entry code {{token}} at the counter.',
+  },
+  {
+    event_type: 'walkin_receipt_laundry',
+    channel:    'sms',
+    body:
+      '{{hostel_name}}: Laundry received · {{weight}}kg · {{amount}}. ' +
+      'Pickup code {{token}}. Ready by {{ready_at}}.',
   },
 ]

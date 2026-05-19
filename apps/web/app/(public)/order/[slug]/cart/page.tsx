@@ -20,6 +20,23 @@ export default async function PublicCartPage({ params }: { params: Promise<{ slu
     .maybeSingle()
   if (!tenant || !tenant.food_orders_enabled) notFound()
 
+  // Look for a public-enabled restaurant/cafeteria revenue point so we can
+  // surface its configured tables + takeaway toggle on the checkout form.
+  // First match wins — most hostels only have one.
+  const { data: restaurantPoint } = await admin
+    .from('revenue_points')
+    .select('id, public_config')
+    .eq('tenant_id', tenant.id)
+    .eq('is_active', true)
+    .eq('public_enabled', true)
+    .in('type', ['restaurant', 'cafeteria'])
+    .limit(1)
+    .maybeSingle()
+
+  const publicConfig: any = restaurantPoint?.public_config ?? {}
+  const tables: string[]  = Array.isArray(publicConfig.tables) ? publicConfig.tables : []
+  const pickupAllowed     = publicConfig.pickup_allowed !== false
+
   const { items } = await getTodaysMenu(tenant.id)
   const color = tenant.primary_color ?? '#2563EB'
   const onlineEnabled = !!tenant.paystack_subaccount_code
@@ -34,6 +51,8 @@ export default async function PublicCartPage({ params }: { params: Promise<{ slu
         slug={slug}
         color={color}
         onlineEnabled={onlineEnabled}
+        tables={tables}
+        pickupAllowed={pickupAllowed}
         items={items.map(it => ({
           id: it.id,
           name: it.name,

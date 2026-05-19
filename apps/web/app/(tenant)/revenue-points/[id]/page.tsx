@@ -7,6 +7,9 @@ import { getRevenuePointItems, getRevenuePointSales } from '@/lib/data/revenue-p
 import { formatGHS } from '@/lib/utils'
 import { notFound } from 'next/navigation'
 import { POSClient } from './pos-client'
+import { PublicConfigEditor } from '@/components/revenue-points/public-config-editor'
+import { VerifyCodeWidget } from '@/components/revenue-points/verify-code-widget'
+import { LaundryQueue } from '@/components/revenue-points/laundry-queue'
 
 export const metadata: Metadata = { title: 'Point of Sale' }
 
@@ -34,9 +37,13 @@ export default async function RevenuePointPOSPage({
   const [items, recentSales, tenantRow] = await Promise.all([
     getRevenuePointItems(tenantId, id),
     getRevenuePointSales(tenantId, id, 15),
-    supabase.from('tenants').select('paystack_subaccount_code').eq('id', tenantId).single(),
+    supabase.from('tenants').select('slug, paystack_subaccount_code').eq('id', tenantId).single(),
   ])
-  const paystackReady = !!process.env.PAYSTACK_SECRET_KEY && !!tenantRow.data?.paystack_subaccount_code
+  const tenantSlug    = (tenantRow.data as any)?.slug as string | undefined
+  const paystackReady = !!process.env.PAYSTACK_SECRET_KEY && !!(tenantRow.data as any)?.paystack_subaccount_code
+  const publicEnabled = (point as any).public_enabled === true
+  const publicConfig  = ((point as any).public_config as Record<string, any> | null) ?? {}
+  const pointType     = (point as any).type as string
 
   return (
     <div className="space-y-6">
@@ -57,6 +64,35 @@ export default async function RevenuePointPOSPage({
         items={items}
         paystackEnabled={paystackReady}
       />
+
+      {tenantSlug && ['gym','sports','laundry','restaurant','cafeteria'].includes(pointType) && (
+        <>
+          <PublicConfigEditor
+            pointId={id}
+            type={pointType as any}
+            publicEnabled={publicEnabled}
+            config={publicConfig}
+            tenantSlug={tenantSlug}
+            paystackReady={paystackReady}
+          />
+          {publicEnabled && (
+            <Link
+              href={`/revenue-points/${id}/qr-print`}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-brand hover:underline"
+            >
+              Print QR sheet →
+            </Link>
+          )}
+        </>
+      )}
+
+      {publicEnabled && ['gym','sports','laundry'].includes(pointType) && (
+        <VerifyCodeWidget pointId={id} pointType={pointType} />
+      )}
+
+      {pointType === 'laundry' && (
+        <LaundryQueue pointId={id} />
+      )}
 
       {/* Recent sales */}
       {recentSales.length > 0 && (

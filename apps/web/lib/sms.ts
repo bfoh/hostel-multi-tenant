@@ -123,6 +123,43 @@ export async function sendPaymentReceipt(params: {
   await send(params.phone, msg)
 }
 
+export async function sendWalkinReceipt(params: {
+  phone:        string
+  firstName:    string
+  hostelName:   string
+  type:         'gym' | 'sports' | 'laundry'
+  amountGHS:    string
+  token:        string
+  description?: string
+  weightKg?:    string
+  readyAt?:     string
+  tenantId?:    string
+}) {
+  const event =
+    params.type === 'gym'     ? 'walkin_receipt_gym' :
+    params.type === 'sports'  ? 'walkin_receipt_sports' :
+                                'walkin_receipt_laundry'
+
+  const fallback =
+    params.type === 'gym'
+      ? 'Welcome to {{hostel_name}}! Gym day pass paid · {{amount}}. Entry code: {{token}}. Valid for 24 hours.'
+      : params.type === 'sports'
+      ? '{{hostel_name}}: {{description}} paid · {{amount}}. Show entry code {{token}} at the counter.'
+      : '{{hostel_name}}: Laundry received · {{weight}}kg · {{amount}}. Pickup code {{token}}. Ready by {{ready_at}}.'
+
+  const msg = await resolveSmsBody(event, fallback, {
+    first_name:  params.firstName,
+    hostel_name: params.hostelName,
+    amount:      params.amountGHS,
+    token:       params.token,
+    description: params.description ?? '',
+    weight:      params.weightKg ?? '',
+    ready_at:    params.readyAt ?? '',
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
 export async function sendPaymentLink(params: {
   phone:      string
   firstName:  string
