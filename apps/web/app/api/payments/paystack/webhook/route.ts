@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifyWebhookSignature } from '@/lib/paystack'
+import { verifyWebhookSignature } from '@/lib/paystack-webhook'
 import { findPlanByCode } from '@/lib/platform-plans'
 
 /**

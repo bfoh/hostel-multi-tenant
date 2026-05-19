@@ -549,16 +549,5 @@ export async function listSubscriptions(params: {
 // ═══════════════════════════════════════════════════════════════════════════
 // Webhook signature verification
 // ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Verify a webhook event signature.
- * Paystack sends X-Paystack-Signature header (HMAC-SHA512 of raw body).
- */
-import { createHmac } from 'node:crypto'
-
-export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
-  const hash = createHmac('sha512', getSecretKey())
-    .update(rawBody)
-    .digest('hex')
-  return hash === signature
-}
+// `verifyWebhookSignature` lives in `lib/paystack-webhook.ts` to keep this
+// module edge-runtime compatible. Import it directly from there.
