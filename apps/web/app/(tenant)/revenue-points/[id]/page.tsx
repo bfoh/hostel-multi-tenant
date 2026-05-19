@@ -31,10 +31,12 @@ export default async function RevenuePointPOSPage({
 
   if (!point) notFound()
 
-  const [items, recentSales] = await Promise.all([
+  const [items, recentSales, tenantRow] = await Promise.all([
     getRevenuePointItems(tenantId, id),
     getRevenuePointSales(tenantId, id, 15),
+    supabase.from('tenants').select('paystack_subaccount_code').eq('id', tenantId).single(),
   ])
+  const paystackReady = !!process.env.PAYSTACK_SECRET_KEY && !!tenantRow.data?.paystack_subaccount_code
 
   return (
     <div className="space-y-6">
@@ -53,6 +55,7 @@ export default async function RevenuePointPOSPage({
       <POSClient
         revenuePointId={id}
         items={items}
+        paystackEnabled={paystackReady}
       />
 
       {/* Recent sales */}

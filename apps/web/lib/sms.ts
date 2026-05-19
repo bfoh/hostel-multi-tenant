@@ -123,6 +123,30 @@ export async function sendPaymentReceipt(params: {
   await send(params.phone, msg)
 }
 
+export async function sendPaymentLink(params: {
+  phone:      string
+  firstName:  string
+  bookingRef: string
+  amountGHS:  string
+  url:        string
+  hostelName: string
+  tenantId?:  string
+}) {
+  const fallback =
+    'Hi {{first_name}}, pay {{amount}} for booking {{booking_ref}} at {{hostel_name}}: ' +
+    '{{url}} — Mobile Money, Card or Bank Transfer accepted.'
+
+  const msg = await resolveSmsBody('payment_link', fallback, {
+    first_name:  params.firstName,
+    amount:      params.amountGHS,
+    booking_ref: params.bookingRef,
+    url:         params.url,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
 export async function sendOverdueReminder(params: {
   phone:       string
   firstName:   string

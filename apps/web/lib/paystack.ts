@@ -113,6 +113,71 @@ export async function initiateMoMoCharge(params: {
 }
 
 /**
+ * Initiate a Paystack bank-transfer charge.
+ *
+ * Returns dynamic NUBAN account details (account_number / account_name /
+ * bank name) that the guest can transfer to from any Ghana bank app.
+ * Paystack fires `charge.success` once the transfer settles, which the
+ * unified webhook reconciles via `metadata.payment_id` or
+ * `paystack_reference`.
+ *
+ * Funds route to the tenant subaccount when provided.
+ */
+export interface BankTransferChargeResult {
+  reference:        string
+  paystackReference: string
+  status:           string          // expected: 'pay_offline' or 'pending'
+  displayText:      string
+  accountNumber:    string | null
+  accountName:      string | null
+  bankName:         string | null
+  expiresAt:        string | null   // ISO timestamp, may be null
+}
+
+export async function initiateBankTransferCharge(params: {
+  email:           string
+  amountPesewas:   number
+  reference:       string
+  metadata?:       Record<string, unknown>
+  subaccount?:     string
+  bearer?:         'account' | 'subaccount'
+  expiresAt?:      string           // ISO timestamp; Paystack auto-sets if omitted
+}): Promise<BankTransferChargeResult> {
+  const body: Record<string, unknown> = {
+    email:    params.email,
+    amount:   params.amountPesewas,
+    currency: 'GHS',
+    bank_transfer: params.expiresAt
+      ? { account_expires_at: params.expiresAt }
+      : {},
+    reference: params.reference,
+    metadata:  params.metadata ?? {},
+  }
+
+  if (params.subaccount) {
+    body.subaccount = params.subaccount
+    body.bearer     = params.bearer ?? 'subaccount'
+  }
+
+  const json = await paystackFetch<any>('/charge', {
+    method: 'POST',
+    body:   JSON.stringify(body),
+  })
+
+  const d = json.data ?? {}
+  return {
+    reference:         params.reference,
+    paystackReference: d.reference,
+    status:            d.status ?? 'pending',
+    displayText:       d.display_text ?? 'Transfer the exact amount to the account below to complete payment.',
+    accountNumber:     d.account_number ?? d.account?.account_number ?? null,
+    accountName:       d.account_name   ?? d.account?.account_name   ?? null,
+    bankName:          d.bank?.name     ?? d.bank_name               ?? null,
+    expiresAt:         d.account_expires_at ?? d.expires_at ?? null,
+  }
+}
+
+/**
  * Initialize a hosted Paystack transaction (card / MoMo / bank picker).
  * Returns an authorization_url to redirect the customer to.
  * Pass `subaccount` to route funds to a hostel.

@@ -266,6 +266,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                 bookingId={id}
                 balance={balance}
                 initialPlan={paymentPlan as any}
+                paystackEnabled={paystackReady}
               />
             </CardContent>
           </Card>
@@ -278,6 +279,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                 bookingId={id}
                 occupantId={occupant?.id ?? ''}
                 initialDeposit={deposit as any}
+                paystackEnabled={paystackReady}
               />
             </CardContent>
           </Card>

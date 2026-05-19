@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { widgetCorsHeaders, corsPreflightResponse, checkOrigin } from '@/lib/widget-cors'
 import { sendBookingConfirmation } from '@/lib/sms'
+import { initBookingPayment } from '@/lib/booking-payment'
 
 export const runtime = 'edge'
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, is_active, widget_domains')
+    .select('id, name, is_active, widget_domains, paystack_subaccount_code')
     .eq('slug', slug)
     .single()
 
@@ -149,6 +150,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     tenantId:    tenant.id,
   }).catch(() => {})
 
+  // Initialize Paystack hosted payment (card / momo / bank / bank_transfer)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host') ?? 'localhost:3000'}`
+  const callbackUrl = `${appUrl}/api/public/${slug}/pay/callback?booking_id=${booking.id}&amount=${category.base_rate}`
+
+  let payment: { authorization_url: string; reference: string; amount: number } | null = null
+  try {
+    const result = await initBookingPayment({
+      tenantId:         tenant.id,
+      tenantSubaccount: tenant.paystack_subaccount_code ?? null,
+      bookingId:        booking.id,
+      bookingRef:       booking.booking_ref,
+      amountPesewas:    category.base_rate,
+      email:            d.email ?? null,
+      callbackUrl,
+      source:           'widget_booking',
+    })
+    if (result) {
+      payment = {
+        authorization_url: result.authorizationUrl,
+        reference:         result.reference,
+        amount:            result.amount,
+      }
+    }
+  } catch (err) {
+    console.error('[POST /api/widget/[slug]/book] payment init failed', err)
+    // Soft-fail: booking persists, no auth URL returned
+  }
+
   return NextResponse.json({
     booking_ref:    booking.booking_ref,
     booking_id:     booking.id,
@@ -159,5 +188,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     rate_unit:      category.rate_unit,
     status:         'pending_payment',
     hold_expires_at: holdExpiresAt,
+    payment,
   }, { status: 201, headers: cors })
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Shield, ShieldCheck, ShieldX, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Shield, ShieldCheck, ShieldX, Loader2, ChevronDown, ChevronUp, Link2, Copy } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
 
 interface Deposit {
@@ -36,22 +36,61 @@ export function DepositCard({
   bookingId,
   occupantId,
   initialDeposit,
+  paystackEnabled = false,
 }: {
   bookingId: string
   occupantId: string
   initialDeposit: Deposit | null
+  paystackEnabled?: boolean
 }) {
   const [deposit, setDeposit] = useState<Deposit | null>(initialDeposit)
   const [showForm, setShowForm]     = useState(false)
   const [showResolve, setShowResolve] = useState(false)
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState<string | null>(null)
+  const [mode, setMode]             = useState<'manual' | 'paylink'>('manual')
 
   // New deposit form
   const [amount, setAmount]     = useState('')
   const [method, setMethod]     = useState('cash')
   const [reference, setReference] = useState('')
   const [notes, setNotes]       = useState('')
+
+  // Pay link state
+  const [payLinkUrl, setPayLinkUrl]   = useState<string | null>(null)
+  const [payLinkSent, setPayLinkSent] = useState(false)
+  const [sendSms, setSendSms]         = useState(true)
+  const [copied, setCopied]           = useState(false)
+
+  async function generateLink() {
+    const amtNum = Math.round(parseFloat(amount) * 100)
+    if (!amount || isNaN(amtNum) || amtNum <= 0) { setError('Enter a valid amount'); return }
+    setSaving(true); setError(null); setPayLinkUrl(null); setPayLinkSent(false)
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/deposit/pay-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amtNum, send_sms: sendSms }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      setPayLinkUrl(data.authorization_url)
+      if (sendSms) setPayLinkSent(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function copyLink() {
+    if (!payLinkUrl) return
+    try {
+      await navigator.clipboard.writeText(payLinkUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* clipboard unavailable */ }
+  }
 
   // Resolve form
   const [resolution, setResolution] = useState<'refunded' | 'forfeited' | 'partial_refund'>('refunded')
@@ -244,51 +283,139 @@ export function DepositCard({
 
           {showForm && (
             <div className="mt-3 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs text-text-tertiary">Amount (GHS)</label>
+              {paystackEnabled && (
+                <div className="flex gap-1 rounded-lg border border-border bg-surface-sunken p-1">
+                  <button
+                    type="button"
+                    onClick={() => { setMode('manual'); setPayLinkUrl(null); setError(null) }}
+                    className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${
+                      mode === 'manual' ? 'bg-surface shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    Manual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('paylink'); setError(null) }}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${
+                      mode === 'paylink' ? 'bg-surface shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    <Link2 className="h-3 w-3" />
+                    Pay link
+                  </button>
+                </div>
+              )}
+
+              {mode === 'manual' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs text-text-tertiary">Amount (GHS)</label>
+                      <input
+                        type="number" step="0.01" min="0"
+                        placeholder="0.00"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-text-tertiary">Method</label>
+                      <select
+                        value={method}
+                        onChange={(e) => setMethod(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+                      >
+                        {Object.entries(METHOD_LABEL).map(([v, l]) => (
+                          <option key={v} value={v}>{l}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   <input
-                    type="number" step="0.01" min="0"
-                    placeholder="0.00"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Reference / receipt no. (optional)"
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
                     className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
                   />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-text-tertiary">Method</label>
-                  <select
-                    value={method}
-                    onChange={(e) => setMethod(e.target.value)}
+                  <input
+                    placeholder="Notes (optional)"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                     className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                  {error && <p className="text-xs text-danger">{error}</p>}
+                  <button
+                    onClick={record}
+                    disabled={saving}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-60"
                   >
-                    {Object.entries(METHOD_LABEL).map(([v, l]) => (
-                      <option key={v} value={v}>{l}</option>
-                    ))}
-                  </select>
+                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Record deposit
+                  </button>
+                </>
+              )}
+
+              {mode === 'paylink' && (
+                <div className="space-y-3">
+                  {!payLinkUrl ? (
+                    <>
+                      <p className="text-[11px] text-text-tertiary">
+                        Sends a Paystack hosted page (Mobile Money, Card, Bank Transfer). Deposit is recorded automatically on success.
+                      </p>
+                      <div>
+                        <label className="mb-1 block text-xs text-text-tertiary">Amount (GHS)</label>
+                        <input
+                          type="number" step="0.01" min="0"
+                          placeholder="0.00"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-xs text-text-secondary">
+                        <input type="checkbox" checked={sendSms} onChange={(e) => setSendSms(e.target.checked)} className="h-3.5 w-3.5" />
+                        Send link to occupant by SMS
+                      </label>
+                      {error && <p className="text-xs text-danger">{error}</p>}
+                      <button
+                        onClick={generateLink}
+                        disabled={saving}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-60"
+                      >
+                        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                        Generate pay link
+                      </button>
+                    </>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-success/30 bg-success-subtle px-3 py-2 text-xs text-success">
+                        Pay link ready{payLinkSent ? ' · SMS sent to occupant' : ''}.
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          readOnly
+                          value={payLinkUrl}
+                          className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-mono"
+                          onFocus={(e) => e.currentTarget.select()}
+                        />
+                        <button
+                          type="button"
+                          onClick={copyLink}
+                          className="flex items-center gap-1 rounded-md border border-border bg-surface-raised px-3 py-2 text-xs font-medium text-text-primary hover:bg-surface-sunken transition-colors"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          {copied ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-text-tertiary">
+                        Deposit will record automatically once the guest pays. Refresh after receipt.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <input
-                placeholder="Reference / receipt no. (optional)"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
-              />
-              <input
-                placeholder="Notes (optional)"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
-              />
-              {error && <p className="text-xs text-danger">{error}</p>}
-              <button
-                onClick={record}
-                disabled={saving}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-fg hover:bg-brand-hover transition-colors disabled:opacity-60"
-              >
-                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                Record deposit
-              </button>
+              )}
             </div>
           )}
         </div>

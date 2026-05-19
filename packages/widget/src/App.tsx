@@ -177,13 +177,33 @@ export function App({ slug, onClose }: Props) {
         {step === 'success' && result && (
           <div class="abw-success">
             <div class="abw-success-icon">🎉</div>
-            <div class="abw-success-title">Booking Confirmed!</div>
+            <div class="abw-success-title">Booking Received!</div>
             <div class="abw-success-ref">Ref: {result.booking_ref}</div>
-            <p style={{ marginTop: 12, fontSize: 13, color: '#4a5568' }}>
-              We'll contact you shortly to complete payment of <strong>{ghs(result.amount)}</strong>.
-            </p>
+            {result.payment ? (
+              <>
+                <p style={{ marginTop: 12, fontSize: 13, color: '#4a5568' }}>
+                  Complete payment of <strong>{ghs(result.payment.amount)}</strong> to confirm your room.
+                </p>
+                <p style={{ marginTop: 4, fontSize: 12, color: '#718096' }}>
+                  Mobile Money · Card · Bank Transfer
+                </p>
+                <a
+                  href={result.payment.authorization_url}
+                  target="_top"
+                  rel="noopener noreferrer"
+                  class="abw-btn"
+                  style={{ marginTop: 20, display: 'inline-block', textDecoration: 'none', textAlign: 'center' }}
+                >
+                  Pay {ghs(result.payment.amount)} now
+                </a>
+              </>
+            ) : (
+              <p style={{ marginTop: 12, fontSize: 13, color: '#4a5568' }}>
+                We'll contact you shortly to complete payment of <strong>{ghs(result.amount)}</strong>.
+              </p>
+            )}
             {onClose && (
-              <button class="abw-btn" style={{ marginTop: 20 }} onClick={onClose}>Close</button>
+              <button class="abw-btn abw-btn-secondary" style={{ marginTop: 12 }} onClick={onClose}>Close</button>
             )}
           </div>
         )}

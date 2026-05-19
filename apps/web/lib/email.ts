@@ -203,6 +203,38 @@ export function paymentReceiptHtml(opts: {
   return baseTemplate(hostelName, primaryColor, content)
 }
 
+/* ── Invoice pay link email ─────────────────────────────────────────────── */
+
+export function invoicePayLinkHtml(opts: {
+  hostelName:    string
+  primaryColor:  string
+  guestName:     string
+  invoiceNumber: string
+  amountGHS:     string
+  url:           string
+}) {
+  const { hostelName, primaryColor, guestName, invoiceNumber, amountGHS, url } = opts
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Pay your invoice</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">
+      Hi ${guestName}, here is the secure payment link for invoice <strong>${invoiceNumber}</strong> at ${hostelName}.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      ${row('Invoice', invoiceNumber)}
+      ${row('Amount due', amountGHS)}
+      ${row('Methods', 'Mobile Money · Card · Bank Transfer')}
+    </table>
+    ${button(url, `Pay ${amountGHS}`, primaryColor)}
+    <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;">
+      Or copy this link into your browser:<br/>
+      <span style="word-break:break-all;color:#374151;">${url}</span>
+    </p>
+  `
+
+  return baseTemplate(hostelName, primaryColor, content)
+}
+
 /* ── Portal credentials email ───────────────────────────────────────────── */
 
 export function portalCredentialsHtml(opts: {

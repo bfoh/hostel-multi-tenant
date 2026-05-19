@@ -8,6 +8,7 @@ import { getInvoiceById } from '@/lib/data/invoices'
 import { splitGhanaTax } from '@/lib/tax/ghana'
 import { formatDate } from '@/lib/utils'
 import { PrintButton } from '@/components/invoices/print-button'
+import { InvoicePayLinkActions } from '@/components/invoices/pay-link-actions'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const metadata: Metadata = { title: 'Invoice' }
@@ -58,10 +59,11 @@ export default async function InvoicePage({
   const supabase = createAdminClient()
   const { data: tenantRaw } = await supabase
     .from('tenants')
-    .select('name, tagline, address_line1, address_city, contact_phone, contact_email, logo_url, tin, vat_reg_number, is_vat_registered')
+    .select('name, tagline, address_line1, address_city, contact_phone, contact_email, logo_url, tin, vat_reg_number, is_vat_registered, paystack_subaccount_code')
     .eq('id', tenantId)
     .single()
   const tenant = tenantRaw as any
+  const paystackReady = !!process.env.PAYSTACK_SECRET_KEY && !!tenant?.paystack_subaccount_code
 
   const occupant = Array.isArray(inv.occupant) ? inv.occupant[0] : inv.occupant
   const room     = Array.isArray(inv.room)     ? inv.room[0]     : inv.room
@@ -91,6 +93,13 @@ export default async function InvoicePage({
           Invoices
         </Link>
         <div className="flex items-center gap-2">
+          <InvoicePayLinkActions
+            bookingId={inv.id}
+            balance={balance}
+            occupantEmail={occupant?.email ?? null}
+            occupantPhone={occupant?.phone ?? null}
+            paystackEnabled={paystackReady}
+          />
           <Link
             href={`/bookings/${inv.id}`}
             className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-surface-raised transition-colors"

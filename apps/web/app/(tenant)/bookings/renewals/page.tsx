@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { RenewalClient } from '@/components/bookings/renewal-client'
@@ -9,6 +10,18 @@ export default async function RenewalsPage() {
   const supabase = createAdminClient()
   const today    = new Date().toISOString().slice(0, 10)
   const in30     = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+
+  const headersList = await headers()
+  const tenantId    = headersList.get('x-tenant-id')
+  let paystackReady = false
+  if (tenantId) {
+    const { data: t } = await supabase
+      .from('tenants')
+      .select('paystack_subaccount_code')
+      .eq('id', tenantId)
+      .single()
+    paystackReady = !!process.env.PAYSTACK_SECRET_KEY && !!t?.paystack_subaccount_code
+  }
 
   const { data: expiring } = await supabase
     .from('bookings')
@@ -37,7 +50,7 @@ export default async function RenewalsPage() {
           ← All bookings
         </Link>
       </div>
-      <RenewalClient initialBookings={expiring ?? []} />
+      <RenewalClient initialBookings={expiring ?? []} paystackEnabled={paystackReady} />
     </div>
   )
 }

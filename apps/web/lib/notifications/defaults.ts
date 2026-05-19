@@ -8,6 +8,7 @@ export type EventType =
   | 'booking_cancelled'
   | 'payment_received'
   | 'payment_reminder'
+  | 'payment_link'
   | 'checkin_reminder'
   | 'checkout_reminder'
   | 'lease_expiry_reminder'
@@ -95,6 +96,27 @@ export const DEFAULT_TEMPLATES: TemplateDefault[] = [
       'Booking Ref: {{booking_ref}}\n' +
       'Outstanding balance: {{balance}}\n\n' +
       'Thank you for your payment.',
+  },
+
+  // ── Payment link ──────────────────────────────────────────────────────────
+  {
+    event_type: 'payment_link',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, pay {{amount}} for booking {{booking_ref}} at {{hostel_name}}: ' +
+      '{{url}} — Mobile Money, Card or Bank Transfer accepted.',
+  },
+  {
+    event_type: 'payment_link',
+    channel:    'email',
+    subject:    'Payment link — {{booking_ref}}',
+    body:
+      'Dear {{first_name}},\n\n' +
+      'Please complete payment of {{amount}} for booking {{booking_ref}} at {{hostel_name}} ' +
+      'using the secure link below:\n\n' +
+      '{{url}}\n\n' +
+      'Mobile Money, Card and Bank Transfer are all accepted.\n\n' +
+      'Thank you.',
   },
 
   // ── Payment reminder ──────────────────────────────────────────────────────

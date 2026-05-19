@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CalendarClock, CheckCircle2, Clock, Loader2, Plus, AlertCircle, Minus } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Clock, Loader2, Plus, AlertCircle, Minus, Link2, Copy } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
 
 interface Installment {
@@ -45,10 +45,12 @@ export function PaymentPlanCard({
   bookingId,
   balance,
   initialPlan,
+  paystackEnabled = false,
 }: {
   bookingId: string
   balance: number
   initialPlan: Plan | null
+  paystackEnabled?: boolean
 }) {
   const router = useRouter()
   const [plan, setPlan]           = useState<Plan | null>(initialPlan)
@@ -56,6 +58,37 @@ export function PaymentPlanCard({
   const [creating, setCreating]   = useState(false)
   const [markingId, setMarkingId] = useState<string | null>(null)
   const [error, setError]         = useState<string | null>(null)
+  const [linkingId, setLinkingId] = useState<string | null>(null)
+  const [payLinks, setPayLinks]   = useState<Record<string, string>>({})
+  const [copiedId, setCopiedId]   = useState<string | null>(null)
+
+  async function generatePayLink(installmentId: string, planId: string) {
+    setLinkingId(installmentId); setError(null)
+    try {
+      const res = await fetch(`/api/plans/${planId}/installments/${installmentId}/pay-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ send_sms: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      setPayLinks((m) => ({ ...m, [installmentId]: data.authorization_url }))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setLinkingId(null)
+    }
+  }
+
+  async function copyLink(installmentId: string) {
+    const url = payLinks[installmentId]
+    if (!url) return
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedId(installmentId)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch { /* clipboard unavailable */ }
+  }
 
   // Create form state
   const [count, setCount]       = useState(3)
@@ -271,6 +304,17 @@ export function PaymentPlanCard({
               </div>
               {ins.status !== 'paid' && ins.status !== 'waived' && (
                 <div className="flex gap-1 shrink-0">
+                  {paystackEnabled && !payLinks[ins.id] && (
+                    <button
+                      disabled={linkingId === ins.id}
+                      onClick={() => generatePayLink(ins.id, plan.id)}
+                      className="flex items-center gap-1 rounded px-2 py-0.5 text-xs bg-brand/10 text-brand hover:bg-brand/20 disabled:opacity-50 transition-colors"
+                      title="Generate Paystack pay link"
+                    >
+                      {linkingId === ins.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Link2 className="h-3 w-3" />}
+                      Pay link
+                    </button>
+                  )}
                   <button
                     disabled={loading}
                     onClick={() => markInstallment(ins.id, plan.id, 'paid')}
@@ -291,6 +335,33 @@ export function PaymentPlanCard({
           )
         })}
       </div>
+
+      {Object.keys(payLinks).length > 0 && (
+        <div className="space-y-2 rounded-lg border border-success/30 bg-success-subtle p-3">
+          <p className="text-[11px] font-medium text-success">Pay link(s) ready · SMS sent to occupant</p>
+          {Object.entries(payLinks).map(([insId, url]) => {
+            const ins = installments.find((i) => i.id === insId)
+            return (
+              <div key={insId} className="flex items-center gap-2">
+                <span className="shrink-0 text-[11px] text-text-secondary">#{ins?.installment_number}</span>
+                <input
+                  readOnly
+                  value={url}
+                  className="flex-1 rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-mono"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <button
+                  onClick={() => copyLink(insId)}
+                  className="flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-medium"
+                >
+                  <Copy className="h-3 w-3" />
+                  {copiedId === insId ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

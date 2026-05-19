@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, Loader2, Bell, ChevronDown, ChevronUp } from 'lucide-react'
+import { RefreshCw, Loader2, Bell, ChevronDown, ChevronUp, Link2, Copy } from 'lucide-react'
 import Link from 'next/link'
 import { formatGHS } from '@/lib/utils'
 
@@ -23,7 +23,13 @@ function urgency(days: number) {
   return           { cls: 'bg-surface-sunken text-text-secondary border-border',    label: `${days}d` }
 }
 
-export function RenewalClient({ initialBookings }: { initialBookings: Booking[] }) {
+export function RenewalClient({
+  initialBookings,
+  paystackEnabled = false,
+}: {
+  initialBookings: Booking[]
+  paystackEnabled?: boolean
+}) {
   const [bookings, setBookings] = useState(initialBookings)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [renewingId, setRenewingId] = useState<string | null>(null)
@@ -32,25 +38,48 @@ export function RenewalClient({ initialBookings }: { initialBookings: Booking[] 
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState<string | null>(null)
   const [smsId, setSmsId]       = useState<string | null>(null)
+  const [generatePayLink, setGeneratePayLink] = useState(false)
+  const [sendSms, setSendSms]   = useState(true)
+  const [payLink, setPayLink]   = useState<{ url: string; smsSent: boolean } | null>(null)
+  const [copied, setCopied]     = useState(false)
 
   async function renew(bookingId: string) {
     if (!newDate) { setError('Select a new check-out date'); return }
-    setSaving(true); setError(null)
+    setSaving(true); setError(null); setRenewingId(bookingId); setPayLink(null)
     try {
       const res = await fetch(`/api/bookings/${bookingId}/renew`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_check_out_date: newDate, notes: notes || undefined }),
+        body: JSON.stringify({
+          new_check_out_date: newDate,
+          notes:              notes || undefined,
+          generate_pay_link:  generatePayLink,
+          send_sms:           generatePayLink && sendSms,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed')
-      setBookings((prev) => prev.filter((b) => b.id !== bookingId))
-      setExpanded(null); setNewDate(''); setNotes('')
+
+      if (data.payment?.authorization_url) {
+        setPayLink({ url: data.payment.authorization_url, smsSent: !!(generatePayLink && sendSms) })
+      } else {
+        setBookings((prev) => prev.filter((b) => b.id !== bookingId))
+        setExpanded(null); setNewDate(''); setNotes('')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed')
     } finally {
-      setSaving(false)
+      setSaving(false); setRenewingId(null)
     }
+  }
+
+  async function copyPayLink() {
+    if (!payLink) return
+    try {
+      await navigator.clipboard.writeText(payLink.url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* clipboard unavailable */ }
   }
 
   async function sendReminder(booking: Booking) {
@@ -165,6 +194,56 @@ export function RenewalClient({ initialBookings }: { initialBookings: Booking[] 
                     placeholder="Notes (optional)"
                     className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
                   />
+
+                  {paystackEnabled && (
+                    <div className="space-y-2 rounded-lg border border-border bg-surface px-3 py-2">
+                      <label className="flex items-center gap-2 text-xs text-text-secondary">
+                        <input
+                          type="checkbox"
+                          checked={generatePayLink}
+                          onChange={(e) => setGeneratePayLink(e.target.checked)}
+                          className="h-3.5 w-3.5"
+                        />
+                        <Link2 className="h-3.5 w-3.5" />
+                        Generate Paystack pay link for new balance
+                      </label>
+                      {generatePayLink && (
+                        <label className="flex items-center gap-2 pl-5 text-xs text-text-secondary">
+                          <input
+                            type="checkbox"
+                            checked={sendSms}
+                            onChange={(e) => setSendSms(e.target.checked)}
+                            className="h-3.5 w-3.5"
+                          />
+                          Send link to occupant by SMS
+                        </label>
+                      )}
+                    </div>
+                  )}
+
+                  {payLink && expanded === b.id && (
+                    <div className="space-y-2 rounded-lg border border-success/30 bg-success-subtle px-3 py-2">
+                      <p className="text-xs text-success">
+                        Renewed · pay link ready{payLink.smsSent ? ' · SMS sent' : ''}.
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          readOnly
+                          value={payLink.url}
+                          className="flex-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] font-mono"
+                          onFocus={(e) => e.currentTarget.select()}
+                        />
+                        <button
+                          onClick={copyPayLink}
+                          className="flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1.5 text-[11px] font-medium"
+                        >
+                          <Copy className="h-3 w-3" />
+                          {copied ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {error && <p className="text-xs text-danger">{error}</p>}
                 </div>
               </div>

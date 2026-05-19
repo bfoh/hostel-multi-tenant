@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBookingConfirmation } from '@/lib/sms'
 import { sendEmail, bookingConfirmationHtml } from '@/lib/email'
+import { initBookingPayment } from '@/lib/booking-payment'
 
 const schema = z.object({
   category_id: z.string().uuid(),
@@ -27,7 +28,7 @@ export async function POST(
   // Resolve tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, is_active')
+    .select('id, name, is_active, paystack_subaccount_code')
     .eq('slug', slug)
     .single()
 
@@ -130,11 +131,39 @@ export async function POST(
     return NextResponse.json({ error: bookingError?.message ?? 'Booking failed' }, { status: 500 })
   }
 
-  // Mark room as occupied
+  // Reserve room (hold, not occupied until confirmed)
   await supabase
     .from('rooms')
-    .update({ status: 'occupied' })
+    .update({ status: 'reserved' })
     .eq('id', availableRoom.id)
+
+  // Initialize Paystack hosted payment (card / momo / bank / bank_transfer)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host') ?? 'localhost:3000'}`
+  const callbackUrl = `${appUrl}/api/public/${slug}/pay/callback?booking_id=${booking.id}&amount=${category.base_rate}`
+
+  let payment: { authorization_url: string; reference: string; amount: number } | null = null
+  try {
+    const result = await initBookingPayment({
+      tenantId:         tenant.id,
+      tenantSubaccount: tenant.paystack_subaccount_code ?? null,
+      bookingId:        booking.id,
+      bookingRef:       booking.booking_ref,
+      amountPesewas:    category.base_rate,
+      email:            d.email ?? null,
+      callbackUrl,
+      source:           'public_booking',
+    })
+    if (result) {
+      payment = {
+        authorization_url: result.authorizationUrl,
+        reference:         result.reference,
+        amount:            result.amount,
+      }
+    }
+  } catch (err) {
+    console.error('[POST /api/public/[slug]/book] payment init failed', err)
+    // Soft-fail: booking still created, guest can pay later via /api/public/[slug]/pay
+  }
 
   // Fetch tenant branding for email
   const { data: tenantFull } = await supabase
@@ -187,5 +216,6 @@ export async function POST(
     amount:        category.base_rate,
     rate_unit:     category.rate_unit,
     status:        'pending_payment',
+    payment,
   }, { status: 201 })
 }

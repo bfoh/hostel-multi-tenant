@@ -19,7 +19,7 @@ export interface BookingPayload {
   check_out_date: string | null
   first_name: string
   last_name: string
-  email: string
+  email: string | null
   phone: string
   student_id: string | null
 }
@@ -28,7 +28,11 @@ export interface BookingResult {
   booking_id: string
   booking_ref: string
   amount: number          // pesewas
-  paystack_ref: string | null
+  payment: {
+    authorization_url: string
+    reference: string
+    amount: number
+  } | null
 }
 
 let _baseUrl = ''

@@ -121,6 +121,140 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
   // subscription.create event owns the tenant_subscriptions row.
   if (source === 'platform_subscription') return
 
+  // POS sale — pay link issued at a revenue point. Insert sale row on
+  // success. Idempotent by reference unique check.
+  if (source === 'pos_sale') {
+    const md = metadata as any
+    const tenantId = md?.tenant_id as string | undefined
+    if (!tenantId || !md?.revenue_point_id || !md?.total_amount) return
+
+    const adminAny = supabase as any
+    const { data: existing } = await adminAny
+      .from('revenue_point_sales')
+      .select('id')
+      .eq('reference', reference)
+      .maybeSingle()
+    if (existing) return
+
+    // Map Paystack channel to our payment_method enum
+    const channel = event.data.channel
+    const method  =
+      channel === 'mobile_money'  ? 'momo_mtn' :
+      channel === 'card'          ? 'card'     :
+      channel === 'bank' || channel === 'bank_transfer' ? 'bank_transfer' :
+      (md.payment_method === 'mobile_money' ? 'momo_mtn'
+       : md.payment_method === 'bank_transfer' ? 'bank_transfer'
+       : 'card')
+
+    await adminAny
+      .from('revenue_point_sales')
+      .insert({
+        tenant_id:        tenantId,
+        revenue_point_id: md.revenue_point_id,
+        item_id:          md.item_id ?? null,
+        description:      md.description,
+        quantity:         md.quantity ?? 1,
+        unit_price:       md.unit_price ?? md.total_amount,
+        total_amount:     md.total_amount,
+        payment_method:   method,
+        reference,
+        customer_name:    md.customer_name ?? null,
+        occupant_id:      md.occupant_id ?? null,
+        sold_by:          md.sold_by ?? null,
+      })
+    return
+  }
+
+  // Installment — pay link for a single payment_plan_installments row.
+  // Marks installment paid and increments booking.paid_amount. Idempotent
+  // by checking installment.status.
+  if (source === 'installment') {
+    const tenantId       = (metadata as any)?.tenant_id as string | undefined
+    const installmentId  = (metadata as any)?.installment_id as string | undefined
+    const bookingId      = (metadata as any)?.booking_id as string | undefined
+    const amountPesewas  = (metadata as any)?.amount as number | undefined
+
+    if (!tenantId || !installmentId || !bookingId || !amountPesewas) return
+
+    const adminAny = supabase as any
+
+    const { data: existing } = await adminAny
+      .from('payment_plan_installments')
+      .select('id, status, amount')
+      .eq('id', installmentId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (!existing || existing.status === 'paid') return
+
+    const { data: updated } = await adminAny
+      .from('payment_plan_installments')
+      .update({
+        status:         'paid',
+        paid_at:        new Date().toISOString(),
+        payment_method: inferMethodFromChannel(event.data.channel),
+        reference,
+      })
+      .eq('id', installmentId)
+      .eq('tenant_id', tenantId)
+      .neq('status', 'paid')
+      .select('amount')
+      .single()
+
+    if (updated) {
+      const { data: bk } = await adminAny
+        .from('bookings')
+        .select('paid_amount, final_amount')
+        .eq('id', bookingId)
+        .single()
+      if (bk) {
+        const newPaid = (bk.paid_amount as number) + amountPesewas
+        const newPaymentStatus = newPaid >= bk.final_amount ? 'paid'
+          : newPaid > 0 ? 'partial' : 'unpaid'
+        await adminAny
+          .from('bookings')
+          .update({ paid_amount: newPaid, payment_status: newPaymentStatus })
+          .eq('id', bookingId)
+      }
+    }
+    return
+  }
+
+  // Damage deposit — pay link issued by staff/guest. Insert deposit row on
+  // success, idempotent on (booking_id) unique constraint.
+  if (source === 'damage_deposit') {
+    const tenantId    = (metadata as any)?.tenant_id as string | undefined
+    const bookingId   = (metadata as any)?.booking_id as string | undefined
+    const occupantId  = (metadata as any)?.occupant_id as string | undefined
+    const depositAmt  = (metadata as any)?.deposit_amount as number | undefined
+
+    if (!tenantId || !bookingId || !occupantId || !depositAmt) return
+
+    const adminAny = supabase as any
+    const { data: existing } = await adminAny
+      .from('damage_deposits')
+      .select('id')
+      .eq('booking_id', bookingId)
+      .maybeSingle()
+
+    if (existing) return // idempotent — deposit already on file
+
+    await adminAny
+      .from('damage_deposits')
+      .insert({
+        tenant_id:    tenantId,
+        booking_id:   bookingId,
+        occupant_id:  occupantId,
+        amount:       depositAmt,
+        method:       inferMethodFromChannel(event.data.channel),
+        reference:    reference,
+        collected_at: new Date().toISOString(),
+        status:       'held',
+        notes:        'Paid online via Paystack pay link',
+      })
+    return
+  }
+
   // Food orders — tenant-side ledger, not booking_payments. Branch first so
   // the booking_payments fallback below never accidentally matches.
   if (source === 'food_order') {
@@ -342,6 +476,16 @@ function extractTenantId(event: PaystackWebhookPayload): string | null {
   return null
 }
 
+function inferMethodFromChannel(channel: string | undefined): string {
+  switch (channel) {
+    case 'mobile_money': return 'momo_mtn'
+    case 'card':         return 'card'
+    case 'bank':
+    case 'bank_transfer': return 'bank_transfer'
+    default:             return 'card'
+  }
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type AdminClient = ReturnType<typeof createAdminClient>
@@ -354,6 +498,7 @@ interface PaystackWebhookPayload {
     status?: string
     amount?: number
     paid?: boolean
+    channel?: string
     metadata?: Record<string, any> | null
     customer?: { customer_code?: string; email?: string }
     subscription?: {

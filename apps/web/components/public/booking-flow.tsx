@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Check, Users, Wifi, Wind, Droplets, Zap, Shield, Car, Utensils, Dumbbell, BookOpen, Share2, Phone, Flame, Clock } from 'lucide-react'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
@@ -459,6 +459,11 @@ interface BookingResult {
   amount: number
   rate_unit: string
   status: string
+  payment: {
+    authorization_url: string
+    reference: string
+    amount: number
+  } | null
 }
 
 function Confirmation({
@@ -483,6 +488,8 @@ function Confirmation({
     `Hi! I just made a booking at ${tenantName}.\nBooking ref: ${result.booking_ref}\nRoom: ${result.room_type}\nCheck-in: ${formatDate(result.check_in_date)}`
   )
 
+  const canPayOnline = !!result.payment?.authorization_url
+
   return (
     <div className="text-center space-y-6">
       {/* Success icon */}
@@ -491,9 +498,11 @@ function Confirmation({
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Booking Confirmed!</h2>
+        <h2 className="text-xl font-bold text-gray-900">Booking Received!</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Your booking has been received. The hostel will contact you to confirm payment and check-in details.
+          {canPayOnline
+            ? 'Complete payment now to confirm your room. We accept Mobile Money, Card and Bank Transfer.'
+            : 'The hostel will contact you to arrange payment and check-in.'}
         </p>
       </div>
 
@@ -520,6 +529,18 @@ function Confirmation({
           />
         </div>
       </div>
+
+      {/* Online payment CTA */}
+      {canPayOnline && (
+        <a
+          href={result.payment!.authorization_url}
+          className="flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: brandColor }}
+        >
+          Pay {formatGHS(result.payment!.amount)} now
+          <ChevronRight className="h-4 w-4" />
+        </a>
+      )}
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -622,6 +643,20 @@ export function BookingFlow({ categories, tenant }: BookingFlowProps) {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<BookingResult | null>(null)
   const [submittedPhone, setSubmittedPhone] = useState('')
+  const [payStatus, setPayStatus] = useState<'success' | 'failed' | 'error' | null>(null)
+
+  // Read ?pay=success|failed|error after Paystack redirects back
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    const p = sp.get('pay')
+    if (p === 'success' || p === 'failed' || p === 'error') {
+      setPayStatus(p)
+      // Clean URL so banner doesn't reappear on refresh
+      const url = new URL(window.location.href)
+      url.searchParams.delete('pay')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [])
 
   async function handleSubmit(data: FormData) {
     if (!selectedCategory) return
@@ -669,6 +704,22 @@ export function BookingFlow({ categories, tenant }: BookingFlowProps) {
   return (
     <div>
       <Steps current={step} brandColor={tenant.brandColor} />
+
+      {payStatus === 'success' && (
+        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          ✓ Payment received. Your booking is confirmed — see your inbox/SMS for the receipt.
+        </div>
+      )}
+      {payStatus === 'failed' && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Payment was not completed. Start a new booking or contact the hostel to pay manually.
+        </div>
+      )}
+      {payStatus === 'error' && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Something went wrong while verifying your payment. Please contact the hostel with your booking reference.
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

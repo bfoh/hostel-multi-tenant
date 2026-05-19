@@ -1,17 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Minus, ShoppingCart, Loader2, CheckCircle, Trash2 } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, Loader2, CheckCircle, Trash2, Link2, Copy, X } from 'lucide-react'
 import type { RevenuePointItem } from '@/lib/data/revenue-points'
 
 const PAYMENT_METHODS = [
   { value: 'cash',            label: 'Cash' },
-  { value: 'momo_mtn',       label: 'MTN MoMo' },
-  { value: 'momo_vodafone',  label: 'Vodafone Cash' },
-  { value: 'momo_airteltigo', label: 'AirtelTigo' },
-  { value: 'card',            label: 'Card' },
+  { value: 'momo_mtn',       label: 'MTN MoMo (offline)' },
+  { value: 'momo_vodafone',  label: 'Vodafone Cash (offline)' },
+  { value: 'momo_airteltigo', label: 'AirtelTigo (offline)' },
+  { value: 'card',            label: 'Card (offline)' },
   { value: 'on_account',      label: 'Charge to Room' },
+]
+
+const ONLINE_METHODS = [
+  { value: 'mobile_money',  label: 'Online — Mobile Money' },
+  { value: 'card',          label: 'Online — Card' },
+  { value: 'bank_transfer', label: 'Online — Bank Transfer' },
 ]
 
 interface CartItem {
@@ -24,9 +30,11 @@ interface CartItem {
 export function POSClient({
   revenuePointId,
   items,
+  paystackEnabled = false,
 }: {
   revenuePointId: string
   items: RevenuePointItem[]
+  paystackEnabled?: boolean
 }) {
   const router = useRouter()
   const [cart, setCart] = useState<CartItem[]>([])
@@ -36,6 +44,33 @@ export function POSClient({
   const [customItemPrice, setCustomItemPrice] = useState('')
   const [busy, setBusy] = useState(false)
   const [success, setSuccess] = useState(false)
+
+  // Online checkout modal state
+  const [online, setOnline] = useState<{
+    url:         string
+    reference:   string
+    amount:      number
+    status:      'pending' | 'completed' | 'failed'
+  } | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  // Poll for completion when online checkout is active
+  useEffect(() => {
+    if (!online || online.status !== 'pending') return
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/revenue-points/sales/by-reference?reference=${encodeURIComponent(online.reference)}`)
+        const data = await res.json()
+        if (data.status === 'completed') {
+          setOnline((cur) => (cur ? { ...cur, status: 'completed' } : cur))
+          setCart([])
+          setCustomerName('')
+          router.refresh()
+        }
+      } catch { /* keep polling */ }
+    }, 4000)
+    return () => clearInterval(id)
+  }, [online, router])
 
   const total = cart.reduce((s, c) => s + c.unitPrice * c.quantity, 0)
 
@@ -69,38 +104,79 @@ export function POSClient({
     setCustomItemPrice('')
   }
 
+  const isOnline = method === 'mobile_money' || method === 'bank_transfer' || method === 'online_card'
+
   async function handleCheckout() {
     if (cart.length === 0) return
     setBusy(true)
     setSuccess(false)
 
     try {
-      for (const item of cart) {
-        await fetch('/api/revenue-points/sales', {
+      if (isOnline) {
+        // Single Paystack transaction for the full cart
+        const description = cart.length === 1
+          ? `${cart[0].name} × ${cart[0].quantity}`
+          : `POS sale · ${cart.reduce((s, c) => s + c.quantity, 0)} items`
+
+        const res = await fetch('/api/revenue-points/sales/pay-link', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             revenue_point_id: revenuePointId,
-            item_id:          item.itemId.startsWith('custom-') ? null : item.itemId,
-            description:      item.name,
-            quantity:         item.quantity,
-            unit_price:       item.unitPrice,
-            total_amount:     item.unitPrice * item.quantity,
-            payment_method:   method,
+            item_id:          cart.length === 1 && !cart[0].itemId.startsWith('custom-') ? cart[0].itemId : null,
+            description,
+            quantity:         1,
+            unit_price:       total,
+            total_amount:     total,
+            payment_method:   method === 'online_card' ? 'card' : method,
             customer_name:    customerName || undefined,
           }),
         })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error ?? 'Failed')
+        setOnline({
+          url:       data.authorization_url,
+          reference: data.reference,
+          amount:    data.amount,
+          status:    'pending',
+        })
+      } else {
+        for (const item of cart) {
+          await fetch('/api/revenue-points/sales', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              revenue_point_id: revenuePointId,
+              item_id:          item.itemId.startsWith('custom-') ? null : item.itemId,
+              description:      item.name,
+              quantity:         item.quantity,
+              unit_price:       item.unitPrice,
+              total_amount:     item.unitPrice * item.quantity,
+              payment_method:   method,
+              customer_name:    customerName || undefined,
+            }),
+          })
+        }
+        setSuccess(true)
+        setCart([])
+        setCustomerName('')
+        setTimeout(() => setSuccess(false), 3000)
+        router.refresh()
       }
-      setSuccess(true)
-      setCart([])
-      setCustomerName('')
-      setTimeout(() => setSuccess(false), 3000)
-      router.refresh()
     } catch {
       // Silently handle
     } finally {
       setBusy(false)
     }
+  }
+
+  async function copyOnlineUrl() {
+    if (!online) return
+    try {
+      await navigator.clipboard.writeText(online.url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* clipboard unavailable */ }
   }
 
   // Group items by category
@@ -232,6 +308,13 @@ export function POSClient({
               {PAYMENT_METHODS.map((m) => (
                 <option key={m.value} value={m.value}>{m.label}</option>
               ))}
+              {paystackEnabled && (
+                <optgroup label="Pay online (Paystack)">
+                  <option value="mobile_money">{ONLINE_METHODS[0].label}</option>
+                  <option value="online_card">{ONLINE_METHODS[1].label}</option>
+                  <option value="bank_transfer">{ONLINE_METHODS[2].label}</option>
+                </optgroup>
+              )}
             </select>
           </div>
 
@@ -254,11 +337,88 @@ export function POSClient({
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : success ? (
               <CheckCircle className="h-4 w-4" />
+            ) : isOnline ? (
+              <Link2 className="h-4 w-4" />
             ) : null}
-            {success ? 'Sale Recorded!' : `Charge GH₵ ${(total / 100).toFixed(2)}`}
+            {success ? 'Sale Recorded!' : isOnline ? `Generate pay link · GH₵ ${(total / 100).toFixed(2)}` : `Charge GH₵ ${(total / 100).toFixed(2)}`}
           </button>
         </div>
       </div>
+
+      {/* ── Online checkout modal ─────────────────────────────────────── */}
+      {online && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-text-primary">
+                  {online.status === 'completed' ? 'Payment received' : 'Waiting for payment'}
+                </h3>
+                <p className="mt-0.5 text-xs text-text-tertiary">
+                  GH₵ {(online.amount / 100).toFixed(2)} · {online.reference}
+                </p>
+              </div>
+              <button
+                onClick={() => setOnline(null)}
+                className="rounded p-1 text-text-tertiary hover:bg-surface-raised"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {online.status === 'pending' && (
+              <div className="mt-4 space-y-4">
+                <p className="text-sm text-text-secondary">
+                  Share this link with the customer. They can scan the QR or open it on their phone to pay with Mobile Money, Card or Bank Transfer.
+                </p>
+
+                {/* QR code via public service — no external dep */}
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(online.url)}`}
+                  alt="Payment QR code"
+                  className="mx-auto h-56 w-56 rounded-lg border border-border bg-white p-2"
+                />
+
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={online.url}
+                    className="flex-1 rounded-md border border-border bg-surface-raised px-2 py-1.5 text-[11px] font-mono"
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    onClick={copyOnlineUrl}
+                    className="flex items-center gap-1 rounded-md border border-border bg-surface-raised px-2 py-1.5 text-xs font-medium"
+                  >
+                    <Copy className="h-3 w-3" />
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 text-xs text-text-tertiary">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Waiting for confirmation…
+                </div>
+              </div>
+            )}
+
+            {online.status === 'completed' && (
+              <div className="mt-6 flex flex-col items-center gap-3 py-2 text-center">
+                <CheckCircle className="h-10 w-10 text-success" />
+                <p className="font-semibold text-success">Sale recorded</p>
+                <p className="text-xs text-text-secondary">Receipt has been logged. You can close this window.</p>
+                <button
+                  onClick={() => setOnline(null)}
+                  className="mt-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
