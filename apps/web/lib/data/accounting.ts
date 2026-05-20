@@ -309,6 +309,169 @@ export async function getCashFlow(dateFrom: string, dateTo: string): Promise<Cas
 
 /* ── KPI summary ──────────────────────────────────────────────────────── */
 
+export interface MonthlyTrendPoint {
+  month:       string  // YYYY-MM
+  label:       string  // 'Jan 26'
+  revenue:     number
+  expenses:    number
+  netProfit:   number
+}
+
+export interface FinancialHealth {
+  asOf:               string
+  cashPosition:       number
+  arOutstanding:      number
+  apOutstanding:      number
+  vatPayable:         number
+  payeAndSsnitPayable:number
+  currentAssets:      number
+  currentLiabilities: number
+  totalAssets:        number
+  totalLiabilities:   number
+  totalEquity:        number
+  ratios: {
+    netMargin:     number | null  // 0..1
+    currentRatio:  number | null
+    quickRatio:    number | null
+    debtToEquity:  number | null
+  }
+  mtd: { revenue: number; expenses: number; netProfit: number }
+  ytd: { revenue: number; expenses: number; netProfit: number }
+  cashRunwayMonths:   number | null
+  monthlyTrend:       MonthlyTrendPoint[]
+  topRevenueMtd:      { account_id: string; code: string; name: string; amount: number }[]
+  topExpensesMtd:     { account_id: string; code: string; name: string; amount: number }[]
+}
+
+export async function getFinancialHealth(): Promise<FinancialHealth | null> {
+  const tenantId = await getServerTenantId()
+  if (!tenantId) return null
+
+  const supabase = createAdminClient()
+
+  const now = new Date()
+  const y   = now.getFullYear()
+  const m   = String(now.getMonth() + 1).padStart(2, '0')
+  const today    = now.toISOString().slice(0, 10)
+  const mtdStart = `${y}-${m}-01`
+  const ytdStart = `${y}-01-01`
+
+  // 6-month window starting first day of (now - 5) months
+  const trendStartDate = new Date(y, now.getMonth() - 5, 1)
+  const trendStart = trendStartDate.toISOString().slice(0, 10)
+
+  const [tb, mtdPnL, ytdPnL, trendLines] = await Promise.all([
+    getTrialBalance(undefined, today),
+    getPnL(mtdStart, today),
+    getPnL(ytdStart, today),
+    (supabase as any)
+      .from('journal_lines')
+      .select(`
+        debit, credit,
+        entry:journal_entries!inner(entry_date),
+        account:chart_of_accounts(type)
+      `)
+      .eq('tenant_id', tenantId)
+      .gte('journal_entries.entry_date', trendStart)
+      .lte('journal_entries.entry_date', today),
+  ])
+
+  // Account-balance helpers
+  const byCodePrefix = (prefix: string) => tb
+    .filter((a) => a.code.startsWith(prefix))
+    .reduce((s, a) => s + a.balance, 0)
+
+  const cashPosition = byCodePrefix('10')                                       // 1010 + 1020
+  const arOutstanding = byCodePrefix('1100')
+  const apOutstanding = byCodePrefix('2010')
+  const vatPayable = ['2100', '2110', '2120'].reduce((s, c) => s + byCodePrefix(c), 0)
+  const payeAndSsnitPayable = ['2200', '2210', '2220'].reduce((s, c) => s + byCodePrefix(c), 0)
+
+  // Current = codes 10xx/11xx/12xx (assets), 20xx/21xx/22xx/23xx (liabilities)
+  const currentAssets = tb
+    .filter((a) => a.type === 'asset' && /^1[012]/.test(a.code))
+    .reduce((s, a) => s + a.balance, 0)
+  const currentLiabilities = tb
+    .filter((a) => a.type === 'liability' && /^2[0123]/.test(a.code))
+    .reduce((s, a) => s + a.balance, 0)
+
+  const totalAssets      = tb.filter((a) => a.type === 'asset')    .reduce((s, a) => s + a.balance, 0)
+  const totalLiabilities = tb.filter((a) => a.type === 'liability').reduce((s, a) => s + a.balance, 0)
+  const totalEquity      = tb.filter((a) => a.type === 'equity')   .reduce((s, a) => s + a.balance, 0)
+
+  // Quick ratio = (current assets − inventory) / current liabilities
+  const inventoryBalance = byCodePrefix('1300')
+
+  const ratios = {
+    netMargin: ytdPnL.totalRevenue > 0 ? ytdPnL.netProfit / ytdPnL.totalRevenue : null,
+    currentRatio: currentLiabilities > 0 ? currentAssets / currentLiabilities : null,
+    quickRatio: currentLiabilities > 0
+      ? Math.max(0, currentAssets - inventoryBalance) / currentLiabilities
+      : null,
+    debtToEquity: totalEquity > 0 ? totalLiabilities / totalEquity : null,
+  }
+
+  // Aggregate trend by month + account type
+  const monthlyMap = new Map<string, { revenue: number; expenses: number }>()
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(y, now.getMonth() - i, 1)
+    monthlyMap.set(d.toISOString().slice(0, 7), { revenue: 0, expenses: 0 })
+  }
+
+  for (const row of ((trendLines as any)?.data ?? []) as any[]) {
+    const entry = Array.isArray(row.entry) ? row.entry[0] : row.entry
+    const acct  = Array.isArray(row.account) ? row.account[0] : row.account
+    if (!entry || !acct) continue
+    const monthKey = String(entry.entry_date).slice(0, 7)
+    const slot = monthlyMap.get(monthKey)
+    if (!slot) continue
+    if (acct.type === 'revenue') slot.revenue  += (row.credit as number) - (row.debit as number)
+    if (acct.type === 'expense') slot.expenses += (row.debit as number) - (row.credit as number)
+  }
+
+  const monthlyTrend: MonthlyTrendPoint[] = Array.from(monthlyMap.entries()).map(([month, v]) => {
+    const d = new Date(month + '-01')
+    return {
+      month,
+      label:    d.toLocaleDateString('en-GH', { month: 'short', year: '2-digit' }),
+      revenue:  v.revenue,
+      expenses: v.expenses,
+      netProfit: v.revenue - v.expenses,
+    }
+  })
+
+  // Cash runway: average monthly burn over the last 3 months (only months with burn)
+  const recentBurns = monthlyTrend.slice(-3).map((p) => p.expenses).filter((e) => e > 0)
+  const avgBurn = recentBurns.length > 0
+    ? recentBurns.reduce((s, n) => s + n, 0) / recentBurns.length
+    : 0
+  const cashRunwayMonths = avgBurn > 0 ? cashPosition / avgBurn : null
+
+  const topRevenueMtd = [...mtdPnL.revenue].sort((a, b) => b.amount - a.amount).slice(0, 5)
+  const topExpensesMtd = [...mtdPnL.expenses].sort((a, b) => b.amount - a.amount).slice(0, 5)
+
+  return {
+    asOf: today,
+    cashPosition,
+    arOutstanding,
+    apOutstanding,
+    vatPayable,
+    payeAndSsnitPayable,
+    currentAssets,
+    currentLiabilities,
+    totalAssets,
+    totalLiabilities,
+    totalEquity,
+    ratios,
+    mtd: { revenue: mtdPnL.totalRevenue, expenses: mtdPnL.totalExpenses, netProfit: mtdPnL.netProfit },
+    ytd: { revenue: ytdPnL.totalRevenue, expenses: ytdPnL.totalExpenses, netProfit: ytdPnL.netProfit },
+    cashRunwayMonths,
+    monthlyTrend,
+    topRevenueMtd,
+    topExpensesMtd,
+  }
+}
+
 export async function getAccountingKpis() {
   const now    = new Date()
   const y      = now.getFullYear()
