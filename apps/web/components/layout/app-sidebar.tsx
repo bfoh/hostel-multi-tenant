@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { useTenant } from '@/components/providers/tenant-provider'
 import { initials } from '@/lib/utils'
 import { SidebarDraftBadge } from '@/components/payments/sidebar-draft-badge'
+import { SidebarEnquiryBadge } from '@/components/waiting-list/sidebar-enquiry-badge'
 import { UnreadBadge } from '@/components/messages/unread-badge'
 
 // ── Role helpers ─────────────────────────────────────────────────────────────
@@ -81,7 +82,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { label: 'Expenses',       href: '/accounting/expenses', icon: TrendingDown, anim: 'slide'  },
   { label: 'Staff',          href: '/staff',               icon: UserCog,      anim: 'spin'   },
   { label: 'Assets',         href: '/assets',              icon: Package,      anim: 'tilt'   },
-  { label: 'Waiting List',   href: '/waiting-list',        icon: ListOrdered,  anim: 'slide'  },
+  { label: 'Waiting List',   href: '/waiting-list',        icon: ListOrdered,  anim: 'slide'  }, // badge injected below
   { label: 'Reports',        href: '/reports',             icon: BarChart3,    anim: 'pulse'  },
   { label: 'Intelligence',   href: '/intelligence',        icon: Sparkles,     anim: 'pop'    },
   { label: 'AI Assistant',   href: '/ai',                  icon: Bot,          anim: 'ring'   },
@@ -96,13 +97,20 @@ const BOTTOM_ITEMS: NavItem[] = [
 // ── Component ────────────────────────────────────────────────────────────────
 
 interface AppSidebarProps {
-  user:              User
-  tenantRole:        string
-  tenantId:          string
-  initialDraftCount: number
+  user:                User
+  tenantRole:          string
+  tenantId:            string
+  initialDraftCount:   number
+  initialEnquiryCount: number
 }
 
-export function AppSidebar({ user, tenantRole, tenantId, initialDraftCount }: AppSidebarProps) {
+export function AppSidebar({
+  user,
+  tenantRole,
+  tenantId,
+  initialDraftCount,
+  initialEnquiryCount,
+}: AppSidebarProps) {
   const pathname   = usePathname()
   const { tenantName, tenantLogo } = useTenant()
   const [collapsed, setCollapsed] = useState(false)
@@ -124,6 +132,11 @@ export function AppSidebar({ user, tenantRole, tenantId, initialDraftCount }: Ap
       ? <SidebarDraftBadge tenantId={tenantId} initialCount={initialDraftCount} compact={collapsed} />
       : null,
   }
+  const adminItems: NavItem[] = ADMIN_ITEMS.map((it) =>
+    it.href === '/waiting-list' && tenantId
+      ? { ...it, badge: <SidebarEnquiryBadge tenantId={tenantId} initialCount={initialEnquiryCount} compact={collapsed} /> }
+      : it
+  )
 
   return (
     <aside
@@ -222,7 +235,7 @@ export function AppSidebar({ user, tenantRole, tenantId, initialDraftCount }: Ap
               <div className="my-2 mx-2 border-t border-[rgba(214,235,253,0.12)]" />
             )}
             <ul className="space-y-0.5">
-              {ADMIN_ITEMS.map((item) => (
+              {adminItems.map((item) => (
                 <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
               ))}
             </ul>

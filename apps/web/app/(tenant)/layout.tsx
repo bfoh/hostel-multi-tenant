@@ -27,15 +27,27 @@ export default async function TenantLayout({ children }: { children: React.React
   // Initial pending bank-draft count for the sidebar badge — only fetched
   // for owner/accountant since the link is hidden from other roles anyway.
   let initialDraftCount = 0
-  if (tenantId && (tenantRole === 'owner' || tenantRole === 'accountant')) {
+  let initialEnquiryCount = 0
+  if (tenantId) {
     const admin = createAdminClient()
-    const { count } = await admin
-      .from('booking_payments')
-      .select('id', { head: true, count: 'exact' })
-      .eq('tenant_id', tenantId)
-      .eq('method', 'bank_draft' as any)
-      .eq('status', 'pending')
-    initialDraftCount = count ?? 0
+    if (tenantRole === 'owner' || tenantRole === 'accountant') {
+      const { count } = await admin
+        .from('booking_payments')
+        .select('id', { head: true, count: 'exact' })
+        .eq('tenant_id', tenantId)
+        .eq('method', 'bank_draft' as any)
+        .eq('status', 'pending')
+      initialDraftCount = count ?? 0
+    }
+    if (tenantRole === 'owner' || tenantRole === 'manager') {
+      const { count } = await (admin
+        .from('waiting_list') as any)
+        .select('id', { head: true, count: 'exact' })
+        .eq('tenant_id', tenantId)
+        .eq('source', 'website')
+        .eq('status', 'waiting')
+      initialEnquiryCount = count ?? 0
+    }
   }
 
   return (
@@ -59,6 +71,7 @@ export default async function TenantLayout({ children }: { children: React.React
         tenantRole={tenantRole}
         tenantId={tenantId}
         initialDraftCount={initialDraftCount}
+        initialEnquiryCount={initialEnquiryCount}
       />
 
       {/* ── Main content area ────────────────────────────────────── */}

@@ -1,24 +1,40 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Check, Bell, Loader2, Users, CalendarClock } from 'lucide-react'
+import { Plus, Trash2, Check, Bell, Loader2, Users, CalendarClock, Globe, Mail, Phone, MessageSquare } from 'lucide-react'
 
 interface Category { id: string; name: string }
 interface WLEntry {
   id: string
   status: string
   priority: number
+  source: 'manual' | 'website' | 'whatsapp' | 'referral'
   contact_name: string | null
   contact_phone: string | null
   contact_email: string | null
   preferred_check_in: string | null
   preferred_duration: string | null
   notes: string | null
+  message: string | null
   notified_at: string | null
   created_at: string
   room_categories?: { name: string } | null
   occupants?: { first_name: string; last_name: string; phone?: string; email?: string } | null
+}
+
+const SOURCE_LABEL: Record<WLEntry['source'], string> = {
+  manual:   'Walk-in / Staff',
+  website:  'Website',
+  whatsapp: 'WhatsApp',
+  referral: 'Referral',
+}
+
+const SOURCE_BADGE: Record<WLEntry['source'], string> = {
+  manual:   'bg-surface-raised text-text-secondary border-border',
+  website:  'bg-brand/10 text-brand border-brand/30',
+  whatsapp: 'bg-success-subtle text-success border-success/20',
+  referral: 'bg-info-subtle text-info border-info/20',
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -29,9 +45,11 @@ const STATUS_BADGE: Record<string, string> = {
 export function WaitingListClient({
   initialEntries,
   categories,
+  initialSource = 'all',
 }: {
   initialEntries: WLEntry[]
   categories: Category[]
+  initialSource?: string
 }) {
   const router  = useRouter()
   const [entries, setEntries] = useState(initialEntries)
@@ -39,6 +57,18 @@ export function WaitingListClient({
   const [saving, setSaving]   = useState(false)
   const [actingId, setActingId] = useState<string | null>(null)
   const [error, setError]     = useState<string | null>(null)
+  const [sourceFilter, setSourceFilter] = useState<string>(initialSource)
+
+  const sourceCounts = useMemo(() => {
+    const c: Record<string, number> = { all: entries.length, website: 0, manual: 0, whatsapp: 0, referral: 0 }
+    for (const e of entries) c[e.source] = (c[e.source] ?? 0) + 1
+    return c
+  }, [entries])
+
+  const visibleEntries = useMemo(
+    () => sourceFilter === 'all' ? entries : entries.filter((e) => e.source === sourceFilter),
+    [entries, sourceFilter],
+  )
 
   const [form, setForm] = useState({
     contact_name:      '',
@@ -117,9 +147,9 @@ export function WaitingListClient({
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Waiting List</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Waiting List & Enquiries</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
-            {entries.length} {entries.length === 1 ? 'person' : 'people'} waiting for a room
+            {entries.length} open · {sourceCounts.website ?? 0} from website
           </p>
         </div>
         <button
@@ -129,6 +159,32 @@ export function WaitingListClient({
           <Plus className="h-4 w-4" />
           Add to list
         </button>
+      </div>
+
+      {/* Source filter chips */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {(['all', 'website', 'manual', 'whatsapp', 'referral'] as const).map((s) => {
+          const count = sourceCounts[s] ?? 0
+          const active = sourceFilter === s
+          const label = s === 'all' ? 'All' : SOURCE_LABEL[s as WLEntry['source']]
+          return (
+            <button
+              key={s}
+              onClick={() => setSourceFilter(s)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                active
+                  ? 'bg-brand text-brand-fg border-brand'
+                  : 'bg-surface border-border text-text-secondary hover:text-text-primary hover:border-brand/40'
+              }`}
+            >
+              {s === 'website' && <Globe className="h-3 w-3" />}
+              {label}
+              <span className={`rounded-full px-1.5 text-[10px] ${active ? 'bg-brand-fg/15 text-brand-fg' : 'bg-surface-raised text-text-tertiary'}`}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Add form */}
@@ -226,11 +282,17 @@ export function WaitingListClient({
       )}
 
       {/* List */}
-      {entries.length === 0 ? (
+      {visibleEntries.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
           <Users className="h-8 w-8 text-text-disabled" />
-          <p className="font-medium text-text-primary">No one on the waiting list</p>
-          <p className="text-sm text-text-secondary">Add people who are waiting for a room to become available.</p>
+          <p className="font-medium text-text-primary">
+            {sourceFilter === 'website' ? 'No website enquiries yet' : 'No one on the waiting list'}
+          </p>
+          <p className="text-sm text-text-secondary">
+            {sourceFilter === 'website'
+              ? 'New enquiries submitted from your public website will show up here.'
+              : 'Add people who are waiting for a room to become available.'}
+          </p>
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-surface overflow-hidden">
@@ -241,19 +303,25 @@ export function WaitingListClient({
             <span>Actions</span>
           </div>
           <div className="divide-y divide-border">
-            {entries.map((entry, i) => {
+            {visibleEntries.map((entry, i) => {
               const occ = Array.isArray(entry.occupants) ? entry.occupants[0] : entry.occupants
               const cat = Array.isArray(entry.room_categories) ? entry.room_categories[0] : entry.room_categories
               const name = occ ? `${occ.first_name} ${occ.last_name}` : entry.contact_name
               const phone = occ?.phone ?? entry.contact_phone
+              const email = occ?.email ?? entry.contact_email
               const loading = actingId === entry.id
+              const isWeb = entry.source === 'website'
 
               return (
-                <div key={entry.id} className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center px-4 py-3">
-                  <span className="text-sm font-bold text-text-tertiary w-6 text-center">{i + 1}</span>
+                <div key={entry.id} className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-start px-4 py-3">
+                  <span className="text-sm font-bold text-text-tertiary w-6 text-center pt-0.5">{i + 1}</span>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium text-text-primary">{name}</p>
+                      <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${SOURCE_BADGE[entry.source]}`}>
+                        {isWeb && <Globe className="inline h-2.5 w-2.5 mr-0.5 -mt-0.5" />}
+                        {SOURCE_LABEL[entry.source]}
+                      </span>
                       <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${STATUS_BADGE[entry.status] ?? 'bg-surface-raised text-text-secondary border-border'}`}>
                         {entry.status}
                       </span>
@@ -264,20 +332,42 @@ export function WaitingListClient({
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-text-tertiary mt-0.5 flex-wrap">
-                      {phone && <span>{phone}</span>}
+                      {phone && (
+                        <a href={`tel:${phone}`} className="inline-flex items-center gap-1 hover:text-text-primary">
+                          <Phone className="h-3 w-3" />
+                          {phone}
+                        </a>
+                      )}
+                      {email && (
+                        <a href={`mailto:${email}`} className="inline-flex items-center gap-1 hover:text-text-primary">
+                          <Mail className="h-3 w-3" />
+                          {email}
+                        </a>
+                      )}
                       {entry.preferred_check_in && (
                         <span className="flex items-center gap-1">
                           <CalendarClock className="h-3 w-3" />
                           From {entry.preferred_check_in}
                         </span>
                       )}
-                      {entry.notes && <span className="truncate max-w-[200px]">{entry.notes}</span>}
                       {entry.notified_at && (
                         <span className="text-success">Notified {new Date(entry.notified_at).toLocaleDateString('en-GH', { dateStyle: 'short' })}</span>
                       )}
                     </div>
+                    {entry.message && (
+                      <div className="mt-2 rounded-md border border-border bg-surface-raised/40 px-3 py-2">
+                        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-text-tertiary mb-1">
+                          <MessageSquare className="h-3 w-3" />
+                          Enquiry message
+                        </div>
+                        <p className="text-xs text-text-secondary whitespace-pre-wrap">{entry.message}</p>
+                      </div>
+                    )}
+                    {entry.notes && (
+                      <p className="mt-1 text-xs text-text-tertiary">Note: {entry.notes}</p>
+                    )}
                   </div>
-                  <span className="text-xs text-text-tertiary">{cat?.name ?? 'Any'}</span>
+                  <span className="text-xs text-text-tertiary pt-0.5">{cat?.name ?? 'Any'}</span>
                   <div className="flex items-center gap-1 shrink-0">
                     {loading ? (
                       <Loader2 className="h-4 w-4 animate-spin text-text-tertiary" />
