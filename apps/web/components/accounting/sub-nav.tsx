@@ -12,10 +12,12 @@ import {
   DollarSign,
   GitMerge,
   Receipt,
+  ArrowDownToLine,
 } from 'lucide-react'
 
 const TABS = [
   { href: '/accounting',                label: 'Overview',     icon: LayoutDashboard },
+  { href: '/accounting/ar',             label: 'A/R Aging',    icon: ArrowDownToLine },
   { href: '/accounting/journal',        label: 'Journal',      icon: BookOpen },
   { href: '/accounting/trial-balance',  label: 'Trial Balance',icon: Scale },
   { href: '/accounting/pnl',            label: 'P&L',          icon: BarChart3 },
