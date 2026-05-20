@@ -11,7 +11,10 @@ interface CreateBillBody {
   due_date:           string  // YYYY-MM-DD
   category:           string
   description:        string
-  amount:             number  // pesewas
+  amount:             number  // pesewas in BASE currency (GHS)
+  currency_code?:     string  // ISO 4217; default 'GHS'
+  original_amount?:   number  // pesewas in original currency (only for non-GHS)
+  fx_rate_used?:      number  // rate applied at capture (only for non-GHS)
   expense_account_id?:string
   notes?:             string
 }
@@ -34,6 +37,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Amount must be positive integer pesewas' }, { status: 400 })
   }
 
+  const currency = body.currency_code?.trim().toUpperCase() || 'GHS'
+  if (!/^[A-Z]{3,4}$/.test(currency)) {
+    return NextResponse.json({ error: 'currency_code must be 3–4 letters (ISO 4217)' }, { status: 400 })
+  }
+  if (currency !== 'GHS') {
+    if (!Number.isInteger(body.original_amount) || (body.original_amount ?? 0) <= 0) {
+      return NextResponse.json({ error: 'original_amount required for non-GHS bills' }, { status: 400 })
+    }
+    if (!Number.isFinite(body.fx_rate_used) || (body.fx_rate_used ?? 0) <= 0) {
+      return NextResponse.json({ error: 'fx_rate_used required for non-GHS bills' }, { status: 400 })
+    }
+  }
+
   const admin = createAdminClient()
   const { data, error } = await (admin as any)
     .from('supplier_bills')
@@ -47,6 +63,9 @@ export async function POST(req: NextRequest) {
       category:           body.category,
       description:        body.description.trim(),
       amount:             body.amount,
+      currency_code:      currency,
+      original_amount:    currency === 'GHS' ? null : body.original_amount,
+      fx_rate_used:       currency === 'GHS' ? null : body.fx_rate_used,
       expense_account_id: body.expense_account_id || null,
       notes:              body.notes?.trim() || null,
       status:             'draft',

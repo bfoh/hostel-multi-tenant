@@ -1,17 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Banknote } from 'lucide-react'
 
 interface ExpenseAccount { id: string; code: string; name: string }
+interface FxRate { code: string; rate: number; asOf: string }
 
 const CATEGORIES = [
   'utilities','repairs','salaries','supplies','maintenance',
   'marketing','insurance','rent','equipment','other',
 ] as const
 
-export function NewBillForm({ expenseAccounts }: { expenseAccounts: ExpenseAccount[] }) {
+export function NewBillForm({
+  expenseAccounts,
+  fxRates,
+}: {
+  expenseAccounts: ExpenseAccount[]
+  fxRates:         FxRate[]
+}) {
   const router = useRouter()
   const today = new Date().toISOString().slice(0, 10)
   const due30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
@@ -23,21 +30,37 @@ export function NewBillForm({ expenseAccounts }: { expenseAccounts: ExpenseAccou
   const [dueDate, setDueDate]             = useState(due30)
   const [category, setCategory]           = useState<typeof CATEGORIES[number]>('utilities')
   const [description, setDescription]     = useState('')
+  const [currency, setCurrency]           = useState<string>('GHS')
+  const [rateOverride, setRateOverride]   = useState('')
   const [amount, setAmount]               = useState('')
   const [expenseAcct, setExpenseAcct]     = useState('')
   const [notes, setNotes]                 = useState('')
   const [submitting, setSubmitting]       = useState(false)
   const [error, setError]                 = useState<string | null>(null)
 
+  const fxRate = useMemo(() => fxRates.find((r) => r.code === currency), [fxRates, currency])
+  const effectiveRate = currency === 'GHS'
+    ? 1
+    : rateOverride
+    ? parseFloat(rateOverride)
+    : fxRate?.rate ?? 0
+
+  const amtNum = parseFloat(amount)
+  const validAmount = Number.isFinite(amtNum) && amtNum > 0
+  const ghsAmount = validAmount && effectiveRate > 0 ? amtNum * effectiveRate : 0
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    const amtNum = parseFloat(amount)
-    if (!Number.isFinite(amtNum) || amtNum <= 0) {
-      setError('Amount must be greater than 0')
+    if (!validAmount) { setError('Amount must be greater than 0'); return }
+    if (currency !== 'GHS' && (!effectiveRate || effectiveRate <= 0)) {
+      setError(`No FX rate available for ${currency}. Capture one in FX Rates first or set an override.`)
       return
     }
+
+    const ghsPesewas       = Math.round(ghsAmount * 100)
+    const originalPesewas  = Math.round(amtNum * 100)
 
     setSubmitting(true)
     try {
@@ -52,7 +75,10 @@ export function NewBillForm({ expenseAccounts }: { expenseAccounts: ExpenseAccou
           due_date:           dueDate,
           category,
           description:        description.trim(),
-          amount:             Math.round(amtNum * 100),
+          amount:             ghsPesewas,
+          currency_code:      currency,
+          original_amount:    currency === 'GHS' ? undefined : originalPesewas,
+          fx_rate_used:       currency === 'GHS' ? undefined : effectiveRate,
           expense_account_id: expenseAcct || undefined,
           notes:              notes.trim() || undefined,
         }),
@@ -172,20 +198,73 @@ export function NewBillForm({ expenseAccounts }: { expenseAccounts: ExpenseAccou
             className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
           />
         </div>
+      </div>
 
-        <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Amount (GHS) *</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-            placeholder="0.00"
-            className="w-full max-w-xs rounded-lg border border-border bg-surface px-3 py-2 text-right text-sm text-text-primary tabular-nums focus:border-brand focus:outline-none"
-          />
+      {/* Currency + amount block */}
+      <div className="rounded-xl border border-border bg-surface p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Banknote className="h-3.5 w-3.5 text-brand" />
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-text-secondary">Amount</h2>
         </div>
+
+        <div className="grid gap-3 sm:grid-cols-[1fr_2fr_1fr]">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Currency</label>
+            <select
+              value={currency}
+              onChange={(e) => { setCurrency(e.target.value); setRateOverride('') }}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
+            >
+              <option value="GHS">GHS (base)</option>
+              {fxRates.map((r) => (
+                <option key={r.code} value={r.code}>{r.code}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">
+              Amount ({currency}) *
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+              placeholder="0.00"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right text-sm text-text-primary tabular-nums focus:border-brand focus:outline-none"
+            />
+          </div>
+          {currency !== 'GHS' && (
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">
+                Rate to GHS {fxRate && <span className="text-text-tertiary">(latest {fxRate.rate.toFixed(4)})</span>}
+              </label>
+              <input
+                type="number"
+                step="0.0001"
+                min="0.0001"
+                value={rateOverride}
+                onChange={(e) => setRateOverride(e.target.value)}
+                placeholder={fxRate ? fxRate.rate.toFixed(4) : 'Set FX rate first'}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right text-sm tabular-nums focus:border-brand focus:outline-none"
+              />
+            </div>
+          )}
+        </div>
+
+        {currency !== 'GHS' && (
+          <div className="rounded-lg bg-surface-raised px-3 py-2 text-xs text-text-secondary flex flex-wrap items-center justify-between gap-2">
+            <span>
+              {validAmount && effectiveRate > 0
+                ? <>= <strong className="text-text-primary tabular-nums">GH₵ {ghsAmount.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> at rate {effectiveRate.toFixed(4)}{fxRate ? ` (captured ${fxRate.asOf})` : ''}</>
+                : fxRate
+                ? `Will convert at ${fxRate.rate.toFixed(4)} ${currency} → 1 GHS (captured ${fxRate.asOf})`
+                : <span className="text-warning">No rate captured for {currency} — set an override above or add one under FX Rates.</span>}
+            </span>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs font-medium text-text-secondary mb-1">Notes</label>

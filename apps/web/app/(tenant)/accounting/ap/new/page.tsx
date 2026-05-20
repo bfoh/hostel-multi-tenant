@@ -3,12 +3,17 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
 import { getChartOfAccounts } from '@/lib/data/accounting'
+import { getLatestFxRates } from '@/lib/data/fx'
 import { NewBillForm } from '@/components/accounting/new-bill-form'
 
 export const metadata: Metadata = { title: 'New Supplier Bill' }
 
 export default async function NewBillPage() {
-  const accounts = await getChartOfAccounts()
+  const [accounts, fxRates] = await Promise.all([
+    getChartOfAccounts(),
+    getLatestFxRates(),
+  ])
+
   const expenseAccounts = accounts
     .filter((a) => a.type === 'expense')
     .map((a) => ({ id: a.id, code: a.code, name: a.name }))
@@ -29,7 +34,10 @@ export default async function NewBillPage() {
         </p>
       </div>
 
-      <NewBillForm expenseAccounts={expenseAccounts} />
+      <NewBillForm
+        expenseAccounts={expenseAccounts}
+        fxRates={fxRates.map((r) => ({ code: r.currency_code, rate: r.rate_to_base, asOf: r.as_of_date }))}
+      />
     </div>
   )
 }

@@ -44,17 +44,10 @@ export async function POST(req: NextRequest) {
   if (!period) return NextResponse.json({ error: 'Period not found' }, { status: 404 })
   if (period.status === 'open') return NextResponse.json({ error: 'Period is already open' }, { status: 400 })
 
-  // Delete closing entry (cascades lines)
-  if (period.closing_entry_id) {
-    await (admin as any)
-      .from('journal_entries')
-      .delete()
-      .eq('id', period.closing_entry_id)
-      .eq('tenant_id', tenantId)
-  }
-
-  // Flip status
-  const { error } = await (admin as any)
+  // Flip status to open FIRST — otherwise the journal_lines period-guard
+  // trigger (migration 084) would block the cascade delete on the closing
+  // entry's lines.
+  const { error: flipErr } = await (admin as any)
     .from('accounting_periods')
     .update({
       status:           'open',
@@ -65,7 +58,17 @@ export async function POST(req: NextRequest) {
     })
     .eq('id', period.id)
     .eq('tenant_id', tenantId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (flipErr) return NextResponse.json({ error: flipErr.message }, { status: 500 })
+
+  // Now delete the closing entry (cascades lines)
+  if (period.closing_entry_id) {
+    const { error: delErr } = await (admin as any)
+      .from('journal_entries')
+      .delete()
+      .eq('id', period.closing_entry_id)
+      .eq('tenant_id', tenantId)
+    if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true })
 }

@@ -86,6 +86,17 @@ export default async function BillDetailPage({
               <Row label="Category"    value={<span className="capitalize">{bill.category}</span>} />
               <Row label="Vendor contact" value={bill.vendor_contact ?? '—'} />
               <Row label="Expense account" value={expenseAccount ? `${expenseAccount.code} · ${expenseAccount.name}` : 'Default (5050)'} />
+              {bill.currency_code && bill.currency_code !== 'GHS' && bill.original_amount && (
+                <Row
+                  label="Foreign currency"
+                  value={
+                    <span className="text-text-primary">
+                      {bill.currency_code} {(Number(bill.original_amount) / 100).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                      <span className="ml-2 text-[11px] text-text-tertiary">@ rate {Number(bill.fx_rate_used).toFixed(4)}</span>
+                    </span>
+                  }
+                />
+              )}
               {bill.notes && <Row label="Notes" value={bill.notes} />}
             </dl>
             <div className="grid grid-cols-3 gap-4 border-t border-border bg-surface-raised px-4 py-3 text-sm">

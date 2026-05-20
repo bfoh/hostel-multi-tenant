@@ -21,6 +21,9 @@ export interface SupplierBill {
   notes:              string | null
   created_at:         string
   daysUntilDue:       number   // negative = overdue
+  currency_code:      string | null
+  original_amount:    number | null
+  fx_rate_used:       number | null
 }
 
 export interface BillFilters {
@@ -56,7 +59,8 @@ export async function getBills(filters: BillFilters = {}): Promise<SupplierBill[
     .select(`
       id, vendor_name, vendor_contact, bill_number, bill_date, due_date,
       category, description, amount, paid_amount, status, expense_account_id,
-      approved_at, notes, created_at
+      approved_at, notes, created_at,
+      currency_code, original_amount, fx_rate_used
     `)
     .eq('tenant_id', tenantId)
     .order('due_date', { ascending: true })

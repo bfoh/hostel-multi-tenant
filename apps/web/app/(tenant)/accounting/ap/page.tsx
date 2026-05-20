@@ -136,7 +136,14 @@ export default async function AccountsPayablePage({
                   return (
                     <tr key={b.id} className="hover:bg-surface-raised/50 transition-colors">
                       <td className="px-4 py-3">
-                        <p className="text-sm font-medium text-text-primary">{b.vendor_name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-text-primary">{b.vendor_name}</p>
+                          {b.currency_code && b.currency_code !== 'GHS' && (
+                            <span className="rounded-full bg-brand/10 px-1.5 py-0 text-[10px] font-semibold text-brand">
+                              {b.currency_code}
+                            </span>
+                          )}
+                        </div>
                         {b.bill_number && <p className="mt-0.5 text-[11px] text-text-tertiary">#{b.bill_number}</p>}
                       </td>
                       <td className="px-4 py-3 text-xs text-text-secondary max-w-xs">
