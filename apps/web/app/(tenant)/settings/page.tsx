@@ -12,7 +12,7 @@ import { PushToggle } from '@/components/settings/push-toggle'
 import { BillingClient } from '@/components/settings/billing-client'
 import { listPlatformPlans, findPlanByCode } from '@/lib/platform-plans'
 import { listSubscriptions } from '@/lib/paystack'
-import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode, ChevronRight, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode, ChevronRight, AlertTriangle, CheckCircle2, Inbox } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Settings' }
 export const dynamic = 'force-dynamic'
@@ -349,13 +349,23 @@ export default async function SettingsPage({
                     </div>
                   </Link>
                   <Link
+                    href="/settings/enquiry-webhook"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <Inbox className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Website Enquiry Webhook</p>
+                      <p className="text-xs text-text-secondary">Receive enquiries from Readdy, FormBold, Zapier or any external form into the dashboard</p>
+                    </div>
+                  </Link>
+                  <Link
                     href="/settings/webhooks"
                     className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
                   >
                     <Webhook className="h-4 w-4 text-brand shrink-0" />
                     <div>
-                      <p className="font-medium text-text-primary">Webhooks</p>
-                      <p className="text-xs text-text-secondary">Send real-time HTTP events to external systems</p>
+                      <p className="font-medium text-text-primary">Outbound Webhooks</p>
+                      <p className="text-xs text-text-secondary">Send real-time HTTP events from this hostel to external systems</p>
                     </div>
                   </Link>
                   <Link

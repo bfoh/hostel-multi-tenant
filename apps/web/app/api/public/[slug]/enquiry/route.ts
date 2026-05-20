@@ -2,16 +2,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendEmail, baseTemplate } from '@/lib/email'
-import { notifyEnquirySms } from '@/lib/enquiries/notify'
+import { insertEnquiry, fireNotifications } from '@/lib/enquiries/intake'
 
-// Note: this route is open to cross-origin POSTs from each tenant's public
-// marketing site. We allow the origin only when it matches the tenant's
-// configured `website_url` host (or *.gh-hostels.com for previews).
+// Browser-facing public POST. Origin must match the tenant's website_url
+// (or the platform's own APP_DOMAIN for previews). Uses the service-role
+// admin client because visitors aren't authenticated against Supabase Auth;
+// existing tenant_members RLS still gates dashboard reads.
 //
-// Inserts use the service-role admin client because public visitors are not
-// authenticated against Supabase Auth; existing tenant_members RLS still
-// gates dashboard reads.
+// External form services that can't honour an Origin header (Readdy.ai,
+// Zapier, custom backends) should hit /api/webhooks/enquiry/[slug] instead.
 
 export const runtime = 'nodejs'
 
@@ -106,174 +105,36 @@ export async function POST(
       { status: 422, headers: corsHeaders(origin) },
     )
   }
-  const input = parsed.data
 
-  // Combine message + room_of_interest hint into the stored message body so
-  // the form's free-text and the room-type dropdown both survive into the
-  // dashboard view (notes stays reserved for staff annotations).
-  const messageBody = [
-    input.room_of_interest ? `Room of interest: ${input.room_of_interest}` : null,
-    input.message ?? null,
-  ].filter(Boolean).join('\n\n') || null
-
-  const { data: inserted, error } = await (supabase.from('waiting_list') as any)
-    .insert({
-      tenant_id:          tenant.id,
-      category_id:        input.category_id ?? null,
-      contact_name:       input.full_name,
-      contact_phone:      input.phone,
-      contact_email:      input.email ?? null,
-      preferred_check_in: input.preferred_move_in ?? null,
-      message:            messageBody,
-      source:             'website',
-      status:             'waiting',
-      priority:           0,
-    })
-    .select('id')
-    .single()
-
-  if (error) {
-    console.error('[enquiry] insert failed:', error)
+  const result = await insertEnquiry(
+    {
+      id:            tenant.id,
+      name:          tenant.name,
+      primary_color: tenant.primary_color,
+      contact_phone: tenant.contact_phone,
+    },
+    parsed.data,
+  )
+  if ('error' in result) {
     return NextResponse.json(
       { error: 'Could not save enquiry' },
       { status: 500, headers: corsHeaders(origin) },
     )
   }
 
-  // Fire notifications in the background — never block the visitor's response.
-  // Errors are swallowed inside the helpers and only logged.
-  void dispatchNotifications({
-    tenantId:    tenant.id,
-    tenantName:  tenant.name,
-    primaryColor: tenant.primary_color ?? '#111827',
-    tenantPhone: tenant.contact_phone,
-    enquiryId:   inserted.id,
-    name:        input.full_name,
-    phone:       input.phone,
-    email:       input.email ?? null,
-    preferredCheckIn: input.preferred_move_in ?? null,
-    roomOfInterest:   input.room_of_interest ?? null,
-    message:     input.message ?? null,
-  })
+  fireNotifications(
+    {
+      id:            tenant.id,
+      name:          tenant.name,
+      primary_color: tenant.primary_color,
+      contact_phone: tenant.contact_phone,
+    },
+    result.id,
+    parsed.data,
+  )
 
   return NextResponse.json(
-    { ok: true, id: inserted.id },
+    { ok: true, id: result.id },
     { status: 201, headers: corsHeaders(origin) },
   )
-}
-
-interface NotifyArgs {
-  tenantId:         string
-  tenantName:       string
-  primaryColor:     string
-  tenantPhone:      string | null
-  enquiryId:        string
-  name:             string
-  phone:            string
-  email:            string | null
-  preferredCheckIn: string | null
-  roomOfInterest:   string | null
-  message:          string | null
-}
-
-async function dispatchNotifications(args: NotifyArgs): Promise<void> {
-  const admin = createAdminClient()
-
-  // ── Resolve admin/manager/owner emails for this tenant ─────────────────
-  const { data: members } = await admin
-    .from('tenant_members')
-    .select('user_id, role')
-    .eq('tenant_id', args.tenantId)
-    .eq('is_active', true)
-    .in('role', ['owner', 'manager'])
-
-  const adminEmails: string[] = []
-  if (members && members.length > 0) {
-    try {
-      const { data: { users } } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const wantedIds = new Set(members.map((m: any) => m.user_id))
-      for (const u of users) {
-        if (u.email && wantedIds.has(u.id)) adminEmails.push(u.email)
-      }
-    } catch (err) {
-      console.error('[enquiry] listUsers failed:', err)
-    }
-  }
-
-  // ── Email ──────────────────────────────────────────────────────────────
-  if (adminEmails.length > 0) {
-    const subject = `New website enquiry — ${args.name}`
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL
-      ?? `https://${process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'}`
-    const dashboardUrl = `${appUrl}/waiting-list?source=website`
-    const html = baseTemplate(args.tenantName, args.primaryColor, enquiryEmailContent({
-      ...args,
-      dashboardUrl,
-    }))
-    const result = await sendEmail({
-      to:        adminEmails,
-      subject,
-      html,
-      replyTo:   args.email ?? undefined,
-    })
-    if (!result.ok) console.error('[enquiry] email failed:', result.error)
-  }
-
-  // ── SMS to tenant's primary contact phone ─────────────────────────────
-  if (args.tenantPhone) {
-    await notifyEnquirySms({
-      tenantId:   args.tenantId,
-      tenantName: args.tenantName,
-      toPhone:    args.tenantPhone,
-      enquirerName:  args.name,
-      enquirerPhone: args.phone,
-      roomOfInterest: args.roomOfInterest,
-    })
-  }
-}
-
-function enquiryEmailContent(args: NotifyArgs & { dashboardUrl: string }): string {
-  const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]!))
-
-  function row(label: string, value: string) {
-    return `<tr>
-      <td style="padding:6px 0;font-size:14px;color:#6b7280;width:160px;">${label}</td>
-      <td style="padding:6px 0;font-size:14px;color:#111827;font-weight:500;">${value}</td>
-    </tr>`
-  }
-
-  const detailRows = [
-    row('Name', escape(args.name)),
-    row('Phone', `<a href="tel:${escape(args.phone)}" style="color:${args.primaryColor};">${escape(args.phone)}</a>`),
-    args.email      ? row('Email', `<a href="mailto:${escape(args.email)}" style="color:${args.primaryColor};">${escape(args.email)}</a>`) : '',
-    args.preferredCheckIn ? row('Preferred move-in', escape(args.preferredCheckIn)) : '',
-    args.roomOfInterest   ? row('Room of interest', escape(args.roomOfInterest)) : '',
-  ].join('')
-
-  const messageBlock = args.message
-    ? `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin:16px 0;">
-         <p style="margin:0 0 6px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Enquiry</p>
-         <p style="margin:0;font-size:14px;color:#111827;white-space:pre-wrap;">${escape(args.message)}</p>
-       </div>`
-    : ''
-
-  return `
-    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">New website enquiry</p>
-    <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">
-      A prospect just submitted the enquiry form on your website.
-    </p>
-    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:8px;">
-      ${detailRows}
-    </table>
-    ${messageBlock}
-    <a href="${args.dashboardUrl}"
-      style="display:inline-block;margin-top:16px;padding:12px 22px;background:${args.primaryColor};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
-      Open waiting list
-    </a>
-    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">
-      Reply to this email to respond directly to ${escape(args.name)}.
-    </p>
-  `
 }
