@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 async function getTenantId() {
   return (await headers()).get('x-tenant-id')
@@ -20,13 +21,18 @@ export async function PATCH(
   const { id } = await params
   const body = await req.json()
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('waiting_list')
     .update(body)
     .eq('id', id)
     .eq('tenant_id', tenantId)
+    .select('id')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
+  }
   return NextResponse.json({ ok: true })
 }
 
@@ -42,12 +48,17 @@ export async function DELETE(
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const { id } = await params
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('waiting_list')
     .delete()
     .eq('id', id)
     .eq('tenant_id', tenantId)
+    .select('id')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
+  }
+  return NextResponse.json({ ok: true, deleted: data.length })
 }
