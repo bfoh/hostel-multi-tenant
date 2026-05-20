@@ -115,32 +115,66 @@ export function WaitingListClient({
 
   async function updateStatus(id: string, status: string) {
     setActingId(id)
-    await fetch(`/api/waiting-list/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    })
-    setActingId(null)
-    router.refresh()
+    setError(null)
+    try {
+      const res = await fetch(`/api/waiting-list/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? `Failed (${res.status})`)
+      }
+      setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)))
+      router.refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setActingId(null)
+    }
   }
 
   async function markNotified(id: string) {
     setActingId(id)
-    await fetch(`/api/waiting-list/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notified_at: new Date().toISOString() }),
-    })
-    setActingId(null)
-    router.refresh()
+    setError(null)
+    try {
+      const notified_at = new Date().toISOString()
+      const res = await fetch(`/api/waiting-list/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notified_at }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? `Failed (${res.status})`)
+      }
+      setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, notified_at } : e)))
+      router.refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setActingId(null)
+    }
   }
 
   async function remove(id: string) {
     if (!confirm('Remove this entry from the waiting list?')) return
     setActingId(id)
-    await fetch(`/api/waiting-list/${id}`, { method: 'DELETE' })
-    setActingId(null)
-    router.refresh()
+    setError(null)
+    try {
+      const res = await fetch(`/api/waiting-list/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? `Failed (${res.status})`)
+      }
+      setEntries((prev) => prev.filter((e) => e.id !== id))
+      router.refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setActingId(null)
+    }
   }
 
   return (
@@ -160,6 +194,18 @@ export function WaitingListClient({
           Add to list
         </button>
       </div>
+
+      {error && !showForm && (
+        <div className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger flex items-start justify-between gap-3">
+          <span>{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="text-danger/70 hover:text-danger text-xs font-semibold"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Source filter chips */}
       <div className="flex flex-wrap items-center gap-1.5">
