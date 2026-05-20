@@ -32,7 +32,8 @@ function originAllowed(origin: string | null, websiteUrl: string | null): boolea
   let originHost: string
   try { originHost = new URL(origin).host.toLowerCase() } catch { return false }
 
-  if (originHost.endsWith('.gh-hostels.com') || originHost === 'gh-hostels.com') return true
+  const appDomain = (process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com').toLowerCase()
+  if (originHost === appDomain || originHost.endsWith(`.${appDomain}`)) return true
   if (!websiteUrl) return false
   try {
     const allowedHost = new URL(websiteUrl).host.toLowerCase()
@@ -202,7 +203,9 @@ async function dispatchNotifications(args: NotifyArgs): Promise<void> {
   // ── Email ──────────────────────────────────────────────────────────────
   if (adminEmails.length > 0) {
     const subject = `New website enquiry — ${args.name}`
-    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.gh-hostels.com'}/waiting-list?source=website`
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+      ?? `https://${process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'}`
+    const dashboardUrl = `${appUrl}/waiting-list?source=website`
     const html = baseTemplate(args.tenantName, args.primaryColor, enquiryEmailContent({
       ...args,
       dashboardUrl,

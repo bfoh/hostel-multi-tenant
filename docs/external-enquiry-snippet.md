@@ -9,13 +9,21 @@ sites can't impersonate Abrempong), inserts a row into `waiting_list` with
 ## Endpoint
 
 ```
-POST https://app.gh-hostels.com/api/public/<tenant-slug>/enquiry
+POST https://<APP_HOST>/api/public/<tenant-slug>/enquiry
 Content-Type: application/json
 ```
 
-For Abrempong: `https://app.gh-hostels.com/api/public/abrempong/enquiry`
-(replace `abrempong` with the actual tenant slug — confirm in the platform's
-Tenants table).
+`<APP_HOST>` is whichever platform domain the tenant uses. Examples for
+Abrempong (any one works):
+- Auto subdomain: `abrempong-hostel-666865.ghh.com`
+- Custom domain:  `app.abremponghostel.com`
+
+Tenant slug is the prefix of the auto subdomain — e.g. `abrempong-hostel-666865`.
+Confirm in the platform's Tenants table or by running:
+
+```sql
+select slug from tenants where name ilike '%abrempong%';
+```
 
 ## Required tenant setup (one-time)
 
@@ -74,7 +82,7 @@ uses `id="enquiryForm"` and named inputs matching the body keys above.
 </form>
 
 <script>
-  const ENQUIRY_URL = 'https://app.gh-hostels.com/api/public/abrempong/enquiry'
+  const ENQUIRY_URL = 'https://app.abremponghostel.com/api/public/abrempong-hostel-666865/enquiry'
 
   document.getElementById('enquiryForm').addEventListener('submit', async (e) => {
     e.preventDefault()
@@ -117,7 +125,7 @@ uses `id="enquiryForm"` and named inputs matching the body keys above.
 3. From that origin, POST a sample payload:
 
 ```bash
-curl -i -X POST https://app.gh-hostels.com/api/public/abrempong/enquiry \
+curl -i -X POST https://app.abremponghostel.com/api/public/abrempong-hostel-666865/enquiry \
   -H 'Origin: https://www.abremponghostel.com' \
   -H 'Content-Type: application/json' \
   -d '{
