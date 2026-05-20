@@ -14,6 +14,7 @@ import {
   Receipt,
   ArrowDownToLine,
   ArrowUpFromLine,
+  Target,
 } from 'lucide-react'
 
 const TABS = [
@@ -25,6 +26,7 @@ const TABS = [
   { href: '/accounting/pnl',            label: 'P&L',          icon: BarChart3 },
   { href: '/accounting/balance-sheet',  label: 'Balance Sheet',icon: Landmark },
   { href: '/accounting/cash-flow',      label: 'Cash Flow',    icon: Waves },
+  { href: '/accounting/budgets',        label: 'Budgets',      icon: Target },
   { href: '/accounting/chart',          label: 'Chart',        icon: DollarSign },
   { href: '/accounting/expenses',       label: 'Expenses',     icon: Receipt },
   { href: '/accounting/reconcile',      label: 'Reconcile',    icon: GitMerge },
