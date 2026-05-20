@@ -1,0 +1,139 @@
+<!--
+  DROP-IN "ORDER ONLINE" CTA for the Readdy restaurant section on
+  www.abremponghostel.com.
+
+  Paste this entire block into a Custom HTML / Embed widget in the
+  Readdy editor, placed in the restaurant card alongside the existing
+  "ORDER VIA WHATSAPP" and "CALL TO ORDER" buttons.
+
+  The button opens the live online ordering portal hosted on the
+  GH Hostels platform — guests can browse the live menu, place an order
+  and pay (MoMo / card / bank). Orders land directly in the tenant
+  dashboard under Food Orders.
+
+  Two style variants are included below — pick one and delete the other:
+    1. SOLID GOLD (primary) — matches the existing "ORDER VIA WHATSAPP" pill.
+    2. OUTLINED GOLD (secondary) — matches the existing "CALL TO ORDER" pill.
+-->
+
+<style>
+  /* Shared base — pill, uppercase, brand spacing */
+  .gh-order-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px 28px 14px 32px;
+    border-radius: 999px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .25s ease, background .2s ease, border-color .2s ease, color .2s ease;
+    will-change: transform;
+  }
+  .gh-order-cta:hover { transform: translateY(-1px); }
+  .gh-order-cta:active { transform: translateY(0); }
+
+  /* Icon chip on the right (mirrors the WhatsApp button) */
+  .gh-order-cta .gh-chip {
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Variant 1: Solid gold ─────────────────────────────────────── */
+  .gh-order-cta--solid {
+    background: #c7a55a;
+    color: #0a0a0a;
+    box-shadow: 0 10px 30px -12px rgba(199, 165, 90, 0.45);
+  }
+  .gh-order-cta--solid:hover {
+    background: #d9b56b;
+    box-shadow: 0 14px 36px -10px rgba(199, 165, 90, 0.6);
+  }
+  .gh-order-cta--solid .gh-chip {
+    background: rgba(0, 0, 0, 0.18);
+    color: #0a0a0a;
+  }
+
+  /* ── Variant 2: Outlined gold ──────────────────────────────────── */
+  .gh-order-cta--outline {
+    background: transparent;
+    color: #c7a55a;
+    border: 1px solid rgba(199, 165, 90, 0.55);
+  }
+  .gh-order-cta--outline:hover {
+    background: rgba(199, 165, 90, 0.08);
+    border-color: #c7a55a;
+    color: #d9b56b;
+  }
+  .gh-order-cta--outline .gh-chip {
+    background: rgba(199, 165, 90, 0.12);
+    color: #c7a55a;
+  }
+
+  /* Subtle pulse on the chip to draw the eye — "lively" */
+  @keyframes gh-order-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
+  }
+  .gh-order-cta .gh-chip { animation: gh-order-pulse 2.4s ease-in-out infinite; }
+  .gh-order-cta:hover .gh-chip { animation-play-state: paused; }
+</style>
+
+
+<!-- ════════════════════════════════════════════════════════════════════
+     VARIANT 1 — SOLID GOLD (matches "ORDER VIA WHATSAPP")
+     Recommended placement: as the FIRST button in the row, so the
+     online portal becomes the primary CTA and WhatsApp/Call act as
+     fallbacks.
+     ════════════════════════════════════════════════════════════════════ -->
+<a
+  class="gh-order-cta gh-order-cta--solid"
+  href="https://app.abremponghostel.com/order/abrempong-hostel-666865"
+  target="_blank"
+  rel="noopener"
+  aria-label="Order food online from Abrempong Hostel Restaurant"
+>
+  Order Online
+  <span class="gh-chip" aria-hidden="true">
+    <!-- shopping bag icon -->
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+      <path d="M3 6h18" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  </span>
+</a>
+
+
+<!-- ════════════════════════════════════════════════════════════════════
+     VARIANT 2 — OUTLINED GOLD (matches "CALL TO ORDER")
+     Use this if you'd rather keep WhatsApp as the primary CTA and add
+     online ordering as a peer option.
+     ════════════════════════════════════════════════════════════════════ -->
+<!--
+<a
+  class="gh-order-cta gh-order-cta--outline"
+  href="https://app.abremponghostel.com/order/abrempong-hostel-666865"
+  target="_blank"
+  rel="noopener"
+  aria-label="Order food online from Abrempong Hostel Restaurant"
+>
+  Order Online
+  <span class="gh-chip" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+      <path d="M3 6h18" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  </span>
+</a>
+-->
