@@ -154,7 +154,6 @@ function RoomPicker({
       {categories.map(cat => {
         const sold = cat.available === 0
         const hasImage = cat.image_urls.length > 0
-        const monogram = (cat.name.match(/[A-Za-z]/)?.[0] ?? cat.name[0] ?? '·').toUpperCase()
         const typeLabel = cat.type ? (TYPE_LABEL[cat.type] ?? cat.type) : null
 
         return (
@@ -205,17 +204,17 @@ function RoomPicker({
                     style={{ background: `linear-gradient(90deg, transparent, ${brandColor}, transparent)` }}
                   />
 
-                  {/* Monogram tile */}
+                  {/* Icon tile — bed glyph, replaces bare initial */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div
-                      className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/55 backdrop-blur-md ring-1 ring-white/70 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.2)]"
+                      className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/70 backdrop-blur-md ring-1 ring-white/80 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.2)]"
                     >
-                      <span
-                        className="text-3xl font-semibold tracking-tight"
-                        style={{ color: brandColor, fontFamily: 'Playfair Display, serif' }}
-                      >
-                        {monogram}
-                      </span>
+                      <BedDouble
+                        className="h-9 w-9"
+                        style={{ color: brandColor }}
+                        strokeWidth={1.5}
+                        aria-hidden
+                      />
                     </div>
                   </div>
                 </div>
