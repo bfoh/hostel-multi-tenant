@@ -70,12 +70,36 @@ export async function getChartOfAccounts(): Promise<Account[]> {
 
 /* ── Journal entries ──────────────────────────────────────────────────── */
 
-export async function getJournalEntries(limit = 50, offset = 0): Promise<JournalEntry[]> {
+export interface JournalEntryFilters {
+  source?:    string
+  dateFrom?:  string
+  dateTo?:    string
+  accountId?: string
+}
+
+export async function getJournalEntries(
+  limit = 50,
+  offset = 0,
+  filters: JournalEntryFilters = {},
+): Promise<JournalEntry[]> {
   const tenantId = await getServerTenantId()
   if (!tenantId) return []
 
   const supabase = createAdminClient()
-  const { data } = await (supabase as any)
+
+  // If filtering by account, first find entry IDs that touch that account
+  let entryIdFilter: string[] | null = null
+  if (filters.accountId) {
+    const { data: matchingLines } = await (supabase as any)
+      .from('journal_lines')
+      .select('entry_id')
+      .eq('tenant_id', tenantId)
+      .eq('account_id', filters.accountId)
+    entryIdFilter = Array.from(new Set(((matchingLines ?? []) as any[]).map((l) => l.entry_id as string)))
+    if (entryIdFilter.length === 0) return []
+  }
+
+  let q = (supabase as any)
     .from('journal_entries')
     .select(`
       id, entry_date, reference, description, source, source_id, created_at,
@@ -88,6 +112,13 @@ export async function getJournalEntries(limit = 50, offset = 0): Promise<Journal
     .order('entry_date', { ascending: false })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
+
+  if (filters.source)   q = q.eq('source', filters.source)
+  if (filters.dateFrom) q = q.gte('entry_date', filters.dateFrom)
+  if (filters.dateTo)   q = q.lte('entry_date', filters.dateTo)
+  if (entryIdFilter)    q = q.in('id', entryIdFilter)
+
+  const { data } = await q
 
   return ((data ?? []) as any[]).map((e) => ({
     ...e,

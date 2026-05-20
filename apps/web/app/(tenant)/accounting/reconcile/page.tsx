@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { ChevronLeft, Upload, CheckCircle, AlertCircle, MinusCircle, Pencil } from 'lucide-react'
+import { Upload, CheckCircle, AlertCircle, MinusCircle, Pencil } from 'lucide-react'
 
 import { getReconSummary } from '@/lib/data/reconciliation'
 import { formatGHS } from '@/lib/utils'
@@ -40,14 +39,6 @@ export default async function ReconcilePage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3">
-        <Link href="/accounting" className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors">
-          <ChevronLeft className="h-4 w-4" /> Accounting
-        </Link>
-        <span className="text-text-disabled">/</span>
-        <span className="text-sm font-medium text-text-primary">Bank Reconciliation</span>
-      </div>
-
       <div>
         <h1 className="text-xl font-semibold text-text-primary">Bank Reconciliation</h1>
         <p className="mt-1 text-sm text-text-secondary">
