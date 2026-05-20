@@ -1,0 +1,134 @@
+<!--
+  DROP-IN REPLACEMENT for the Readdy "Make an Enquiry" form on
+  www.abremponghostel.com. Paste this entire block into a Custom HTML
+  / Embed widget inside the Readdy editor and DELETE the original
+  Readdy form. The form POSTs directly to the GH Hostels platform's
+  CORS-gated public endpoint — submissions land on the tenant
+  dashboard under Waiting List & Enquiries.
+
+  No secret needed: the endpoint validates the browser's Origin against
+  the tenant's saved website_url (https://www.abremponghostel.com).
+-->
+
+<style>
+  .gh-enquiry { background:#0a0a0a; border-radius:16px; padding:32px; max-width:560px; margin:0 auto; color:#fff; font-family:'Inter',system-ui,sans-serif; }
+  .gh-enquiry h3 { color:#fff; font-size:22px; font-weight:700; margin:0 0 6px; font-family:'Playfair Display',serif; }
+  .gh-enquiry .gh-sub { color:#888; font-size:13px; margin:0 0 22px; }
+  .gh-enquiry label { display:block; color:#bbb; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; margin:14px 0 6px; }
+  .gh-enquiry label .gh-req { color:#c7a55a; }
+  .gh-enquiry input, .gh-enquiry select, .gh-enquiry textarea {
+    width:100%; box-sizing:border-box; background:#141414; border:1px solid #222;
+    border-radius:14px; padding:12px 16px; color:#fff; font-size:14px; font-family:inherit;
+    transition:border-color .15s ease;
+  }
+  .gh-enquiry input:focus, .gh-enquiry select:focus, .gh-enquiry textarea:focus {
+    outline:none; border-color:#c7a55a;
+  }
+  .gh-enquiry textarea { min-height:110px; resize:vertical; }
+  .gh-enquiry .gh-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .gh-enquiry .gh-counter { text-align:right; color:#555; font-size:11px; margin-top:4px; }
+  .gh-enquiry button {
+    width:100%; margin-top:22px; background:#c7a55a; color:#000;
+    border:0; border-radius:999px; padding:14px; font-size:14px;
+    font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+    cursor:pointer; transition:background .15s ease;
+  }
+  .gh-enquiry button:hover { background:#d9b56b; }
+  .gh-enquiry button:disabled { opacity:.6; cursor:wait; }
+  .gh-enquiry .gh-status { margin-top:14px; text-align:center; font-size:13px; min-height:1.2em; }
+  .gh-enquiry .gh-ok    { color:#9ad08e; }
+  .gh-enquiry .gh-err   { color:#e08585; }
+  .gh-enquiry .gh-hp    { position:absolute; left:-9999px; height:0; width:0; opacity:0; }
+  @media (max-width:480px) { .gh-enquiry .gh-row { grid-template-columns:1fr; } }
+</style>
+
+<div class="gh-enquiry">
+  <h3>Make an Enquiry</h3>
+  <p class="gh-sub">Fill in your details and we'll get back to you within 24 hours.</p>
+
+  <form id="ghEnquiryForm" novalidate>
+    <div class="gh-row">
+      <div>
+        <label>Full name <span class="gh-req">*</span></label>
+        <input name="full_name" required minlength="2" maxlength="120" placeholder="e.g. Kwame Asante" />
+      </div>
+      <div>
+        <label>Phone number <span class="gh-req">*</span></label>
+        <input name="phone" required minlength="7" maxlength="32" placeholder="+233 XX XXX XXXX" />
+      </div>
+    </div>
+
+    <label>Email address</label>
+    <input name="email" type="email" maxlength="160" placeholder="your@email.com" />
+
+    <div class="gh-row">
+      <div>
+        <label>Preferred move-in date</label>
+        <input name="preferred_move_in" type="date" />
+      </div>
+      <div>
+        <label>Room of interest</label>
+        <select name="room_of_interest">
+          <option value="">Select room type</option>
+          <option>1-in-1 Premium</option>
+          <option>2-in-1 Standard</option>
+          <option>4-in-1 Shared</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Your enquiry <span class="gh-req">*</span></label>
+    <textarea name="message" maxlength="500" required placeholder="Ask us anything about rooms, amenities, pricing, or facilities…"></textarea>
+    <div class="gh-counter"><span id="ghCount">0</span>/500</div>
+
+    <!-- Honeypot. Bots fill, humans don't see. -->
+    <input class="gh-hp" name="website" tabindex="-1" autocomplete="off" />
+
+    <button type="submit" id="ghBtn">Send Enquiry</button>
+    <p class="gh-status" id="ghStatus" role="status"></p>
+  </form>
+</div>
+
+<script>
+(function () {
+  var ENDPOINT = 'https://app.abremponghostel.com/api/public/abrempong-hostel-666865/enquiry';
+  var form = document.getElementById('ghEnquiryForm');
+  var btn  = document.getElementById('ghBtn');
+  var msg  = document.getElementById('ghStatus');
+  var ta   = form.querySelector('textarea[name="message"]');
+  var cnt  = document.getElementById('ghCount');
+
+  ta.addEventListener('input', function () { cnt.textContent = ta.value.length; });
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    msg.className = 'gh-status';
+    msg.textContent = 'Sending…';
+    btn.disabled = true;
+
+    var data = Object.fromEntries(new FormData(form).entries());
+    try {
+      var res = await fetch(ENDPOINT, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(data),
+      });
+      if (res.ok) {
+        msg.className = 'gh-status gh-ok';
+        msg.textContent = "Thanks — we'll get back to you within 24 hours.";
+        form.reset();
+        cnt.textContent = '0';
+      } else {
+        var body = await res.json().catch(function(){ return {}; });
+        msg.className = 'gh-status gh-err';
+        msg.textContent = body.error || 'Could not send. Please try again or call us.';
+      }
+    } catch (err) {
+      msg.className = 'gh-status gh-err';
+      msg.textContent = 'Network error — please try again.';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();
+</script>
