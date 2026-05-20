@@ -6,7 +6,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS } from '@/lib/utils'
 import { BookingFlow } from '@/components/public/booking-flow'
 
-export const revalidate = 300 // ISR: re-render at most every 5 minutes
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 // Dynamic metadata per hostel
 export async function generateMetadata(): Promise<Metadata> {
@@ -74,20 +75,43 @@ interface RawCategory {
   amenities: string[] | null
   description: string | null
   image_urls: string[] | null
-  rooms: { id: string; status: string }[] | null
+}
+
+interface OccupancyRow {
+  category_id: string
+  capacity: number
+  free_beds: number
+  manual_status: string
 }
 
 async function getRoomCategories(tenantId: string) {
   const supabase = createAdminClient()
-  const { data } = await supabase
-    .from('room_categories')
-    .select('id, name, type, base_rate, rate_unit, capacity, amenities, description, image_urls, rooms(id, status)')
-    .eq('tenant_id', tenantId)
-    .eq('is_active', true)
-    .order('sort_order')
 
-  return ((data ?? []) as unknown as RawCategory[]).map(cat => {
-    const rooms = Array.isArray(cat.rooms) ? cat.rooms : []
+  const [{ data: catData }, { data: occData }] = await Promise.all([
+    supabase
+      .from('room_categories')
+      .select('id, name, type, base_rate, rate_unit, capacity, amenities, description, image_urls')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('sort_order'),
+    supabase
+      .from('room_occupancy_v')
+      .select('category_id, capacity, free_beds, manual_status')
+      .eq('tenant_id', tenantId),
+  ])
+
+  const occByCat = new Map<string, { available: number; total: number }>()
+  for (const row of (occData ?? []) as unknown as OccupancyRow[]) {
+    const agg = occByCat.get(row.category_id) ?? { available: 0, total: 0 }
+    agg.total += row.capacity
+    if (row.manual_status !== 'maintenance' && row.manual_status !== 'blocked') {
+      agg.available += row.free_beds
+    }
+    occByCat.set(row.category_id, agg)
+  }
+
+  return ((catData ?? []) as unknown as RawCategory[]).map(cat => {
+    const occ = occByCat.get(cat.id) ?? { available: 0, total: 0 }
     return {
       id:          cat.id,
       name:        cat.name,
@@ -98,8 +122,8 @@ async function getRoomCategories(tenantId: string) {
       amenities:   cat.amenities ?? [],
       description: cat.description ?? null,
       image_urls:  cat.image_urls ?? [],
-      available:   rooms.filter(r => r.status === 'available').length,
-      total:       rooms.length,
+      available:   occ.available,
+      total:       occ.total,
     }
   })
 }
