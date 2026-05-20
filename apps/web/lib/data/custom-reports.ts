@@ -11,6 +11,7 @@ export interface ReportDefinition {
     to?:           string
   }
   grouping:        'by_account' | 'by_type'
+  comparison?:     'none' | 'prior_period' | 'prior_year'
 }
 
 export interface CustomReport {
@@ -28,13 +29,18 @@ export interface ReportResultRow {
   name:         string
   type:         AccountType
   amount:       number
+  priorAmount?: number   // present when comparison set
+  delta?:       number   // amount - priorAmount
+  deltaPct?:    number | null
 }
 
 export interface ReportResult {
-  period:    { from: string; to: string; label: string }
-  rows:      ReportResultRow[]
-  total:     number
-  groupedBy: 'by_account' | 'by_type'
+  period:        { from: string; to: string; label: string }
+  priorPeriod?:  { from: string; to: string; label: string }
+  rows:          ReportResultRow[]
+  total:         number
+  priorTotal?:   number
+  groupedBy:     'by_account' | 'by_type'
 }
 
 export async function getCustomReports(): Promise<CustomReport[]> {
@@ -97,23 +103,75 @@ function resolvePeriod(def: ReportDefinition['period']): { from: string; to: str
   }
 }
 
+/**
+ * Returns the comparable prior window. For prior_period the window length
+ * matches the current one and ends the day before it starts. For prior_year
+ * the same calendar window shifts back 12 months.
+ */
+function priorWindow(
+  current: { from: string; to: string },
+  kind:    'prior_period' | 'prior_year',
+): { from: string; to: string; label: string } {
+  const fmt = (d: Date) => d.toISOString().slice(0, 10)
+  const fromDate = new Date(current.from)
+  const toDate   = new Date(current.to)
+
+  if (kind === 'prior_year') {
+    const start = new Date(fromDate)
+    const end   = new Date(toDate)
+    start.setFullYear(start.getFullYear() - 1)
+    end.setFullYear(end.getFullYear() - 1)
+    return { from: fmt(start), to: fmt(end), label: 'Prior year — same window' }
+  }
+
+  // prior_period — equal length ending the day before current.from
+  const dayMs   = 24 * 60 * 60 * 1000
+  const lengthMs = toDate.getTime() - fromDate.getTime()
+  const priorEnd   = new Date(fromDate.getTime() - dayMs)
+  const priorStart = new Date(priorEnd.getTime() - lengthMs)
+  return { from: fmt(priorStart), to: fmt(priorEnd), label: 'Prior period — same length' }
+}
+
 export async function runCustomReport(definition: ReportDefinition): Promise<ReportResult | null> {
   const tenantId = await getServerTenantId()
   if (!tenantId) return null
 
-  const period = resolvePeriod(definition.period)
-  const tb     = await getTrialBalance(period.from, period.to)
+  const period       = resolvePeriod(definition.period)
+  const comparison   = definition.comparison ?? 'none'
+  const priorPeriod  = comparison !== 'none' ? priorWindow(period, comparison) : undefined
 
   const typeSet = new Set(definition.accountTypes)
   const idSet   = definition.accountIds && definition.accountIds.length > 0
     ? new Set(definition.accountIds)
     : null
 
-  const filtered = tb.filter((l) => {
+  const matches = (l: { type: AccountType; account_id: string }) => {
     if (!typeSet.has(l.type)) return false
     if (idSet && !idSet.has(l.account_id)) return false
     return true
-  })
+  }
+
+  const [tb, tbPrior] = await Promise.all([
+    getTrialBalance(period.from, period.to),
+    priorPeriod ? getTrialBalance(priorPeriod.from, priorPeriod.to) : Promise.resolve([]),
+  ])
+
+  const filtered      = tb.filter(matches)
+  const filteredPrior = tbPrior.filter(matches)
+
+  // Build prior lookup keyed by account_id (only meaningful for by_account); for
+  // by_type we'll aggregate prior into a per-type map below.
+  const priorByAccount = new Map(filteredPrior.map((l) => [l.account_id, l.balance]))
+  const priorByType    = new Map<AccountType, number>()
+  for (const l of filteredPrior) priorByType.set(l.type, (priorByType.get(l.type) ?? 0) + l.balance)
+
+  const withComparison = (amount: number, prior: number | undefined): Partial<ReportResultRow> => {
+    if (!priorPeriod) return {}
+    const priorAmount = prior ?? 0
+    const delta = amount - priorAmount
+    const deltaPct = priorAmount !== 0 ? (delta / priorAmount) * 100 : null
+    return { priorAmount, delta, deltaPct }
+  }
 
   let rows: ReportResultRow[]
   if (definition.grouping === 'by_type') {
@@ -123,6 +181,7 @@ export async function runCustomReport(definition: ReportDefinition): Promise<Rep
       name: `${type[0].toUpperCase()}${type.slice(1)} total`,
       type,
       amount,
+      ...withComparison(amount, priorByType.get(type)),
     }))
   } else {
     rows = filtered.map((l) => ({
@@ -131,10 +190,12 @@ export async function runCustomReport(definition: ReportDefinition): Promise<Rep
       name:       l.name,
       type:       l.type,
       amount:     l.balance,
+      ...withComparison(l.balance, priorByAccount.get(l.account_id)),
     }))
   }
 
-  const total = rows.reduce((s, r) => s + r.amount, 0)
+  const total      = rows.reduce((s, r) => s + r.amount, 0)
+  const priorTotal = priorPeriod ? filteredPrior.reduce((s, r) => s + r.balance, 0) : undefined
 
-  return { period, rows, total, groupedBy: definition.grouping }
+  return { period, priorPeriod, rows, total, priorTotal, groupedBy: definition.grouping }
 }

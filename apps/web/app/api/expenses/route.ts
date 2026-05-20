@@ -7,12 +7,21 @@ const schema = z.object({
   category:       z.enum(['utilities','repairs','salaries','supplies','maintenance','marketing','insurance','rent','equipment','other']),
   description:    z.string().min(1).max(500),
   vendor:         z.string().max(200).optional(),
-  amount:         z.number().int().positive(),   // pesewas
+  amount:         z.number().int().positive(),   // pesewas in base (GHS)
   expense_date:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   payment_method: z.enum(['cash','bank_transfer','momo','card','cheque']).optional(),
   reference:      z.string().max(100).optional(),
   notes:          z.string().max(1000).optional(),
-})
+  currency_code:   z.string().regex(/^[A-Z]{3,4}$/).optional(),
+  original_amount: z.number().int().positive().optional(),
+  fx_rate_used:    z.number().positive().optional(),
+}).refine(
+  (v) => {
+    if (!v.currency_code || v.currency_code === 'GHS') return true
+    return v.original_amount !== undefined && v.fx_rate_used !== undefined
+  },
+  { message: 'Non-GHS expenses require original_amount and fx_rate_used' },
+)
 
 export async function GET(req: NextRequest) {
   const h = await headers()
@@ -53,7 +62,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 422 })
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('expenses')
     .insert({ tenant_id: tenantId, created_by: user.id, ...parsed.data })
     .select()

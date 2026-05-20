@@ -33,6 +33,7 @@ export function NewReportForm({ accounts }: { accounts: Account[] }) {
   const [customFrom, setCustomFrom]   = useState('')
   const [customTo, setCustomTo]       = useState('')
   const [grouping, setGrouping]       = useState<'by_account' | 'by_type'>('by_account')
+  const [comparison, setComparison]   = useState<'none' | 'prior_period' | 'prior_year'>('none')
   const [submitting, setSubmitting]   = useState(false)
   const [error, setError]             = useState<string | null>(null)
 
@@ -79,6 +80,7 @@ export function NewReportForm({ accounts }: { accounts: Account[] }) {
               ...(periodKind === 'custom' ? { from: customFrom, to: customTo } : {}),
             },
             grouping,
+            comparison,
           },
         }),
       })
@@ -242,6 +244,36 @@ export function NewReportForm({ accounts }: { accounts: Account[] }) {
             )
           })}
         </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-widest text-text-secondary">Comparison</p>
+        <div className="flex flex-wrap gap-1">
+          {([
+            { id: 'none',         label: 'None' },
+            { id: 'prior_period', label: 'Prior period (same length)' },
+            { id: 'prior_year',   label: 'Prior year (same window)' },
+          ] as const).map((c) => {
+            const active = comparison === c.id
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setComparison(c.id)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  active
+                    ? 'bg-brand text-white'
+                    : 'border border-border bg-surface text-text-secondary hover:bg-surface-raised hover:text-text-primary'
+                }`}
+              >
+                {c.label}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-[11px] text-text-tertiary">
+          Adds prior-amount + delta + delta % columns to the rendered report.
+        </p>
       </div>
 
       {error && (

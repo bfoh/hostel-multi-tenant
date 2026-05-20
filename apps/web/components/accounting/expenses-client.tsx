@@ -9,7 +9,12 @@ interface Expense {
   id: string; category: string; description: string; vendor: string | null
   amount: number; expense_date: string; payment_method: string | null
   reference: string | null; notes: string | null
+  currency_code?: string | null
+  original_amount?: number | null
+  fx_rate_used?: number | null
 }
+
+interface FxRate { code: string; rate: number; asOf: string }
 
 const CATEGORIES = [
   'utilities','repairs','salaries','supplies','maintenance',
@@ -28,7 +33,13 @@ const CAT_COLORS: Record<string, string> = {
   other:       'bg-gray-100 text-gray-700',
 }
 
-export function ExpensesClient({ initialExpenses }: { initialExpenses: Expense[] }) {
+export function ExpensesClient({
+  initialExpenses,
+  fxRates = [],
+}: {
+  initialExpenses: Expense[]
+  fxRates?:        FxRate[]
+}) {
   const [expenses, setExpenses] = useState(initialExpenses)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving]     = useState(false)
@@ -47,23 +58,44 @@ export function ExpensesClient({ initialExpenses }: { initialExpenses: Expense[]
   const [method, setMethod] = useState('')
   const [ref, setRef]       = useState('')
   const [notes, setNotes]   = useState('')
+  const [currency, setCurrency]         = useState<string>('GHS')
+  const [rateOverride, setRateOverride] = useState('')
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true); setError(null)
     try {
+      const amtNum = parseFloat(amount)
+      if (!Number.isFinite(amtNum) || amtNum <= 0) throw new Error('Invalid amount')
+
+      const fxRate = fxRates.find((r) => r.code === currency)
+      const effectiveRate = currency === 'GHS'
+        ? 1
+        : rateOverride
+        ? parseFloat(rateOverride)
+        : fxRate?.rate ?? 0
+      if (currency !== 'GHS' && (!effectiveRate || effectiveRate <= 0)) {
+        throw new Error(`No FX rate for ${currency} — capture one under FX Rates or set an override`)
+      }
+
+      const ghsPesewas      = Math.round(amtNum * effectiveRate * 100)
+      const originalPesewas = Math.round(amtNum * 100)
+
       const res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          category:       cat,
-          description:    desc,
-          vendor:         vendor || undefined,
-          amount:         Math.round(parseFloat(amount) * 100),
-          expense_date:   date,
-          payment_method: method || undefined,
-          reference:      ref || undefined,
-          notes:          notes || undefined,
+          category:        cat,
+          description:     desc,
+          vendor:          vendor || undefined,
+          amount:          ghsPesewas,
+          expense_date:    date,
+          payment_method:  method || undefined,
+          reference:       ref || undefined,
+          notes:           notes || undefined,
+          currency_code:   currency,
+          original_amount: currency === 'GHS' ? undefined : originalPesewas,
+          fx_rate_used:    currency === 'GHS' ? undefined : effectiveRate,
         }),
       })
       const data = await res.json()
@@ -71,6 +103,7 @@ export function ExpensesClient({ initialExpenses }: { initialExpenses: Expense[]
       setExpenses((prev) => [data, ...prev])
       setShowForm(false)
       setDesc(''); setVendor(''); setAmount(''); setMethod(''); setRef(''); setNotes('')
+      setCurrency('GHS'); setRateOverride('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed')
     } finally {
@@ -168,7 +201,7 @@ export function ExpensesClient({ initialExpenses }: { initialExpenses: Expense[]
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-text-tertiary">Amount (GHS)</label>
+                  <label className="mb-1 block text-xs text-text-tertiary">Amount ({currency})</label>
                   <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="0.00"
                     className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand" />
                 </div>
@@ -177,6 +210,49 @@ export function ExpensesClient({ initialExpenses }: { initialExpenses: Expense[]
                   <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required
                     className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand" />
                 </div>
+              </div>
+
+              {/* Currency row */}
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs text-text-tertiary">Currency</label>
+                  <select value={currency} onChange={(e) => { setCurrency(e.target.value); setRateOverride('') }}
+                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand">
+                    <option value="GHS">GHS (base)</option>
+                    {fxRates.map((r) => <option key={r.code} value={r.code}>{r.code}</option>)}
+                  </select>
+                </div>
+                {currency !== 'GHS' && (
+                  <div>
+                    <label className="mb-1 block text-xs text-text-tertiary">
+                      Rate to GHS{' '}
+                      {fxRates.find((r) => r.code === currency) && (
+                        <span className="text-text-disabled">
+                          (latest {fxRates.find((r) => r.code === currency)!.rate.toFixed(4)})
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      min="0.0001"
+                      value={rateOverride}
+                      onChange={(e) => setRateOverride(e.target.value)}
+                      placeholder={fxRates.find((r) => r.code === currency)?.rate.toFixed(4) ?? 'Set FX rate first'}
+                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-right text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-brand"
+                    />
+                  </div>
+                )}
+                {currency !== 'GHS' && amount && (
+                  <div className="rounded-lg bg-surface-raised px-3 py-2 text-xs text-text-secondary self-end">
+                    = <strong className="text-text-primary tabular-nums">
+                      GH₵ {(
+                        parseFloat(amount) *
+                        (rateOverride ? parseFloat(rateOverride) : fxRates.find((r) => r.code === currency)?.rate ?? 0)
+                      ).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </strong>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-xs text-text-tertiary">Description</label>
@@ -256,7 +332,19 @@ export function ExpensesClient({ initialExpenses }: { initialExpenses: Expense[]
                           {e.category}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-text-primary max-w-xs truncate">{e.description}</td>
+                      <td className="px-4 py-3 text-text-primary max-w-xs truncate">
+                        {e.description}
+                        {e.currency_code && e.currency_code !== 'GHS' && (
+                          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-brand/10 px-1.5 py-0 text-[10px] font-semibold text-brand">
+                            {e.currency_code}
+                            {e.original_amount && (
+                              <span className="text-text-tertiary font-normal">
+                                {(e.original_amount / 100).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-text-secondary">{e.vendor ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono font-medium text-text-primary">{formatGHS(e.amount)}</td>
                       <td className="px-4 py-3">

@@ -13,6 +13,7 @@ interface CreateBody {
 const VALID_ACCOUNT_TYPES = new Set(['asset', 'liability', 'equity', 'revenue', 'expense'])
 const VALID_PERIOD_KINDS  = new Set(['mtd', 'qtd', 'ytd', 'last_month', 'last_year', 'custom'])
 const VALID_GROUPINGS     = new Set(['by_account', 'by_type'])
+const VALID_COMPARISONS   = new Set(['none', 'prior_period', 'prior_year'])
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -43,6 +44,9 @@ export async function POST(req: NextRequest) {
   }
   if (!VALID_GROUPINGS.has(d.grouping)) {
     return NextResponse.json({ error: 'definition.grouping invalid' }, { status: 400 })
+  }
+  if (d.comparison && !VALID_COMPARISONS.has(d.comparison)) {
+    return NextResponse.json({ error: 'definition.comparison invalid' }, { status: 400 })
   }
 
   const admin = createAdminClient()

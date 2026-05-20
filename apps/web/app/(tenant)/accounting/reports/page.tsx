@@ -73,6 +73,11 @@ export default async function CustomReportsPage() {
                     <span className="rounded-full bg-surface-raised px-2 py-0.5 text-text-secondary">
                       {r.definition.grouping === 'by_account' ? 'By account' : 'By type'}
                     </span>
+                    {r.definition.comparison && r.definition.comparison !== 'none' && (
+                      <span className="rounded-full bg-success/10 px-2 py-0.5 text-success">
+                        vs {r.definition.comparison === 'prior_year' ? 'prior year' : 'prior period'}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
