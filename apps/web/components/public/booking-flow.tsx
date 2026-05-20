@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Check, Users, Wifi, Wind, Droplets, Zap, Shield, Car, Utensils, Dumbbell, BookOpen, Share2, Phone, Flame, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, Users, Wifi, Wind, Droplets, Zap, Shield, Car, Utensils, Dumbbell, BookOpen, Share2, Phone, Flame, Clock, ArrowUpRight, BedDouble, Sparkles } from 'lucide-react'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -73,32 +73,66 @@ function scarcityLevel(available: number, total: number): 'none' | 'low' | 'crit
   return 'none'
 }
 
-function ScarcityBadge({ available, total }: { available: number; total: number }) {
+function ScarcityBadge({
+  available,
+  total,
+  variant = 'solid',
+}: {
+  available: number
+  total: number
+  variant?: 'solid' | 'glass'
+}) {
   const level = scarcityLevel(available, total)
+  const glass = variant === 'glass'
 
   if (level === 'sold') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${
+          glass
+            ? 'bg-black/55 text-white backdrop-blur-md ring-1 ring-white/10'
+            : 'bg-gray-900 text-white'
+        }`}
+      >
         <Clock className="h-3 w-3" /> Sold out
       </span>
     )
   }
   if (level === 'critical') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2.5 py-1 text-xs font-bold text-white animate-pulse">
-        <Flame className="h-3 w-3" /> Only {available} left!
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ${
+          glass
+            ? 'bg-red-500/90 text-white backdrop-blur-md ring-1 ring-white/20 shadow-[0_4px_14px_rgba(239,68,68,0.4)]'
+            : 'bg-red-500 text-white shadow-[0_4px_14px_rgba(239,68,68,0.35)]'
+        }`}
+      >
+        <Flame className="h-3 w-3" /> Only {available} left
       </span>
     )
   }
   if (level === 'low') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-        <Flame className="h-3 w-3" /> Almost full — {available} left
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${
+          glass
+            ? 'bg-amber-400/90 text-amber-950 backdrop-blur-md ring-1 ring-white/20'
+            : 'bg-amber-100 text-amber-800'
+        }`}
+      >
+        <Flame className="h-3 w-3" /> {available} left
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${
+        glass
+          ? 'bg-white/80 text-emerald-900 backdrop-blur-md ring-1 ring-emerald-900/10'
+          : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-600/10'
+      }`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
       {available} available
     </span>
   )
@@ -116,78 +150,132 @@ function RoomPicker({
   onSelect: (cat: Category) => void
 }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {categories.map(cat => {
         const sold = cat.available === 0
+        const hasImage = cat.image_urls.length > 0
+        const monogram = (cat.name.match(/[A-Za-z]/)?.[0] ?? cat.name[0] ?? '·').toUpperCase()
+        const typeLabel = cat.type ? (TYPE_LABEL[cat.type] ?? cat.type) : null
+
         return (
-          <div
+          <article
             key={cat.id}
-            className={`group flex flex-col rounded-2xl border bg-white shadow-sm overflow-hidden transition-all ${
-              sold ? 'opacity-60' : 'hover:shadow-md hover:-translate-y-0.5'
+            className={`group relative flex flex-col overflow-hidden rounded-[20px] bg-white ring-1 ring-gray-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)] transition-all duration-300 will-change-transform ${
+              sold
+                ? 'opacity-60'
+                : 'hover:-translate-y-1 hover:shadow-[0_4px_8px_rgba(15,23,42,0.06),0_24px_48px_-16px_rgba(15,23,42,0.2)] hover:ring-gray-300/70'
             }`}
           >
-            {/* Image / placeholder with scarcity overlay */}
-            <div className="relative">
-              {cat.image_urls.length > 0 ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={cat.image_urls[0]}
-                  alt={cat.name}
-                  className="h-44 w-full object-cover"
-                />
+            {/* ── Media zone ─────────────────────────────────────────── */}
+            <div className="relative h-52 overflow-hidden">
+              {hasImage ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={cat.image_urls[0]}
+                    alt={cat.name}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+                  />
+                  {/* Bottom gradient for legibility */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
+                </>
               ) : (
                 <div
-                  className="h-44 w-full flex items-center justify-center text-white/60 text-5xl font-bold"
-                  style={{ background: `linear-gradient(135deg, ${brandColor}33, ${brandColor}55)` }}
+                  className="relative h-full w-full overflow-hidden"
+                  style={{
+                    background: `radial-gradient(120% 80% at 100% 0%, ${brandColor}38 0%, ${brandColor}1a 35%, ${brandColor}05 70%, #ffffff 100%)`,
+                  }}
                 >
-                  {cat.name[0]}
+                  {/* Decorative grain dots — subtle, hardware-cheap */}
+                  <svg
+                    className="absolute inset-0 h-full w-full opacity-[0.18] mix-blend-multiply"
+                    aria-hidden
+                  >
+                    <defs>
+                      <pattern id={`dots-${cat.id}`} width="14" height="14" patternUnits="userSpaceOnUse">
+                        <circle cx="1" cy="1" r="1" fill={brandColor} />
+                      </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill={`url(#dots-${cat.id})`} />
+                  </svg>
+
+                  {/* Sweeping highlight line */}
+                  <div
+                    className="absolute -left-10 top-10 h-px w-44 rotate-[-18deg] opacity-50"
+                    style={{ background: `linear-gradient(90deg, transparent, ${brandColor}, transparent)` }}
+                  />
+
+                  {/* Monogram tile */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div
+                      className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/55 backdrop-blur-md ring-1 ring-white/70 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.2)]"
+                    >
+                      <span
+                        className="text-3xl font-semibold tracking-tight"
+                        style={{ color: brandColor, fontFamily: 'Playfair Display, serif' }}
+                      >
+                        {monogram}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
-              {/* Scarcity badge overlay */}
+
+              {/* Top-left: type chip in glass */}
+              {typeLabel && (
+                <div className="absolute left-3 top-3">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/85 backdrop-blur-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-700 ring-1 ring-black/5">
+                    <BedDouble className="h-3 w-3" style={{ color: brandColor }} />
+                    {typeLabel}
+                  </span>
+                </div>
+              )}
+
+              {/* Top-right: scarcity badge (single placement) */}
               {scarcityLevel(cat.available, cat.total) !== 'none' && (
-                <div className="absolute top-2 left-2">
-                  <ScarcityBadge available={cat.available} total={cat.total} />
+                <div className="absolute right-3 top-3">
+                  <ScarcityBadge available={cat.available} total={cat.total} variant="glass" />
                 </div>
               )}
+
+              {/* Bottom-left: capacity, sits on image */}
+              <div className="absolute bottom-3 left-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/85 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-gray-700 ring-1 ring-black/5">
+                  <Users className="h-3 w-3" />
+                  {cat.capacity} {cat.capacity === 1 ? 'guest' : 'guests'}
+                </span>
+              </div>
             </div>
 
-            <div className="flex flex-1 flex-col p-5 gap-3">
-              {/* Name + type */}
+            {/* ── Content zone ───────────────────────────────────────── */}
+            <div className="flex flex-1 flex-col gap-4 p-5">
+              {/* Title block */}
               <div>
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-gray-900 text-base leading-tight">{cat.name}</h3>
-                  {cat.type && (
-                    <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 font-medium">
-                      {TYPE_LABEL[cat.type] ?? cat.type}
-                    </span>
-                  )}
-                </div>
+                <h3 className="text-lg font-semibold tracking-tight text-gray-900 leading-tight">
+                  {cat.name}
+                </h3>
                 {cat.description && (
-                  <p className="mt-1 text-xs text-gray-500 line-clamp-2">{cat.description}</p>
+                  <p className="mt-1.5 text-[13px] text-gray-500 leading-relaxed line-clamp-2">
+                    {cat.description}
+                  </p>
                 )}
               </div>
 
-              {/* Capacity */}
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Users className="h-3.5 w-3.5" />
-                <span>{cat.capacity} {cat.capacity === 1 ? 'person' : 'people'}</span>
-              </div>
-
-              {/* Amenities */}
+              {/* Amenities — refined: hairline ring, no fill */}
               {cat.amenities.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {cat.amenities.slice(0, 5).map(a => (
+                  {cat.amenities.slice(0, 4).map(a => (
                     <span
                       key={a}
-                      className="flex items-center gap-1 rounded-full border border-gray-200 px-2 py-0.5 text-[11px] text-gray-600 bg-gray-50"
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-200 bg-white"
                     >
                       {AMENITY_ICONS[a.toLowerCase()] ?? null}
                       {a}
                     </span>
                   ))}
-                  {cat.amenities.length > 5 && (
-                    <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500 bg-gray-50">
-                      +{cat.amenities.length - 5}
+                  {cat.amenities.length > 4 && (
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-gray-500 ring-1 ring-gray-200 bg-gray-50">
+                      +{cat.amenities.length - 4} more
                     </span>
                   )}
                 </div>
@@ -196,26 +284,54 @@ function RoomPicker({
               {/* Spacer */}
               <div className="flex-1" />
 
-              {/* Price + CTA */}
-              <div className="pt-2 border-t border-gray-100 space-y-2">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-xl font-bold text-gray-900">{formatGHS(cat.base_rate)}</p>
-                    <p className="text-xs text-gray-400">{RATE_LABEL[cat.rate_unit] ?? `/ ${cat.rate_unit}`}</p>
+              {/* Price + CTA. Hairline divider, editorial type contrast. */}
+              <div className="space-y-4 border-t border-gray-100 pt-4">
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[11px] font-medium text-gray-400">GH₵</span>
+                      <span className="text-[26px] font-bold tracking-tight text-gray-900 leading-none tabular-nums">
+                        {new Intl.NumberFormat('en-GH').format(cat.base_rate / 100)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-gray-400 font-medium">
+                      {(RATE_LABEL[cat.rate_unit] ?? `/ ${cat.rate_unit}`).replace(/^\/\s*/, 'per ')}
+                    </p>
                   </div>
-                  <ScarcityBadge available={cat.available} total={cat.total} />
+                  {scarcityLevel(cat.available, cat.total) === 'none' && (
+                    <div className="shrink-0 pt-1">
+                      <ScarcityBadge available={cat.available} total={cat.total} />
+                    </div>
+                  )}
                 </div>
+
                 <button
                   disabled={sold}
                   onClick={() => onSelect(cat)}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+                  className="group/btn relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(0,0,0,0.4)] transition-all duration-200 hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.5)] hover:-translate-y-px disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                   style={{ backgroundColor: brandColor }}
                 >
-                  {sold ? 'Unavailable' : 'Book now'}
+                  {/* Subtle sheen on hover */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-white/15 opacity-0 transition-all duration-700 group-hover/btn:left-[120%] group-hover/btn:opacity-100"
+                  />
+                  {sold ? (
+                    <>
+                      <Clock className="h-4 w-4" />
+                      Unavailable
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 opacity-90" />
+                      Book now
+                      <ArrowUpRight className="h-4 w-4 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
-          </div>
+          </article>
         )
       })}
     </div>
