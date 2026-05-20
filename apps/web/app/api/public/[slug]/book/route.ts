@@ -57,6 +57,14 @@ export async function POST(
     return NextResponse.json({ error: 'Room type not found' }, { status: 404 })
   }
 
+  // Free abandoned Paystack holds (pending_payment + unpaid + source=website
+  // older than 30 minutes) before checking availability — otherwise a stale
+  // unpaid booking could block a fresh guest from grabbing the last bed.
+  await supabase.rpc('release_stale_pending_payment_bookings', {
+    p_tenant_id: tenant.id,
+    p_max_age_minutes: 30,
+  })
+
   // Bed-level availability via room_occupancy_v. A room qualifies when it has
   // at least one free bed and isn't manually held for maintenance/blocked.
   // Prefer partially-filled rooms (fewer free_beds first) so we fill rooms

@@ -87,6 +87,13 @@ interface OccupancyRow {
 async function getRoomCategories(tenantId: string) {
   const supabase = createAdminClient()
 
+  // Free beds held by abandoned Paystack flows (public bookings stuck in
+  // pending_payment+unpaid) so availability reflects what's actually open.
+  await supabase.rpc('release_stale_pending_payment_bookings', {
+    p_tenant_id: tenantId,
+    p_max_age_minutes: 30,
+  })
+
   const [{ data: catData }, { data: occData }] = await Promise.all([
     supabase
       .from('room_categories')
