@@ -44,10 +44,10 @@ export async function POST(
 
   const d = parsed.data
 
-  // Verify category belongs to this tenant and has availability
+  // Verify category belongs to this tenant
   const { data: category } = await supabase
     .from('room_categories')
-    .select('id, name, base_rate, rate_unit, rooms(id, status)')
+    .select('id, name, base_rate, rate_unit')
     .eq('id', d.category_id)
     .eq('tenant_id', tenant.id)
     .eq('is_active', true)
@@ -57,9 +57,20 @@ export async function POST(
     return NextResponse.json({ error: 'Room type not found' }, { status: 404 })
   }
 
-  const rooms = Array.isArray(category.rooms) ? category.rooms : []
-  const availableRoom = rooms.find(r => r.status === 'available')
+  // Bed-level availability via room_occupancy_v. A room qualifies when it has
+  // at least one free bed and isn't manually held for maintenance/blocked.
+  // Prefer partially-filled rooms (fewer free_beds first) so we fill rooms
+  // before opening empty ones — keeps occupancy compact.
+  const { data: roomCandidates } = await supabase
+    .from('room_occupancy_v')
+    .select('room_id, free_beds, manual_status')
+    .eq('tenant_id', tenant.id)
+    .eq('category_id', category.id)
+    .gt('free_beds', 0)
+    .not('manual_status', 'in', '("maintenance","blocked")')
+    .order('free_beds', { ascending: true })
 
+  const availableRoom = (roomCandidates ?? [])[0] as { room_id: string; free_beds: number; manual_status: string } | undefined
   if (!availableRoom) {
     return NextResponse.json({ error: 'No rooms available in this category' }, { status: 409 })
   }
@@ -111,7 +122,7 @@ export async function POST(
     .insert({
       tenant_id:      tenant.id,
       occupant_id:    occupantId,
-      room_id:        availableRoom.id,
+      room_id:        availableRoom.room_id,
       booking_ref:    bookingRef,
       check_in_date:  d.check_in_date,
       check_out_date: d.check_out_date,
@@ -131,11 +142,10 @@ export async function POST(
     return NextResponse.json({ error: bookingError?.message ?? 'Booking failed' }, { status: 500 })
   }
 
-  // Reserve room (hold, not occupied until confirmed)
-  await supabase
-    .from('rooms')
-    .update({ status: 'reserved' })
-    .eq('id', availableRoom.id)
+  // Note: with multi-occupancy (migration 070), bed holds come from the
+  // bookings row itself via room_occupancy_v, not from rooms.status. The old
+  // `rooms.update status='reserved'` flip is intentionally removed — it would
+  // mark the whole room held even when other beds remain bookable.
 
   // Initialize Paystack hosted payment (card / momo / bank / bank_transfer)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host') ?? 'localhost:3000'}`
@@ -179,7 +189,7 @@ export async function POST(
     phone:       d.phone,
     firstName:   d.first_name,
     bookingRef:  booking.booking_ref,
-    roomNumber:  availableRoom.id,
+    roomNumber:  availableRoom.room_id,
     checkInDate: d.check_in_date,
     hostelName:  tenant.name,
     tenantId:    tenant.id,
