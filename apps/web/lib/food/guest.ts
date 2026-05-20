@@ -38,7 +38,7 @@ export async function findOrCreateGuestOccupant(args: FindOrCreateArgs): Promise
       phone:      args.phone,
       email:      args.email,
       status:     'pending',
-      type:       'non_student',
+      type:       'guest',
     })
     .select('id')
     .single()

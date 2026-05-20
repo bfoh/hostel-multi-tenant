@@ -107,7 +107,7 @@ export async function POST(
         institution: d.institution,
         student_id:  d.student_id,
         status:      'pending',
-        type:        d.institution ? 'student' : 'non_student',
+        type:        d.institution ? 'student' : 'guest',
       })
       .select('id')
       .single()
