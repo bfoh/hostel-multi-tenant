@@ -16,6 +16,7 @@ import {
   ArrowUpFromLine,
   Target,
   CalendarClock,
+  Banknote,
 } from 'lucide-react'
 
 const TABS = [
@@ -29,6 +30,7 @@ const TABS = [
   { href: '/accounting/cash-flow',      label: 'Cash Flow',    icon: Waves },
   { href: '/accounting/budgets',        label: 'Budgets',      icon: Target },
   { href: '/accounting/tax',            label: 'Tax',          icon: CalendarClock },
+  { href: '/accounting/fx',             label: 'FX Rates',     icon: Banknote },
   { href: '/accounting/chart',          label: 'Chart',        icon: DollarSign },
   { href: '/accounting/expenses',       label: 'Expenses',     icon: Receipt },
   { href: '/accounting/reconcile',      label: 'Reconcile',    icon: GitMerge },
