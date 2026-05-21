@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 interface CreateBillBody {
+  supplier_id?:       string  // optional FK; vendor_name still required for free-text capture
   vendor_name:        string
   vendor_contact?:    string
   bill_number?:       string
@@ -51,10 +52,23 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient()
+
+  // Verify supplier belongs to tenant if provided
+  if (body.supplier_id) {
+    const { data: sup } = await (admin as any)
+      .from('suppliers')
+      .select('id')
+      .eq('id', body.supplier_id)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    if (!sup) return NextResponse.json({ error: 'Supplier does not belong to this tenant' }, { status: 400 })
+  }
+
   const { data, error } = await (admin as any)
     .from('supplier_bills')
     .insert({
       tenant_id:          tenantId,
+      supplier_id:        body.supplier_id || null,
       vendor_name:        body.vendor_name.trim(),
       vendor_contact:     body.vendor_contact?.trim() || null,
       bill_number:        body.bill_number?.trim() || null,

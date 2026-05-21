@@ -4,14 +4,21 @@ import { ChevronLeft } from 'lucide-react'
 
 import { getChartOfAccounts } from '@/lib/data/accounting'
 import { getLatestFxRates } from '@/lib/data/fx'
+import { getSuppliers } from '@/lib/data/suppliers'
 import { NewBillForm } from '@/components/accounting/new-bill-form'
 
 export const metadata: Metadata = { title: 'New Supplier Bill' }
 
-export default async function NewBillPage() {
-  const [accounts, fxRates] = await Promise.all([
+export default async function NewBillPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ supplier?: string }>
+}) {
+  const sp = await searchParams
+  const [accounts, fxRates, suppliers] = await Promise.all([
     getChartOfAccounts(),
     getLatestFxRates(),
+    getSuppliers(false),
   ])
 
   const expenseAccounts = accounts
@@ -37,6 +44,16 @@ export default async function NewBillPage() {
       <NewBillForm
         expenseAccounts={expenseAccounts}
         fxRates={fxRates.map((r) => ({ code: r.currency_code, rate: r.rate_to_base, asOf: r.as_of_date }))}
+        suppliers={suppliers.map((s) => ({
+          id:                  s.id,
+          name:                s.name,
+          phone:               s.phone,
+          email:               s.email,
+          payment_terms_days:  s.payment_terms_days,
+          default_expense_account_id: s.default_expense_account_id,
+          default_currency:    s.default_currency,
+        }))}
+        preselectSupplierId={sp.supplier}
       />
     </div>
   )

@@ -6,37 +6,73 @@ import { Loader2, Banknote } from 'lucide-react'
 
 interface ExpenseAccount { id: string; code: string; name: string }
 interface FxRate { code: string; rate: number; asOf: string }
+interface SupplierOption {
+  id:                          string
+  name:                        string
+  phone:                       string | null
+  email:                       string | null
+  payment_terms_days:          number
+  default_expense_account_id:  string | null
+  default_currency:            string
+}
 
 const CATEGORIES = [
   'utilities','repairs','salaries','supplies','maintenance',
   'marketing','insurance','rent','equipment','other',
 ] as const
 
+function addDays(iso: string, days: number): string {
+  const d = new Date(iso)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
 export function NewBillForm({
   expenseAccounts,
   fxRates,
+  suppliers = [],
+  preselectSupplierId,
 }: {
-  expenseAccounts: ExpenseAccount[]
-  fxRates:         FxRate[]
+  expenseAccounts:     ExpenseAccount[]
+  fxRates:             FxRate[]
+  suppliers?:          SupplierOption[]
+  preselectSupplierId?:string
 }) {
   const router = useRouter()
   const today = new Date().toISOString().slice(0, 10)
-  const due30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
-  const [vendorName, setVendorName]       = useState('')
-  const [vendorContact, setVendorContact] = useState('')
+  const preselect = preselectSupplierId
+    ? suppliers.find((s) => s.id === preselectSupplierId)
+    : undefined
+  const due30 = addDays(today, preselect?.payment_terms_days ?? 30)
+
+  const [supplierId, setSupplierId]       = useState(preselect?.id ?? '')
+  const [vendorName, setVendorName]       = useState(preselect?.name ?? '')
+  const [vendorContact, setVendorContact] = useState(preselect?.phone ?? preselect?.email ?? '')
   const [billNumber, setBillNumber]       = useState('')
   const [billDate, setBillDate]           = useState(today)
   const [dueDate, setDueDate]             = useState(due30)
   const [category, setCategory]           = useState<typeof CATEGORIES[number]>('utilities')
   const [description, setDescription]     = useState('')
-  const [currency, setCurrency]           = useState<string>('GHS')
+  const [currency, setCurrency]           = useState<string>(preselect?.default_currency ?? 'GHS')
   const [rateOverride, setRateOverride]   = useState('')
   const [amount, setAmount]               = useState('')
-  const [expenseAcct, setExpenseAcct]     = useState('')
+  const [expenseAcct, setExpenseAcct]     = useState(preselect?.default_expense_account_id ?? '')
   const [notes, setNotes]                 = useState('')
   const [submitting, setSubmitting]       = useState(false)
   const [error, setError]                 = useState<string | null>(null)
+
+  function onSupplierChange(id: string) {
+    setSupplierId(id)
+    if (!id) return
+    const s = suppliers.find((x) => x.id === id)
+    if (!s) return
+    setVendorName(s.name)
+    if (s.phone || s.email) setVendorContact(s.phone ?? s.email ?? '')
+    setCurrency(s.default_currency)
+    if (s.default_expense_account_id) setExpenseAcct(s.default_expense_account_id)
+    setDueDate(addDays(billDate, s.payment_terms_days))
+  }
 
   const fxRate = useMemo(() => fxRates.find((r) => r.code === currency), [fxRates, currency])
   const effectiveRate = currency === 'GHS'
@@ -68,6 +104,7 @@ export function NewBillForm({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          supplier_id:        supplierId || undefined,
           vendor_name:        vendorName.trim(),
           vendor_contact:     vendorContact.trim() || undefined,
           bill_number:        billNumber.trim() || undefined,
@@ -100,6 +137,27 @@ export function NewBillForm({
   return (
     <form onSubmit={submit} className="space-y-6">
       <div className="rounded-xl border border-border bg-surface p-5 space-y-4">
+        {suppliers.length > 0 && (
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Pick from suppliers (optional)</label>
+            <select
+              value={supplierId}
+              onChange={(e) => onSupplierChange(e.target.value)}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:border-brand focus:outline-none"
+            >
+              <option value="">— Free-text vendor —</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.default_currency !== 'GHS' ? ` (${s.default_currency})` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-text-tertiary">
+              Picking a supplier prefills contact, currency, expense account, and the due date based on their payment terms.
+            </p>
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">Vendor name *</label>
