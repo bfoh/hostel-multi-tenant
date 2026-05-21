@@ -41,24 +41,30 @@ export default async function VisitSuccessPage({ params, searchParams }: PagePro
 
   const brand = tenant.primary_color ?? '#2563EB'
 
-  // Cash-on-pickup path: look the sale up by reference + token; nothing to
-  // verify with Paystack.
-  let cashSale: { status: string; amount: number; description: string } | null = null
-  if (isCash && reference) {
+  // Lookup the sale by reference + token in revenue_point_sales — works for
+  // both cash and online (webhook writes the row on Paystack success), and
+  // gives us a clean fallback when the Paystack hosted page sends the user
+  // here with a stale verify cache.
+  let sale: { status: string; amount: number; payment_method: string } | null = null
+  if (reference) {
     const { data } = await (supabase as any)
       .from('revenue_point_sales')
-      .select('status, total_amount, description, entry_token')
+      .select('status, total_amount, payment_method, entry_token')
       .eq('tenant_id', tenant.id)
       .eq('reference', reference)
       .maybeSingle()
     if (data && (!expectedToken || data.entry_token === expectedToken)) {
-      cashSale = { status: data.status, amount: data.total_amount, description: data.description }
+      sale = { status: data.status, amount: data.total_amount, payment_method: data.payment_method }
     }
   }
 
-  // Verify the Paystack transaction (no DB writes here — webhook owns that)
+  const looksCash = isCash || sale?.payment_method === 'cash' || sale?.status === 'pending_pickup'
+
+  // Only ping Paystack when we don't already have a settled sale (cash path
+  // never needs it; online path doesn't need it once the webhook wrote the
+  // row). Avoids the misleading "Could not verify" banner for cash bookings.
   let charge: { status: string; amount: number; channel?: string } | null = null
-  if (!isCash && reference) {
+  if (!looksCash && reference && !sale) {
     try {
       const result = await verifyTransaction(reference)
       charge = { status: result.status, amount: result.amount, channel: (result as any).channel }
@@ -67,7 +73,7 @@ export default async function VisitSuccessPage({ params, searchParams }: PagePro
     }
   }
 
-  const ok = isCash ? cashSale !== null : charge?.status === 'success'
+  const ok = looksCash ? sale !== null : (sale !== null || charge?.status === 'success')
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -94,7 +100,7 @@ export default async function VisitSuccessPage({ params, searchParams }: PagePro
             title="Missing reference"
             message="No payment reference was passed back. Contact the hostel if you were charged."
           />
-        ) : charge === null ? (
+        ) : !looksCash && charge === null && sale === null ? (
           <ErrorCard
             title="Could not verify"
             message="We couldn't reach Paystack to confirm your payment. Refresh in a few seconds."
@@ -107,13 +113,13 @@ export default async function VisitSuccessPage({ params, searchParams }: PagePro
         ) : (
           <SuccessCard
             brand={brand}
-            amountPesewas={isCash ? cashSale!.amount : charge!.amount}
+            amountPesewas={sale?.amount ?? charge!.amount}
             entryToken={expectedToken}
             type={point.type as string}
             pointName={point.name}
             contactPhone={tenant.contact_phone}
             turnaroundHours={Number(point.public_config?.turnaround_hours ?? 24)}
-            isCash={isCash}
+            isCash={looksCash}
           />
         )}
       </main>
