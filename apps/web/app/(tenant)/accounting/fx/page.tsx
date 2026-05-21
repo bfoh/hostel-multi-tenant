@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { Banknote } from 'lucide-react'
+import Link from 'next/link'
+import { Banknote, RefreshCw } from 'lucide-react'
 
 import { getFxRates, getLatestFxRates } from '@/lib/data/fx'
 import { FxRatesClient } from '@/components/accounting/fx-rates-client'
@@ -11,11 +12,20 @@ export default async function FxRatesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-text-primary">FX Rates</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Capture daily exchange rates against GHS · 1 unit foreign currency = X GHS
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-text-primary">FX Rates</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Capture daily exchange rates against GHS · 1 unit foreign currency = X GHS
+          </p>
+        </div>
+        <Link
+          href="/accounting/fx/revalue"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Run revaluation
+        </Link>
       </div>
 
       {latest.length > 0 && (
