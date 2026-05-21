@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import { getJournalEntries, getChartOfAccounts } from '@/lib/data/accounting'
 import { formatGHS } from '@/lib/utils'
 import { JournalFilters } from '@/components/accounting/journal-filters'
+import { VoidEntryButton } from '@/components/accounting/void-entry-button'
 
 export const metadata: Metadata = { title: 'Journal Entries' }
 
@@ -84,19 +85,24 @@ export default async function JournalPage({
         <div className="space-y-4">
           {entries.map((entry) => {
             const totalDebit = entry.lines.reduce((s, l) => s + l.debit, 0)
+            const isVoided = Boolean(entry.voided_at)
             return (
-              <div key={entry.id} className="rounded-xl border border-border bg-surface overflow-hidden">
+              <div key={entry.id} className={`rounded-xl border border-border bg-surface overflow-hidden ${isVoided ? 'opacity-60' : ''}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
                   <div className="flex flex-wrap items-center gap-3">
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${SOURCE_BADGE[entry.source] ?? 'bg-surface-raised text-text-secondary'}`}>
                       {SOURCE_LABELS[entry.source] ?? entry.source}
                     </span>
-                    <span className="text-sm font-medium text-text-primary">{entry.description}</span>
+                    <span className={`text-sm font-medium ${isVoided ? 'line-through text-text-tertiary' : 'text-text-primary'}`}>{entry.description}</span>
                     {entry.reference && (
                       <span className="text-xs text-text-tertiary">· {entry.reference}</span>
                     )}
+                    {entry.reverses_entry_id && (
+                      <span className="rounded-full bg-warning/10 px-1.5 py-0 text-[10px] font-semibold text-warning">Reversal</span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <VoidEntryButton entryId={entry.id} isVoided={isVoided} />
                     <span className="text-xs text-text-secondary">
                       {new Date(entry.entry_date).toLocaleDateString('en-GH', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
@@ -105,6 +111,12 @@ export default async function JournalPage({
                     </span>
                   </div>
                 </div>
+
+                {isVoided && entry.void_reason && (
+                  <div className="border-b border-border bg-danger/5 px-4 py-2 text-[11px] text-danger">
+                    Voided: {entry.void_reason}
+                  </div>
+                )}
 
                 <div className="divide-y divide-border/50">
                   {entry.lines.map((line) => (
