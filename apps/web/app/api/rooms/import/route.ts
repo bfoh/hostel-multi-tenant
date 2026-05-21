@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       category_id: categoryId,
       room_number: roomNumber,
       floor:       floor,
-      block:       row['block']?.trim() || null,
+      block:       row['block']?.trim() || '',
       status,
       notes:       row['notes']?.trim() || null,
     })
@@ -98,15 +98,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ errors, imported: 0, skipped: errors.length }, { status: 422 })
   }
 
+  // Pre-dedupe in-batch on (block, room_number) so two rows targeting
+  // the same conflict key don't blow Postgres' "cannot affect row a
+  // second time" guard. Last write wins.
+  const seen = new Map<string, typeof valid[number]>()
+  const dupes: string[] = []
+  for (const r of valid) {
+    const key = `${r.block}::${r.room_number}`
+    if (seen.has(key)) dupes.push(`${r.block || '(no block)'} ${r.room_number}`)
+    seen.set(key, r)
+  }
+  const deduped = Array.from(seen.values())
+
   if (dryRun) {
-    return NextResponse.json({ dry_run: true, valid: valid.length, rows: valid })
+    return NextResponse.json({
+      dry_run:   true,
+      valid:     deduped.length,
+      duplicates:dupes,
+      rows:      deduped,
+    })
   }
 
-  // Upsert on tenant_id + room_number
+  // Upsert on (tenant_id, block, room_number) — block included so multi-block
+  // hostels with reused room numbers (Block A 1..10, Block B 1..10) work.
   const { data, error } = await (supabase.from('rooms') as any)
-    .upsert(valid, { onConflict: 'tenant_id,room_number' })
+    .upsert(deduped, { onConflict: 'tenant_id,block,room_number' })
     .select('id, room_number')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ imported: data?.length ?? 0, errors: [] }, { status: 201 })
+  return NextResponse.json({
+    imported:  data?.length ?? 0,
+    duplicates:dupes,
+    errors:    [],
+  }, { status: 201 })
 }
