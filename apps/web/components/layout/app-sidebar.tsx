@@ -10,7 +10,7 @@ import {
   MessageSquare, MessageCircle, UserCog, ClipboardList, BookOpen, Bot,
   Package, Search, Building2, ListOrdered, TrendingDown,
   Monitor, Lock, Store, ClipboardCheck, Banknote,
-  Utensils, ShoppingBag,
+  Utensils, ShoppingBag, Activity,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -58,6 +58,7 @@ interface NavItem {
 /** Day-to-day operations — visible to ALL authenticated roles (staff + admin) */
 const OPS_ITEMS: NavItem[] = [
   { label: 'Dashboard',      href: '/dashboard',      icon: LayoutDashboard, anim: 'pulse'  },
+  { label: 'Today',          href: '/ops',             icon: Activity,        anim: 'pulse'  },
   { label: 'Occupants',      href: '/occupants',      icon: Users,           anim: 'bounce' },
   { label: 'Rooms',          href: '/rooms',           icon: BedDouble,       anim: 'tilt'   },
   { label: 'Bookings',       href: '/bookings',        icon: CalendarCheck,   anim: 'flip'   },
