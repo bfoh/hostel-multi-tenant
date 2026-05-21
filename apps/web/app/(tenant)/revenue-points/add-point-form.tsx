@@ -6,6 +6,7 @@ import { Plus, Loader2 } from 'lucide-react'
 
 const TYPES = [
   { value: 'gym',        label: 'Gym' },
+  { value: 'sports',     label: 'Sports Centre / Court' },
   { value: 'cafeteria',  label: 'Cafeteria' },
   { value: 'restaurant', label: 'Restaurant' },
   { value: 'mini_mart',  label: 'Mini-Mart / Tuck Shop' },

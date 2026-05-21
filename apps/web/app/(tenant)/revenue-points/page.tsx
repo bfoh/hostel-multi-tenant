@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   Store, Dumbbell, UtensilsCrossed, ShoppingCart, WashingMachine,
-  Printer, Car, Plus, ArrowUpRight, TrendingUp,
+  Printer, Car, Plus, ArrowUpRight, TrendingUp, Trophy,
 } from 'lucide-react'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { getRevenuePoints } from '@/lib/data/revenue-points'
@@ -14,6 +14,7 @@ export const metadata: Metadata = { title: 'Revenue Points' }
 
 const TYPE_ICON: Record<string, typeof Store> = {
   gym:        Dumbbell,
+  sports:     Trophy,
   cafeteria:  UtensilsCrossed,
   restaurant: UtensilsCrossed,
   mini_mart:  ShoppingCart,
@@ -25,6 +26,7 @@ const TYPE_ICON: Record<string, typeof Store> = {
 
 const TYPE_COLOR: Record<string, string> = {
   gym:        'bg-purple-500/10 text-purple-600',
+  sports:     'bg-amber-500/10 text-amber-600',
   cafeteria:  'bg-orange-500/10 text-orange-600',
   restaurant: 'bg-orange-500/10 text-orange-600',
   mini_mart:  'bg-blue-500/10 text-blue-600',
@@ -36,6 +38,7 @@ const TYPE_COLOR: Record<string, string> = {
 
 const TYPE_LABEL: Record<string, string> = {
   gym:        'Gym',
+  sports:     'Sports Centre',
   cafeteria:  'Cafeteria',
   restaurant: 'Restaurant',
   mini_mart:  'Mini-Mart',
