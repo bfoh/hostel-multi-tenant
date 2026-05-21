@@ -105,19 +105,41 @@ export async function POST(
   if (parsed.data.payment_method === 'cash_at_pickup') {
     const phoneClean = normPhone(parsed.data.phone)
 
-    // Upsert visitor
+    // Link to occupant if phone matches one on file — mirrors webhook
+    // behaviour so cash and online bookings end up in the same CRM record.
+    const { data: occ } = await (supabase as any)
+      .from('occupants')
+      .select('id')
+      .eq('tenant_id', tenant.id)
+      .eq('phone', phoneClean)
+      .maybeSingle()
+
     const { data: visitor } = await (supabase as any)
       .from('revenue_point_visitors')
       .upsert({
-        tenant_id:  tenant.id,
-        phone:      phoneClean,
-        first_name: parsed.data.first_name,
-        last_name:  parsed.data.last_name,
-        email:      parsed.data.email ?? null,
+        tenant_id:    tenant.id,
+        phone:        phoneClean,
+        first_name:   parsed.data.first_name,
+        last_name:    parsed.data.last_name,
+        email:        parsed.data.email ?? null,
+        occupant_id:  occ?.id ?? null,
         last_seen_at: new Date().toISOString(),
       }, { onConflict: 'tenant_id,phone' })
-      .select('id')
+      .select('id, visit_count, total_spend')
       .single()
+
+    if (visitor) {
+      // visit_count = behaviour signal — bump now.
+      // total_spend = revenue — bump now under the assumption most
+      // reservations are honoured. Adjust later via cancellations if needed.
+      await (supabase as any)
+        .from('revenue_point_visitors')
+        .update({
+          visit_count: (visitor.visit_count ?? 0) + 1,
+          total_spend: (visitor.total_spend ?? 0) + priced.amount,
+        })
+        .eq('id', visitor.id)
+    }
 
     const { data: sale, error: insErr } = await (supabase as any)
       .from('revenue_point_sales')

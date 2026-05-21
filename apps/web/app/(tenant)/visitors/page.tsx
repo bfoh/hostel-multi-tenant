@@ -5,24 +5,49 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, UserRound } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS } from '@/lib/utils'
+import { ExportCsvButton } from '@/components/accounting/export-csv-button'
 
 export const metadata: Metadata = { title: 'Walk-in visitors' }
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; cursor?: string }>
+  searchParams: Promise<{ q?: string; cursor?: string; rp?: string; linked?: string }>
 }
 
 export default async function VisitorsPage({ searchParams }: PageProps) {
   const sp = await searchParams
-  const q  = (sp.q ?? '').trim()
-  const cursor = sp.cursor ?? null
+  const q       = (sp.q ?? '').trim()
+  const cursor  = sp.cursor ?? null
+  const rpId    = sp.rp ?? ''
+  const linkedFilter = sp.linked ?? '' // '', 'occupant', 'guest'
 
   const h        = await headers()
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) notFound()
 
   const supabase = createAdminClient()
+
+  // Revenue point list for the filter chips
+  const { data: rpsRaw } = await supabase
+    .from('revenue_points')
+    .select('id, name, type')
+    .eq('tenant_id', tenantId)
+    .order('name')
+  const rps = (rpsRaw ?? []) as any[]
+
+  // If filtering by RP, prefetch the visitor IDs that have a sale at that RP
+  let visitorIdsForRp: string[] | null = null
+  if (rpId) {
+    const { data } = await (supabase as any)
+      .from('revenue_point_sales')
+      .select('visitor_id')
+      .eq('tenant_id', tenantId)
+      .eq('revenue_point_id', rpId)
+      .not('visitor_id', 'is', null)
+      .limit(5000)
+    visitorIdsForRp = Array.from(new Set(((data ?? []) as any[]).map((r) => r.visitor_id as string)))
+    if (visitorIdsForRp.length === 0) visitorIdsForRp = ['00000000-0000-0000-0000-000000000000']
+  }
 
   let query = supabase
     .from('revenue_point_visitors')
@@ -37,6 +62,14 @@ export default async function VisitorsPage({ searchParams }: PageProps) {
   if (cursor) {
     query = query.lt('last_seen_at', cursor)
   }
+  if (visitorIdsForRp) {
+    query = query.in('id', visitorIdsForRp)
+  }
+  if (linkedFilter === 'occupant') {
+    query = query.not('occupant_id', 'is', null)
+  } else if (linkedFilter === 'guest') {
+    query = query.is('occupant_id', null)
+  }
 
   const { data: rowsRaw } = await query
   const rows: any[] = (rowsRaw as any[]) ?? []
@@ -44,9 +77,32 @@ export default async function VisitorsPage({ searchParams }: PageProps) {
   const visible = hasMore ? rows.slice(0, 50) : rows
   const nextCursor = hasMore ? visible[visible.length - 1].last_seen_at : null
 
+  // Full export — independent of page cursor, capped at 5000 for safety
+  let exportQuery = (supabase as any)
+    .from('revenue_point_visitors')
+    .select('phone, first_name, last_name, email, occupant_id, visit_count, total_spend, first_seen_at, last_seen_at')
+    .eq('tenant_id', tenantId)
+    .order('last_seen_at', { ascending: false })
+    .limit(5000)
+  if (q) exportQuery = exportQuery.or(`phone.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`)
+  if (visitorIdsForRp) exportQuery = exportQuery.in('id', visitorIdsForRp)
+  if (linkedFilter === 'occupant') exportQuery = exportQuery.not('occupant_id', 'is', null)
+  if (linkedFilter === 'guest')    exportQuery = exportQuery.is('occupant_id', null)
+  const { data: exportRows } = await exportQuery
+  const csvRows = ((exportRows ?? []) as any[]).map((v) => [
+    [v.first_name, v.last_name].filter(Boolean).join(' '),
+    v.phone ?? '',
+    v.email ?? '',
+    v.occupant_id ? 'resident' : 'guest',
+    v.visit_count ?? 0,
+    ((v.total_spend ?? 0) / 100).toFixed(2),
+    v.first_seen_at ? new Date(v.first_seen_at).toISOString().slice(0, 10) : '',
+    v.last_seen_at  ? new Date(v.last_seen_at).toISOString().slice(0, 10)  : '',
+  ])
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link
             href="/dashboard"
@@ -56,19 +112,46 @@ export default async function VisitorsPage({ searchParams }: PageProps) {
           </Link>
           <h1 className="text-2xl font-bold text-text-primary">Walk-in visitors</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
-            Customers who paid at the gym, sports centre, laundry or restaurant QR portal.
+            Marketing CRM · everyone who used a revenue point QR (gym, sports, laundry, restaurant, mini-mart…). De-duped by phone per tenant.
           </p>
         </div>
+        <ExportCsvButton
+          filename={`walkin-visitors-${new Date().toISOString().slice(0, 10)}`}
+          headers={['Name', 'Phone', 'Email', 'Type', 'Visits', 'Total spend (GHS)', 'First seen', 'Last seen']}
+          rows={csvRows}
+          label={`Export ${csvRows.length} for marketing`}
+        />
       </div>
 
-      <form className="flex items-center gap-2">
+      <form className="flex flex-wrap items-center gap-2">
         <input
           type="search"
           name="q"
           defaultValue={q}
           placeholder="Search by name, phone or email…"
-          className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+          className="flex-1 min-w-[200px] rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
         />
+        {rps.length > 0 && (
+          <select
+            name="rp"
+            defaultValue={rpId}
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+          >
+            <option value="">All revenue points</option>
+            {rps.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        )}
+        <select
+          name="linked"
+          defaultValue={linkedFilter}
+          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+        >
+          <option value="">Residents + guests</option>
+          <option value="occupant">Residents only</option>
+          <option value="guest">Outside guests only</option>
+        </select>
         <button
           type="submit"
           className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
