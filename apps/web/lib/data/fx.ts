@@ -1,12 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
-/**
- * Common currencies a Ghanaian hospitality business is likely to transact in.
- * UI seeds the dropdown from this — the table accepts any ISO 4217 code so
- * tenants can record exotic currencies if needed.
- */
-export const COMMON_FOREIGN_CURRENCIES = ['USD', 'EUR', 'GBP', 'NGN', 'XOF', 'ZAR', 'CFA'] as const
+// Re-export from the client-safe module so existing server imports keep working
+export { COMMON_FOREIGN_CURRENCIES } from '@/lib/currencies'
 
 export interface FxRate {
   id:            string

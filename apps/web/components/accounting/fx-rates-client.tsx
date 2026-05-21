@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
 
-import { COMMON_FOREIGN_CURRENCIES, type FxRate } from '@/lib/data/fx'
+import { COMMON_FOREIGN_CURRENCIES } from '@/lib/currencies'
+import type { FxRate } from '@/lib/data/fx'
 
 export function FxRatesClient({ initialRates }: { initialRates: FxRate[] }) {
   const router = useRouter()

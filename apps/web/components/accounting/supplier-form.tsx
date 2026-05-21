@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 
-import { COMMON_FOREIGN_CURRENCIES } from '@/lib/data/fx'
+import { COMMON_FOREIGN_CURRENCIES } from '@/lib/currencies'
 import type { Supplier } from '@/lib/data/suppliers'
 
 interface ExpenseAccount { id: string; code: string; name: string }
