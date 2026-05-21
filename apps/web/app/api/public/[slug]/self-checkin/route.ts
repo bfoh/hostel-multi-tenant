@@ -247,17 +247,45 @@ export async function POST(
   // Pick a room with at least one free bed in this category. Bed availability
   // is derived from active bookings vs category capacity (room_occupancy_v),
   // not from rooms.status — rooms.status is now a manual override only.
-  const { data: candidates } = await admin
-    .from('room_occupancy_v')
-    .select('room_id, free_beds, manual_status')
-    .eq('tenant_id', tenant.id)
-    .eq('category_id', d.category_id)
-    .gt('free_beds', 0)
-    .order('beds_taken', { ascending: false })
-    .order('room_id',    { ascending: true })
-    .limit(1)
+  //
+  // If the occupant explicitly picked a room in the form (d.room_id), validate
+  // it belongs to the category and still has free beds; otherwise auto-pick.
+  let availableRoom: { room_id: string; free_beds: number; manual_status: string | null } | null = null
 
-  const availableRoom = candidates?.[0]
+  if (d.room_id) {
+    const { data: chosen } = await admin
+      .from('room_occupancy_v')
+      .select('room_id, free_beds, manual_status, category_id')
+      .eq('tenant_id', tenant.id)
+      .eq('room_id', d.room_id)
+      .maybeSingle()
+    if (!chosen) {
+      return NextResponse.json({ error: 'Chosen room not found' }, { status: 404 })
+    }
+    if ((chosen as any).category_id !== d.category_id) {
+      return NextResponse.json({ error: 'Chosen room does not belong to selected category' }, { status: 400 })
+    }
+    const manual = (chosen as any).manual_status
+    if (manual === 'maintenance' || manual === 'blocked') {
+      return NextResponse.json({ error: 'Chosen room is unavailable' }, { status: 409 })
+    }
+    if ((chosen as any).free_beds <= 0) {
+      return NextResponse.json({ error: 'Chosen room is already full' }, { status: 409 })
+    }
+    availableRoom = { room_id: (chosen as any).room_id, free_beds: (chosen as any).free_beds, manual_status: manual }
+  } else {
+    const { data: candidates } = await admin
+      .from('room_occupancy_v')
+      .select('room_id, free_beds, manual_status')
+      .eq('tenant_id', tenant.id)
+      .eq('category_id', d.category_id)
+      .gt('free_beds', 0)
+      .order('beds_taken', { ascending: false })
+      .order('room_id',    { ascending: true })
+      .limit(1)
+    availableRoom = (candidates?.[0] as any) ?? null
+  }
+
   if (!availableRoom) {
     return NextResponse.json({ error: 'No rooms available in this category' }, { status: 409 })
   }
@@ -284,7 +312,9 @@ export async function POST(
       payment_status:            'unpaid',
       status:                    'pending_confirmation',
       source:                    'walk_in',
-      notes:                     d.notes ?? null,
+      notes:                     d.bed_label
+                                   ? `${d.notes ?? ''}${d.notes ? '\n' : ''}Preferred bed: ${d.bed_label}`.trim()
+                                   : (d.notes ?? null),
       self_checkin_submitted_at: new Date().toISOString(),
       ghana_card_front_doc_id:   frontId,
       ghana_card_back_doc_id:    backId,

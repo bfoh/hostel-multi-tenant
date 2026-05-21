@@ -54,13 +54,47 @@ export default async function SelfCheckinPage({
 
   const { data: occupancy } = await admin
     .from('room_occupancy_v')
-    .select('category_id, free_beds')
+    .select('room_id, category_id, room_number, capacity, beds_taken, free_beds, manual_status')
     .eq('tenant_id', tenant.id)
 
+  // Pull block from rooms (the view doesn't expose it)
+  const { data: roomRows } = await admin
+    .from('rooms')
+    .select('id, block, floor')
+    .eq('tenant_id', tenant.id)
+
+  const blockById = new Map((roomRows ?? []).map((r: any) => [r.id as string, { block: r.block as string | null, floor: r.floor as number | null }]))
+
   const freeByCategory = new Map<string, number>()
-  for (const row of occupancy ?? []) {
+  const roomsByCategory = new Map<string, Array<{
+    room_id: string; room_number: string; block: string | null; floor: number | null;
+    capacity: number; beds_taken: number; free_beds: number
+  }>>()
+
+  for (const row of (occupancy ?? []) as any[]) {
     const key = row.category_id as string
     freeByCategory.set(key, (freeByCategory.get(key) ?? 0) + (row.free_beds as number))
+    if (row.manual_status === 'maintenance' || row.manual_status === 'blocked') continue
+    if ((row.free_beds as number) <= 0) continue
+    const meta = blockById.get(row.room_id as string)
+    const arr = roomsByCategory.get(key) ?? []
+    arr.push({
+      room_id:     row.room_id,
+      room_number: row.room_number,
+      block:       meta?.block ?? null,
+      floor:       meta?.floor ?? null,
+      capacity:    row.capacity,
+      beds_taken:  row.beds_taken,
+      free_beds:   row.free_beds,
+    })
+    roomsByCategory.set(key, arr)
+  }
+  // sort rooms by (block, room_number) for stable dropdown order
+  for (const arr of roomsByCategory.values()) {
+    arr.sort((a, b) =>
+      (a.block ?? '').localeCompare(b.block ?? '') ||
+      a.room_number.localeCompare(b.room_number, undefined, { numeric: true })
+    )
   }
 
   const categories = (cats ?? [])
@@ -71,6 +105,7 @@ export default async function SelfCheckinPage({
       base_rate:   c.base_rate as number,
       rate_unit:   c.rate_unit as string,
       available:   freeByCategory.get(c.id) ?? 0,
+      rooms:       roomsByCategory.get(c.id) ?? [],
     }))
     .filter((c) => c.available > 0)
 

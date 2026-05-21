@@ -12,6 +12,12 @@ export const selfCheckinSchema = z.object({
   emergency_contact_name:  z.string().max(120).nullable().optional(),
   emergency_contact_phone: z.string().max(20).nullable().optional(),
   category_id:    z.string().uuid(),
+  /** Optional explicit room pick. When supplied, server validates it belongs
+      to category_id and has free_beds > 0. Otherwise server auto-picks. */
+  room_id:        z.string().uuid().nullable().optional(),
+  /** UI-only label e.g. "Bed 2". Persisted to bookings.notes appendix; not a
+      hard reference because the rooms schema doesn't model individual beds. */
+  bed_label:      z.string().max(40).nullable().optional(),
   check_in_date:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   check_out_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   notes:          z.string().max(500).nullable().optional(),

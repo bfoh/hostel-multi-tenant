@@ -6,6 +6,16 @@ import { ChevronRight, ChevronLeft, Loader2, CheckCircle2, AlertTriangle } from 
 import { GhanaCardCapture } from '@/components/public/ghana-card-capture'
 import { formatGHS } from '@/lib/utils'
 
+type RoomOption = {
+  room_id:     string
+  room_number: string
+  block:       string | null
+  floor:       number | null
+  capacity:    number
+  beds_taken:  number
+  free_beds:   number
+}
+
 type Category = {
   id: string
   name: string
@@ -13,6 +23,7 @@ type Category = {
   base_rate: number
   rate_unit: string
   available: number
+  rooms?: RoomOption[]
 }
 
 interface Props {
@@ -32,6 +43,8 @@ type Form = {
   emergency_contact_name: string
   emergency_contact_phone: string
   category_id: string
+  room_id:     string         // '' = "Auto-assign"
+  bed_label:   string         // '' = "Any free bed"
   check_in_date: string
   check_out_date: string
   notes: string
@@ -64,6 +77,8 @@ export function SelfCheckinFlow({ tenant, categories }: Props) {
     emergency_contact_name:  '',
     emergency_contact_phone: '',
     category_id: '',
+    room_id:     '',
+    bed_label:   '',
     check_in_date:  todayIso(),
     check_out_date: addMonths(todayIso(), 4),
     notes: '',
@@ -109,6 +124,8 @@ export function SelfCheckinFlow({ tenant, categories }: Props) {
       emergency_contact_name:  form.emergency_contact_name.trim() || null,
       emergency_contact_phone: form.emergency_contact_phone.replace(/[\s\-()]/g, '') || null,
       category_id: form.category_id,
+      room_id:     form.room_id || null,
+      bed_label:   form.bed_label || null,
       check_in_date:  form.check_in_date,
       check_out_date: form.check_out_date,
       notes: form.notes.trim() || null,
@@ -320,12 +337,76 @@ export function SelfCheckinFlow({ tenant, categories }: Props) {
                     name="category"
                     value={c.id}
                     checked={form.category_id === c.id}
-                    onChange={() => set('category_id', c.id)}
+                    onChange={() => {
+                      set('category_id', c.id)
+                      set('room_id',   '')
+                      set('bed_label', '')
+                    }}
                     className="sr-only"
                   />
                 </label>
               ))}
             </div>
+
+            {/* Room + bed pickers — appear once a category is chosen */}
+            {selectedCategory && selectedCategory.rooms && selectedCategory.rooms.length > 0 && (
+              <div className="space-y-3 rounded-lg border border-border bg-surface p-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-text-secondary">
+                  Pick a specific room (optional)
+                </p>
+
+                <Field label="Room">
+                  <select
+                    value={form.room_id}
+                    onChange={(e) => {
+                      set('room_id', e.target.value)
+                      set('bed_label', '')
+                    }}
+                    className={inputCls}
+                  >
+                    <option value="">Auto-assign any available room</option>
+                    {selectedCategory.rooms.map((r) => {
+                      const label = r.block
+                        ? `Block ${r.block} · Room ${r.room_number}`
+                        : `Room ${r.room_number}`
+                      const beds = r.capacity > 1
+                        ? ` · ${r.free_beds}/${r.capacity} beds free`
+                        : ''
+                      const floor = r.floor !== null ? ` · Floor ${r.floor}` : ''
+                      return (
+                        <option key={r.room_id} value={r.room_id}>
+                          {label}{floor}{beds}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </Field>
+
+                {form.room_id && (() => {
+                  const room = selectedCategory.rooms!.find((r) => r.room_id === form.room_id)
+                  if (!room || room.capacity <= 1) return null
+                  const bedOptions: string[] = []
+                  for (let i = 1; i <= room.capacity; i++) bedOptions.push(`Bed ${i}`)
+                  return (
+                    <Field label={`Bed slot (${room.free_beds} of ${room.capacity} free)`}>
+                      <select
+                        value={form.bed_label}
+                        onChange={(e) => set('bed_label', e.target.value)}
+                        className={inputCls}
+                      >
+                        <option value="">No preference</option>
+                        {bedOptions.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-[11px] text-text-tertiary">
+                        Your preference is noted for the front desk. Final bed assignment is confirmed at check-in.
+                      </p>
+                    </Field>
+                  )
+                })()}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3 border-t border-border pt-4">
               <Field label="Check-in">
