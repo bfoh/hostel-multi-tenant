@@ -100,8 +100,15 @@ export async function DELETE(
 
   if (error) {
     if (error.code === '23503') {
+      const detail = (error as any).details ?? error.message ?? ''
+      const matchedTable = detail.match(/on table "([^"]+)"/)?.[1]
       return NextResponse.json(
-        { error: 'Cannot delete: room is referenced by other records.' },
+        {
+          error: matchedTable
+            ? `Cannot delete: room is still referenced by "${matchedTable}". Clear those records first or apply the latest migrations.`
+            : 'Cannot delete: room is referenced by other records.',
+          detail,
+        },
         { status: 409 }
       )
     }
