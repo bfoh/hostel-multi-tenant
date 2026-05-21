@@ -5,6 +5,7 @@ import { AlertCircle, ArrowRight, Mail, Phone, Users } from 'lucide-react'
 import { getAgingReport, AGING_BUCKETS, type AgingBucketId, type AgingReport } from '@/lib/data/ar-aging'
 import { formatGHS } from '@/lib/utils'
 import { ExportCsvButton } from '@/components/accounting/export-csv-button'
+import { SendReminderButton } from '@/components/accounting/send-reminder-button'
 
 export const metadata: Metadata = { title: 'Accounts Receivable · Aging' }
 
@@ -196,7 +197,12 @@ function CustomersTable({
             return (
               <tr key={c.occupant_id} className="hover:bg-surface-raised/50 transition-colors">
                 <td className="px-4 py-3">
-                  <p className="text-sm font-medium text-text-primary">{c.first_name} {c.last_name}</p>
+                  <Link
+                    href={`/accounting/ar/${c.occupant_id}`}
+                    className="text-sm font-medium text-text-primary hover:text-brand transition-colors"
+                  >
+                    {c.first_name} {c.last_name}
+                  </Link>
                 </td>
                 <td className="px-4 py-3 text-xs text-text-secondary">
                   <div className="flex flex-wrap items-center gap-3">
@@ -226,12 +232,17 @@ function CustomersTable({
                   {formatGHS(c.totalOutstanding)}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/invoices/${c.oldestInvoiceId}`}
-                    className="inline-flex items-center gap-0.5 text-xs text-brand hover:opacity-80 transition-opacity"
-                  >
-                    Open <ArrowRight className="h-3 w-3" />
-                  </Link>
+                  <div className="flex items-center justify-end gap-2">
+                    {c.oldestDaysOverdue > 0 && c.phone && (
+                      <SendReminderButton occupantId={c.occupant_id} balance={c.totalOutstanding} compact />
+                    )}
+                    <Link
+                      href={`/accounting/ar/${c.occupant_id}`}
+                      className="inline-flex items-center gap-0.5 text-xs text-brand hover:opacity-80 transition-opacity"
+                    >
+                      Statement <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
                 </td>
               </tr>
             )
