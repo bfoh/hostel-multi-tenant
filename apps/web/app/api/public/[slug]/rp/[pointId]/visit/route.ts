@@ -19,12 +19,19 @@ import {
   type RevenuePointType,
 } from '@/lib/walkin-pricing'
 
+function normPhone(p: string) {
+  return p.replace(/[^\d+]/g, '')
+}
+
 const schema = z.object({
-  first_name: z.string().min(1).max(80),
-  last_name:  z.string().min(1).max(80),
-  phone:      z.string().min(9).max(20),
-  email:      z.string().email().nullable().optional(),
-  input:      z.any().optional(), // type-specific; validated by priceWalkinSale
+  first_name:     z.string().min(1).max(80),
+  last_name:      z.string().min(1).max(80),
+  phone:          z.string().min(9).max(20),
+  email:          z.string().email().nullable().optional(),
+  input:          z.any().optional(), // type-specific; validated by priceWalkinSale
+  /** 'online' (default) — Paystack hosted page. 'cash_at_pickup' — sale
+      recorded as pending_pickup; revenue posts when staff marks paid. */
+  payment_method: z.enum(['online', 'cash_at_pickup']).default('online'),
 })
 
 export async function POST(
@@ -32,10 +39,6 @@ export async function POST(
   { params }: { params: Promise<{ slug: string; pointId: string }> },
 ) {
   const { slug, pointId } = await params
-
-  if (!process.env.PAYSTACK_SECRET_KEY) {
-    return NextResponse.json({ error: 'Online payment not configured' }, { status: 503 })
-  }
 
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
@@ -52,8 +55,15 @@ export async function POST(
     .single()
 
   if (!tenant) return NextResponse.json({ error: 'Hostel not found' }, { status: 404 })
-  if (!tenant.paystack_subaccount_code) {
-    return NextResponse.json({ error: 'Online payment not available here yet.' }, { status: 409 })
+
+  // Online payment requires Paystack; cash-at-pickup doesn't.
+  if (parsed.data.payment_method === 'online') {
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+      return NextResponse.json({ error: 'Online payment not configured' }, { status: 503 })
+    }
+    if (!tenant.paystack_subaccount_code) {
+      return NextResponse.json({ error: 'Online payment not available here yet.' }, { status: 409 })
+    }
   }
 
   const { data: pointRaw } = await supabase
@@ -91,6 +101,64 @@ export async function POST(
 
   const email = parsed.data.email ?? `walkin+${parsed.data.phone.replace(/\D/g, '')}@${slug}.local`
 
+  /* ── CASH-AT-PICKUP path ───────────────────────────────────────────── */
+  if (parsed.data.payment_method === 'cash_at_pickup') {
+    const phoneClean = normPhone(parsed.data.phone)
+
+    // Upsert visitor
+    const { data: visitor } = await (supabase as any)
+      .from('revenue_point_visitors')
+      .upsert({
+        tenant_id:  tenant.id,
+        phone:      phoneClean,
+        first_name: parsed.data.first_name,
+        last_name:  parsed.data.last_name,
+        email:      parsed.data.email ?? null,
+        last_seen_at: new Date().toISOString(),
+      }, { onConflict: 'tenant_id,phone' })
+      .select('id')
+      .single()
+
+    const { data: sale, error: insErr } = await (supabase as any)
+      .from('revenue_point_sales')
+      .insert({
+        tenant_id:        tenant.id,
+        revenue_point_id: point.id,
+        description:      priced.description,
+        quantity:         1,
+        unit_price:       priced.amount,
+        total_amount:     priced.amount,
+        payment_method:   'cash',
+        reference,
+        customer_name:    `${parsed.data.first_name} ${parsed.data.last_name}`.trim(),
+        visitor_id:       visitor?.id ?? null,
+        weight_kg:        priced.weight_kg ?? null,
+        duration_minutes: priced.duration_minutes ?? null,
+        court_id:         priced.court_id ?? null,
+        entry_token:      entryToken,
+        status:           'pending_pickup',
+      })
+      .select('id')
+      .single()
+
+    if (insErr) {
+      return NextResponse.json({ error: insErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      payment_method:    'cash_at_pickup',
+      sale_id:           sale.id,
+      reference,
+      amount:            priced.amount,
+      description:       priced.description,
+      entry_token:       entryToken,
+      // Direct the browser to the success page so it can show the same
+      // receipt UX as the online flow.
+      authorization_url: `${appUrl}/visit/${slug}/${pointId}/success?ref=${encodeURIComponent(reference)}&token=${entryToken}&cash=1`,
+    })
+  }
+
+  /* ── ONLINE path (Paystack hosted) ─────────────────────────────────── */
   try {
     const result = await initializeTransaction({
       email,
@@ -115,7 +183,7 @@ export async function POST(
         court_name:       priced.court_name ?? null,
         entry_token:      entryToken,
       },
-      subaccount: tenant.paystack_subaccount_code,
+      subaccount: tenant.paystack_subaccount_code ?? undefined,
       bearer:     'subaccount',
     })
 

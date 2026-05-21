@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Loader2, Shirt, Scale, Clock } from 'lucide-react'
+import { Shirt, Scale, Clock } from 'lucide-react'
+import { WalkinPaymentActions } from './payment-actions'
 
 interface Props {
   slug:            string
@@ -27,6 +28,7 @@ export function LaundryFlow({
   const [email,     setEmail]     = useState('')
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState<string | null>(null)
+  const [method,    setMethod]    = useState<'online' | 'cash_at_pickup'>('online')
 
   const weightNum = parseFloat(weight)
   const weightOk  = Number.isFinite(weightNum) && weightNum > 0 && weightNum <= 50
@@ -57,11 +59,12 @@ export function LaundryFlow({
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          first_name: firstName.trim(),
-          last_name:  lastName.trim(),
-          phone:      phone.trim(),
-          email:      email.trim() || null,
-          input:      { weight_kg: weightNum },
+          first_name:     firstName.trim(),
+          last_name:      lastName.trim(),
+          phone:          phone.trim(),
+          email:          email.trim() || null,
+          input:          { weight_kg: weightNum },
+          payment_method: method,
         }),
       })
       const data = await res.json()
@@ -211,23 +214,26 @@ export function LaundryFlow({
         </div>
       )}
 
-      <button
-        onClick={pay}
-        disabled={!valid || loading}
-        className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-        style={{ backgroundColor: brandColor }}
-      >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        {loading
-          ? 'Connecting to payment…'
-          : weightOk
-          ? `Pay ${ghs(amount)} now`
-          : 'Enter weight to continue'}
-      </button>
-
-      <p className="text-center text-[11px] text-gray-400">
-        Mobile Money · Card · Bank Transfer — all accepted through Paystack
-      </p>
+      {weightOk ? (
+        <WalkinPaymentActions
+          amount={amount}
+          loading={loading}
+          disabled={!valid}
+          brandColor={brandColor}
+          method={method}
+          onMethodChange={setMethod}
+          onSubmit={pay}
+          cashLabel="Pay cash on pickup"
+        />
+      ) : (
+        <button
+          disabled
+          className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white opacity-40 cursor-not-allowed"
+          style={{ backgroundColor: brandColor }}
+        >
+          Enter weight to continue
+        </button>
+      )}
     </div>
   )
 }

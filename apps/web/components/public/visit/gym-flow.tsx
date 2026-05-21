@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, ShieldCheck, Dumbbell } from 'lucide-react'
+import { ShieldCheck, Dumbbell } from 'lucide-react'
+import { WalkinPaymentActions } from './payment-actions'
 
 interface Props {
   slug:        string
@@ -25,6 +26,7 @@ export function GymFlow({
   const [email,     setEmail]     = useState('')
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState<string | null>(null)
+  const [method,    setMethod]    = useState<'online' | 'cash_at_pickup'>('online')
 
   const valid = firstName.trim().length > 0
     && lastName.trim().length > 0
@@ -38,11 +40,12 @@ export function GymFlow({
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          first_name: firstName.trim(),
-          last_name:  lastName.trim(),
-          phone:      phone.trim(),
-          email:      email.trim() || null,
-          input:      {},
+          first_name:     firstName.trim(),
+          last_name:      lastName.trim(),
+          phone:          phone.trim(),
+          email:          email.trim() || null,
+          input:          {},
+          payment_method: method,
         }),
       })
       const data = await res.json()
@@ -150,19 +153,16 @@ export function GymFlow({
         </div>
       )}
 
-      <button
-        onClick={pay}
-        disabled={!valid || loading || dayPassPrice <= 0}
-        className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-        style={{ backgroundColor: brandColor }}
-      >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        {loading ? 'Connecting to payment…' : `Pay ${ghs(dayPassPrice)} now`}
-      </button>
-
-      <p className="text-center text-[11px] text-gray-400">
-        Mobile Money · Card · Bank Transfer — all accepted through Paystack
-      </p>
+      <WalkinPaymentActions
+        amount={dayPassPrice}
+        loading={loading}
+        disabled={!valid}
+        brandColor={brandColor}
+        method={method}
+        onMethodChange={setMethod}
+        onSubmit={pay}
+        cashLabel="Pay cash on entry"
+      />
     </div>
   )
 }

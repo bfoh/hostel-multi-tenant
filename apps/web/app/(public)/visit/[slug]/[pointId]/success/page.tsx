@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: 'Payment receipt' }
 
 interface PageProps {
   params:       Promise<{ slug: string; pointId: string }>
-  searchParams: Promise<{ ref?: string; reference?: string; trxref?: string; token?: string }>
+  searchParams: Promise<{ ref?: string; reference?: string; trxref?: string; token?: string; cash?: string }>
 }
 
 export default async function VisitSuccessPage({ params, searchParams }: PageProps) {
@@ -18,6 +18,7 @@ export default async function VisitSuccessPage({ params, searchParams }: PagePro
   const sp = await searchParams
   const reference = sp.ref ?? sp.reference ?? sp.trxref
   const expectedToken = sp.token ?? null
+  const isCash = sp.cash === '1'
 
   const supabase = createAdminClient()
 
@@ -40,9 +41,24 @@ export default async function VisitSuccessPage({ params, searchParams }: PagePro
 
   const brand = tenant.primary_color ?? '#2563EB'
 
+  // Cash-on-pickup path: look the sale up by reference + token; nothing to
+  // verify with Paystack.
+  let cashSale: { status: string; amount: number; description: string } | null = null
+  if (isCash && reference) {
+    const { data } = await (supabase as any)
+      .from('revenue_point_sales')
+      .select('status, total_amount, description, entry_token')
+      .eq('tenant_id', tenant.id)
+      .eq('reference', reference)
+      .maybeSingle()
+    if (data && (!expectedToken || data.entry_token === expectedToken)) {
+      cashSale = { status: data.status, amount: data.total_amount, description: data.description }
+    }
+  }
+
   // Verify the Paystack transaction (no DB writes here — webhook owns that)
   let charge: { status: string; amount: number; channel?: string } | null = null
-  if (reference) {
+  if (!isCash && reference) {
     try {
       const result = await verifyTransaction(reference)
       charge = { status: result.status, amount: result.amount, channel: (result as any).channel }
@@ -51,7 +67,7 @@ export default async function VisitSuccessPage({ params, searchParams }: PagePro
     }
   }
 
-  const ok = charge?.status === 'success'
+  const ok = isCash ? cashSale !== null : charge?.status === 'success'
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -91,12 +107,13 @@ export default async function VisitSuccessPage({ params, searchParams }: PagePro
         ) : (
           <SuccessCard
             brand={brand}
-            amountPesewas={charge.amount}
+            amountPesewas={isCash ? cashSale!.amount : charge!.amount}
             entryToken={expectedToken}
             type={point.type as string}
             pointName={point.name}
             contactPhone={tenant.contact_phone}
             turnaroundHours={Number(point.public_config?.turnaround_hours ?? 24)}
+            isCash={isCash}
           />
         )}
       </main>
@@ -109,7 +126,7 @@ function ghs(p: number) {
 }
 
 function SuccessCard({
-  brand, amountPesewas, entryToken, type, pointName, contactPhone, turnaroundHours,
+  brand, amountPesewas, entryToken, type, pointName, contactPhone, turnaroundHours, isCash,
 }: {
   brand:           string
   amountPesewas:   number
@@ -118,12 +135,23 @@ function SuccessCard({
   pointName:       string
   contactPhone:    string | null
   turnaroundHours: number
+  isCash?:         boolean
 }) {
-  const instructions =
+  const onlineInstructions =
     type === 'gym'     ? 'Show this code at the gym entrance.'
   : type === 'sports'  ? 'Show this code at the counter to claim your court.'
   : type === 'laundry' ? `Show this code when picking up your laundry — ready in ~${turnaroundHours} hours.`
                        : 'Keep this code as your receipt.'
+
+  const cashInstructions =
+    type === 'gym'     ? 'Show this code and pay cash at the gym entrance.'
+  : type === 'sports'  ? 'Show this code at the counter and pay cash when you claim your court.'
+  : type === 'laundry' ? `Drop your items at the counter with this code. Pay cash on pickup — ready in ~${turnaroundHours} hours.`
+                       : 'Show this code at the counter and pay cash.'
+
+  const instructions = isCash ? cashInstructions : onlineInstructions
+  const headline     = isCash ? 'Booking reserved' : 'Payment received'
+  const subline      = isCash ? `${pointName} · ${ghs(amountPesewas)} due on pickup` : `${pointName} · ${ghs(amountPesewas)}`
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
@@ -134,8 +162,8 @@ function SuccessCard({
         >
           <Check className="h-7 w-7" style={{ color: brand }} />
         </div>
-        <p className="text-lg font-bold text-gray-900">Payment received</p>
-        <p className="text-sm text-gray-500">{pointName} · {ghs(amountPesewas)}</p>
+        <p className="text-lg font-bold text-gray-900">{headline}</p>
+        <p className="text-sm text-gray-500">{subline}</p>
       </div>
 
       {entryToken && (

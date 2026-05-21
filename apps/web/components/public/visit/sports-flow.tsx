@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, Trophy, AlertTriangle, Clock } from 'lucide-react'
+import { WalkinPaymentActions } from './payment-actions'
 
 interface Court {
   id:          string
@@ -44,6 +45,7 @@ export function SportsFlow({
   const [conflicts, setConflicts] = useState<Conflict[]>([])
   const [checking,  setChecking]  = useState(false)
   const [override,  setOverride]  = useState(false)
+  const [method,    setMethod]    = useState<'online' | 'cash_at_pickup'>('online')
 
   const court = courts.find((c) => c.id === courtId)
 
@@ -92,10 +94,11 @@ export function SportsFlow({
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          first_name: firstName.trim(),
-          last_name:  lastName.trim(),
-          phone:      phone.trim(),
-          email:      email.trim() || null,
+          first_name:     firstName.trim(),
+          last_name:      lastName.trim(),
+          phone:          phone.trim(),
+          email:          email.trim() || null,
+          payment_method: method,
           input: {
             court_id:        courtId,
             duration_minutes: minutes,
@@ -299,22 +302,32 @@ export function SportsFlow({
         </div>
       )}
 
-      <button
-        onClick={pay}
-        disabled={!canSubmit || loading}
-        className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-        style={{ backgroundColor: brandColor }}
-      >
-        {(loading || checking) && <Loader2 className="h-4 w-4 animate-spin" />}
-        {loading ? 'Connecting to payment…'
-          : checking ? 'Checking availability…'
-          : hasConflict && !override ? 'Confirm with attendant to continue'
-          : `Pay ${ghs(amount)} now`}
-      </button>
+      {checking && (
+        <p className="text-center text-[11px] text-gray-400 flex items-center justify-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" /> Checking availability…
+        </p>
+      )}
 
-      <p className="text-center text-[11px] text-gray-400">
-        Mobile Money · Card · Bank Transfer — all accepted through Paystack
-      </p>
+      {hasConflict && !override ? (
+        <button
+          disabled
+          className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white opacity-40 cursor-not-allowed"
+          style={{ backgroundColor: brandColor }}
+        >
+          Confirm with attendant to continue
+        </button>
+      ) : (
+        <WalkinPaymentActions
+          amount={amount}
+          loading={loading}
+          disabled={!canSubmit}
+          brandColor={brandColor}
+          method={method}
+          onMethodChange={setMethod}
+          onSubmit={pay}
+          cashLabel="Pay cash on court"
+        />
+      )}
     </div>
   )
 }
