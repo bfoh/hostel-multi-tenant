@@ -1,6 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
+export type DepreciationMethod = 'straight_line' | 'declining_balance'
+
 export interface DepreciableAsset {
   id:                      string
   name:                    string
@@ -9,6 +11,8 @@ export interface DepreciableAsset {
   purchase_price:          number | null
   salvage_value:           number
   useful_life_months:      number | null
+  depreciation_method:     DepreciationMethod
+  declining_factor:        number   // multiplier for DB (default 2.0 = double-declining)
   depreciation_start_date: string | null
   last_depreciated_through:string | null
   accumulated_depreciation:number
@@ -43,12 +47,31 @@ export interface DepreciationOverview {
 }
 
 export function computeMonthlyDepreciation(a: {
-  purchase_price:     number | null
-  salvage_value:      number
-  useful_life_months: number | null
+  purchase_price:            number | null
+  salvage_value:             number
+  useful_life_months:        number | null
+  depreciation_method?:      DepreciationMethod
+  declining_factor?:         number
+  accumulated_depreciation?: number
 }): number {
   if (!a.purchase_price || !a.useful_life_months || a.useful_life_months <= 0) return 0
-  const base = Math.max(0, a.purchase_price - a.salvage_value)
+
+  const method = a.depreciation_method ?? 'straight_line'
+  const salvage = a.salvage_value ?? 0
+  const accum   = a.accumulated_depreciation ?? 0
+
+  if (method === 'declining_balance') {
+    const factor       = a.declining_factor && a.declining_factor > 0 ? a.declining_factor : 2.0
+    const bookValue    = Math.max(0, a.purchase_price - accum)
+    const remaining    = Math.max(0, bookValue - salvage)
+    if (remaining <= 0) return 0
+    const monthlyRate  = factor / a.useful_life_months
+    const monthly      = Math.round(bookValue * monthlyRate)
+    return Math.min(monthly, remaining)
+  }
+
+  // straight-line (default)
+  const base = Math.max(0, a.purchase_price - salvage)
   return Math.round(base / a.useful_life_months)
 }
 
@@ -65,7 +88,8 @@ export async function getDepreciationOverview(): Promise<DepreciationOverview | 
         id, name, category, status,
         purchase_date, purchase_price,
         salvage_value, useful_life_months,
-        depreciation_method, depreciation_start_date,
+        depreciation_method, declining_factor,
+        depreciation_start_date,
         last_depreciated_through, accumulated_depreciation
       `)
       .eq('tenant_id', tenantId)
@@ -81,10 +105,14 @@ export async function getDepreciationOverview(): Promise<DepreciationOverview | 
   ])
 
   const assets: DepreciableAsset[] = ((assetsRaw ?? []) as any[]).map((a) => {
+    const declining_factor = Number(a.declining_factor ?? 2.0)
     const monthly = computeMonthlyDepreciation({
-      purchase_price:     a.purchase_price,
-      salvage_value:      a.salvage_value,
-      useful_life_months: a.useful_life_months,
+      purchase_price:            a.purchase_price,
+      salvage_value:             a.salvage_value,
+      useful_life_months:        a.useful_life_months,
+      depreciation_method:       a.depreciation_method,
+      declining_factor,
+      accumulated_depreciation:  a.accumulated_depreciation,
     })
     const cost      = a.purchase_price ?? 0
     const netBook   = Math.max(0, cost - a.accumulated_depreciation)
@@ -97,6 +125,8 @@ export async function getDepreciationOverview(): Promise<DepreciationOverview | 
       purchase_price:           a.purchase_price,
       salvage_value:            a.salvage_value,
       useful_life_months:       a.useful_life_months,
+      depreciation_method:      a.depreciation_method ?? 'straight_line',
+      declining_factor,
       depreciation_start_date:  a.depreciation_start_date,
       last_depreciated_through: a.last_depreciated_through,
       accumulated_depreciation: a.accumulated_depreciation,

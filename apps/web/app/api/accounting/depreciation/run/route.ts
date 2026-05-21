@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   // Fetch eligible assets
   const { data: assets } = await (admin as any)
     .from('assets')
-    .select('id, purchase_price, salvage_value, useful_life_months, accumulated_depreciation')
+    .select('id, purchase_price, salvage_value, useful_life_months, accumulated_depreciation, depreciation_method, declining_factor')
     .eq('tenant_id', tenantId)
     .neq('status', 'disposed')
 
@@ -74,9 +74,12 @@ export async function POST(req: NextRequest) {
 
   for (const a of (assets ?? []) as any[]) {
     const monthly = computeMonthlyDepreciation({
-      purchase_price:     a.purchase_price,
-      salvage_value:      a.salvage_value,
-      useful_life_months: a.useful_life_months,
+      purchase_price:            a.purchase_price,
+      salvage_value:             a.salvage_value,
+      useful_life_months:        a.useful_life_months,
+      depreciation_method:       a.depreciation_method,
+      declining_factor:          a.declining_factor ? Number(a.declining_factor) : 2.0,
+      accumulated_depreciation:  a.accumulated_depreciation,
     })
     if (monthly <= 0) continue
 

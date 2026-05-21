@@ -4,10 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 interface ConfigBody {
-  asset_id:               string
-  useful_life_months:     number | null
-  salvage_value?:         number
+  asset_id:                 string
+  useful_life_months:       number | null
+  salvage_value?:           number
   depreciation_start_date?: string | null
+  depreciation_method?:     'straight_line' | 'declining_balance'
+  declining_factor?:        number
 }
 
 /**
@@ -33,6 +35,12 @@ export async function POST(req: NextRequest) {
   if (body.salvage_value !== undefined && (!Number.isInteger(body.salvage_value) || body.salvage_value < 0)) {
     return NextResponse.json({ error: 'salvage_value must be non-negative integer pesewas' }, { status: 400 })
   }
+  if (body.depreciation_method && !['straight_line', 'declining_balance'].includes(body.depreciation_method)) {
+    return NextResponse.json({ error: 'Invalid depreciation_method' }, { status: 400 })
+  }
+  if (body.declining_factor !== undefined && (!Number.isFinite(body.declining_factor) || body.declining_factor <= 0)) {
+    return NextResponse.json({ error: 'declining_factor must be > 0' }, { status: 400 })
+  }
 
   const admin = createAdminClient()
   const { error } = await (admin as any)
@@ -41,6 +49,8 @@ export async function POST(req: NextRequest) {
       useful_life_months:      body.useful_life_months,
       ...(body.salvage_value !== undefined ? { salvage_value: body.salvage_value } : {}),
       ...(body.depreciation_start_date !== undefined ? { depreciation_start_date: body.depreciation_start_date } : {}),
+      ...(body.depreciation_method ? { depreciation_method: body.depreciation_method } : {}),
+      ...(body.declining_factor !== undefined ? { declining_factor: body.declining_factor } : {}),
     })
     .eq('id', body.asset_id)
     .eq('tenant_id', tenantId)

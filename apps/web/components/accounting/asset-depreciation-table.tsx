@@ -17,11 +17,12 @@ export function AssetDepreciationTable({ assets }: { assets: DepreciableAsset[] 
   }
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-      <table className="w-full min-w-[900px]">
+      <table className="w-full min-w-[1100px]">
         <thead className="bg-surface-raised">
           <tr className="border-b border-border">
             <th className="px-4 py-2.5 text-left text-[11px] font-medium text-text-tertiary">Asset</th>
             <th className="px-4 py-2.5 text-right text-[11px] font-medium text-text-tertiary w-28">Cost</th>
+            <th className="px-4 py-2.5 text-left text-[11px] font-medium text-text-tertiary w-36">Method</th>
             <th className="px-4 py-2.5 text-right text-[11px] font-medium text-text-tertiary w-24">Life (mo)</th>
             <th className="px-4 py-2.5 text-right text-[11px] font-medium text-text-tertiary w-32">Salvage (GHS)</th>
             <th className="px-4 py-2.5 text-right text-[11px] font-medium text-text-tertiary w-28">Monthly</th>
@@ -42,6 +43,8 @@ function Row({ asset }: { asset: DepreciableAsset }) {
   const [editing, setEditing] = useState(false)
   const [life, setLife]       = useState(asset.useful_life_months?.toString() ?? '')
   const [salvage, setSalvage] = useState(((asset.salvage_value ?? 0) / 100).toFixed(2))
+  const [method, setMethod]   = useState<'straight_line' | 'declining_balance'>(asset.depreciation_method)
+  const [factor, setFactor]   = useState((asset.declining_factor ?? 2).toString())
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState<string | null>(null)
 
@@ -49,8 +52,10 @@ function Row({ asset }: { asset: DepreciableAsset }) {
     setError(null)
     const lifeNum    = life ? parseInt(life, 10) : null
     const salvageNum = parseFloat(salvage)
+    const factorNum  = parseFloat(factor)
     if (lifeNum !== null && (!Number.isInteger(lifeNum) || lifeNum <= 0)) { setError('Life must be a positive integer'); return }
     if (!Number.isFinite(salvageNum) || salvageNum < 0) { setError('Salvage must be ≥ 0'); return }
+    if (method === 'declining_balance' && (!Number.isFinite(factorNum) || factorNum <= 0)) { setError('Factor must be > 0'); return }
 
     setSaving(true)
     try {
@@ -58,9 +63,11 @@ function Row({ asset }: { asset: DepreciableAsset }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          asset_id:           asset.id,
-          useful_life_months: lifeNum,
-          salvage_value:      Math.round(salvageNum * 100),
+          asset_id:            asset.id,
+          useful_life_months:  lifeNum,
+          salvage_value:       Math.round(salvageNum * 100),
+          depreciation_method: method,
+          declining_factor:    method === 'declining_balance' ? factorNum : undefined,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -82,6 +89,39 @@ function Row({ asset }: { asset: DepreciableAsset }) {
       </td>
       <td className="px-4 py-2.5 text-right text-sm tabular-nums text-text-primary">
         {asset.purchase_price ? formatGHS(asset.purchase_price) : <span className="text-text-tertiary italic">—</span>}
+      </td>
+      <td className="px-4 py-2.5 text-left">
+        {editing ? (
+          <div className="flex items-center gap-1">
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value as typeof method)}
+              disabled={saving}
+              className="rounded-lg border border-brand bg-surface px-1.5 py-1 text-xs focus:outline-none"
+            >
+              <option value="straight_line">Straight-line</option>
+              <option value="declining_balance">Declining</option>
+            </select>
+            {method === 'declining_balance' && (
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={factor}
+                onChange={(e) => setFactor(e.target.value)}
+                disabled={saving}
+                className="w-12 rounded-lg border border-brand bg-surface px-1 py-1 text-right text-xs tabular-nums focus:outline-none"
+                title="Multiplier (2.0 = double-declining)"
+              />
+            )}
+          </div>
+        ) : (
+          <button type="button" onClick={() => setEditing(true)} className="rounded-md px-1.5 py-1 text-xs text-text-secondary hover:bg-surface-raised transition-colors">
+            {asset.depreciation_method === 'declining_balance'
+              ? `DB ×${asset.declining_factor.toFixed(1)}`
+              : 'Straight-line'}
+          </button>
+        )}
       </td>
       <td className="px-4 py-2.5 text-right">
         {editing ? (
