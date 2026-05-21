@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Calculator, History, Settings as SettingsIcon } from 'lucide-react'
+import { Calculator, History, Settings as SettingsIcon, FileText, BookOpen } from 'lucide-react'
 
 import { getDepreciationOverview } from '@/lib/data/depreciation'
 import { formatGHS } from '@/lib/utils'
@@ -29,13 +29,29 @@ export default async function DepreciationPage() {
             Straight-line method · monthly journal posts DR 5100 Depreciation / CR 1510 Accum. Depreciation
           </p>
         </div>
-        <Link
-          href="/assets"
-          className="inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary transition-colors"
-        >
-          <SettingsIcon className="h-3.5 w-3.5" />
-          Manage assets
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/accounting/depreciation/schedule"
+            className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Schedule
+          </Link>
+          <Link
+            href="/accounting/depreciation/register"
+            className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Asset register
+          </Link>
+          <Link
+            href="/assets"
+            className="inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary transition-colors"
+          >
+            <SettingsIcon className="h-3.5 w-3.5" />
+            Manage assets
+          </Link>
+        </div>
       </div>
 
       {/* KPIs */}

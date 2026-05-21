@@ -125,15 +125,26 @@ export default async function CustomReportRunPage({
                   ? 'text-success'
                   : 'text-danger'
 
+                const drillHref = r.account_id
+                  ? `/accounting/journal?account=${r.account_id}&from=${result.period.from}&to=${result.period.to}`
+                  : null
+                const NameCell = drillHref
+                  ? <Link href={drillHref} className="text-text-primary hover:text-brand transition-colors">{r.name}</Link>
+                  : <span className="text-text-primary">{r.name}</span>
+
                 return (
                   <tr key={r.account_id ?? idx} className="hover:bg-surface-raised/50 transition-colors">
                     {result.groupedBy === 'by_account' && (
                       <td className="px-4 py-2.5 font-mono text-xs text-text-tertiary">{r.code ?? '—'}</td>
                     )}
-                    <td className="px-4 py-2.5 text-sm text-text-primary">{r.name}</td>
+                    <td className="px-4 py-2.5 text-sm">{NameCell}</td>
                     <td className="px-4 py-2.5 text-xs capitalize text-text-secondary">{r.type}</td>
                     <td className="px-4 py-2.5 text-right text-sm tabular-nums currency-amount text-text-primary">
-                      {formatGHS(r.amount)}
+                      {drillHref ? (
+                        <Link href={drillHref} className="hover:text-brand transition-colors">
+                          {formatGHS(r.amount)}
+                        </Link>
+                      ) : formatGHS(r.amount)}
                     </td>
                     {hasComparison && (
                       <>
