@@ -21,6 +21,7 @@ import {
   Lock,
   FileBarChart,
   Truck,
+  Repeat,
 } from 'lucide-react'
 
 const TABS = [
@@ -28,6 +29,7 @@ const TABS = [
   { href: '/accounting/ar',             label: 'A/R Aging',    icon: ArrowDownToLine },
   { href: '/accounting/ap',             label: 'A/P Bills',    icon: ArrowUpFromLine },
   { href: '/accounting/suppliers',      label: 'Suppliers',    icon: Truck },
+  { href: '/accounting/recurring',      label: 'Recurring',    icon: Repeat },
   { href: '/accounting/journal',        label: 'Journal',      icon: BookOpen },
   { href: '/accounting/trial-balance',  label: 'Trial Balance',icon: Scale },
   { href: '/accounting/pnl',            label: 'P&L',          icon: BarChart3 },
