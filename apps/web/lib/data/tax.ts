@@ -6,12 +6,13 @@ import { getServerTenantId } from '@/lib/auth/tenant'
  * Codes mirror migration 007 (seed_ghana_coa).
  */
 const TAX_ACCOUNT_CODES = {
-  vatPayable:    '2100',  // VAT 15%
-  nhilPayable:   '2110',  // NHIL 2.5%
-  getfundPayable:'2120',  // GETFund 2.5%
-  payeePayable:  '2200',
-  ssnitEmployer: '2210',
-  ssnitEmployee: '2220',
+  vatPayable:     '2100',  // VAT 15% (output VAT, credit-normal)
+  vatInput:       '1400',  // Input VAT recoverable (asset, debit-normal)
+  nhilPayable:    '2110',  // NHIL 2.5%
+  getfundPayable: '2120',  // GETFund 2.5%
+  payeePayable:   '2200',
+  ssnitEmployer:  '2210',
+  ssnitEmployee:  '2220',
 } as const
 
 export interface TaxReturnSummary {
@@ -47,11 +48,13 @@ function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate()
 }
 
-async function liabilityActivity(
+async function accountActivity(
   tenantId: string,
   code:     string,
   from:     string,
   to:       string,
+  /** 'credit' for liabilities/revenue (credit-normal); 'debit' for assets/expenses */
+  normal:   'debit' | 'credit',
 ): Promise<number> {
   const supabase = createAdminClient()
   const { data } = await (supabase as any)
@@ -66,13 +69,20 @@ async function liabilityActivity(
     .gte('journal_entries.entry_date', from)
     .lte('journal_entries.entry_date', to)
 
-  // Liabilities are credit-normal — net activity = credit - debit
   let total = 0
   for (const row of (data ?? []) as any[]) {
-    total += (row.credit as number) - (row.debit as number)
+    total += normal === 'credit'
+      ? (row.credit as number) - (row.debit  as number)
+      : (row.debit  as number) - (row.credit as number)
   }
   return total
 }
+
+const liabilityActivity = (tid: string, code: string, from: string, to: string) =>
+  accountActivity(tid, code, from, to, 'credit')
+
+const assetActivity = (tid: string, code: string, from: string, to: string) =>
+  accountActivity(tid, code, from, to, 'debit')
 
 export async function getTaxReturn(year: number, month: number): Promise<TaxReturnSummary | null> {
   const tenantId = await getServerTenantId()
@@ -82,8 +92,9 @@ export async function getTaxReturn(year: number, month: number): Promise<TaxRetu
   const periodStart = `${year}-${mm}-01`
   const periodEnd   = `${year}-${mm}-${String(daysInMonth(year, month)).padStart(2, '0')}`
 
-  const [vatCharged, nhil, getfund, paye, ssnitEmployer, ssnitEmployee] = await Promise.all([
+  const [vatCharged, vatReclaimed, nhil, getfund, paye, ssnitEmployer, ssnitEmployee] = await Promise.all([
     liabilityActivity(tenantId, TAX_ACCOUNT_CODES.vatPayable,    periodStart, periodEnd),
+    assetActivity    (tenantId, TAX_ACCOUNT_CODES.vatInput,      periodStart, periodEnd),
     liabilityActivity(tenantId, TAX_ACCOUNT_CODES.nhilPayable,   periodStart, periodEnd),
     liabilityActivity(tenantId, TAX_ACCOUNT_CODES.getfundPayable,periodStart, periodEnd),
     liabilityActivity(tenantId, TAX_ACCOUNT_CODES.payeePayable,  periodStart, periodEnd),
@@ -91,9 +102,6 @@ export async function getTaxReturn(year: number, month: number): Promise<TaxRetu
     liabilityActivity(tenantId, TAX_ACCOUNT_CODES.ssnitEmployee, periodStart, periodEnd),
   ])
 
-  // Input VAT (reclaimed) isn't tracked separately in the seeded COA — left at 0
-  // so the netDue equals output VAT. Wire in once a 1400 Input VAT account exists.
-  const vatReclaimed = 0
   const netVat = vatCharged - vatReclaimed
 
   const totalPayroll = paye + ssnitEmployer + ssnitEmployee

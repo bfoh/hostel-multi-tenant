@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CalendarClock, AlertTriangle, Receipt, FileText } from 'lucide-react'
+import { CalendarClock, AlertTriangle, Receipt, FileText, BookOpen } from 'lucide-react'
 
 import { getTaxReturn, getFilingCalendar, type FilingObligation } from '@/lib/data/tax'
+import { getTaxFilings, type TaxFilingKind } from '@/lib/data/tax-filings'
 import { formatGHS } from '@/lib/utils'
 import { ExportCsvButton } from '@/components/accounting/export-csv-button'
 import { BudgetMonthPicker } from '@/components/accounting/budget-client'
+import { MarkFiledButton } from '@/components/accounting/mark-filed-button'
 
 export const metadata: Metadata = { title: 'Tax · Calendar & Returns' }
 
@@ -27,10 +29,18 @@ export default async function TaxPage({
   const year  = sp.year  ? parseInt(sp.year,  10) : defaultDate.getFullYear()
   const month = sp.month ? parseInt(sp.month, 10) : defaultDate.getMonth() + 1
 
-  const [ret, calendar] = await Promise.all([
+  const [ret, calendar, filings] = await Promise.all([
     getTaxReturn(year, month),
     getFilingCalendar(),
+    getTaxFilings(200),
   ])
+
+  const filedSet = new Set(filings.filter((f) => f.status === 'filed').map((f) => `${f.kind}-${f.period_year}-${f.period_month ?? 0}`))
+  function filingKindFor(kind: FilingObligation['kind']): TaxFilingKind {
+    if (kind === 'PAYE')  return 'paye'
+    if (kind === 'SSNIT') return 'ssnit'
+    return 'vat_levies'
+  }
 
   if (!ret) {
     return (
@@ -54,11 +64,20 @@ export default async function TaxPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-text-primary">Tax Calendar &amp; Returns</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Ghana statutory filings · VAT / NHIL / GETFund / PAYE / SSNIT · figures derived from journal activity
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-text-primary">Tax Calendar &amp; Returns</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Ghana statutory filings · VAT / NHIL / GETFund / PAYE / SSNIT · figures derived from journal activity
+          </p>
+        </div>
+        <Link
+          href="/accounting/tax/filings"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+          Filing register
+        </Link>
       </div>
 
       {/* Calendar */}
@@ -91,7 +110,7 @@ export default async function TaxPage({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-right">
+                  <div className="flex flex-wrap items-center gap-3 text-right">
                     <div>
                       <p className="text-xs text-text-tertiary">Amount due</p>
                       <p className="text-sm font-semibold currency-amount text-text-primary">{formatGHS(o.amountDue)}</p>
@@ -103,6 +122,15 @@ export default async function TaxPage({
                         ? `Due in ${o.daysUntilDue}d`
                         : `${o.daysUntilDue}d`}
                     </div>
+                    <MarkFiledButton
+                      kind={filingKindFor(o.kind)}
+                      period_year={o.year}
+                      period_month={o.month}
+                      due_date={o.dueDate}
+                      amount_due={o.amountDue}
+                      alreadyFiled={filedSet.has(`${filingKindFor(o.kind)}-${o.year}-${o.month}`)}
+                      label={o.kind}
+                    />
                     <Link
                       href={`/accounting/tax?year=${o.year}&month=${o.month}`}
                       className="text-xs text-brand hover:opacity-80 transition-opacity"
