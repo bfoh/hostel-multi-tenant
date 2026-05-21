@@ -22,6 +22,7 @@ import {
   FileBarChart,
   Truck,
   Repeat,
+  UserCog,
 } from 'lucide-react'
 
 const TABS = [
@@ -39,6 +40,7 @@ const TABS = [
   { href: '/accounting/tax',            label: 'Tax',          icon: CalendarClock },
   { href: '/accounting/fx',             label: 'FX Rates',     icon: Banknote },
   { href: '/accounting/depreciation',   label: 'Depreciation', icon: Calculator },
+  { href: '/accounting/payroll',        label: 'Payroll',      icon: UserCog },
   { href: '/accounting/close',          label: 'Close',        icon: Lock },
   { href: '/accounting/reports',        label: 'Reports',      icon: FileBarChart },
   { href: '/accounting/chart',          label: 'Chart',        icon: DollarSign },

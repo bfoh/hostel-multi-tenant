@@ -23,6 +23,9 @@ export interface JournalEntry {
   source: string
   source_id: string | null
   created_at: string
+  voided_at:         string | null
+  void_reason:       string | null
+  reverses_entry_id: string | null
   lines: {
     id: string
     account: { code: string; name: string; type: AccountType } | null
@@ -103,6 +106,7 @@ export async function getJournalEntries(
     .from('journal_entries')
     .select(`
       id, entry_date, reference, description, source, source_id, created_at,
+      voided_at, void_reason, reverses_entry_id,
       lines:journal_lines(
         id, description, debit, credit,
         account:chart_of_accounts(code, name, type)

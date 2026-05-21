@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 
+import Link from 'next/link'
+import { CalendarDays } from 'lucide-react'
+
 import { getBudgetVariance } from '@/lib/data/budgets'
 import { formatGHS } from '@/lib/utils'
 import { ExportCsvButton } from '@/components/accounting/export-csv-button'
@@ -49,6 +52,13 @@ export default async function BudgetsPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <BudgetMonthPicker year={year} month={month} />
+          <Link
+            href={`/accounting/budgets/annual?year=${year}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+            Annual view
+          </Link>
           <ExportCsvButton
             filename={`budget-variance-${year}-${String(month).padStart(2, '0')}`}
             headers={['Code', 'Account', 'Type', 'Budget (GHS)', 'Actual (GHS)', 'Variance (GHS)', 'Variance %']}
