@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, CreditCard, FileText, Utensils, Wrench, Bell, User } from 'lucide-react'
+import { Home, CreditCard, FileText, Utensils, Wrench, Bell, User, MessageCircle } from 'lucide-react'
 
 type IconAnim = 'bounce' | 'shake' | 'spin' | 'pulse' | 'swing' | 'ring' | 'slide' | 'flip' | 'tilt' | 'pop'
 
@@ -31,6 +31,7 @@ const BASE_TABS: TabDef[] = [
   { href: '/occupant-portal/payments',    label: 'Payments',   Icon: CreditCard, anim: 'flip'   },
   { href: '/occupant-portal/invoices',    label: 'Invoices',   Icon: FileText,   anim: 'slide'  },
   { href: '/occupant-portal/maintenance', label: 'Requests',   Icon: Wrench,     anim: 'swing'  },
+  { href: '/occupant-portal/messages',    label: 'Messages',   Icon: MessageCircle, anim: 'shake' },
   { href: '/occupant-portal/notices',     label: 'Notices',    Icon: Bell,       anim: 'ring'   },
   { href: '/occupant-portal/profile',     label: 'Profile',    Icon: User,       anim: 'bounce' },
 ]

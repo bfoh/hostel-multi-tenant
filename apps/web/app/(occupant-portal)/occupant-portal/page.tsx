@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   BedDouble, CreditCard, FileText, Wrench, AlertCircle,
   CheckCircle2, Clock, XCircle, ChevronRight,
-  Bell, ArrowRight, Calendar,
+  Bell, ArrowRight, Calendar, MessageCircle,
 } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Home · Resident Portal' }
@@ -227,6 +227,7 @@ export default async function OccupantPortalHome() {
             { href: '/occupant-portal/payments',    icon: CreditCard, label: 'View payment history',    sub: 'Fees paid and outstanding balance'  },
             { href: '/occupant-portal/invoices',    icon: FileText,   label: 'View invoices',           sub: 'Download tax-compliant receipts'    },
             { href: '/occupant-portal/maintenance',  icon: Wrench,     label: 'Maintenance requests',    sub: 'Track submitted issues'              },
+            { href: '/occupant-portal/messages',     icon: MessageCircle, label: 'Messages',            sub: 'Chat with hostel management'          },
             { href: '/occupant-portal/notices',      icon: Bell,       label: 'Hostel notices',          sub: 'Announcements from management'       },
             { href: '/occupant-portal/profile',      icon: AlertCircle,label: 'My profile',              sub: 'Update your personal information'    },
           ].map(({ href, icon: Icon, label, sub }) => (
