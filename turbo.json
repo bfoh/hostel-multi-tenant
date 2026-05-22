@@ -14,7 +14,9 @@
     "RESEND_*",
     "APP_DOMAIN",
     "CRON_SECRET",
-    "ANTHROPIC_API_KEY"
+    "ANTHROPIC_API_KEY",
+    "FCM_PROJECT_ID",
+    "FCM_SERVICE_ACCOUNT_JSON"
   ],
   "tasks": {
     "build": {
