@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GH Hostels</string>
+    <string name="title_activity_main">GH Hostels</string>
+    <string name="package_name">com.ghhostels.app</string>
+    <string name="custom_url_scheme">com.ghhostels.app</string>
+</resources>
