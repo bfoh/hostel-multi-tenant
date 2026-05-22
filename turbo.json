@@ -1,6 +1,21 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "NODE_ENV",
+    "VERCEL",
+    "VERCEL_*",
+    "NEXT_PUBLIC_*",
+    "SUPABASE_*",
+    "PAYSTACK_*",
+    "ARKESEL_*",
+    "VAPID_*",
+    "UPSTASH_*",
+    "RESEND_*",
+    "APP_DOMAIN",
+    "CRON_SECRET",
+    "ANTHROPIC_API_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
