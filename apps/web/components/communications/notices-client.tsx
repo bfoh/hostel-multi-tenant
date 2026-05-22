@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Loader2, Pin, Trash2, AlertTriangle, Wrench, DollarSign, Calendar, Info } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useBulkSelect, BulkActionBar } from '@/components/ui/bulk-select'
 
 interface Notice {
   id: string; title: string; body: string; category: string
@@ -29,6 +30,8 @@ export function NoticesClient({ initialNotices }: { initialNotices: Notice[] }) 
   const [category, setCategory] = useState('general')
   const [pinned, setPinned]     = useState(false)
   const [expiresAt, setExpiresAt] = useState('')
+
+  const bulk = useBulkSelect(notices.map((n) => n.id))
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -78,7 +81,10 @@ export function NoticesClient({ initialNotices }: { initialNotices: Notice[] }) 
 
   return (
     <div className="space-y-4 max-w-3xl">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-2">
+        {notices.length > 0 && (
+          <BulkActionBar bulk={bulk} resource="notices" itemNoun="notice" />
+        )}
         <button
           onClick={() => setShowForm((v) => !v)}
           className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-brand-fg hover:bg-brand-hover transition-colors"
@@ -160,6 +166,14 @@ export function NoticesClient({ initialNotices }: { initialNotices: Notice[] }) 
               <CardContent className="py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
+                    {bulk.selectMode && (
+                      <input
+                        type="checkbox"
+                        checked={bulk.isSelected(n.id)}
+                        onChange={() => bulk.toggle(n.id)}
+                        className="mt-1 h-4 w-4 rounded border-border text-brand focus:ring-brand"
+                      />
+                    )}
                     <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${cfg.cls}`}>
                       <Icon className="h-4 w-4" />
                     </span>

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
 import { PhotoUpload } from './photo-upload'
+import { useBulkSelect, BulkActionBar } from '@/components/ui/bulk-select'
 
 interface Category { id: string; name: string; sort_order: number; is_active: boolean }
 interface Item {
@@ -27,6 +28,8 @@ export function MenuEditor({ initialCategories, initialItems }: {
   const [busy, setBusy]   = useState<string | null>(null)
   const [newCat, setNewCat] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  const bulk = useBulkSelect(items.map((i) => i.id))
 
   async function readError(res: Response): Promise<string> {
     try {
@@ -168,13 +171,28 @@ export function MenuEditor({ initialCategories, initialItems }: {
       </section>
 
       <section className="rounded-xl border border-border bg-surface p-4">
-        <h3 className="text-sm font-semibold text-text-primary">Items</h3>
-        <p className="mt-0.5 text-xs text-text-secondary">Toggle Sold out / Available without leaving the page. Edit price + name inline. Use the new-item form to add.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary">Items</h3>
+            <p className="mt-0.5 text-xs text-text-secondary">Toggle Sold out / Available without leaving the page. Edit price + name inline. Use the new-item form to add.</p>
+          </div>
+          {items.length > 0 && (
+            <BulkActionBar bulk={bulk} resource="menu_items" itemNoun="item" />
+          )}
+        </div>
         <NewItemForm cats={cats} nextSortOrder={items.length} onCreated={appendItem} onError={setError} />
         <ul className="mt-3 divide-y divide-border">
           {items.map(it => (
-            <li key={it.id} className="grid grid-cols-12 items-center gap-3 py-3">
-              <div className="col-span-2"><PhotoUpload itemId={it.id} currentUrl={it.photo_url} onUploaded={url => setItems(prev => prev.map(i => i.id === it.id ? { ...i, photo_url: url } : i))} /></div>
+            <li key={it.id} className="relative grid grid-cols-12 items-center gap-3 py-3">
+              {bulk.selectMode && (
+                <input
+                  type="checkbox"
+                  checked={bulk.isSelected(it.id)}
+                  onChange={() => bulk.toggle(it.id)}
+                  className="absolute left-0 top-4 z-10 h-4 w-4 rounded border-border text-brand focus:ring-brand"
+                />
+              )}
+              <div className={`col-span-2 ${bulk.selectMode ? 'pl-6' : ''}`}><PhotoUpload itemId={it.id} currentUrl={it.photo_url} onUploaded={url => setItems(prev => prev.map(i => i.id === it.id ? { ...i, photo_url: url } : i))} /></div>
               <div className="col-span-4">
                 <input defaultValue={it.name} onBlur={e => e.target.value !== it.name && patchItem(it.id, { name: e.target.value })}
                   className="w-full rounded border border-border px-2 py-1 text-sm font-medium" />
