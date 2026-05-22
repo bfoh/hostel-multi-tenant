@@ -65,7 +65,7 @@ export function OrderTracker({ initial, color }: { initial: Order; color: string
 
   return (
     <div className="space-y-3">
-      <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <header className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
         <div className="flex items-center justify-between">
           <p className="font-mono text-lg font-bold">{order.order_ref}</p>
           <span className="font-mono text-base font-bold">{ghs(order.total_pesewas)}</span>
@@ -86,7 +86,7 @@ export function OrderTracker({ initial, color }: { initial: Order; color: string
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
           <ol className="space-y-3">
             {STEPS.map((s, i) => {
               const reached = i <= stepIndex
@@ -110,8 +110,8 @@ export function OrderTracker({ initial, color }: { initial: Order; color: string
         </div>
       )}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Items</h2>
+      <section className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Items</h2>
         <ul className="mt-2 space-y-1 text-sm">
           {order.food_order_items.map(it => (
             <li key={it.id} className="flex justify-between">

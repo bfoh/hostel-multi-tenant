@@ -71,9 +71,12 @@ export function MenuGrid({ categories, items, color }: { categories: Category[];
 
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
-        <p className="text-sm font-medium text-slate-500">No items on today's menu</p>
-        <p className="mt-1 text-xs text-slate-400">Check back later.</p>
+      <div className="flex flex-col items-center rounded-2xl border border-slate-200/70 bg-white px-6 py-12 text-center shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 ring-1 ring-slate-100">
+          <ShoppingCart className="h-7 w-7 text-slate-300" />
+        </span>
+        <p className="mt-3 text-[14px] font-semibold text-slate-700">No items on today&apos;s menu</p>
+        <p className="mt-0.5 text-[12.5px] text-slate-400">Check back later.</p>
       </div>
     )
   }
@@ -86,7 +89,7 @@ export function MenuGrid({ categories, items, color }: { categories: Category[];
           if (catItems.length === 0) return null
           return (
             <section key={cat.id}>
-              <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-700">{cat.name}</h2>
+              <h2 className="mb-2 px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{cat.name}</h2>
               <div className="space-y-2">
                 {catItems.map(it => (
                   <MenuItemCard
@@ -108,7 +111,7 @@ export function MenuGrid({ categories, items, color }: { categories: Category[];
         })}
         {(itemsByCat.get('other') ?? []).length > 0 && (
           <section>
-            <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-700">Other</h2>
+            <h2 className="mb-2 px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">Other</h2>
             <div className="space-y-2">
               {(itemsByCat.get('other') ?? []).map(it => (
                 <MenuItemCard
@@ -130,9 +133,12 @@ export function MenuGrid({ categories, items, color }: { categories: Category[];
       </div>
 
       {cartCount > 0 && (
-        <div className="fixed bottom-20 left-1/2 z-30 w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
+        <div
+          className="fixed bottom-[88px] left-1/2 z-30 w-[calc(100%-2rem)] max-w-md -translate-x-1/2"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        >
           <Link href="/occupant-portal/food/cart"
-            className="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-lg"
+            className="flex items-center justify-between rounded-2xl px-4 py-3.5 text-[13px] font-bold text-white shadow-[0_12px_28px_-8px_rgba(16,24,40,0.5)] transition-all active:scale-[0.98]"
             style={{ backgroundColor: color }}>
             <span className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" /> {cartCount} item{cartCount > 1 ? 's' : ''} · {ghs(cartTotal)}

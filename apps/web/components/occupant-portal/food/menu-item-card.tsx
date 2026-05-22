@@ -33,13 +33,14 @@ export function MenuItemCard({ id, name, description, price_pesewas, photo_url, 
   }
 
   return (
-    <div className={`flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 ${is_sold_out ? 'opacity-60' : ''}`}>
+    <div className={`flex gap-3 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-20px_rgba(16,24,40,0.18)] ${is_sold_out ? 'opacity-60' : ''}`}>
       {photo_url
+        // eslint-disable-next-line @next/next/no-img-element
         ? <img src={photo_url} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover" />
         : <div className="h-20 w-20 shrink-0 rounded-xl bg-slate-100" />}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-900">{name}</p>
-        {description && <p className="mt-0.5 text-xs text-slate-500 line-clamp-2">{description}</p>}
+        <p className="text-[14px] font-semibold text-slate-900">{name}</p>
+        {description && <p className="mt-0.5 text-[12px] text-slate-500 line-clamp-2">{description}</p>}
         <div className="mt-2 flex items-center justify-between">
           <span className="text-sm font-bold text-slate-900">{ghs(price_pesewas)}</span>
           {is_sold_out
