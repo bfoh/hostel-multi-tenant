@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
+import { haptics } from '@/lib/native/haptics'
 
 export function PaymentMethodPicker({ color, total, onlineEnabled }: {
   color:         string
@@ -26,9 +27,11 @@ export function PaymentMethodPicker({ color, total, onlineEnabled }: {
     if (!res.ok) {
       const j = await res.json().catch(() => null) as any
       setErr(j?.error ?? 'Order failed')
+      haptics.error()
       return
     }
     const j = await res.json()
+    haptics.success()
     if (method === 'online' && j.authorization_url) {
       window.location.href = j.authorization_url
     } else {

@@ -6,6 +6,7 @@ import {
   Loader2, CheckCircle2,
   Droplets, Zap, Wind, Building2, Sofa, Cpu, Sparkles, Bug, Shield, MoreHorizontal,
 } from 'lucide-react'
+import { haptics } from '@/lib/native/haptics'
 
 const CATEGORIES = [
   { value: 'plumbing',    label: 'Plumbing',     Icon: Droplets    },
@@ -53,10 +54,12 @@ export function NewMaintenanceForm({ color }: { color: string }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed to submit request')
+      haptics.success()
       setDone(true)
       setTimeout(() => router.push('/occupant-portal/maintenance'), 2000)
     } catch (e: any) {
       setError(e.message)
+      haptics.error()
     } finally {
       setSubmitting(false)
     }
