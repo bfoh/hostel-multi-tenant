@@ -136,28 +136,37 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
       {/* ── Balance summary card ─────────────────────────────────── */}
       {featured ? (
-        <section className="overflow-hidden rounded-2xl shadow-sm" style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)` }}>
+        <section
+          className="overflow-hidden rounded-[20px] shadow-[0_10px_30px_-12px_rgba(16,24,40,0.45)]"
+          style={{ background: `linear-gradient(150deg, ${color} 0%, ${color}d9 55%, ${color}b3 100%)` }}
+        >
           <div className="relative px-5 py-5 text-white">
-            <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10" />
-            <div className="absolute -bottom-4 right-10 h-16 w-16 rounded-full bg-white/5" />
+            <div
+              className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full opacity-60"
+              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 70%)' }}
+            />
+            <div
+              className="pointer-events-none absolute -bottom-24 -left-10 h-52 w-52 rounded-full opacity-50"
+              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)' }}
+            />
 
             <div className="relative">
               <p className="text-[12px] text-white/65">
                 Room {room?.room_number ?? '—'}{room?.block ? ` · ${room.block}` : ''} · {featured.booking_ref}
               </p>
-              <div className="mt-3 grid grid-cols-3 gap-3">
-                <div className="rounded-xl bg-white/15 p-3 text-center">
-                  <p className="text-[10px] text-white/60 uppercase tracking-wide">Total</p>
-                  <p className="mt-1 text-sm font-bold text-white">{ghs(featured.final_amount)}</p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="rounded-2xl border border-white/15 bg-white/12 p-3 text-center backdrop-blur-sm">
+                  <p className="text-[10px] uppercase tracking-wide text-white/60">Total</p>
+                  <p className="mt-1 text-[15px] font-bold text-white">{ghs(featured.final_amount)}</p>
                 </div>
-                <div className="rounded-xl bg-white/15 p-3 text-center">
-                  <p className="text-[10px] text-white/60 uppercase tracking-wide">Paid</p>
-                  <p className="mt-1 text-sm font-bold text-emerald-200">{ghs(featured.paid_amount)}</p>
+                <div className="rounded-2xl border border-white/15 bg-white/12 p-3 text-center backdrop-blur-sm">
+                  <p className="text-[10px] uppercase tracking-wide text-white/60">Paid</p>
+                  <p className="mt-1 text-[15px] font-bold text-emerald-200">{ghs(featured.paid_amount)}</p>
                 </div>
-                <div className="rounded-xl bg-white/15 p-3 text-center">
-                  <p className="text-[10px] text-white/60 uppercase tracking-wide">Balance</p>
-                  <p className={`mt-1 text-sm font-bold ${featuredBalance > 0 ? 'text-red-200' : 'text-emerald-200'}`}>
-                    {featuredBalance > 0 ? ghs(featuredBalance) : 'Nil ✓'}
+                <div className="rounded-2xl border border-white/15 bg-white/12 p-3 text-center backdrop-blur-sm">
+                  <p className="text-[10px] uppercase tracking-wide text-white/60">Balance</p>
+                  <p className={`mt-1 text-[15px] font-bold ${featuredBalance > 0 ? 'text-red-200' : 'text-emerald-200'}`}>
+                    {featuredBalance > 0 ? ghs(featuredBalance) : 'Nil'}
                   </p>
                 </div>
               </div>
@@ -189,10 +198,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           </div>
         </section>
       ) : (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center">
-          <CreditCard className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-          <p className="text-sm font-medium text-slate-500">No active bookings</p>
-          <p className="text-xs text-slate-400 mt-0.5">Contact reception to make a booking.</p>
+        <div className="flex flex-col items-center rounded-2xl border border-slate-200/70 bg-white px-6 py-10 text-center shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 ring-1 ring-slate-100">
+            <CreditCard className="h-7 w-7 text-slate-300" />
+          </span>
+          <p className="mt-3 text-[14px] font-semibold text-slate-700">No active bookings</p>
+          <p className="mt-0.5 text-[12.5px] text-slate-400">Contact reception to make a booking.</p>
         </div>
       )}
 
@@ -221,7 +232,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
       {/* ── All bookings breakdown ───────────────────────────────── */}
       {bookings.length > 0 && (
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
           <div className="border-b border-slate-100 px-5 py-3.5">
             <h2 className="text-sm font-semibold text-slate-800">Booking Accounts</h2>
           </div>
@@ -266,7 +277,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       )}
 
       {/* ── Payment history ──────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
         <div className="border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-sm font-semibold text-slate-800">Payment History</h2>
         </div>

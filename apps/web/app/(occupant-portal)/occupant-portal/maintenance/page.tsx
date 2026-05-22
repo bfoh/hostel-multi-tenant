@@ -102,20 +102,28 @@ export default async function MaintenancePage() {
     <div className="space-y-4">
 
       {/* ── Header + New request CTA ─────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-800">Maintenance</h1>
-          {room && (
-            <p className="text-xs text-slate-500">Room {room.room_number}{room.block ? ` · ${room.block}` : ''}</p>
-          )}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            className="flex h-11 w-11 items-center justify-center rounded-2xl"
+            style={{ backgroundColor: `${color}14` }}
+          >
+            <Wrench className="h-5 w-5" style={{ color }} strokeWidth={2.1} />
+          </span>
+          <div>
+            <h1 className="text-[18px] font-bold tracking-tight text-slate-900">Maintenance</h1>
+            {room && (
+              <p className="text-[12px] text-slate-500">Room {room.room_number}{room.block ? ` · ${room.block}` : ''}</p>
+            )}
+          </div>
         </div>
         {booking && (
           <Link
             href="/occupant-portal/maintenance/new"
-            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+            className="flex shrink-0 items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-95"
             style={{ backgroundColor: color }}
           >
-            <Plus className="h-4 w-4" /> New request
+            <Plus className="h-4 w-4" /> New
           </Link>
         )}
       </div>
@@ -128,9 +136,9 @@ export default async function MaintenancePage() {
             { label: 'In Progress', value: in_progress, cls: 'text-blue-600'   },
             { label: 'Resolved', value: resolved,    cls: 'text-emerald-600' },
           ].map(s => (
-            <div key={s.label} className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
-              <p className={`text-xl font-bold ${s.cls}`}>{s.value}</p>
-              <p className="mt-0.5 text-[10px] text-slate-400 uppercase tracking-wide">{s.label}</p>
+            <div key={s.label} className="rounded-2xl border border-slate-200/70 bg-white px-3 py-3.5 text-center shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
+              <p className={`text-[22px] font-bold ${s.cls}`}>{s.value}</p>
+              <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">{s.label}</p>
             </div>
           ))}
         </div>
@@ -138,10 +146,12 @@ export default async function MaintenancePage() {
 
       {/* ── No booking + no past records ─────────────────────────── */}
       {!booking && requests.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
-          <Wrench className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-          <p className="text-sm font-medium text-slate-500">No active booking</p>
-          <p className="text-xs text-slate-400 mt-0.5">New maintenance requests require an active booking.</p>
+        <div className="flex flex-col items-center rounded-2xl border border-slate-200/70 bg-white px-6 py-10 text-center shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 ring-1 ring-slate-100">
+            <Wrench className="h-7 w-7 text-slate-300" />
+          </span>
+          <p className="mt-3 text-[14px] font-semibold text-slate-700">No active booking</p>
+          <p className="mt-0.5 text-[12.5px] text-slate-400">New maintenance requests require an active booking.</p>
         </div>
       )}
 
@@ -154,15 +164,17 @@ export default async function MaintenancePage() {
 
       {/* ── Active booking, no requests yet ──────────────────────── */}
       {booking && requests.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
-          <CheckCircle2 className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-          <p className="text-sm font-medium text-slate-500">No maintenance requests yet</p>
-          <p className="text-xs text-slate-400 mt-0.5">Everything working? Great! Tap &quot;New request&quot; if something needs attention.</p>
+        <div className="flex flex-col items-center rounded-2xl border border-slate-200/70 bg-white px-6 py-10 text-center shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 ring-1 ring-emerald-100">
+            <CheckCircle2 className="h-7 w-7 text-emerald-400" />
+          </span>
+          <p className="mt-3 text-[14px] font-semibold text-slate-700">No maintenance requests yet</p>
+          <p className="mt-0.5 text-[12.5px] text-slate-400">Everything working? Tap &quot;New&quot; if something needs attention.</p>
         </div>
       )}
 
       {requests.length > 0 && (
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
           <div className="border-b border-slate-100 px-5 py-3.5">
             <h2 className="text-sm font-semibold text-slate-800">Your Requests</h2>
           </div>
