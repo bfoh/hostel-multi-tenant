@@ -140,7 +140,7 @@ export async function POST(
 
   const { data: tenantRow } = await (supabase
     .from('tenants') as any)
-    .select('id, name, slug, primary_color, contact_phone, enquiry_webhook_secret, is_active')
+    .select('id, name, slug, primary_color, contact_phone, logo_url, enquiry_webhook_secret, is_active')
     .eq('slug', slug)
     .single()
   const tenant = tenantRow as {
@@ -149,6 +149,7 @@ export async function POST(
     slug: string
     primary_color: string | null
     contact_phone: string | null
+    logo_url: string | null
     enquiry_webhook_secret: string | null
     is_active: boolean
   } | null
@@ -185,6 +186,7 @@ export async function POST(
       name:          tenant.name,
       primary_color: tenant.primary_color,
       contact_phone: tenant.contact_phone,
+      logo_url:      tenant.logo_url,
     },
     normalised,
   )
@@ -198,6 +200,7 @@ export async function POST(
       name:          tenant.name,
       primary_color: tenant.primary_color,
       contact_phone: tenant.contact_phone,
+      logo_url:      tenant.logo_url,
     },
     result.id,
     normalised,

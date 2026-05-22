@@ -44,7 +44,7 @@ export async function POST(
   // Resolve tenant URLs
   const { data: tenantRow } = await admin
     .from('tenants')
-    .select('name, slug, custom_domain, primary_color')
+    .select('name, slug, custom_domain, primary_color, logo_url')
     .eq('id', tenantId)
     .maybeSingle()
 
@@ -124,6 +124,7 @@ export async function POST(
     html:    portalCredentialsHtml({
       hostelName:        tenantRow?.name ?? 'Hostel',
       primaryColor:      tenantRow?.primary_color ?? '#1B4F72',
+      logoUrl:           (tenantRow as any)?.logo_url ?? null,
       firstName:         occupant.first_name,
       email:             occupant.email,
       password:          tempPassword,

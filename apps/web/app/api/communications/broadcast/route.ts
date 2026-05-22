@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
   // Fetch tenant info
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, primary_color, slug')
+    .select('name, primary_color, slug, logo_url')
     .eq('id', tenantId)
     .single()
 
@@ -168,7 +168,8 @@ export async function POST(req: NextRequest) {
       const html = baseTemplate(
         tenant?.name ?? 'Hostel',
         tenant?.primary_color ?? '',
-        `<p style="font-size:15px;color:#374151;line-height:1.6;">${message.replace(/\n/g, '<br>')}</p>`
+        `<p style="font-size:15px;color:#374151;line-height:1.6;">${message.replace(/\n/g, '<br>')}</p>`,
+        tenant?.logo_url ?? null
       )
       const sent = await sendEmail({
         to:         t.email!,

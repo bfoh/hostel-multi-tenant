@@ -32,7 +32,7 @@ export async function PATCH(
       id, status, room_id, check_in_date, check_out_date, final_amount, paid_amount,
       occupants(first_name, last_name, email),
       rooms(room_number, room_categories(name)),
-      tenants(name, primary_color, contact_phone, slug)
+      tenants(name, primary_color, logo_url, contact_phone, slug)
     `)
     .eq('id', id)
     .eq('tenant_id', tenantId)
@@ -76,6 +76,7 @@ export async function PATCH(
     const guestName    = `${occ.first_name} ${occ.last_name}`
     const hostelName   = tenant.name
     const primaryColor = tenant.primary_color ?? '#2563EB'
+    const logoUrl      = (tenant as any).logo_url ?? null
     const formatDate   = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
     const formatGHS    = (p: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(p / 100)
     const bookingRef   = id.slice(0, 8).toUpperCase()
@@ -88,6 +89,7 @@ export async function PATCH(
         html:    bookingConfirmationHtml({
           hostelName,
           primaryColor,
+          logoUrl,
           guestName,
           bookingRef,
           roomName:     cat?.name ?? room?.room_number ?? 'Your room',
@@ -107,6 +109,7 @@ export async function PATCH(
         html:    checkoutSummaryHtml({
           hostelName,
           primaryColor,
+          logoUrl,
           guestName,
           bookingRef,
           roomName:     cat?.name ?? room?.room_number ?? 'Your room',

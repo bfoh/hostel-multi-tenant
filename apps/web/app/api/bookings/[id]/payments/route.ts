@@ -93,7 +93,7 @@ export async function POST(
     const [occupantRes, bookingRes, tenantRes] = await Promise.all([
       supabase.from('occupants').select('first_name, last_name, phone, email').eq('id', booking.occupant_id).single(),
       supabase.from('bookings').select('booking_ref, final_amount, paid_amount').eq('id', id).single(),
-      supabase.from('tenants').select('name, primary_color').eq('id', tenantId).single(),
+      supabase.from('tenants').select('name, primary_color, logo_url').eq('id', tenantId).single(),
     ])
 
     const occ       = occupantRes.data
@@ -123,6 +123,7 @@ export async function POST(
         html:    paymentReceiptHtml({
           hostelName:   ten.name,
           primaryColor: ten.primary_color ?? '#2563EB',
+          logoUrl:      (ten as any).logo_url ?? null,
           guestName:    `${occ.first_name} ${occ.last_name}`,
           bookingRef:   bkn?.booking_ref ?? id.slice(0, 8).toUpperCase(),
           amountGHS:    formatGHS(parsed.data.amount),

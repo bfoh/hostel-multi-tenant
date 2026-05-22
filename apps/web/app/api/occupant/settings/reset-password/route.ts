@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
   const tenant = host ? await resolveTenant(host) : null
   const hostelName   = tenant?.name ?? 'Your Hostel'
   const primaryColor = tenant?.branding?.primaryColor ?? '#7A3B2E'
+  const logoUrl      = tenant?.branding?.logoUrl ?? null
 
   const proto   = host.includes('localhost') ? 'http' : 'https'
   const baseUrl = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL ?? '')
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
     to:         email,
     subject:    `Reset your ${hostelName} password`,
     senderName: hostelName,
-    html:       passwordResetHtml({ hostelName, primaryColor, resetCode: otp, resetUrl }),
+    html:       passwordResetHtml({ hostelName, primaryColor, logoUrl, resetCode: otp, resetUrl }),
   })
   if (!sent.ok) {
     return NextResponse.json({ error: 'Could not send reset email' }, { status: 500 })

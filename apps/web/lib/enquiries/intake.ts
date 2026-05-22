@@ -25,6 +25,7 @@ export interface IntakeTenant {
   name:          string
   primary_color: string | null
   contact_phone: string | null
+  logo_url:      string | null
 }
 
 export async function insertEnquiry(
@@ -107,7 +108,7 @@ async function dispatchNotifications(
       primaryColor,
       dashboardUrl,
       input,
-    }))
+    }), tenant.logo_url)
     const result = await sendEmail({
       to:        adminEmails,
       subject:   `New website enquiry — ${input.full_name}`,

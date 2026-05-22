@@ -110,7 +110,7 @@ async function handle(req: NextRequest) {
 
       const { data: tenant } = await admin
         .from('tenants')
-        .select('name, primary_color')
+        .select('name, primary_color, logo_url')
         .eq('id', tenantId)
         .single()
 
@@ -154,7 +154,7 @@ async function handle(req: NextRequest) {
         to:         email,
         senderName: tenant?.name ?? 'Hostel',
         subject,
-        html:       baseTemplate(tenant?.name ?? 'Hostel', brand, content),
+        html:       baseTemplate(tenant?.name ?? 'Hostel', brand, content, tenant?.logo_url ?? null),
       })
       sent++
     } catch (err) {

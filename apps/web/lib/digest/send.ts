@@ -56,7 +56,7 @@ export async function sendDailyDigestForTenant(
   const { data: tenant } = await admin
     .from('tenants')
     .select(`
-      id, name, slug, primary_color, contact_phone, contact_email,
+      id, name, slug, primary_color, contact_phone, contact_email, logo_url,
       daily_digest_enabled, daily_digest_channels, daily_digest_recipients
     `)
     .eq('id', tenantId)
@@ -122,6 +122,7 @@ export async function sendDailyDigestForTenant(
     const { subject, html } = buildDigestEmail({
       hostelName:    tenant.name,
       primaryColor:  brand,
+      logoUrl:       tenant.logo_url,
       report,
       yesterday,
       sameDayLastWeek,

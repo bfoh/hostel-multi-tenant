@@ -86,7 +86,7 @@ export async function POST(
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, slug, primary_color, contact_phone, website_url, is_active')
+    .select('id, name, slug, primary_color, contact_phone, website_url, is_active, logo_url')
     .eq('slug', slug)
     .single()
 
@@ -112,6 +112,7 @@ export async function POST(
       name:          tenant.name,
       primary_color: tenant.primary_color,
       contact_phone: tenant.contact_phone,
+      logo_url:      tenant.logo_url,
     },
     parsed.data,
   )
@@ -128,6 +129,7 @@ export async function POST(
       name:          tenant.name,
       primary_color: tenant.primary_color,
       contact_phone: tenant.contact_phone,
+      logo_url:      tenant.logo_url,
     },
     result.id,
     parsed.data,

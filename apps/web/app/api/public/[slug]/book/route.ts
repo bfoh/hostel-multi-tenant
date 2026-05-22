@@ -186,11 +186,12 @@ export async function POST(
   // Fetch tenant branding for email
   const { data: tenantFull } = await supabase
     .from('tenants')
-    .select('primary_color, contact_phone')
+    .select('primary_color, logo_url, contact_phone')
     .eq('id', tenant.id)
     .single()
 
   const primaryColor = tenantFull?.primary_color ?? '#2563EB'
+  const logoUrl      = (tenantFull as any)?.logo_url ?? null
 
   // SMS confirmation (non-blocking)
   sendBookingConfirmation({
@@ -214,6 +215,7 @@ export async function POST(
       html:    bookingConfirmationHtml({
         hostelName:   tenant.name,
         primaryColor,
+        logoUrl,
         guestName:    `${d.first_name} ${d.last_name}`,
         bookingRef:   booking.booking_ref,
         roomName:     category.name,

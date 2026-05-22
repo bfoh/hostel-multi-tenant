@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, slug, name, primary_color, paystack_subaccount_code')
+    .select('id, slug, name, primary_color, logo_url, paystack_subaccount_code')
     .eq('id', tenantId)
     .single()
 
@@ -125,6 +125,7 @@ export async function POST(req: NextRequest) {
         html:       invoicePayLinkHtml({
           hostelName:    tenant.name,
           primaryColor:  (tenant as any).primary_color ?? '#2563EB',
+          logoUrl:       (tenant as any).logo_url ?? null,
           guestName:     `${occ?.first_name ?? ''} ${occ?.last_name ?? ''}`.trim() || 'Guest',
           invoiceNumber,
           amountGHS,

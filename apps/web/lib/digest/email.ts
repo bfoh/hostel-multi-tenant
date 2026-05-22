@@ -9,12 +9,13 @@ import { ghs, pct, deltaPct, isCashVarianceConcerning, formatDate } from './form
 export function buildDigestEmail(opts: {
   hostelName:   string
   primaryColor: string
+  logoUrl?:     string | null
   report:       DailyReport
   yesterday:    DailyReport | null
   sameDayLastWeek: DailyReport | null
   dashboardUrl: string
 }): { subject: string; html: string } {
-  const { hostelName, primaryColor, report, yesterday, sameDayLastWeek, dashboardUrl } = opts
+  const { hostelName, primaryColor, logoUrl, report, yesterday, sameDayLastWeek, dashboardUrl } = opts
   const dateLabel = formatDate(report.report_date)
   const subject = `${hostelName} · Daily report · ${dateLabel}`
 
@@ -119,7 +120,7 @@ export function buildDigestEmail(opts: {
 
   return {
     subject,
-    html: baseTemplate(hostelName, primaryColor, content),
+    html: baseTemplate(hostelName, primaryColor, content, logoUrl),
   }
 }
 
