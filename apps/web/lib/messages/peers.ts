@@ -37,6 +37,8 @@ export async function resolvePeerDisplayNames(
       `)
       .eq('tenant_id', tenantId)
       .in('user_id', ids),
+    // No is_active filter — a deactivated staff member still has a name,
+    // and a thread header reading "Member" is worse than showing it.
     admin
       .from('tenant_members')
       .select(`
@@ -44,7 +46,6 @@ export async function resolvePeerDisplayNames(
         profile:staff_profiles(first_name, last_name, job_title, photo_url)
       `)
       .eq('tenant_id', tenantId)
-      .eq('is_active', true)
       .in('user_id', ids),
   ])
 
@@ -78,16 +79,34 @@ export async function resolvePeerDisplayNames(
     }
   }
 
-  // Fallback for anyone unresolved
-  for (const id of ids) {
-    if (!map[id]) {
-      map[id] = {
-        user_id:    id,
-        display:    'Member',
-        subtitle:   null,
-        kind:       'unknown',
-        avatar_url: null,
+  // Deeper fallback — anyone still unresolved (occupant row not linked to a
+  // user_id, staff membership in another tenant, etc.). Resolve a real name
+  // from the auth user's metadata / email instead of the generic "Member".
+  const unresolved = ids.filter((id) => !map[id])
+  for (const id of unresolved) {
+    let display = 'Member'
+    try {
+      const { data } = await admin.auth.admin.getUserById(id)
+      const u = data?.user
+      const meta = (u?.user_metadata ?? {}) as Record<string, unknown>
+      const metaName = [meta.first_name, meta.last_name].filter(Boolean).join(' ').trim()
+        || (typeof meta.full_name === 'string' ? meta.full_name : '')
+        || (typeof meta.name === 'string' ? meta.name : '')
+      if (metaName) {
+        display = metaName
+      } else if (u?.email) {
+        // "kwame.mensah@x.com" → "Kwame Mensah"
+        display = titleCase(u.email.split('@')[0].replace(/[._-]+/g, ' '))
       }
+    } catch {
+      // keep "Member"
+    }
+    map[id] = {
+      user_id:    id,
+      display,
+      subtitle:   null,
+      kind:       'unknown',
+      avatar_url: null,
     }
   }
 
