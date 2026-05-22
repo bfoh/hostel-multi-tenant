@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, FileText, X } from 'lucide-react'
+import { Loader2, FileText, X, Camera } from 'lucide-react'
+import { useNativeCamera } from '@/lib/native/use-camera'
 
 interface Props {
   bookingId:     string
@@ -138,41 +139,66 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function FilePicker({
   file, setFile, setError,
 }: { file: File | null; setFile: (f: File | null) => void; setError: (s: string | null) => void }) {
+  const { isNative, takePhoto } = useNativeCamera()
+
+  async function snap() {
+    const f = await takePhoto()
+    if (!f) return
+    if (f.size > 5 * 1024 * 1024) { setError('Photo is larger than 5 MB'); return }
+    setError(null)
+    setFile(f)
+  }
+
   return (
-    <label className="block cursor-pointer rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-5 text-center hover:border-slate-400">
-      {file ? (
-        <div className="flex items-center justify-center gap-2 text-sm text-slate-700">
-          <FileText className="h-4 w-4" />
-          <span className="truncate">{file.name}</span>
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); setFile(null) }}
-            className="rounded p-1 hover:bg-slate-100"
-          >
-            <X className="h-3.5 w-3.5 text-slate-500" />
-          </button>
-        </div>
-      ) : (
-        <>
-          <FileText className="mx-auto h-6 w-6 text-slate-400" />
-          <p className="mt-1 text-xs font-medium text-slate-600">Tap to upload draft</p>
-          <p className="text-[10px] text-slate-400">PDF / JPG / PNG / HEIC · max 5 MB</p>
-        </>
+    <div className="space-y-2">
+      {isNative && !file && (
+        <button
+          type="button"
+          onClick={snap}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+        >
+          <Camera className="h-4 w-4" />
+          Take photo of draft
+        </button>
       )}
-      <input
-        type="file"
-        accept="application/pdf,image/jpeg,image/png,image/heic,image/heic-sequence"
-        className="hidden"
-        onChange={e => {
-          const f = e.target.files?.[0] ?? null
-          if (f && f.size > 5 * 1024 * 1024) {
-            setError('File is larger than 5 MB')
-            return
-          }
-          setError(null)
-          setFile(f)
-        }}
-      />
-    </label>
+
+      <label className="block cursor-pointer rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-5 text-center hover:border-slate-400">
+        {file ? (
+          <div className="flex items-center justify-center gap-2 text-sm text-slate-700">
+            <FileText className="h-4 w-4" />
+            <span className="truncate">{file.name}</span>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); setFile(null) }}
+              className="rounded p-1 hover:bg-slate-100"
+            >
+              <X className="h-3.5 w-3.5 text-slate-500" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <FileText className="mx-auto h-6 w-6 text-slate-400" />
+            <p className="mt-1 text-xs font-medium text-slate-600">
+              {isNative ? 'Or upload PDF / image' : 'Tap to upload draft'}
+            </p>
+            <p className="text-[10px] text-slate-400">PDF / JPG / PNG / HEIC · max 5 MB</p>
+          </>
+        )}
+        <input
+          type="file"
+          accept="application/pdf,image/jpeg,image/png,image/heic,image/heic-sequence"
+          className="hidden"
+          onChange={e => {
+            const f = e.target.files?.[0] ?? null
+            if (f && f.size > 5 * 1024 * 1024) {
+              setError('File is larger than 5 MB')
+              return
+            }
+            setError(null)
+            setFile(f)
+          }}
+        />
+      </label>
+    </div>
   )
 }
