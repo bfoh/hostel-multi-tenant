@@ -27,13 +27,13 @@ interface TabDef {
 }
 
 const BASE_TABS: TabDef[] = [
-  { href: '/occupant-portal',             label: 'Home',       Icon: Home,       anim: 'pulse'  },
-  { href: '/occupant-portal/payments',    label: 'Payments',   Icon: CreditCard, anim: 'flip'   },
-  { href: '/occupant-portal/invoices',    label: 'Invoices',   Icon: FileText,   anim: 'slide'  },
-  { href: '/occupant-portal/maintenance', label: 'Requests',   Icon: Wrench,     anim: 'swing'  },
-  { href: '/occupant-portal/messages',    label: 'Messages',   Icon: MessageCircle, anim: 'shake' },
-  { href: '/occupant-portal/notices',     label: 'Notices',    Icon: Bell,       anim: 'ring'   },
-  { href: '/occupant-portal/profile',     label: 'Profile',    Icon: User,       anim: 'bounce' },
+  { href: '/occupant-portal',             label: 'Home',     Icon: Home,          anim: 'pulse'  },
+  { href: '/occupant-portal/payments',    label: 'Payments', Icon: CreditCard,    anim: 'flip'   },
+  { href: '/occupant-portal/invoices',    label: 'Invoices', Icon: FileText,      anim: 'slide'  },
+  { href: '/occupant-portal/maintenance', label: 'Requests', Icon: Wrench,        anim: 'swing'  },
+  { href: '/occupant-portal/messages',    label: 'Messages', Icon: MessageCircle, anim: 'shake'  },
+  { href: '/occupant-portal/notices',     label: 'Notices',  Icon: Bell,          anim: 'ring'   },
+  { href: '/occupant-portal/profile',     label: 'Profile',  Icon: User,          anim: 'bounce' },
 ]
 
 const FOOD_TAB: TabDef = {
@@ -48,25 +48,35 @@ export function BottomNav({ color, foodEnabled = false }: { color: string; foodE
     : BASE_TABS
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-2xl">
+    <nav
+      className="fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/80 bg-white/85 backdrop-blur-xl"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="mx-auto flex max-w-2xl px-1">
         {TABS.map(({ href, label, Icon, anim }) => {
           const active = pathname === href || (href !== '/occupant-portal' && pathname.startsWith(href))
           return (
             <Link
               key={href}
               href={href}
-              className={`${ANIM_CLASS[anim]} flex flex-1 flex-col items-center gap-1 py-2.5 transition-opacity`}
+              aria-current={active ? 'page' : undefined}
+              className={`${ANIM_CLASS[anim]} group flex flex-1 flex-col items-center gap-1 pt-2 pb-2 transition-all`}
             >
-              <span className="sb-icon relative flex shrink-0 items-center justify-center" style={{ perspective: '600px' }}>
+              <span
+                className="sb-icon relative flex h-8 w-full max-w-[52px] shrink-0 items-center justify-center rounded-full transition-all duration-200"
+                style={{
+                  perspective: '600px',
+                  backgroundColor: active ? `${color}16` : 'transparent',
+                }}
+              >
                 <Icon
-                  className="h-5 w-5 transition-colors"
+                  className="h-[18px] w-[18px] transition-colors"
                   style={{ color: active ? color : '#94a3b8' }}
-                  strokeWidth={active ? 2.5 : 1.8}
+                  strokeWidth={active ? 2.5 : 1.9}
                 />
               </span>
               <span
-                className="text-[10px] font-medium transition-colors"
+                className="text-[10px] font-semibold leading-none transition-colors"
                 style={{ color: active ? color : '#94a3b8' }}
               >
                 {label}
