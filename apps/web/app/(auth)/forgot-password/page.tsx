@@ -6,8 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
-import { createClient } from '@/lib/supabase/client'
-
 const FROST = 'rgba(214,235,253,0.19)'
 
 const schema = z.object({
@@ -32,18 +30,20 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(values: FormValues) {
     setServerError(null)
-    const supabase = createClient()
-
-    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    })
-
-    if (error) {
-      setServerError(error.message)
-      return
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: values.email, host: window.location.host }),
+      })
+      if (!res.ok) {
+        setServerError('Something went wrong. Please try again.')
+        return
+      }
+      setSent(true)
+    } catch {
+      setServerError('Network error. Please try again.')
     }
-
-    setSent(true)
   }
 
   if (sent) {
@@ -64,10 +64,17 @@ export default function ForgotPasswordPage() {
           >
             Check your email
           </h2>
-          <p className="text-[13px] text-[#a1a4a5] leading-relaxed max-w-[280px] mx-auto">
-            We&apos;ve sent a password reset link to your email. It expires in 1 hour.
+          <p className="text-[13px] text-[#a1a4a5] leading-relaxed max-w-[300px] mx-auto">
+            If an account exists, we&apos;ve emailed a 6-digit reset code. Enter it on the
+            reset page to choose a new password. The code expires in 1 hour.
           </p>
         </div>
+        <Link
+          href="/reset-password"
+          className="inline-block w-full rounded-full bg-white px-4 py-3 text-[14px] font-semibold text-black transition-all hover:bg-white/90"
+        >
+          Enter reset code
+        </Link>
         <Link
           href="/login"
           className="inline-block text-[13px] font-semibold text-white transition-colors hover:text-white/80"

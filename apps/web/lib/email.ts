@@ -30,9 +30,11 @@ export async function sendEmail(params: SendParams): Promise<{ ok: boolean; erro
   }
 
   const address = process.env.RESEND_FROM_EMAIL ?? 'no-reply@updates.gh-hostels.com'
+  // Display name is the tenant/hostel — recipients see the hostel, not the
+  // platform. The sending domain stays the verified gh-hostels domain.
   const from = params.senderName
-    ? `${params.senderName} via GH Hostels <${address}>`
-    : `GH Hostels <${address}>`
+    ? `${params.senderName} <${address}>`
+    : `Hostel Notifications <${address}>`
 
   try {
     const res = await fetch(RESEND_API, {
@@ -93,7 +95,7 @@ export function baseTemplate(hostelName: string, primaryColor: string, content: 
           <tr>
             <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
               <p style="margin:0;font-size:12px;color:#9ca3af;">
-                Powered by <strong>GH Hostels</strong> · ${hostelName}
+                ${hostelName}
               </p>
             </td>
           </tr>
@@ -377,6 +379,36 @@ export function checkoutSummaryHtml(opts: {
     </table>
     <p style="font-size:14px;color:#374151;margin:0;">
       We'd love to have you back! Visit our booking page to reserve your next stay.
+    </p>
+  `
+
+  return baseTemplate(hostelName, primaryColor, content)
+}
+
+/* ── Password reset email ───────────────────────────────────────────────── */
+
+export function passwordResetHtml(opts: {
+  hostelName:   string
+  primaryColor: string
+  resetCode:    string
+  resetUrl:     string
+}) {
+  const { hostelName, primaryColor, resetCode, resetUrl } = opts
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Reset your password</p>
+    <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
+      We received a request to reset the password for your <strong>${hostelName}</strong>
+      account. Enter the code below on the reset page to choose a new password.
+    </p>
+    <div style="margin:24px 0;border:1px solid #e5e7eb;border-radius:12px;padding:20px 16px;background:#f9fafb;text-align:center;">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.08em;color:#6b7280;text-transform:uppercase;">Your reset code</p>
+      <p style="margin:0;font-family:'Menlo',Consolas,monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#111827;">${resetCode}</p>
+    </div>
+    ${button(resetUrl, "Open reset page", primaryColor)}
+    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">
+      This code is valid for 1 hour. If you did not request a password reset,
+      ignore this email \u2014 your password stays unchanged.
     </p>
   `
 

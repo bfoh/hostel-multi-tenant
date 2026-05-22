@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,6 +14,8 @@ const FROST = 'rgba(214,235,253,0.19)'
 
 const schema = z
   .object({
+    email: z.string().email('Enter the email you requested the reset for'),
+    code:  z.string().regex(/^\d{6}$/, 'Enter the 6-digit code from your email'),
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters')
@@ -32,30 +34,46 @@ const inputClass =
   `w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] transition-all duration-200 focus:outline-none focus:border-[#3b9eff]/50`
 const inputBorder = { borderColor: FROST }
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      email: searchParams.get('email') ?? '',
+      code:  searchParams.get('code')  ?? '',
+    },
+  })
 
   async function onSubmit(values: FormValues) {
     setServerError(null)
     const supabase = createClient()
 
-    const { error } = await supabase.auth.updateUser({
-      password: values.password,
+    // 1. Exchange the emailed recovery code for a session.
+    const { data, error: otpErr } = await supabase.auth.verifyOtp({
+      email: values.email.trim().toLowerCase(),
+      token: values.code.trim(),
+      type:  'recovery',
     })
-
-    if (error) {
-      setServerError(error.message)
+    if (otpErr || !data.session) {
+      setServerError(otpErr?.message ?? 'Invalid or expired code. Request a new reset email.')
       return
     }
 
-    // Sign out all other sessions after password change
+    // 2. Now that we have a session, set the new password.
+    const { error: updErr } = await supabase.auth.updateUser({ password: values.password })
+    if (updErr) {
+      setServerError(updErr.message)
+      return
+    }
+
+    // 3. Sign out other sessions, then send them to login.
     await supabase.auth.signOut({ scope: 'others' })
     router.push('/login?reset=success')
   }
@@ -70,11 +88,48 @@ export default function ResetPasswordPage() {
           Set new password
         </h1>
         <p className="text-[14px] text-[#a1a4a5]">
-          Choose a strong password for your account.
+          Enter the 6-digit code from your email, then choose a new password.
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <div className="space-y-1.5">
+          <label htmlFor="email" className="text-[13px] font-medium text-[#a1a4a5]">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            {...register('email')}
+            className={inputClass}
+            style={inputBorder}
+            placeholder="kwame@example.com"
+          />
+          {errors.email && (
+            <p className="text-[12px] text-[#ff2047] mt-1">{errors.email.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="code" className="text-[13px] font-medium text-[#a1a4a5]">
+            Reset code
+          </label>
+          <input
+            id="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            {...register('code')}
+            className={`${inputClass} tracking-[8px] text-center font-mono`}
+            style={inputBorder}
+            placeholder="000000"
+          />
+          {errors.code && (
+            <p className="text-[12px] text-[#ff2047] mt-1">{errors.code.message}</p>
+          )}
+        </div>
+
         <div className="space-y-1.5">
           <label htmlFor="password" className="text-[13px] font-medium text-[#a1a4a5]">
             New password
@@ -82,7 +137,6 @@ export default function ResetPasswordPage() {
           <PasswordInput
             id="password"
             autoComplete="new-password"
-            autoFocus
             {...register('password')}
             className={inputClass}
             style={inputBorder}
@@ -126,15 +180,24 @@ export default function ResetPasswordPage() {
           disabled={isSubmitting}
           className="w-full rounded-full bg-white px-4 py-3 text-[14px] font-semibold text-black transition-all hover:bg-white/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          {isSubmitting ? 'Updating password\u2026' : 'Update password'}
+          {isSubmitting ? 'Updating password…' : 'Update password'}
         </button>
       </form>
 
       <p className="text-center text-[13px] text-[#a1a4a5]">
-        <Link href="/login" className="font-semibold text-white transition-colors hover:text-white/80">
-          ← Back to sign in
+        Didn&apos;t get a code?{' '}
+        <Link href="/forgot-password" className="font-semibold text-white transition-colors hover:text-white/80">
+          Request a new one
         </Link>
       </p>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }
