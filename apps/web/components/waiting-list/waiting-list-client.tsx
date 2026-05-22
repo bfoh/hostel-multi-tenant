@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Check, Bell, Loader2, Users, CalendarClock, Globe, Mail, Phone, MessageSquare } from 'lucide-react'
+import { useBulkSelect, BulkActionBar } from '@/components/ui/bulk-select'
 
 interface Category { id: string; name: string }
 interface WLEntry {
@@ -69,6 +70,8 @@ export function WaitingListClient({
     () => sourceFilter === 'all' ? entries : entries.filter((e) => e.source === sourceFilter),
     [entries, sourceFilter],
   )
+
+  const bulk = useBulkSelect(visibleEntries.map((e) => e.id))
 
   const [form, setForm] = useState({
     contact_name:      '',
@@ -186,13 +189,18 @@ export function WaitingListClient({
             {entries.length} open · {sourceCounts.website ?? 0} from website
           </p>
         </div>
-        <button
-          onClick={() => { setShowForm(true); setError(null) }}
-          className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add to list
-        </button>
+        <div className="flex items-center gap-2">
+          {visibleEntries.length > 0 && (
+            <BulkActionBar bulk={bulk} resource="waiting_list" itemNoun="entry" />
+          )}
+          <button
+            onClick={() => { setShowForm(true); setError(null) }}
+            className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add to list
+          </button>
+        </div>
       </div>
 
       {error && !showForm && (
@@ -343,7 +351,17 @@ export function WaitingListClient({
       ) : (
         <div className="rounded-xl border border-border bg-surface overflow-hidden">
           <div className="border-b border-border px-4 py-3 bg-surface-raised text-xs font-semibold uppercase tracking-wide text-text-tertiary grid grid-cols-[auto_1fr_auto_auto] gap-4">
-            <span>#</span>
+            {bulk.selectMode ? (
+              <input
+                type="checkbox"
+                checked={bulk.allSelected}
+                onChange={bulk.toggleAll}
+                className="h-4 w-4 rounded border-border text-brand focus:ring-brand"
+                aria-label="Select all"
+              />
+            ) : (
+              <span>#</span>
+            )}
             <span>Contact</span>
             <span>Category</span>
             <span>Actions</span>
@@ -360,7 +378,16 @@ export function WaitingListClient({
 
               return (
                 <div key={entry.id} className="grid grid-cols-[auto_1fr_auto_auto] gap-4 items-start px-4 py-3">
-                  <span className="text-sm font-bold text-text-tertiary w-6 text-center pt-0.5">{i + 1}</span>
+                  {bulk.selectMode ? (
+                    <input
+                      type="checkbox"
+                      checked={bulk.isSelected(entry.id)}
+                      onChange={() => bulk.toggle(entry.id)}
+                      className="mt-1 h-4 w-4 rounded border-border text-brand focus:ring-brand"
+                    />
+                  ) : (
+                    <span className="text-sm font-bold text-text-tertiary w-6 text-center pt-0.5">{i + 1}</span>
+                  )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium text-text-primary">{name}</p>

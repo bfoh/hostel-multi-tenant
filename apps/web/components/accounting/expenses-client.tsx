@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Loader2, Trash2, TrendingDown } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatGHS } from '@/lib/utils'
+import { useBulkSelect, BulkActionBar } from '@/components/ui/bulk-select'
 
 interface Expense {
   id: string; category: string; description: string; vendor: string | null
@@ -128,6 +129,8 @@ export function ExpensesClient({
 
   const totalFiltered = filtered.reduce((s, e) => s + e.amount, 0)
 
+  const bulk = useBulkSelect(filtered.map((e) => e.id))
+
   // Category breakdown
   const breakdown = useMemo(() => {
     const map = new Map<string, number>()
@@ -180,11 +183,17 @@ export function ExpensesClient({
             className="rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand" />
         </div>
         <button onClick={() => setShowForm((v) => !v)}
-          className="ml-auto flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-brand-fg hover:bg-brand-hover transition-colors">
+          className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-brand-fg hover:bg-brand-hover transition-colors">
           <Plus className="h-4 w-4" />
           Add expense
         </button>
       </div>
+
+      {filtered.length > 0 && (
+        <div className="flex justify-end">
+          <BulkActionBar bulk={bulk} resource="expenses" itemNoun="expense" />
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
@@ -315,6 +324,7 @@ export function ExpensesClient({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
+                    {bulk.selectMode && <th className="px-4 py-3 w-8" />}
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Category</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Description</th>
@@ -326,6 +336,16 @@ export function ExpensesClient({
                 <tbody className="divide-y divide-border">
                   {filtered.map((e) => (
                     <tr key={e.id} className="hover:bg-surface-raised transition-colors">
+                      {bulk.selectMode && (
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={bulk.isSelected(e.id)}
+                            onChange={() => bulk.toggle(e.id)}
+                            className="h-4 w-4 rounded border-border text-brand focus:ring-brand"
+                          />
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{e.expense_date}</td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${CAT_COLORS[e.category] ?? 'bg-gray-100 text-gray-600'}`}>
@@ -358,7 +378,7 @@ export function ExpensesClient({
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-border bg-surface-raised">
-                    <td colSpan={4} className="px-4 py-3 text-sm font-semibold text-text-primary">Total</td>
+                    <td colSpan={bulk.selectMode ? 5 : 4} className="px-4 py-3 text-sm font-semibold text-text-primary">Total</td>
                     <td className="px-4 py-3 text-right font-mono font-bold text-text-primary">{formatGHS(totalFiltered)}</td>
                     <td />
                   </tr>
