@@ -55,11 +55,13 @@ function ResetPasswordForm() {
     setServerError(null)
     const supabase = createClient()
 
-    // 1. Exchange the emailed recovery code for a session.
+    // 1. Exchange the emailed code for a session. 'magiclink' (not
+    // 'recovery') — matches the generateLink type the API uses; the
+    // recovery pairing intermittently rejects valid codes.
     const { data, error: otpErr } = await supabase.auth.verifyOtp({
       email: values.email.trim().toLowerCase(),
       token: values.code.trim(),
-      type:  'recovery',
+      type:  'magiclink',
     })
     if (otpErr || !data.session) {
       setServerError(otpErr?.message ?? 'Invalid or expired code. Request a new reset email.')

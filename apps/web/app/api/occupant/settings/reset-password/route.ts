@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient()
   const { data, error } = await (admin as any).auth.admin.generateLink({
-    type:    'recovery',
+    type:    'magiclink',
     email,
     options: { redirectTo: resetUrl },
   })

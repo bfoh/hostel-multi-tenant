@@ -9,11 +9,13 @@ import { sendEmail, passwordResetHtml } from '@/lib/email'
  * Sends a tenant-branded password-reset email via Resend instead of relying
  * on Supabase's built-in (unbranded, SMTP-dependent) reset mail.
  *
- * We use admin.generateLink({ type: 'recovery' }) which mints the recovery
+ * We use admin.generateLink({ type: 'magiclink' }) which mints a login
  * token WITHOUT dispatching Supabase's own email, and returns a 6-digit
  * email_otp. The user enters that code on /reset-password, which calls
- * verifyOtp({ type: 'recovery' }) — scanner-safe (link pre-fetchers can't
- * burn a typed code) and free of redirect-URL whitelist headaches.
+ * verifyOtp({ type: 'magiclink' }) to get a session, then updateUser.
+ * magiclink (not recovery) is used because that exact generateLink +
+ * verifyOtp pairing is already proven by the invite flow — the recovery
+ * pairing intermittently returns "Token has expired or is invalid".
  *
  * Always responds 200 — never reveal whether an account exists.
  */
@@ -41,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const { data, error } = await (admin as any).auth.admin.generateLink({
-      type:    'recovery',
+      type:    'magiclink',
       email,
       options: { redirectTo: resetUrl },
     })
