@@ -74,7 +74,7 @@ packages/
 3. Webview loads `app.gh-hostels.com`.
 4. Portal session resolves user role:
    - **Occupant** → existing `/occupant-portal` (premium, bottom-nav).
-   - **`tenant_members` with an owner-level role** → new `/owner-digest`. (Exact role enum value(s) — e.g. `owner`, `admin` — to be confirmed against `tenant_members.role` schema in Phase 0.)
+   - **`tenant_members.role = 'owner'`** → new `/owner-digest`. (Schema confirmed: `tenant_members.role text check (role in ('owner','admin','manager','accountant','receptionist','member'))`. Only `'owner'` qualifies for v1.)
    - **Other tenant_member roles (staff, accountant, manager, etc.)** → friendly block: "Use desktop dashboard for full features." App is owners + residents only.
 5. No session → existing portal login page.
 
@@ -109,18 +109,20 @@ Native polish added by the shell:
 
 ## 6. Owner Experience (new web route)
 
-New route in the portal: **`/owner-digest`** (auth gated to `tenant_members` rows with an owner-level role; exact role value(s) confirmed in Phase 0).
+New route in the portal: **`/owner-digest`** (auth gated to `tenant_members.role = 'owner'`).
 
-**Today view** — renders the latest `tenant_daily_reports` row for the tenant:
-- Occupancy % (today vs. yesterday delta)
-- Revenue today (and MTD)
-- Pending payments count + amount
-- Maintenance flags (open count, overdue count)
-- Anomaly alerts (from existing anomaly detection)
+Note: a richer `/dashboard/owner` route already exists in the web portal (574 lines, today/yesterday/week/month tabs, full rollups via `lib/reports/daily`). We **do not** route the mobile app to that — per the explicit "only daily digest" scope, the mobile app gets a slim new `/owner-digest` route that reuses the same `lib/reports/daily` data layer but renders only digest content (today's snapshot + history). The full web owner dashboard remains web-only.
 
-Data source: the same query the existing email digest already runs (`lib/digest/send.ts`). Render as a clean, read-only screen — no edit, no drill-down.
+**Today view** — renders the latest `tenant_daily_reports` row for the tenant. Schema confirmed (migration `072_tenant_daily_reports.sql`):
+- Revenue: `revenue_total`, breakdown (`revenue_rooms`, `revenue_food`, `revenue_pos`, `revenue_walkin`, `revenue_deposits`) and by method (`rev_cash`, `rev_momo`, `rev_card`, `rev_bank`, `rev_online_other`)
+- Receivables: `outstanding_balance`, `overdue_installments_count`, `overdue_installments_amount`
+- Occupancy: `rooms_total`, `rooms_occupied`, `rooms_reserved`, `rooms_dirty`, `rooms_maintenance`, `occupancy_pct`
+- Movement: `arrivals_today`, `departures_today`
+- Delta vs. yesterday (via existing `deltaVs()` from `lib/reports/daily`)
 
-**History view** — paginated list of the past 90 daily reports. Tap a row to view that day's full snapshot in the same layout as Today.
+Data source: existing `getDailyReport()` from `lib/reports/daily.ts` (already used by `/dashboard/owner` and digest). Render as a clean, read-only screen — no edit, no drill-down.
+
+**History view** — paginated list of the past 90 daily reports via existing `listDailyReports()`. Tap a row to view that day's full snapshot in the same layout as Today.
 
 **Push integration** — when the daily-digest cron sends, it also emits a native push to all owner devices for that tenant. Notification payload carries `{ path: "/owner-digest" }` so the deep-link router opens straight to today's digest.
 
