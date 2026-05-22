@@ -1,0 +1,15 @@
+node_modules/
+ios/App/App/public/
+ios/build/
+ios/Pods/
+ios/DerivedData/
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/local.properties
+*.keystore
+!debug.keystore
+.env
+.env.local
+src/main.js
