@@ -25,6 +25,7 @@ const schema = z.object({
   sms_enabled:   z.boolean().optional(),
   email_enabled: z.boolean().optional(),
   momo_enabled:  z.boolean().optional(),
+  inter_occupant_dm_enabled: z.boolean().optional(),
   // Bank deposit details (migration 055)
   bank_name:             z.string().max(120).optional().nullable(),
   bank_branch:           z.string().max(120).optional().nullable(),

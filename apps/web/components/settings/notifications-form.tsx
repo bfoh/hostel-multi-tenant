@@ -8,6 +8,7 @@ interface Props {
     sms_enabled:   boolean
     email_enabled: boolean
     momo_enabled:  boolean
+    inter_occupant_dm_enabled: boolean
   }
 }
 
@@ -33,6 +34,11 @@ const TOGGLES: Toggle[] = [
     label: 'Mobile Money payments',
     description: 'Enable MTN MoMo, Vodafone Cash, and AirtelTigo as payment channels via Paystack.',
   },
+  {
+    key: 'inter_occupant_dm_enabled',
+    label: 'Resident-to-resident messaging',
+    description: 'Let residents start private chats with each other in the resident portal. When off, residents can only message staff.',
+  },
 ]
 
 export function NotificationsForm({ tenant }: Props) {
@@ -41,6 +47,7 @@ export function NotificationsForm({ tenant }: Props) {
     sms_enabled:   tenant.sms_enabled,
     email_enabled: tenant.email_enabled,
     momo_enabled:  tenant.momo_enabled,
+    inter_occupant_dm_enabled: tenant.inter_occupant_dm_enabled,
   })
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
