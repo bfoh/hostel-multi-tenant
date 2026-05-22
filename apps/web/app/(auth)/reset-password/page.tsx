@@ -15,7 +15,7 @@ const FROST = 'rgba(214,235,253,0.19)'
 const schema = z
   .object({
     email: z.string().email('Enter the email you requested the reset for'),
-    code:  z.string().regex(/^\d{6}$/, 'Enter the 6-digit code from your email'),
+    code:  z.string().trim().regex(/^\d{6,10}$/, 'Enter the numeric code from your email'),
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters')
@@ -90,7 +90,7 @@ function ResetPasswordForm() {
           Set new password
         </h1>
         <p className="text-[14px] text-[#a1a4a5]">
-          Enter the 6-digit code from your email, then choose a new password.
+          Enter the code from your email, then choose a new password.
         </p>
       </div>
 
@@ -121,11 +121,11 @@ function ResetPasswordForm() {
             id="code"
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
+            maxLength={10}
             {...register('code')}
-            className={`${inputClass} tracking-[8px] text-center font-mono`}
+            className={`${inputClass} tracking-[4px] text-center font-mono`}
             style={inputBorder}
-            placeholder="000000"
+            placeholder="Code from email"
           />
           {errors.code && (
             <p className="text-[12px] text-[#ff2047] mt-1">{errors.code.message}</p>

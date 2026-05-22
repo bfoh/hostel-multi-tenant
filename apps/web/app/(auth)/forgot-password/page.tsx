@@ -65,7 +65,7 @@ export default function ForgotPasswordPage() {
             Check your email
           </h2>
           <p className="text-[13px] text-[#a1a4a5] leading-relaxed max-w-[300px] mx-auto">
-            If an account exists, we&apos;ve emailed a 6-digit reset code. Enter it on the
+            If an account exists, we&apos;ve emailed a reset code. Enter it on the
             reset page to choose a new password. The code expires in 1 hour.
           </p>
         </div>
