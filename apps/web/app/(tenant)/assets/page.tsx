@@ -4,6 +4,7 @@ import { Plus, QrCode, Package, AlertTriangle, Trash2, Wrench } from 'lucide-rea
 
 import { getAssets, getAssetSummary } from '@/lib/data/assets'
 import { formatGHS } from '@/lib/utils'
+import { AssetsTable, type AssetRow } from '@/components/assets/assets-table'
 
 export const metadata: Metadata = { title: 'Asset Register' }
 
@@ -117,66 +118,22 @@ export default async function AssetsPage({
           </Link>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-surface overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border bg-surface-raised">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Asset</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary hidden sm:table-cell">Category</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary hidden md:table-cell">Location</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary hidden lg:table-cell">Value</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">QR</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {assets.map((asset) => {
-                  const badge = STATUS_BADGE[asset.status]
-                  const condCls = CONDITION_BADGE[asset.condition]
-                  return (
-                    <tr key={asset.id} className="hover:bg-surface-raised transition-colors">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-text-primary">{asset.name}</p>
-                        {(asset.brand || asset.model) && (
-                          <p className="text-xs text-text-tertiary">{[asset.brand, asset.model].filter(Boolean).join(' ')}</p>
-                        )}
-                        <span className={`text-[11px] font-medium ${condCls}`}>{asset.condition}</span>
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary hidden sm:table-cell capitalize">{asset.category}</td>
-                      <td className="px-4 py-3 text-text-secondary hidden md:table-cell text-xs">
-                        {asset.room ? `Room ${asset.room.room_number}${asset.room.block ? ` · ${asset.room.block}` : ''}` : asset.location_note ?? '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.cls}`}>
-                          {badge.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 currency-amount text-text-secondary hidden lg:table-cell">
-                        {asset.purchase_price ? formatGHS(asset.purchase_price) : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/assets/qr/${asset.qr_code}`}
-                          className="flex items-center gap-1 text-xs text-brand hover:underline font-mono"
-                        >
-                          <QrCode className="h-3 w-3" />
-                          {asset.qr_code}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link href={`/assets/${asset.id}/edit`} className="text-xs text-brand hover:underline">
-                          Edit
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <AssetsTable
+          assets={assets.map((asset: any): AssetRow => ({
+            id:             asset.id,
+            name:           asset.name,
+            brand:          asset.brand ?? null,
+            model:          asset.model ?? null,
+            category:       asset.category,
+            condition:      asset.condition,
+            status:         asset.status,
+            locationLabel:  asset.room
+              ? `Room ${asset.room.room_number}${asset.room.block ? ` · ${asset.room.block}` : ''}`
+              : (asset.location_note ?? '—'),
+            purchase_price: asset.purchase_price ?? null,
+            qr_code:        asset.qr_code,
+          }))}
+        />
       )}
     </div>
   )
