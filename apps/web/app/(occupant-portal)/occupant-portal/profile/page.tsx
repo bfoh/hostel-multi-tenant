@@ -62,18 +62,18 @@ export default async function ProfilePage() {
     <div className="space-y-4">
 
       {/* ── Avatar + name header ─────────────────────────────────── */}
-      <div className="flex flex-col items-center gap-3 py-4">
+      <div className="flex flex-col items-center gap-3 py-5">
         <div
-          className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white shadow-md"
-          style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}bb 100%)` }}
+          className="flex h-[84px] w-[84px] items-center justify-center rounded-3xl text-2xl font-bold text-white shadow-[0_10px_24px_-10px_rgba(16,24,40,0.5)] ring-4 ring-white"
+          style={{ background: `linear-gradient(150deg, ${color} 0%, ${color}cc 100%)` }}
         >
           {occupant.first_name[0]?.toUpperCase()}{occupant.last_name[0]?.toUpperCase()}
         </div>
         <div className="text-center">
-          <h1 className="text-xl font-bold text-slate-800">{occupant.first_name} {occupant.last_name}</h1>
-          <p className="text-sm text-slate-500">{occupant.email}</p>
+          <h1 className="text-[20px] font-bold tracking-tight text-slate-900">{occupant.first_name} {occupant.last_name}</h1>
+          <p className="text-[13px] text-slate-500">{occupant.email}</p>
           {occupant.student_id && (
-            <p className="mt-0.5 font-mono text-xs text-slate-400">{occupant.student_id}</p>
+            <p className="mt-0.5 font-mono text-[12px] text-slate-400">{occupant.student_id}</p>
           )}
         </div>
       </div>
@@ -93,7 +93,7 @@ export default async function ProfilePage() {
 
       {/* ── Booking history ──────────────────────────────────────── */}
       {bookings.length > 0 && (
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
           <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
             <BedDouble className="h-4 w-4 text-slate-400" />
             <h2 className="text-sm font-semibold text-slate-800">Booking History</h2>
@@ -126,7 +126,7 @@ export default async function ProfilePage() {
       )}
 
       {/* ── Account info ─────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
         <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
           <Shield className="h-4 w-4 text-slate-400" />
           <h2 className="text-sm font-semibold text-slate-800">Account</h2>
@@ -160,7 +160,7 @@ export default async function ProfilePage() {
       <form action="/api/auth/signout" method="POST">
         <button
           type="submit"
-          className="w-full rounded-xl border border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100"
+          className="w-full rounded-2xl border border-red-200 bg-red-50 py-3.5 text-[14px] font-semibold text-red-600 transition-all hover:bg-red-100 active:scale-[0.99]"
         >
           Sign out
         </button>
