@@ -1,20 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, Users, Search, Pencil, Upload } from 'lucide-react'
+import { Plus, Users, Search, Upload } from 'lucide-react'
 
 import { getOccupants } from '@/lib/data/occupants'
-import { initials } from '@/lib/utils'
-import { DeleteOccupantButton } from '@/components/occupants/delete-occupant-button'
+import { OccupantsTable, type OccupantRow } from '@/components/occupants/occupants-table'
 
 export const metadata: Metadata = { title: 'Occupants' }
-
-const STATUS_STYLES: Record<string, string> = {
-  active:      'bg-success-subtle text-success border-success/20',
-  pending:     'bg-warning-subtle text-warning-fg border-warning/20',
-  checked_out: 'bg-surface-sunken text-text-secondary border-border',
-  suspended:   'bg-danger-subtle text-danger border-danger/20',
-  blacklisted: 'bg-danger-subtle text-danger border-danger/20',
-}
 
 export default async function OccupantsPage({
   searchParams,
@@ -95,86 +86,27 @@ export default async function OccupantsPage({
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Phone</th>
-                <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary sm:table-cell">Institution</th>
-                <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary lg:table-cell">Status</th>
-                <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary xl:table-cell">Room</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {occupants.map((o) => {
-                const activeBooking = (Array.isArray(o.bookings) ? o.bookings : []).find(
-                  (b) => b.status === 'checked_in'
-                )
-                const room = activeBooking?.room
-                  ? Array.isArray(activeBooking.room) ? activeBooking.room[0] : activeBooking.room
-                  : null
-
-                return (
-                  <tr key={o.id} className="hover:bg-surface-raised transition-colors">
-                    <td className="px-4 py-3">
-                      <Link href={`/occupants/${o.id}`} className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-xs font-semibold text-brand">
-                          {o.photo_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={o.photo_url} alt="" className="h-8 w-8 rounded-full object-cover" />
-                          ) : (
-                            initials(`${o.first_name} ${o.last_name}`)
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-text-primary hover:text-brand transition-colors">
-                            {o.first_name} {o.last_name}
-                          </p>
-                          {o.student_id && (
-                            <p className="ref-number text-[11px] text-text-tertiary">{o.student_id}</p>
-                          )}
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-text-secondary">{o.phone}</td>
-                    <td className="hidden px-4 py-3 sm:table-cell">
-                      <p className="truncate text-sm text-text-secondary">{o.institution ?? '—'}</p>
-                    </td>
-                    <td className="hidden px-4 py-3 lg:table-cell">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize ${
-                          STATUS_STYLES[o.status] ?? 'bg-surface-sunken text-text-secondary border-border'
-                        }`}
-                      >
-                        {o.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="hidden px-4 py-3 xl:table-cell text-sm text-text-secondary">
-                      {room ? `Room ${room.room_number}` : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link
-                          href={`/occupants/${o.id}/edit`}
-                          title="Edit occupant"
-                          className="rounded p-1.5 text-text-disabled hover:text-brand hover:bg-brand/10 transition-colors"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Link>
-                        <DeleteOccupantButton
-                          occupantId={o.id}
-                          occupantName={`${o.first_name} ${o.last_name}`}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <OccupantsTable
+          occupants={occupants.map((o): OccupantRow => {
+            const activeBooking = (Array.isArray(o.bookings) ? o.bookings : []).find(
+              (b) => b.status === 'checked_in'
+            )
+            const room = activeBooking?.room
+              ? Array.isArray(activeBooking.room) ? activeBooking.room[0] : activeBooking.room
+              : null
+            return {
+              id:          o.id,
+              first_name:  o.first_name,
+              last_name:   o.last_name,
+              photo_url:   o.photo_url ?? null,
+              student_id:  o.student_id ?? null,
+              phone:       o.phone ?? null,
+              institution: o.institution ?? null,
+              status:      o.status,
+              roomLabel:   room ? `Room ${room.room_number}` : null,
+            }
+          })}
+        />
       )}
     </div>
   )

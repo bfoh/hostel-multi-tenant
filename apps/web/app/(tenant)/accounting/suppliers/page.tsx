@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, ArrowRight, Phone, Mail } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 import { getSuppliers } from '@/lib/data/suppliers'
 import { formatGHS } from '@/lib/utils'
 import { ExportCsvButton } from '@/components/accounting/export-csv-button'
+import { SuppliersTable } from '@/components/accounting/suppliers-table'
 
 export const metadata: Metadata = { title: 'Suppliers' }
 
@@ -77,65 +78,7 @@ export default async function SuppliersPage({
         </Link>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-        {suppliers.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-text-tertiary">No suppliers yet.</p>
-        ) : (
-          <table className="w-full min-w-[900px]">
-            <thead className="bg-surface-raised">
-              <tr className="border-b border-border">
-                <th className="px-4 py-2.5 text-left text-[11px] font-medium text-text-tertiary">Supplier</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-medium text-text-tertiary w-48">Contact</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-medium text-text-tertiary w-32">TIN</th>
-                <th className="px-4 py-2.5 text-right text-[11px] font-medium text-text-tertiary w-24">Terms</th>
-                <th className="px-4 py-2.5 text-right text-[11px] font-medium text-text-tertiary w-32">Open balance</th>
-                <th className="px-4 py-2.5 text-right text-[11px] font-medium text-text-tertiary w-20"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {suppliers.map((s) => (
-                <tr key={s.id} className="hover:bg-surface-raised/50 transition-colors">
-                  <td className="px-4 py-2.5">
-                    <Link href={`/accounting/suppliers/${s.id}`} className="text-sm font-medium text-text-primary hover:text-brand transition-colors">
-                      {s.name}
-                    </Link>
-                    {!s.is_active && (
-                      <span className="ml-2 inline-block rounded-full bg-surface-raised px-1.5 py-0 text-[10px] text-text-tertiary">inactive</span>
-                    )}
-                    {s.default_currency !== 'GHS' && (
-                      <span className="ml-2 inline-block rounded-full bg-brand/10 px-1.5 py-0 text-[10px] font-semibold text-brand">{s.default_currency}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-xs text-text-secondary">
-                    <div className="flex flex-wrap gap-2">
-                      {s.phone && <a href={`tel:${s.phone}`} className="inline-flex items-center gap-1 hover:text-brand transition-colors"><Phone className="h-3 w-3" />{s.phone}</a>}
-                      {s.email && <a href={`mailto:${s.email}`} className="inline-flex items-center gap-1 hover:text-brand transition-colors"><Mail className="h-3 w-3" />{s.email}</a>}
-                    </div>
-                    {s.contact_name && <p className="mt-0.5 text-text-tertiary">{s.contact_name}</p>}
-                  </td>
-                  <td className="px-4 py-2.5 text-xs font-mono text-text-secondary">{s.tin ?? '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-xs tabular-nums text-text-secondary">{s.payment_terms_days}d</td>
-                  <td className="px-4 py-2.5 text-right">
-                    {(s.openBalance ?? 0) > 0 ? (
-                      <>
-                        <p className="text-sm font-semibold currency-amount text-text-primary">{formatGHS(s.openBalance ?? 0)}</p>
-                        <p className="mt-0.5 text-[10px] text-text-tertiary">{s.openCount} bill{s.openCount === 1 ? '' : 's'}</p>
-                      </>
-                    ) : (
-                      <span className="text-xs text-text-tertiary">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Link href={`/accounting/suppliers/${s.id}`} className="inline-flex items-center gap-0.5 text-xs text-brand hover:opacity-80 transition-opacity">
-                      Open <ArrowRight className="h-3 w-3" />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <SuppliersTable suppliers={suppliers} />
     </div>
   )
 }
