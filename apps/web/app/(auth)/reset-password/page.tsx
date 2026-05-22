@@ -75,8 +75,9 @@ function ResetPasswordForm() {
       return
     }
 
-    // 3. Sign out other sessions, then send them to login.
-    await supabase.auth.signOut({ scope: 'others' })
+    // 3. Sign out everywhere — including this session — so the user must
+    // log in again with the new password instead of being auto-signed-in.
+    await supabase.auth.signOut()
     router.push('/login?reset=success')
   }
 
