@@ -111,7 +111,7 @@ export async function getRevenuePointSales(
 
   const { data } = await (supabase as any)
     .from('revenue_point_sales')
-    .select('id, description, quantity, total_amount, payment_method, sold_at')
+    .select('id, description, quantity, total_amount, payment_method, sold_at, status, customer_name, entry_token')
     .eq('tenant_id', tenantId)
     .eq('revenue_point_id', revenuePointId)
     .order('sold_at', { ascending: false })

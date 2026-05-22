@@ -10,8 +10,19 @@ import { POSClient } from './pos-client'
 import { PublicConfigEditor } from '@/components/revenue-points/public-config-editor'
 import { VerifyCodeWidget } from '@/components/revenue-points/verify-code-widget'
 import { LaundryQueue } from '@/components/revenue-points/laundry-queue'
+import { SettleSaleButton } from '@/components/revenue-points/settle-sale-button'
 
 export const metadata: Metadata = { title: 'Point of Sale' }
+
+const SALE_STATUS_TONE: Record<string, string> = {
+  pending_pickup: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  completed:      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  collected:      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  received:       'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  washing:        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  ready:          'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  cancelled:      'bg-gray-100 text-gray-500 line-through',
+}
 
 export default async function RevenuePointPOSPage({
   params,
@@ -107,18 +118,33 @@ export default async function RevenuePointPOSPage({
                 <th className="px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-text-tertiary">Qty</th>
                 <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Amount</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Method</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Status</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary hidden md:table-cell">Time</th>
+                <th className="px-4 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {recentSales.map((s) => (
                 <tr key={s.id} className="hover:bg-surface-raised transition-colors">
-                  <td className="px-4 py-2 text-text-primary">{s.itemName}</td>
+                  <td className="px-4 py-2 text-text-primary">
+                    {s.itemName}
+                    {s.customer_name && <p className="text-[11px] text-text-tertiary">{s.customer_name}</p>}
+                  </td>
                   <td className="px-4 py-2 text-center text-text-secondary">{s.quantity}</td>
                   <td className="px-4 py-2 text-right font-mono font-semibold text-text-primary">{formatGHS(s.total_amount)}</td>
                   <td className="px-4 py-2 text-text-secondary text-xs capitalize">{s.payment_method?.replace(/_/g, ' ')}</td>
+                  <td className="px-4 py-2">
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${SALE_STATUS_TONE[s.status] ?? 'bg-surface-raised text-text-secondary'}`}>
+                      {s.status === 'pending_pickup' ? 'awaiting cash' : (s.status ?? 'completed')}
+                    </span>
+                  </td>
                   <td className="px-4 py-2 text-text-tertiary text-xs hidden md:table-cell">
                     {s.sold_at ? new Date(s.sold_at).toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    {s.status === 'pending_pickup' && (
+                      <SettleSaleButton saleId={s.id} amountLabel={formatGHS(s.total_amount)} />
+                    )}
                   </td>
                 </tr>
               ))}
