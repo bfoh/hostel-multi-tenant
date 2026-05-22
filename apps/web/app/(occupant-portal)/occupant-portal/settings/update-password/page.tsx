@@ -57,20 +57,20 @@ export default function UpdatePasswordPage() {
   }
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-2">
+      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-slate-200/70 bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_28px_-18px_rgba(16,24,40,0.20)]">
 
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
             <KeyRound className="h-7 w-7 text-slate-500" />
           </div>
-          <h1 className="text-xl font-bold text-slate-800">Set new password</h1>
-          <p className="mt-1 text-sm text-slate-500">Choose a strong password for your account.</p>
+          <h1 className="text-[18px] font-bold tracking-tight text-slate-900">Set new password</h1>
+          <p className="mt-1 text-[13px] text-slate-500">Choose a strong password for your account.</p>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">New password</label>
+            <label className="mb-1.5 block text-[13px] font-semibold text-slate-700">New password</label>
             <div className="relative">
               <input
                 type={showPw ? 'text' : 'password'}
@@ -79,7 +79,7 @@ export default function UpdatePasswordPage() {
                 placeholder="Min. 8 characters"
                 required
                 minLength={8}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm text-slate-800 outline-none transition-colors focus:border-slate-400"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-[14px] text-slate-800 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
               />
               <button
                 type="button"
@@ -92,25 +92,25 @@ export default function UpdatePasswordPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Confirm password</label>
+            <label className="mb-1.5 block text-[13px] font-semibold text-slate-700">Confirm password</label>
             <input
               type={showPw ? 'text' : 'password'}
               value={confirm}
               onChange={e => setConfirm(e.target.value)}
               placeholder="Repeat new password"
               required
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition-colors focus:border-slate-400"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-800 outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
             />
           </div>
 
           {error && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-800 py-3.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 text-[14px] font-bold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update password'}
           </button>

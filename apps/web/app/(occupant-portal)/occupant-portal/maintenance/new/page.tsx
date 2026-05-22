@@ -38,9 +38,9 @@ export default async function NewMaintenancePage() {
       </div>
 
       <div>
-        <h1 className="text-lg font-semibold text-slate-800">Report an Issue</h1>
+        <h1 className="text-[18px] font-bold tracking-tight text-slate-900">Report an issue</h1>
         {room && (
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="mt-0.5 text-[12px] text-slate-500">
             Room {room.room_number}{room.block ? ` · ${room.block}` : ''}
           </p>
         )}
