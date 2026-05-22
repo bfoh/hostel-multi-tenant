@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { ProfileForm } from '@/components/settings/profile-form'
 import { BrandingForm } from '@/components/settings/branding-form'
+import { DigestSettingsForm } from '@/components/settings/digest-settings-form'
 import { BankDepositForm } from '@/components/settings/bank-deposit-form'
 import { NotificationsForm } from '@/components/settings/notifications-form'
 import { PasswordForm } from '@/components/settings/password-form'
@@ -21,6 +22,7 @@ const TABS = [
   { value: 'profile',       label: 'Profile'       },
   { value: 'branding',      label: 'Branding'      },
   { value: 'notifications', label: 'Notifications' },
+  { value: 'digest',        label: 'Digest'        },
   { value: 'security',      label: 'Security'      },
   { value: 'billing',       label: 'Billing'       },
 ]
@@ -42,7 +44,9 @@ async function getTenant() {
       status, plan, trial_ends_at,
       bank_name, bank_branch, bank_account_name, bank_account_number,
       bank_swift_code, bank_instructions, bank_deposits_enabled,
-      paystack_subaccount_code
+      paystack_subaccount_code,
+      daily_digest_enabled, daily_digest_time, daily_digest_channels,
+      daily_digest_recipients, daily_digest_paused_until
     `)
     .eq('id', tenantId)
     .single()
@@ -289,6 +293,32 @@ export default async function SettingsPage({
                 </div>
                 <NotificationsForm tenant={tenant} />
                 <PushToggle />
+              </section>
+            )}
+
+            {tab === 'digest' && (
+              <section className="space-y-4">
+                <div>
+                  <h2 className="text-base font-semibold text-text-primary">Daily digest</h2>
+                  <p className="mt-0.5 text-sm text-text-secondary">
+                    Owners get a one-screen summary of every revenue stream, occupancy,
+                    cash variance, and open issues — sent automatically each evening.
+                  </p>
+                </div>
+                <DigestSettingsForm
+                  initial={{
+                    enabled:     (tenant as any).daily_digest_enabled ?? true,
+                    time:        (tenant as any).daily_digest_time ?? '19:00',
+                    channels:    (tenant as any).daily_digest_channels ?? { sms: true, email: true, push: true },
+                    recipients:  (tenant as any).daily_digest_recipients ?? [],
+                    pausedUntil: (tenant as any).daily_digest_paused_until ?? null,
+                  }}
+                  primary={{
+                    phone: (tenant as any).contact_phone ?? null,
+                    email: (tenant as any).contact_email ?? null,
+                  }}
+                  timezone={(tenant as any).timezone ?? 'Africa/Accra'}
+                />
               </section>
             )}
 
