@@ -3,6 +3,8 @@ import { setupPush } from './push'
 import { setupDeepLinks, navigateWebview } from './deep-links'
 import { gateBiometric } from './biometric'
 import { setupCameraBridge } from './camera-bridge'
+import { setupHapticsBridge } from './haptics-bridge'
+import { applyCachedTheme, refreshTheme } from './theming'
 import { log } from './log'
 
 const PORTAL_BASE = 'https://app.gh-hostels.com'
@@ -10,25 +12,31 @@ const PORTAL_BASE = 'https://app.gh-hostels.com'
 /**
  * Cold-start bootstrap. Order matters:
  *   1. Splash already showing (Capacitor)
- *   2. Biometric gate (native; skipped on non-native / no enrolment)
- *   3. Install JS bridges on `window` so the portal can call native
- *   4. Wire deep-link listener (push taps + universal links)
- *   5. Request push permission + register token
- *   6. Resolve role → owner goes to /owner-digest; occupants stay on portal default
- *   7. Hide splash so the webview takes over
- *
- * Phase 5 inserts cached theme apply first + fresh theme refresh after push.
+ *   2. Apply cached theme — status bar tints to last-known tenant brand
+ *      before any network call
+ *   3. Biometric gate (native; skipped on non-native / no enrolment)
+ *   4. Install JS bridges on `window` so the portal can call native
+ *   5. Wire deep-link listener (push taps + universal links)
+ *   6. Request push permission + register token
+ *   7. Resolve role → owners go to /owner-digest; occupants stay on portal default
+ *   8. Refresh tenant theme in the background (cache for next cold launch)
+ *   9. Hide splash so the webview takes over
  */
 async function main(): Promise<void> {
   log.info('boot: start')
+
+  await applyCachedTheme()
 
   const gate = await gateBiometric()
   if (gate === 'failed') log.warn('boot: biometric failed; continuing')
 
   setupCameraBridge()
+  setupHapticsBridge()
   setupDeepLinks()
+
   await setupPush((path) => navigateWebview(path))
   await routeByRole()
+  void refreshTheme()  // fire-and-forget; updates cache for next cold-launch
 
   setTimeout(() => SplashScreen.hide().catch(() => undefined), 700)
   log.info('boot: done')

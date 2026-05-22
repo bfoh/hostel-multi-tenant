@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, FileText, X, Camera } from 'lucide-react'
 import { useNativeCamera } from '@/lib/native/use-camera'
+import { haptics } from '@/lib/native/haptics'
 
 interface Props {
   bookingId:     string
@@ -55,9 +56,11 @@ export function DraftUploadForm({ bookingId, defaultAmount, defaultBank, color }
       const res  = await fetch('/api/occupant/bank-draft', { method: 'POST', body: fd })
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error ?? 'Submission failed')
+      haptics.success()
       router.refresh()
     } catch (e: any) {
       setError(e.message)
+      haptics.error()
     } finally {
       setSubmitting(false)
     }
