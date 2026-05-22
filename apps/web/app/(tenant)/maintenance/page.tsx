@@ -1,26 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, HardHat, AlertTriangle, CalendarClock, Zap } from 'lucide-react'
+import { Plus, HardHat, CalendarClock, Zap } from 'lucide-react'
 
 import { getMaintenanceRequests, getMaintenanceStats } from '@/lib/data/maintenance'
-import { formatDate } from '@/lib/utils'
+import { MaintenanceList, type MaintenanceRow } from '@/components/maintenance/maintenance-list'
 
 export const metadata: Metadata = { title: 'Maintenance' }
-
-const PRIORITY_STYLES: Record<string, string> = {
-  low:    'bg-surface-sunken text-text-secondary border-border',
-  medium: 'bg-brand-subtle text-brand border-brand/20',
-  high:   'bg-warning-subtle text-warning-fg border-warning/20',
-  urgent: 'bg-danger-subtle text-danger border-danger/20',
-}
-
-const STATUS_STYLES: Record<string, string> = {
-  open:        'bg-warning-subtle text-warning-fg border-warning/20',
-  in_progress: 'bg-brand-subtle text-brand border-brand/20',
-  on_hold:     'bg-surface-sunken text-text-secondary border-border',
-  completed:   'bg-success-subtle text-success border-success/20',
-  cancelled:   'bg-surface-sunken text-text-secondary border-border',
-}
 
 const STATUSES = [
   { value: 'all',         label: 'All' },
@@ -135,45 +120,24 @@ export default async function MaintenancePage({
           </Link>
         </div>
       ) : (
-        <div className="space-y-2">
-          {requests.map(req => {
+        <MaintenanceList
+          requests={requests.map((req: any): MaintenanceRow => {
             const room = Array.isArray(req.room) ? req.room[0] : req.room
             const contractor = Array.isArray(req.contractor) ? req.contractor[0] : req.contractor
-            return (
-              <Link key={req.id} href={`/maintenance/${req.id}`} className="block rounded-xl border border-border bg-surface p-4 hover:bg-surface-raised transition-colors">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="ref-number text-xs text-text-tertiary">{req.ref_number}</span>
-                      {req.priority === 'urgent' && (
-                        <AlertTriangle className="h-3.5 w-3.5 text-danger" />
-                      )}
-                    </div>
-                    <p className="mt-0.5 text-sm font-semibold text-text-primary">{req.title}</p>
-                    {req.description && (
-                      <p className="mt-0.5 text-xs text-text-secondary line-clamp-1">{req.description}</p>
-                    )}
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
-                      <span className="capitalize">{req.category.replace('_', ' ')}</span>
-                      {room && <span>Room {room.room_number}{room.block ? `, Block ${room.block}` : ''}</span>}
-                      {contractor && <span>Contractor: {contractor.name}</span>}
-                      <span>{formatDate(req.created_at)}</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize ${PRIORITY_STYLES[req.priority] ?? 'bg-surface-sunken text-text-secondary border-border'}`}>
-                      {req.priority}
-                    </span>
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize ${STATUS_STYLES[req.status] ?? 'bg-surface-sunken text-text-secondary border-border'}`}>
-                      {req.status.replace('_', ' ')}
-                    </span>
-                    <MaintenanceStatusAction requestId={req.id} currentStatus={req.status} />
-                  </div>
-                </div>
-              </Link>
-            )
+            return {
+              id:             req.id,
+              ref_number:     req.ref_number,
+              title:          req.title,
+              description:    req.description ?? null,
+              priority:       req.priority,
+              category:       req.category,
+              status:         req.status,
+              created_at:     req.created_at,
+              roomLabel:      room ? `Room ${room.room_number}${room.block ? `, Block ${room.block}` : ''}` : null,
+              contractorName: contractor?.name ?? null,
+            }
           })}
-        </div>
+        />
       )}
     </div>
   )
@@ -194,31 +158,3 @@ function KpiCard({ label, value, color }: { label: string; value: number; color:
   )
 }
 
-function MaintenanceStatusAction({ requestId, currentStatus }: { requestId: string; currentStatus: string }) {
-  if (currentStatus === 'completed' || currentStatus === 'cancelled') return null
-  const nextStatus = currentStatus === 'open' ? 'in_progress' : currentStatus === 'in_progress' ? 'completed' : null
-  if (!nextStatus) return null
-
-  return (
-    <form action={async () => {
-      'use server'
-      const { createClient } = await import('@/lib/supabase/server')
-      const { headers } = await import('next/headers')
-      const { revalidatePath } = await import('next/cache')
-      const headersList = await headers()
-      const tenantId = headersList.get('x-tenant-id')
-      if (!tenantId) return
-      const supabase = await createClient()
-      if (nextStatus === 'completed') {
-        await supabase.from('maintenance_requests').update({ status: 'completed', resolved_at: new Date().toISOString() }).eq('id', requestId).eq('tenant_id', tenantId)
-      } else {
-        await supabase.from('maintenance_requests').update({ status: nextStatus as 'in_progress' }).eq('id', requestId).eq('tenant_id', tenantId)
-      }
-      revalidatePath('/maintenance')
-    }}>
-      <button type="submit" className="text-[11px] text-brand hover:text-brand-hover transition-colors font-medium">
-        {nextStatus === 'in_progress' ? 'Start →' : 'Complete →'}
-      </button>
-    </form>
-  )
-}
