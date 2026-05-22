@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, Minus, Loader2 } from 'lucide-react'
+import { haptics } from '@/lib/native/haptics'
 
 interface Props {
   id:            string
@@ -28,7 +29,8 @@ export function MenuItemCard({ id, name, description, price_pesewas, photo_url, 
     const prev = qty
     setQty(next)
     setBusy(true)
-    try { await onChange(id, next) } catch { setQty(prev) }
+    haptics.light()
+    try { await onChange(id, next) } catch { setQty(prev); haptics.error() }
     setBusy(false)
   }
 
