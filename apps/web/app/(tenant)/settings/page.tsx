@@ -41,7 +41,7 @@ async function getTenant() {
       primary_color, accent_color, logo_url,
       currency, timezone,
       sms_enabled, email_enabled, momo_enabled,
-      inter_occupant_dm_enabled,
+      inter_occupant_dm_enabled, roommate_matching_enabled,
       status, plan, trial_ends_at,
       bank_name, bank_branch, bank_account_name, bank_account_number,
       bank_swift_code, bank_instructions, bank_deposits_enabled,

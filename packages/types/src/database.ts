@@ -43,6 +43,14 @@ type LostFoundStatus    = 'unclaimed' | 'claimed' | 'disposed'
 type SmsBlastStatus     = 'pending' | 'scheduled' | 'sent' | 'failed'
 type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete'
 
+type SleepSchedule = 'early_bird' | 'night_owl' | 'flexible'
+type StudyPreference = 'in_room_quiet' | 'in_room_background_noise' | 'library'
+type GuestFrequency = 'none' | 'rare' | 'frequent'
+type AcPreference = 'ac_cold' | 'fan_only' | 'no_preference'
+type ReligionType = 'christian' | 'muslim' | 'traditional' | 'other' | 'none' | 'prefer_not_to_say'
+type ReligiosityLevel = 'devout' | 'moderate' | 'not_religious'
+type RelationshipStatus = 'single' | 'in_relationship' | 'married'
+
 // ── Relationship helper ──────────────────────────────────────────────────────
 
 type Rel = {
@@ -112,6 +120,7 @@ export type Database = {
           website_content: Json | null
           widget_domains: string[]
           public_api_key: string | null
+          roommate_matching_enabled: boolean
           created_at: string
           updated_at: string
         }
@@ -167,6 +176,7 @@ export type Database = {
           website_content?: Json | null
           widget_domains?: string[]
           public_api_key?: string | null
+          roommate_matching_enabled?: boolean
         }
         Update: {
           slug?: string
@@ -219,6 +229,7 @@ export type Database = {
           website_content?: Json | null
           widget_domains?: string[]
           public_api_key?: string | null
+          roommate_matching_enabled?: boolean
         }
         Relationships: []
       }
@@ -451,6 +462,60 @@ export type Database = {
         }
         Relationships: [
           { foreignKeyName: 'occupants_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+        ]
+      }
+
+      occupant_matching_profiles: {
+        Row: {
+          id: string
+          tenant_id: string
+          occupant_id: string
+          cleanliness: number | null
+          sleep_schedule: SleepSchedule | null
+          study_preference: StudyPreference | null
+          guest_frequency: GuestFrequency | null
+          noise_tolerance: number | null
+          ac_preference: AcPreference | null
+          hobbies: string[]
+          religion: ReligionType | null
+          religiosity_level: ReligiosityLevel | null
+          relationship_status: RelationshipStatus | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          occupant_id: string
+          cleanliness?: number | null
+          sleep_schedule?: SleepSchedule | null
+          study_preference?: StudyPreference | null
+          guest_frequency?: GuestFrequency | null
+          noise_tolerance?: number | null
+          ac_preference?: AcPreference | null
+          hobbies?: string[]
+          religion?: ReligionType | null
+          religiosity_level?: ReligiosityLevel | null
+          relationship_status?: RelationshipStatus | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          cleanliness?: number | null
+          sleep_schedule?: SleepSchedule | null
+          study_preference?: StudyPreference | null
+          guest_frequency?: GuestFrequency | null
+          noise_tolerance?: number | null
+          ac_preference?: AcPreference | null
+          hobbies?: string[]
+          religion?: ReligionType | null
+          religiosity_level?: ReligiosityLevel | null
+          relationship_status?: RelationshipStatus | null
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: 'occupant_matching_profiles_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
+          { foreignKeyName: 'occupant_matching_profiles_occupant_id_fkey'; columns: ['occupant_id']; isOneToOne: false; referencedRelation: 'occupants'; referencedColumns: ['id'] }
         ]
       }
 

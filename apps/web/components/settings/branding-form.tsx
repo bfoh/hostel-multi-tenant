@@ -8,10 +8,11 @@ import { z } from 'zod'
 import { Upload, X, Loader2, Eye } from 'lucide-react'
 
 const schema = z.object({
-  primary_color: z.string().optional(),
-  accent_color:  z.string().optional(),
-  currency:      z.string().length(3).default('GHS'),
-  timezone:      z.string().default('Africa/Accra'),
+  primary_color:             z.string().optional(),
+  accent_color:              z.string().optional(),
+  currency:                  z.string().length(3).default('GHS'),
+  timezone:                  z.string().default('Africa/Accra'),
+  roommate_matching_enabled: z.boolean().default(false),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -26,6 +27,7 @@ interface Props {
     logo_url:      string | null
     currency:      string
     timezone:      string
+    roommate_matching_enabled: boolean
   }
 }
 
@@ -43,10 +45,11 @@ export function BrandingForm({ tenant }: Props) {
   const { control, register, handleSubmit, watch, formState: { errors, isSubmitting, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
     defaultValues: {
-      primary_color: tenant.primary_color ?? '#159d82',
-      accent_color:  tenant.accent_color  ?? '#F39C12',
-      currency:      tenant.currency,
-      timezone:      tenant.timezone,
+      primary_color:             tenant.primary_color ?? '#159d82',
+      accent_color:              tenant.accent_color  ?? '#F39C12',
+      currency:                  tenant.currency,
+      timezone:                  tenant.timezone,
+      roommate_matching_enabled: tenant.roommate_matching_enabled ?? false,
     },
   })
 
@@ -269,6 +272,39 @@ export function BrandingForm({ tenant }: Props) {
             <option value="America/New_York">America/New_York</option>
           </select>
         </div>
+      </div>
+
+      {/* Roommate Matching Toggle */}
+      <div className="border-t border-border pt-4">
+        <label className="flex cursor-pointer items-start gap-4 rounded-xl border border-border bg-surface-sunken p-4 hover:bg-surface-raised transition-colors">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-text-primary">Roommate Compatibility Matching</p>
+            <p className="mt-1 text-xs text-text-secondary">
+              Enable compatibility-based roommate assignments. When enabled, occupants booking shared rooms (capacity &gt; 1) will fill out a lifestyle survey. The system will auto-assign rooms to maximize roommate harmony, and staff will gain access to the Roommate Matching Dashboard.
+            </p>
+          </div>
+          <Controller
+            control={control}
+            name="roommate_matching_enabled"
+            render={({ field }) => (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={field.value}
+                onClick={() => field.onChange(!field.value)}
+                className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 focus:outline-none ${
+                  field.value ? 'bg-brand' : 'bg-border'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                    field.value ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            )}
+          />
+        </label>
       </div>
 
       {serverError && <div className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">{serverError}</div>}

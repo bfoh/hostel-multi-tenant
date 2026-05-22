@@ -62,6 +62,7 @@ const OPS_ITEMS: NavItem[] = [
   { label: 'Occupants',      href: '/occupants',      icon: Users,           anim: 'bounce' },
   { label: 'Rooms',          href: '/rooms',           icon: BedDouble,       anim: 'tilt'   },
   { label: 'Bookings',       href: '/bookings',        icon: CalendarCheck,   anim: 'flip'   },
+  { label: 'Roommate Match', href: '/bookings/matching', icon: Sparkles,        anim: 'pop'    },
   { label: 'Housekeeping',   href: '/housekeeping',    icon: Wrench,          anim: 'swing'  },
   { label: 'Maintenance',    href: '/maintenance',     icon: HardHat,         anim: 'bounce' },
   { label: 'Food Menu',      href: '/food/menu',       icon: Utensils,        anim: 'pop'    },

@@ -38,6 +38,8 @@ const schema = z.object({
   food_orders_enabled:   z.boolean().optional(),
   food_cutoff_time:      z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).nullable().optional(),
   food_ready_sms:        z.boolean().optional(),
+  // Roommate matching toggle
+  roommate_matching_enabled: z.boolean().optional(),
 })
 
 export async function PATCH(request: NextRequest) {

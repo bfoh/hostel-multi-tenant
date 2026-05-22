@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBookingConfirmation } from '@/lib/sms'
 import { sendEmail, bookingConfirmationHtml } from '@/lib/email'
 import { initBookingPayment } from '@/lib/booking-payment'
+import { calculateRoomHarmonyScore } from '@/lib/matching'
 
 const schema = z.object({
   category_id: z.string().uuid(),
@@ -16,6 +17,18 @@ const schema = z.object({
   institution: z.string().max(200).optional().nullable(),
   student_id:  z.string().max(50).optional().nullable(),
   notes:       z.string().max(500).optional().nullable(),
+  matching_profile: z.object({
+    cleanliness: z.number().int().min(1).max(5).nullable().optional(),
+    sleep_schedule: z.enum(['early_bird', 'night_owl', 'flexible']).nullable().optional(),
+    study_preference: z.enum(['in_room_quiet', 'in_room_background_noise', 'library']).nullable().optional(),
+    guest_frequency: z.enum(['none', 'rare', 'frequent']).nullable().optional(),
+    noise_tolerance: z.number().int().min(1).max(5).nullable().optional(),
+    ac_preference: z.enum(['ac_cold', 'fan_only', 'no_preference']).nullable().optional(),
+    hobbies: z.array(z.string()).default([]),
+    religion: z.enum(['christian', 'muslim', 'traditional', 'other', 'none', 'prefer_not_to_say']).nullable().optional(),
+    religiosity_level: z.enum(['devout', 'moderate', 'not_religious']).nullable().optional(),
+    relationship_status: z.enum(['single', 'in_relationship', 'married']).nullable().optional(),
+  }).nullable().optional(),
 })
 
 export async function POST(
@@ -28,7 +41,7 @@ export async function POST(
   // Resolve tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, is_active, paystack_subaccount_code')
+    .select('id, name, is_active, paystack_subaccount_code, roommate_matching_enabled')
     .eq('slug', slug)
     .single()
 
@@ -47,7 +60,7 @@ export async function POST(
   // Verify category belongs to this tenant
   const { data: category } = await supabase
     .from('room_categories')
-    .select('id, name, base_rate, rate_unit')
+    .select('id, name, base_rate, rate_unit, capacity')
     .eq('id', d.category_id)
     .eq('tenant_id', tenant.id)
     .eq('is_active', true)
@@ -78,9 +91,69 @@ export async function POST(
     .not('manual_status', 'in', '("maintenance","blocked")')
     .order('free_beds', { ascending: true })
 
-  const availableRoom = (roomCandidates ?? [])[0] as { room_id: string; free_beds: number; manual_status: string } | undefined
-  if (!availableRoom) {
+  if (!roomCandidates || roomCandidates.length === 0) {
     return NextResponse.json({ error: 'No rooms available in this category' }, { status: 409 })
+  }
+
+  let assignedRoomId = roomCandidates[0].room_id as string
+
+  // If roommate matching is enabled and room category capacity is shared (>1)
+  if (tenant.roommate_matching_enabled && category.capacity > 1) {
+    try {
+      const roomIds = roomCandidates.map(rc => rc.room_id as string)
+      // Fetch active bookings in these candidate rooms during the requested dates
+      const { data: activeBookings } = await supabase
+        .from('bookings')
+        .select('room_id, occupant_id')
+        .in('room_id', roomIds)
+        .lte('check_in_date', d.check_out_date)
+        .gte('check_out_date', d.check_in_date)
+        .in('status', ['pending_payment', 'confirmed', 'checked_in'])
+
+      if (activeBookings && activeBookings.length > 0) {
+        const occupantIds = Array.from(new Set(activeBookings.map(b => b.occupant_id)))
+        const { data: profiles } = await supabase
+          .from('occupant_matching_profiles')
+          .select('*')
+          .in('occupant_id', occupantIds)
+
+        const profileMap = new Map(profiles?.map(p => [p.occupant_id, p]) ?? [])
+
+        // Score each candidate room
+        const scoredRooms = roomCandidates.map(rc => {
+          // Get occupants in this room
+          const occupantIdsInRoom = activeBookings
+            .filter(b => b.room_id === rc.room_id)
+            .map(b => b.occupant_id)
+
+          const roomProfiles = occupantIdsInRoom
+            .map(oid => profileMap.get(oid))
+            .filter((p): p is NonNullable<typeof p> => !!p)
+
+          const targetProfile = d.matching_profile ?? null
+          const score = calculateRoomHarmonyScore(targetProfile, roomProfiles)
+
+          return {
+            room_id: rc.room_id as string,
+            free_beds: rc.free_beds as number,
+            score,
+          }
+        })
+
+        // Sort: highest compatibility first, then fewest free beds (compactness)
+        scoredRooms.sort((a, b) => {
+          if (b.score !== a.score) {
+            return b.score - a.score
+          }
+          return a.free_beds - b.free_beds
+        })
+
+        assignedRoomId = scoredRooms[0].room_id
+      }
+    } catch (err) {
+      console.error('[Roommate Matching] Error during automated room assignment:', err)
+      // Fallback to the first available room candidate (default behavior)
+    }
   }
 
   // Create or find occupant
@@ -130,7 +203,7 @@ export async function POST(
     .insert({
       tenant_id:      tenant.id,
       occupant_id:    occupantId,
-      room_id:        availableRoom.room_id,
+      room_id:        assignedRoomId,
       booking_ref:    bookingRef,
       check_in_date:  d.check_in_date,
       check_out_date: d.check_out_date,
@@ -148,6 +221,21 @@ export async function POST(
 
   if (bookingError || !booking) {
     return NextResponse.json({ error: bookingError?.message ?? 'Booking failed' }, { status: 500 })
+  }
+
+  // Save occupant matching profile if roommate matching is enabled and provided
+  if (tenant.roommate_matching_enabled && category.capacity > 1 && d.matching_profile) {
+    try {
+      await supabase
+        .from('occupant_matching_profiles')
+        .upsert({
+          tenant_id: tenant.id,
+          occupant_id: occupantId,
+          ...d.matching_profile,
+        }, { onConflict: 'tenant_id,occupant_id' })
+    } catch (err) {
+      console.error('[Roommate Matching] Error upserting matching profile:', err)
+    }
   }
 
   // Note: with multi-occupancy (migration 070), bed holds come from the
@@ -198,7 +286,7 @@ export async function POST(
     phone:       d.phone,
     firstName:   d.first_name,
     bookingRef:  booking.booking_ref,
-    roomNumber:  availableRoom.room_id,
+    roomNumber:  assignedRoomId,
     checkInDate: d.check_in_date,
     hostelName:  tenant.name,
     tenantId:    tenant.id,

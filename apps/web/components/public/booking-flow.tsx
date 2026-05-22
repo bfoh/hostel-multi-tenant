@@ -24,11 +24,25 @@ interface Tenant {
   name: string
   slug: string
   brandColor: string
+  roommate_matching_enabled?: boolean
 }
 
 interface BookingFlowProps {
   categories: Category[]
   tenant: Tenant
+}
+
+interface OccupantMatchingProfile {
+  cleanliness: number | null
+  sleep_schedule: 'early_bird' | 'night_owl' | 'flexible' | null
+  study_preference: 'in_room_quiet' | 'in_room_background_noise' | 'library' | null
+  guest_frequency: 'none' | 'rare' | 'frequent' | null
+  noise_tolerance: number | null
+  ac_preference: 'ac_cold' | 'fan_only' | 'no_preference' | null
+  hobbies: string[]
+  religion: 'christian' | 'muslim' | 'traditional' | 'other' | 'none' | 'prefer_not_to_say' | null
+  religiosity_level: 'devout' | 'moderate' | 'not_religious' | null
+  relationship_status: 'single' | 'in_relationship' | 'married' | null
 }
 
 /* ── Helpers ───────────────────────────────────────────────────────────── */
@@ -351,17 +365,96 @@ interface FormData {
   notes: string
 }
 
+function CardSelector<T extends string | number>({
+  options,
+  value,
+  onChange,
+  brandColor,
+}: {
+  options: { value: T; label: string; desc?: string; icon: string }[]
+  value: T | null
+  onChange: (val: T) => void
+  brandColor: string
+}) {
+  return (
+    <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+      {options.map(opt => {
+        const isSelected = value === opt.value
+        return (
+          <button
+            key={String(opt.value)}
+            type="button"
+            onClick={() => onChange(opt.value === value ? null as any : opt.value)}
+            className="flex flex-col text-left p-4 rounded-xl border transition-all duration-200 focus:outline-none hover:shadow-sm"
+            style={{
+              borderColor: isSelected ? brandColor : '#E5E7EB',
+              backgroundColor: isSelected ? `${brandColor}0a` : '#FFFFFF',
+              boxShadow: isSelected ? `0 0 0 1px ${brandColor}` : undefined,
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xl">{opt.icon}</span>
+              <span className="text-sm font-semibold text-gray-800">{opt.label}</span>
+            </div>
+            {opt.desc && (
+              <span className="mt-1 text-[11px] text-gray-500 leading-normal">{opt.desc}</span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function CompactSelector<T extends string | number>({
+  options,
+  value,
+  onChange,
+  brandColor,
+}: {
+  options: { value: T; label: string; icon: string }[]
+  value: T | null
+  onChange: (val: T) => void
+  brandColor: string
+}) {
+  return (
+    <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
+      {options.map(opt => {
+        const isSelected = value === opt.value
+        return (
+          <button
+            key={String(opt.value)}
+            type="button"
+            onClick={() => onChange(opt.value === value ? null as any : opt.value)}
+            className="flex items-center gap-2 text-left px-3 py-2.5 rounded-xl border transition-all duration-200 focus:outline-none hover:shadow-sm"
+            style={{
+              borderColor: isSelected ? brandColor : '#E5E7EB',
+              backgroundColor: isSelected ? `${brandColor}0a` : '#FFFFFF',
+              boxShadow: isSelected ? `0 0 0 1px ${brandColor}` : undefined,
+            }}
+          >
+            <span className="text-lg">{opt.icon}</span>
+            <span className="text-xs font-semibold text-gray-700">{opt.label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function DetailsForm({
   category,
   brandColor,
+  roommate_matching_enabled,
   onBack,
   onSubmit,
   loading,
 }: {
   category: Category
   brandColor: string
+  roommate_matching_enabled: boolean
   onBack: () => void
-  onSubmit: (data: FormData) => void
+  onSubmit: (data: FormData & { matching_profile: OccupantMatchingProfile | null }) => void
   loading: boolean
 }) {
   const today = new Date().toISOString().split('T')[0]
@@ -377,13 +470,107 @@ function DetailsForm({
     notes: '',
   })
 
+  const [matchingProfile, setMatchingProfile] = useState<OccupantMatchingProfile>({
+    cleanliness: null,
+    sleep_schedule: null,
+    study_preference: null,
+    guest_frequency: null,
+    noise_tolerance: null,
+    ac_preference: null,
+    hobbies: [],
+    religion: null,
+    religiosity_level: null,
+    relationship_status: null,
+  })
+
+  const cleanlinessOptions = [
+    { value: 1, label: 'Casual', desc: 'Relaxed about tidy spaces', icon: '🛋️' },
+    { value: 2, label: 'Moderate', desc: 'Tidy but not obsessed', icon: '🧸' },
+    { value: 3, label: 'Clean', desc: 'Keep things organized', icon: '🧼' },
+    { value: 4, label: 'Very Neat', desc: 'Regular cleaning schedule', icon: '✨' },
+    { value: 5, label: 'Spotless', desc: 'Highly organized/meticulous', icon: '🧹' },
+  ]
+
+  const sleepOptions = [
+    { value: 'early_bird', label: 'Early Bird', desc: 'Sleep early, wake up early', icon: '🌅' },
+    { value: 'night_owl', label: 'Night Owl', desc: 'Sleep late, wake up late', icon: '🦉' },
+    { value: 'flexible', label: 'Flexible', desc: 'Varies day-to-day', icon: '🔄' },
+  ]
+
+  const studyOptions = [
+    { value: 'in_room_quiet', label: 'Quiet Room', desc: 'Need silence in room', icon: '🤫' },
+    { value: 'in_room_background_noise', label: 'BG Noise', desc: 'Fine with normal noise', icon: '🎧' },
+    { value: 'library', label: 'Library/Desk', desc: 'Usually study elsewhere', icon: '🏫' },
+  ]
+
+  const guestOptions = [
+    { value: 'none', label: 'No Guests', desc: 'Prefer a guest-free room', icon: '🚫' },
+    { value: 'rare', label: 'Occasional', desc: 'Rare/short visits only', icon: '👥' },
+    { value: 'frequent', label: 'Frequent', desc: 'Host friends/study groups', icon: '🎉' },
+  ]
+
+  const noiseOptions = [
+    { value: 1, label: 'Silent', desc: 'Need absolute quiet to rest', icon: '🔇' },
+    { value: 2, label: 'Low Noise', desc: 'Can handle quiet talk', icon: '🔉' },
+    { value: 3, label: 'Moderate', desc: 'Average noise levels', icon: '🔊' },
+    { value: 4, label: 'Loud', desc: 'Can handle active room', icon: '⚡' },
+    { value: 5, label: 'Heavy', desc: 'Can sleep through anything', icon: '🎸' },
+  ]
+
+  const acOptions = [
+    { value: 'ac_cold', label: 'Cold AC', desc: 'AC running cold preferred', icon: '❄️' },
+    { value: 'fan_only', label: 'Fan Only', desc: 'Prefer fan or natural breeze', icon: '🌀' },
+    { value: 'no_preference', label: 'No Preference', desc: 'Either is perfectly fine', icon: '🍃' },
+  ]
+
+  const religionOptions = [
+    { value: 'christian', label: 'Christian', icon: '⛪' },
+    { value: 'muslim', label: 'Muslim', icon: '🕌' },
+    { value: 'traditional', label: 'Traditional', icon: '⛩️' },
+    { value: 'other', label: 'Other', icon: '🕊️' },
+    { value: 'none', label: 'None', icon: '🤷' },
+    { value: 'prefer_not_to_say', label: 'Skip/Private', icon: '🤐' },
+  ]
+
+  const religiosityOptions = [
+    { value: 'devout', label: 'Devout', desc: 'Faith shapes my daily routine', icon: '🔥' },
+    { value: 'moderate', label: 'Moderate', desc: 'Observe core habits/holidays', icon: '⚖️' },
+    { value: 'not_religious', label: 'Not Religious', desc: 'Values are secular/non-practicing', icon: '🌊' },
+  ]
+
+  const relationshipOptions = [
+    { value: 'single', label: 'Single', icon: '👤' },
+    { value: 'in_relationship', label: 'Relationship', icon: '💖' },
+    { value: 'married', label: 'Married', icon: '💍' },
+  ]
+
+  const hobbyOptions = [
+    'Gaming 🎮', 'Reading 📚', 'Fitness 🏋️', 'Cooking 🍳', 'Football ⚽', 
+    'Music 🎵', 'Coding 💻', 'Art 🎨', 'Movies 🎬', 'Travel ✈️', 
+    'Photography 📷', 'Writing ✍️', 'Dancing 💃', 'Anime ⛩️'
+  ]
+
   function set(k: keyof FormData, v: string) {
     setForm(f => ({ ...f, [k]: v }))
   }
 
+  function toggleHobby(hobby: string) {
+    setMatchingProfile(prev => {
+      const hobbies = prev.hobbies || []
+      if (hobbies.includes(hobby)) {
+        return { ...prev, hobbies: hobbies.filter(h => h !== hobby) }
+      } else {
+        return { ...prev, hobbies: [...hobbies, hobby] }
+      }
+    })
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    onSubmit(form)
+    onSubmit({
+      ...form,
+      matching_profile: roommate_matching_enabled && category.capacity > 1 ? matchingProfile : null,
+    })
   }
 
   return (
@@ -513,6 +700,149 @@ function DetailsForm({
           </div>
         </div>
       </fieldset>
+
+      {/* Roommate Matching Questionnaire (Optional) */}
+      {roommate_matching_enabled && category.capacity > 1 && (
+        <fieldset className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-6">
+          <legend className="px-1 text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-indigo-500 animate-pulse" />
+            Roommate Matching Survey (Optional)
+          </legend>
+          <p className="text-xs text-gray-500 -mt-2">
+            Answer these optional lifestyle questions to help us place you in a room with compatible roommates.
+          </p>
+
+          <div className="space-y-5">
+            {/* Cleanliness */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-gray-700">Cleanliness & Tidiness</label>
+              <CardSelector
+                options={cleanlinessOptions}
+                value={matchingProfile.cleanliness}
+                onChange={val => setMatchingProfile(p => ({ ...p, cleanliness: val }))}
+                brandColor={brandColor}
+              />
+            </div>
+
+            {/* Sleep Schedule */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-gray-700">Sleep Schedule</label>
+              <CardSelector
+                options={sleepOptions}
+                value={matchingProfile.sleep_schedule}
+                onChange={val => setMatchingProfile(p => ({ ...p, sleep_schedule: val as any }))}
+                brandColor={brandColor}
+              />
+            </div>
+
+            {/* Study Preference */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-gray-700">Study Preference</label>
+              <CardSelector
+                options={studyOptions}
+                value={matchingProfile.study_preference}
+                onChange={val => setMatchingProfile(p => ({ ...p, study_preference: val as any }))}
+                brandColor={brandColor}
+              />
+            </div>
+
+            {/* Guest Frequency */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-gray-700">Guest Frequency</label>
+              <CardSelector
+                options={guestOptions}
+                value={matchingProfile.guest_frequency}
+                onChange={val => setMatchingProfile(p => ({ ...p, guest_frequency: val as any }))}
+                brandColor={brandColor}
+              />
+            </div>
+
+            {/* Noise Tolerance */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-gray-700">Noise Tolerance</label>
+              <CardSelector
+                options={noiseOptions}
+                value={matchingProfile.noise_tolerance}
+                onChange={val => setMatchingProfile(p => ({ ...p, noise_tolerance: val }))}
+                brandColor={brandColor}
+              />
+            </div>
+
+            {/* AC & Air Preference */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-gray-700">Air Conditioning Preference</label>
+              <CardSelector
+                options={acOptions}
+                value={matchingProfile.ac_preference}
+                onChange={val => setMatchingProfile(p => ({ ...p, ac_preference: val as any }))}
+                brandColor={brandColor}
+              />
+            </div>
+
+            <div className="border-t border-gray-100 pt-4 grid gap-4 sm:grid-cols-2">
+              {/* Religion */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-gray-700">Religion</label>
+                <CompactSelector
+                  options={religionOptions}
+                  value={matchingProfile.religion}
+                  onChange={val => setMatchingProfile(p => ({ ...p, religion: val as any }))}
+                  brandColor={brandColor}
+                />
+              </div>
+
+              {/* Relationship Status */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-gray-700">Relationship/Marital Status</label>
+                <CompactSelector
+                  options={relationshipOptions}
+                  value={matchingProfile.relationship_status}
+                  onChange={val => setMatchingProfile(p => ({ ...p, relationship_status: val as any }))}
+                  brandColor={brandColor}
+                />
+              </div>
+            </div>
+
+            {/* Religiosity Level */}
+            {matchingProfile.religion && matchingProfile.religion !== 'none' && matchingProfile.religion !== 'prefer_not_to_say' && (
+              <div className="space-y-2 border-t border-gray-100 pt-4">
+                <label className="block text-xs font-semibold text-gray-700">Level of Religiosity</label>
+                <CardSelector
+                  options={religiosityOptions}
+                  value={matchingProfile.religiosity_level}
+                  onChange={val => setMatchingProfile(p => ({ ...p, religiosity_level: val as any }))}
+                  brandColor={brandColor}
+                />
+              </div>
+            )}
+
+            {/* Hobbies */}
+            <div className="space-y-2 border-t border-gray-100 pt-4">
+              <label className="block text-xs font-semibold text-gray-700">Hobbies & Interests (Select multiple)</label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {hobbyOptions.map(hobby => {
+                  const isSelected = matchingProfile.hobbies?.includes(hobby)
+                  return (
+                    <button
+                      key={hobby}
+                      type="button"
+                      onClick={() => toggleHobby(hobby)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-200 focus:outline-none"
+                      style={{
+                        borderColor: isSelected ? brandColor : '#E5E7EB',
+                        backgroundColor: isSelected ? `${brandColor}15` : '#F9FAFB',
+                        color: isSelected ? brandColor : '#4B5563',
+                      }}
+                    >
+                      {hobby}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </fieldset>
+      )}
 
       {/* Notes */}
       <div>
@@ -773,7 +1103,7 @@ export function BookingFlow({ categories, tenant }: BookingFlowProps) {
     }
   }, [])
 
-  async function handleSubmit(data: FormData) {
+  async function handleSubmit(data: FormData & { matching_profile?: OccupantMatchingProfile | null }) {
     if (!selectedCategory) return
     setLoading(true)
     setError(null)
@@ -793,6 +1123,7 @@ export function BookingFlow({ categories, tenant }: BookingFlowProps) {
           institution:    data.institution || null,
           student_id:     data.student_id || null,
           notes:          data.notes || null,
+          matching_profile: data.matching_profile || null,
         }),
       })
 
@@ -858,6 +1189,7 @@ export function BookingFlow({ categories, tenant }: BookingFlowProps) {
         <DetailsForm
           category={selectedCategory}
           brandColor={tenant.brandColor}
+          roommate_matching_enabled={tenant.roommate_matching_enabled ?? false}
           loading={loading}
           onBack={() => setStep(1)}
           onSubmit={handleSubmit}

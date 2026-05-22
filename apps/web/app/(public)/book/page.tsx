@@ -48,6 +48,7 @@ interface TenantRow {
   address_region: string | null
   website_url: string | null
   website_content: CmsContent
+  roommate_matching_enabled?: boolean
 }
 
 async function getTenantFromRequest(): Promise<TenantRow | null> {
@@ -58,7 +59,7 @@ async function getTenantFromRequest(): Promise<TenantRow | null> {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_line1, address_city, address_region, website_url, website_content')
+    .select('id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_line1, address_city, address_region, website_url, website_content, roommate_matching_enabled')
     .eq('id', tenantId)
     .single()
 
@@ -279,7 +280,7 @@ export default async function PublicBookingPage() {
             ) : (
               <BookingFlow
                 categories={categories}
-                tenant={{ id: tenant.id, name: tenant.name, slug: tenant.slug, brandColor }}
+                tenant={{ id: tenant.id, name: tenant.name, slug: tenant.slug, brandColor, roommate_matching_enabled: tenant.roommate_matching_enabled ?? false }}
               />
             )}
           </section>
