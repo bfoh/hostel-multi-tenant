@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
@@ -33,19 +32,8 @@ export default async function RoommateMatchingPage() {
     .eq('tenant_id', tenantId)
     .maybeSingle()
 
-  const headersList = await headers()
-  const headerRole  = headersList.get('x-tenant-role') ?? null
-  const dbRole      = (member as any)?.role        ?? null
-  const dbActive    = (member as any)?.is_active   ?? null
-
-  // Diagnostic — remove after the redirect bug is confirmed fixed in prod.
-  console.log('[roommate-match] role gate', {
-    tenantId,
-    userId:     user.id,
-    headerRole,
-    dbRole,
-    dbActive,
-  })
+  const dbRole   = (member as any)?.role      ?? null
+  const dbActive = (member as any)?.is_active ?? null
 
   const effectiveRole = dbActive ? dbRole : null
   if (!effectiveRole || !ALLOWED_ROLES.includes(effectiveRole as (typeof ALLOWED_ROLES)[number])) {
