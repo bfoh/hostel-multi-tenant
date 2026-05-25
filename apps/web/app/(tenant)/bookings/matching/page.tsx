@@ -1,11 +1,14 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { MatchingDashboard } from '@/components/bookings/matching-dashboard'
 
 export const metadata: Metadata = { title: 'Roommate Matching' }
+
+const ALLOWED_ROLES = ['owner', 'manager', 'receptionist'] as const
 
 export default async function RoommateMatchingPage() {
   const tenantId = await getServerTenantId()
@@ -13,13 +16,41 @@ export default async function RoommateMatchingPage() {
     redirect('/login')
   }
 
+  const supabase = createAdminClient()
+
+  // Resolve caller's tenant_members.role from the DB directly. We used to
+  // trust the x-tenant-role header set by middleware, but that header can
+  // be missing OR stale (e.g. JWT carries an old role after a role change,
+  // or fetchRoleForUser had a transient miss). The DB is authoritative.
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: member } = await supabase
+    .from('tenant_members')
+    .select('role, is_active')
+    .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
   const headersList = await headers()
-  const tenantRole = headersList.get('x-tenant-role') ?? 'staff'
-  if (!['owner', 'manager', 'receptionist'].includes(tenantRole)) {
+  const headerRole  = headersList.get('x-tenant-role') ?? null
+  const dbRole      = (member as any)?.role        ?? null
+  const dbActive    = (member as any)?.is_active   ?? null
+
+  // Diagnostic — remove after the redirect bug is confirmed fixed in prod.
+  console.log('[roommate-match] role gate', {
+    tenantId,
+    userId:     user.id,
+    headerRole,
+    dbRole,
+    dbActive,
+  })
+
+  const effectiveRole = dbActive ? dbRole : null
+  if (!effectiveRole || !ALLOWED_ROLES.includes(effectiveRole as (typeof ALLOWED_ROLES)[number])) {
     redirect('/dashboard')
   }
-
-  const supabase = createAdminClient()
 
   // Fetch rooms with categories
   const { data: roomsData } = await supabase
