@@ -18,32 +18,37 @@ export default async function RoommateMatchingPage() {
 
   const supabase = createAdminClient()
 
-  // Resolve caller's tenant_members.role. The middleware *usually* injects
-  // x-tenant-role, but on edge paths (stale JWT claim + transient DB miss)
-  // the header can be absent for legit owners — the page then bounced to
-  // /dashboard even though the sidebar (which falls back to x-portal-role)
-  // still showed the link. Fall back to a live tenant_members lookup so
-  // the gate is bulletproof regardless of header state.
+  // Resolve caller's tenant_members.role from the DB directly. We used to
+  // trust the x-tenant-role header set by middleware, but that header can
+  // be missing OR stale (e.g. JWT carries an old role after a role change,
+  // or fetchRoleForUser had a transient miss). The DB is authoritative.
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: member } = await supabase
+    .from('tenant_members')
+    .select('role, is_active')
+    .eq('user_id', user.id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
   const headersList = await headers()
-  let tenantRole = headersList.get('x-tenant-role') ?? ''
+  const headerRole  = headersList.get('x-tenant-role') ?? null
+  const dbRole      = (member as any)?.role        ?? null
+  const dbActive    = (member as any)?.is_active   ?? null
 
-  if (!tenantRole) {
-    const authClient = await createClient()
-    const { data: { user } } = await authClient.auth.getUser()
-    if (!user) redirect('/login')
+  // Diagnostic — remove after the redirect bug is confirmed fixed in prod.
+  console.log('[roommate-match] role gate', {
+    tenantId,
+    userId:     user.id,
+    headerRole,
+    dbRole,
+    dbActive,
+  })
 
-    const { data: member } = await supabase
-      .from('tenant_members')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    tenantRole = (member as any)?.role ?? ''
-  }
-
-  if (!ALLOWED_ROLES.includes(tenantRole as (typeof ALLOWED_ROLES)[number])) {
+  const effectiveRole = dbActive ? dbRole : null
+  if (!effectiveRole || !ALLOWED_ROLES.includes(effectiveRole as (typeof ALLOWED_ROLES)[number])) {
     redirect('/dashboard')
   }
 
