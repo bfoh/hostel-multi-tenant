@@ -1,11 +1,14 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { MatchingDashboard } from '@/components/bookings/matching-dashboard'
 
 export const metadata: Metadata = { title: 'Roommate Matching' }
+
+const ALLOWED_ROLES = ['owner', 'manager', 'receptionist'] as const
 
 export default async function RoommateMatchingPage() {
   const tenantId = await getServerTenantId()
@@ -13,13 +16,36 @@ export default async function RoommateMatchingPage() {
     redirect('/login')
   }
 
+  const supabase = createAdminClient()
+
+  // Resolve caller's tenant_members.role. The middleware *usually* injects
+  // x-tenant-role, but on edge paths (stale JWT claim + transient DB miss)
+  // the header can be absent for legit owners — the page then bounced to
+  // /dashboard even though the sidebar (which falls back to x-portal-role)
+  // still showed the link. Fall back to a live tenant_members lookup so
+  // the gate is bulletproof regardless of header state.
   const headersList = await headers()
-  const tenantRole = headersList.get('x-tenant-role') ?? 'staff'
-  if (!['owner', 'manager', 'receptionist'].includes(tenantRole)) {
-    redirect('/dashboard')
+  let tenantRole = headersList.get('x-tenant-role') ?? ''
+
+  if (!tenantRole) {
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    if (!user) redirect('/login')
+
+    const { data: member } = await supabase
+      .from('tenant_members')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    tenantRole = (member as any)?.role ?? ''
   }
 
-  const supabase = createAdminClient()
+  if (!ALLOWED_ROLES.includes(tenantRole as (typeof ALLOWED_ROLES)[number])) {
+    redirect('/dashboard')
+  }
 
   // Fetch rooms with categories
   const { data: roomsData } = await supabase
