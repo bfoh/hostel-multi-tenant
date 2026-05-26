@@ -364,7 +364,7 @@ export default async function LandingPage() {
 
   if (user && isAppDomain) redirect('/dashboard')
 
-  const heroWords = ['Hostel', 'management,']
+  const heroWords = ['Every', 'bed', 'booked.']
 
   return (
     <div
@@ -499,31 +499,33 @@ export default async function LandingPage() {
               </span>
             ))}
             <span
-              className="platform-word inline-block platform-shimmer-text"
+              className="platform-word block platform-shimmer-text"
               style={{ animationDelay: `${120 + heroWords.length * 90}ms` }}
             >
-              made in Ghana.
+              Every cedi tracked.
             </span>
             <span
-              className="platform-word mt-3 block text-[68%] italic"
+              className="platform-word mt-4 block text-[52%] italic"
               style={{
                 animationDelay: `${120 + (heroWords.length + 1) * 90}ms`,
-                color: 'rgba(245, 233, 210, 0.5)',
+                color: 'rgba(245, 233, 210, 0.55)',
                 fontFamily: 'Georgia, serif',
+                letterSpacing: '-0.02em',
               }}
             >
-              For the way we run hostels here.
+              The hostel operating system for Ghana.
             </span>
           </h1>
 
           <p
-            className="mx-auto mt-7 max-w-[580px] text-[15px] leading-relaxed sm:mt-9 sm:text-[17px]"
-            style={{ color: 'rgba(245, 233, 210, 0.62)' }}
+            className="mx-auto mt-8 max-w-[600px] text-[15px] leading-relaxed sm:mt-10 sm:text-[17px]"
+            style={{ color: 'rgba(245, 233, 210, 0.65)' }}
             data-platform-reveal
             data-platform-reveal-delay="450"
           >
-            Bookings, MoMo payments, GRA-compliant accounting, SSNIT payroll, occupant portal —
-            one calm dashboard, built for hostels across Ghana and West Africa.
+            One dashboard for bookings, Mobile Money, GRA-compliant accounting,
+            SSNIT payroll and the occupant portal. Built in Accra, trusted by
+            hostels from Legon to Tamale.
           </p>
 
           {/* CTA buttons */}
