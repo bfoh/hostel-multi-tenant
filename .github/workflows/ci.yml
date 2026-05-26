@@ -36,6 +36,9 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      - name: Tenant-scoping audit
+        run: npm --workspace @gh-hostels/web run audit:tenant-scoping
+
   # ── Build ──────────────────────────────────────────────────────────────────
   build:
     name: Build

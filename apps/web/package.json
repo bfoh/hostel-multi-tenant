@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
+    "audit:tenant-scoping": "node scripts/audit-tenant-scoping.mjs",
     "clean": "rm -rf .next"
   },
   "dependencies": {
