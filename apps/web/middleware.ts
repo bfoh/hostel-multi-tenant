@@ -248,12 +248,34 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Impersonation override ─────────────────────────────────────────────────
+  // Verify the impersonating user is actually a platform admin before honouring
+  // the cookies — otherwise a stale/forged cookie could grant tenant access.
+  // Also load the impersonated tenant's full record so branding (logo, color,
+  // name, custom domain) is available downstream.
   const impersonateTenantId   = request.cookies.get('x-admin-impersonate-tenant')?.value
   const impersonateTenantSlug = request.cookies.get('x-admin-impersonate-slug')?.value
   if (impersonateTenantId && impersonateTenantSlug && user) {
-    reqHeaders.set('x-tenant-id',          impersonateTenantId)
-    reqHeaders.set('x-tenant-slug',        impersonateTenantSlug)
-    reqHeaders.set('x-admin-impersonating','true')
+    const sr  = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/platform_admins?user_id=eq.${encodeURIComponent(user.id)}&select=id&limit=1`
+    const verify = await fetch(url, {
+      headers: { apikey: sr, Authorization: `Bearer ${sr}`, Accept: 'application/json' },
+      cache: 'no-store',
+    })
+    const adminRows = verify.ok ? await verify.json() : []
+
+    if (Array.isArray(adminRows) && adminRows.length > 0) {
+      const appDomainForLookup = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+      const impTenant = await resolveTenant(`${impersonateTenantSlug}.${appDomainForLookup}`)
+      if (impTenant) {
+        injectHeaders(reqHeaders, impTenant)
+      } else {
+        // Fallback to minimum context if tenant resolver missed
+        reqHeaders.set('x-tenant-id',   impersonateTenantId)
+        reqHeaders.set('x-tenant-slug', impersonateTenantSlug)
+      }
+      reqHeaders.set('x-tenant-role',         'owner')
+      reqHeaders.set('x-admin-impersonating', 'true')
+    }
   }
 
   // ── Subdomain redirect (production only) ──────────────────────────────────
@@ -268,12 +290,19 @@ export async function middleware(request: NextRequest) {
     const onRootDomain = !isLocalDev && (hostBase === rootDomain || hostBase === `app.${rootDomain}` || hostBase === `www.${rootDomain}`)
     const resolvedSlug = reqHeaders.get('x-tenant-slug')
 
+    // Super-admin impersonation must NOT redirect to the tenant subdomain
+    // — Supabase auth and impersonation cookies are host-scoped to the
+    // platform domain. Redirecting would drop the session and bounce to
+    // /login. Admin browses the impersonated tenant on the platform URL.
+    const isImpersonating = reqHeaders.get('x-admin-impersonating') === 'true'
+
     if (
       user && resolvedSlug && onRootDomain &&
       !isAuthPath && !isPortalPath &&
       !pathname.startsWith('/onboarding') &&
       !pathname.startsWith('/admin') &&
-      !pathname.startsWith('/api/')
+      !pathname.startsWith('/api/') &&
+      !isImpersonating
     ) {
       // Prefer the tenant's custom domain over the slug-based subdomain
       const resolvedDomain = reqHeaders.get('x-tenant-domain')
