@@ -364,7 +364,7 @@ export default async function LandingPage() {
 
   if (user && isAppDomain) redirect('/dashboard')
 
-  const heroWords = ['Run', 'your', 'hostel', 'with']
+  const heroWords = ['Hostel', 'management,']
 
   return (
     <div
@@ -502,28 +502,28 @@ export default async function LandingPage() {
               className="platform-word inline-block platform-shimmer-text"
               style={{ animationDelay: `${120 + heroWords.length * 90}ms` }}
             >
-              Akwaaba.
+              made in Ghana.
             </span>
             <span
-              className="platform-word mt-2 block text-[80%] italic"
+              className="platform-word mt-3 block text-[68%] italic"
               style={{
                 animationDelay: `${120 + (heroWords.length + 1) * 90}ms`,
-                color: 'rgba(245, 233, 210, 0.55)',
+                color: 'rgba(245, 233, 210, 0.5)',
                 fontFamily: 'Georgia, serif',
               }}
             >
-              The smarter way to run your hostel.
+              For the way we run hostels here.
             </span>
           </h1>
 
           <p
-            className="mx-auto mt-7 max-w-[560px] text-[15px] leading-relaxed sm:mt-9 sm:text-[17px]"
+            className="mx-auto mt-7 max-w-[580px] text-[15px] leading-relaxed sm:mt-9 sm:text-[17px]"
             style={{ color: 'rgba(245, 233, 210, 0.62)' }}
             data-platform-reveal
             data-platform-reveal-delay="450"
           >
-            From bookings and MoMo payments to housekeeping and full GRA-compliant
-            accounting — everything your Ghanaian hostel needs, elegantly unified.
+            Bookings, MoMo payments, GRA-compliant accounting, SSNIT payroll, occupant portal —
+            one calm dashboard, built for hostels across Ghana and West Africa.
           </p>
 
           {/* CTA buttons */}
