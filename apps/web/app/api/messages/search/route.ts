@@ -7,7 +7,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const MAX = 20
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const limit = Math.min(MAX, parseInt(req.nextUrl.searchParams.get('limit') ?? String(MAX), 10))
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
 
   // Conversations the caller belongs to (RLS would also enforce this, but
   // we filter explicitly to constrain the index scan).

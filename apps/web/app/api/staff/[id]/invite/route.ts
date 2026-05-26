@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { sendEmail, staffCredentialsHtml } from '@/lib/email'
 
@@ -25,7 +25,7 @@ export async function POST(
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const { data: staff, error: staffError } = await admin
     .from('staff_profiles')

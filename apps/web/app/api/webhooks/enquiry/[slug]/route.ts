@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { insertEnquiry, fireNotifications, type EnquiryInput } from '@/lib/enquiries/intake'
 
 // Server-to-server enquiry webhook. Used by external form services (Readdy.ai,
@@ -136,7 +136,7 @@ export async function POST(
 ) {
   const { slug } = await params
   const url = new URL(req.url)
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: tenantRow } = await (supabase
     .from('tenants') as any)

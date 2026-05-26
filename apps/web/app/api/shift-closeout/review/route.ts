@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 /**
@@ -23,7 +23,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid status' }, { status: 422 })
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const { error } = await (admin as any)
     .from('shift_closeouts')

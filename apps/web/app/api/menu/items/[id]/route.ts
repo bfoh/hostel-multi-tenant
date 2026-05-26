@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const updateSchema = z.object({
   category_id:   z.string().uuid().nullable().optional(),
@@ -36,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const ctx = await requireTenantRole(tenantId, allowedRoles)
   if (ctx instanceof NextResponse) return ctx
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
   const { error } = await admin.from('menu_items')
     .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq('id', (await params).id).eq('tenant_id', tenantId)
@@ -51,7 +51,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (ctx instanceof NextResponse) return ctx
 
   const { id } = await params
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
 
   // Try hard delete first. After migration 063 the FK is ON DELETE SET NULL
   // so this always succeeds. Pre-migration, fall back to soft-delete (mark

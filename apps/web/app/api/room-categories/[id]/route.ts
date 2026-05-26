@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
@@ -31,7 +31,7 @@ export async function PUT(
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data, error } = await supabase
     .from('room_categories')
     .update(parsed.data)
@@ -58,7 +58,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Check if rooms reference this category
   const { count } = await supabase

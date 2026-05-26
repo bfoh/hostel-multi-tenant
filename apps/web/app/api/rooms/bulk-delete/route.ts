@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 interface BulkDeleteBody {
   ids: string[]
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Maximum 200 rooms per bulk delete' }, { status: 400 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Find rooms in this batch that have bookings — those are blocked.
   const { data: bookedRows } = await (supabase as any)

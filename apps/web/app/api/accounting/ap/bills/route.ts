@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 interface CreateBillBody {
   supplier_id?:       string  // optional FK; vendor_name still required for free-text capture
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   // Verify supplier belongs to tenant if provided
   if (body.supplier_id) {

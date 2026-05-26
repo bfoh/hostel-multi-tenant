@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { verifyTransaction, listSubscriptions } from '@/lib/paystack'
 import { findPlanByCode } from '@/lib/platform-plans'
 
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
         const sub  = subs[0]
         if (sub) {
           const plan = findPlanByCode(sub.plan.plan_code)
-          const admin = createAdminClient()
+          const admin = await createTenantAdminClientFromHeaders()
           await admin
             .from('tenant_subscriptions')
             .upsert(

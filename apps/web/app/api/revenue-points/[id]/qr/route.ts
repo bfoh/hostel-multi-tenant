@@ -11,7 +11,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import QRCode from 'qrcode'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 export async function GET(
   req: NextRequest,
@@ -27,7 +27,7 @@ export async function GET(
   const size    = Math.min(1024, Math.max(128, Number.isFinite(sizeRaw) ? sizeRaw : 512))
   const format  = req.nextUrl.searchParams.get('format') === 'svg' ? 'svg' : 'png'
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: tenant } = await supabase
     .from('tenants')

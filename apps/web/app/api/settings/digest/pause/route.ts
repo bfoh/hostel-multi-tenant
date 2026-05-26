@@ -9,7 +9,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const pauseSchema = z.object({
   days: z.number().int().min(1).max(90),
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   const until = new Date(Date.now() + parsed.data.days * 24 * 3600_000).toISOString()
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { error } = await (supabase.from('tenants') as any)
     .update({ daily_digest_paused_until: until })
     .eq('id', tenantId)
@@ -49,7 +49,7 @@ export async function DELETE() {
   const { data: { user } } = await auth.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { error } = await (supabase.from('tenants') as any)
     .update({ daily_digest_paused_until: null })
     .eq('id', tenantId)

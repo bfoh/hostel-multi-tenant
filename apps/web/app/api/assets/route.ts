@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { generateQrCode } from '@/lib/data/assets'
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Generate unique QR code (retry up to 5 times on collision)
   let qr_code = ''

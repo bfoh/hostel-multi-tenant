@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { WaitingListClient } from '@/components/waiting-list/waiting-list-client'
 
 export const metadata: Metadata = { title: 'Waiting List' }
@@ -10,7 +10,7 @@ export default async function WaitingListPage({
 }: {
   searchParams: Promise<{ source?: string }>
 }) {
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const headerList = await headers()
   const tenantId = headerList.get('x-tenant-id')
   const initialSource = (await searchParams).source ?? 'all'

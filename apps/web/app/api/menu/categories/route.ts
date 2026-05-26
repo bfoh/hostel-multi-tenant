@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const createSchema = z.object({
   name:       z.string().min(1).max(80),
@@ -15,7 +15,7 @@ export async function GET() {
   const ctx = await requireTenantRole(tenantId, ['owner','manager','housekeeper','receptionist','accountant'])
   if (ctx instanceof NextResponse) return ctx
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
   const { data } = await admin.from('menu_categories')
     .select('id, name, sort_order, is_active, created_at')
     .eq('tenant_id', tenantId).order('sort_order')
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const parsed = createSchema.safeParse(json)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 422 })
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
   const { data, error } = await admin.from('menu_categories')
     .insert({ tenant_id: tenantId, ...parsed.data })
     .select('id').single()

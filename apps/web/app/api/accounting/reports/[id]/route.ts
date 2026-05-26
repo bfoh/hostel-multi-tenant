@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 export async function DELETE(
   _req: NextRequest,
@@ -15,7 +15,7 @@ export async function DELETE(
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const { id } = await params
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { data, error } = await (admin as any)
     .from('custom_reports')
     .delete()

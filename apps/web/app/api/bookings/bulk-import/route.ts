@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { bookingImportRowSchema } from '@/lib/validation/booking-import'
 
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ created: 0, errors, created_refs: [] }, { status: 200 })
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   // ── Resolve occupants in bulk ────────────────────────────────────
   const phones = Array.from(new Set(

@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { LfItemForm } from '@/components/lost-found/lf-item-form'
 
 export const metadata: Metadata = { title: 'Log Found Item' }
 
 export default async function NewLfItemPage() {
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const [{ data: occupants }, { data: rooms }] = await Promise.all([
     supabase.from('occupants').select('id, first_name, last_name').eq('status', 'active').order('first_name'),
     supabase.from('rooms').select('id, room_number, block').order('room_number'),

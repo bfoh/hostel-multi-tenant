@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { insertSystemMessage } from '@/lib/maintenance/messages'
 import { sendPushToUsers } from '@/lib/push'
 
@@ -25,7 +25,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid priority' }, { status: 400 })
   }
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
   const { data: mr } = await admin
     .from('maintenance_requests')
     .select('id, priority, occupant_id')

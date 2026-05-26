@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { formatPhone, sendOverdueReminder } from '@/lib/sms'
 
 interface RemindBody {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'booking_id or occupant_id required' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const today = new Date(); today.setHours(0, 0, 0, 0)
 
   let phone:        string | null = null

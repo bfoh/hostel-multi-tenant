@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { occupantSchema, type OccupantInput } from '@/lib/validation/occupant'
 
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     dedupedValid.push(v)
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   // Cross-check phones already in tenant.
   const phoneList = dedupedValid.map((v) => String(v.data.phone))

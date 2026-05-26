@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { randomUUID } from 'crypto'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { hasPriorStaffMessage, MAINTENANCE_ROLES } from '@/lib/maintenance/messages'
 import { uploadAttachments } from '@/lib/maintenance/attachments'
 import { sendPushToUsers } from '@/lib/push'
@@ -20,7 +20,7 @@ export async function POST(
   const { userId } = ctx
 
   const { id } = await params
-  const admin  = createAdminClient() as any
+  const admin  = await createTenantAdminClientFromHeaders() as any
 
   const { data: mr } = await admin
     .from('maintenance_requests')

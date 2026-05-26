@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import Link from 'next/link'
 import { ReportSchedulesClient } from '@/components/reports/report-schedules-client'
 
 export const metadata: Metadata = { title: 'Report Schedules' }
 
 export default async function ReportSchedulesPage() {
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data: schedules } = await supabase
     .from('report_schedules')
     .select('*')

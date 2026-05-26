@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
@@ -45,7 +45,7 @@ export async function GET(
   
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data, error } = await supabase
     .from('staff_profiles')
     .select(`*, member:tenant_members(role, is_active),
@@ -73,7 +73,7 @@ export async function PATCH(
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { error } = await supabase
     .from('staff_profiles')
     .update(parsed.data)
@@ -93,7 +93,7 @@ export async function DELETE(
   
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Get member_id before deleting so we can clean up tenant_members too
   const { data: profile } = await supabase

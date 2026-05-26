@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 interface PayBillBody {
   amount:         number  // pesewas
@@ -51,7 +51,7 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid payment_method' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const { data: bill } = await (admin as any)
     .from('supplier_bills')

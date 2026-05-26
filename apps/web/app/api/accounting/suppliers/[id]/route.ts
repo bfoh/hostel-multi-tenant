@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 interface UpdateBody {
   name?:                      string
@@ -58,7 +58,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { data, error } = await (admin as any)
     .from('suppliers')
     .update(update)
@@ -83,7 +83,7 @@ export async function DELETE(
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const { id } = await params
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   // Refuse delete if linked to any bill — soft-deactivate instead
   const { data: linked } = await (admin as any)

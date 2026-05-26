@@ -9,7 +9,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { postMessage } from '@/lib/messages/server'
 
 const postSchema = z.object({
@@ -35,7 +35,7 @@ export async function GET(
   const { data: { user } } = await auth.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
 
   // Participation check (also implicit via RLS but explicit here for 403)
   const { data: part } = await admin

@@ -10,7 +10,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const schema = z.object({ token: z.string().min(4).max(12) })
 
@@ -31,7 +31,7 @@ export async function POST(
   }
 
   const code = parsed.data.token.trim().toUpperCase()
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: point } = await supabase
     .from('revenue_points')

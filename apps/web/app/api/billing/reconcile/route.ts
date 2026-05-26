@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { listSubscriptions } from '@/lib/paystack'
 import { findPlanByCode } from '@/lib/platform-plans'
@@ -27,7 +27,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Billing not configured' }, { status: 503 })
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const { data: tenant } = await admin
     .from('tenants')

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 interface UpsertBody {
   currency_code:  string
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'rate_to_base must be > 0' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { error } = await (admin as any)
     .from('fx_rates')
     .upsert({
@@ -64,7 +64,7 @@ export async function DELETE(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { error } = await (admin as any)
     .from('fx_rates')
     .delete()

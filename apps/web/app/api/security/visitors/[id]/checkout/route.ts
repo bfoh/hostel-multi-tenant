@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 export async function PATCH(
   _req: NextRequest,
@@ -11,7 +11,7 @@ export async function PATCH(
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { error } = await supabase
     .from('visitor_log')
     .update({ check_out_at: new Date().toISOString() })

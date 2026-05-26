@@ -5,7 +5,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { z } from 'zod'
 
 const MODEL = 'claude-haiku-4-5-20251001'
@@ -118,7 +118,7 @@ async function runTool(
   input: Record<string, unknown>,
   tenantId: string,
 ): Promise<string> {
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   if (name === 'check_availability') {
     const { data } = await supabase
@@ -443,7 +443,7 @@ export async function POST(req: NextRequest) {
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Fetch hostel context + AI config for the system prompt
-  const supabase  = createAdminClient()
+  const supabase  = await createTenantAdminClientFromHeaders()
   const { data: tenantData } = await supabase
     .from('tenants')
     .select('name, address_city, ai_config')

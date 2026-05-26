@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 // POST /api/report-schedules/run
 // Called by a cron job (e.g. Vercel Cron / Supabase Edge Functions scheduler)
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const now = new Date().toISOString()
 
   const { data: due } = await supabase

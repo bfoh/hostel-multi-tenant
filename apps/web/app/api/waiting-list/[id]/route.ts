@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 async function getTenantId() {
   return (await headers()).get('x-tenant-id')
@@ -21,7 +21,7 @@ export async function PATCH(
   const { id } = await params
   const body = await req.json()
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { data, error } = await admin
     .from('waiting_list')
     .update(body)
@@ -48,7 +48,7 @@ export async function DELETE(
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const { id } = await params
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { data, error } = await admin
     .from('waiting_list')
     .delete()

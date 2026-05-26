@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 const ALLOWED_STATUSES = ['pending_payment', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show']
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const tenantId = await getServerTenantId()
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const body = await req.json()
   const { ids, action, value } = body as { ids: string[]; action: string; value?: string }

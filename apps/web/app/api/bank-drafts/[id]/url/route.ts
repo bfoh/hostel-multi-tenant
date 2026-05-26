@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
 import { getSignedDraftUrl } from '@/lib/bank-draft'
@@ -15,7 +15,7 @@ export async function GET(
   if (ctx instanceof NextResponse) return ctx
 
   const { id } = await params
-  const admin  = createAdminClient()
+  const admin  = await createTenantAdminClientFromHeaders()
   const { data: rowRaw } = await admin
     .from('booking_payments')
     .select('draft_file_path')

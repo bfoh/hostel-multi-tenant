@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 const bodySchema = z.object({
@@ -27,7 +27,7 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const { data: bookingRaw } = await (admin.from('bookings') as any)
     .select('id, status, room_id, occupant_id, self_checkin_submitted_at, self_checkin_confirmed_at, payment_status')

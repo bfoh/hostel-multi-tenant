@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const schema = z.object({
   public_enabled: z.boolean(),
@@ -33,7 +33,7 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: existing } = await supabase
     .from('revenue_points')

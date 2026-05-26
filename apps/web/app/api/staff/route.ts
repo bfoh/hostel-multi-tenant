@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { createClient } from '@/lib/supabase/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const parsed = schema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
 
-    const admin = createAdminClient()
+    const admin = await createTenantAdminClientFromHeaders()
     const d = parsed.data
 
     // 1. Create or find the auth user — use createUser so it works without email infra

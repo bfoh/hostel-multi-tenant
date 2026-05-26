@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import Link from 'next/link'
 import { NotificationTemplatesClient } from '@/components/settings/notification-templates-client'
 import { getServerTenantId } from '@/lib/auth/tenant'
@@ -8,7 +8,7 @@ import { DEFAULT_TEMPLATES } from '@/lib/notifications/defaults'
 export const metadata: Metadata = { title: 'Notification Templates' }
 
 export default async function NotificationTemplatesPage() {
-  const supabase  = createAdminClient()
+  const supabase  = await createTenantAdminClientFromHeaders()
   const tenantId  = await getServerTenantId()
 
   // Auto-seed defaults on first visit so the page is populated out of the box.

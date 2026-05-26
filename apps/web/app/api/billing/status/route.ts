@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 /**
@@ -9,7 +9,7 @@ export async function GET() {
   const tenantId = await getServerTenantId()
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { data } = await admin
     .from('tenant_subscriptions')
     .select(`

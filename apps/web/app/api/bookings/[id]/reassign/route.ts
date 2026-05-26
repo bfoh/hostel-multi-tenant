@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { z } from 'zod'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
 
@@ -26,7 +26,7 @@ export async function POST(
     return roleCtx
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Fetch current booking
   const { data: booking, error: bookingErr } = await supabase

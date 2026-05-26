@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { ShiftRota } from '@/components/staff/shift-rota'
 
 export const metadata: Metadata = { title: 'Shift Scheduling' }
@@ -10,7 +10,7 @@ export default async function ShiftsPage({
   searchParams: Promise<{ week?: string }>
 }) {
   const { week } = await searchParams
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Default to current Monday
   const today = new Date()

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest, after } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
 import { dispatchDraftRejected } from '@/lib/bank-draft'
@@ -22,7 +22,7 @@ export async function POST(
   if (!parsed.success) return NextResponse.json({ error: 'Reason is required (3-500 chars)' }, { status: 422 })
 
   const { id } = await params
-  const admin  = createAdminClient()
+  const admin  = await createTenantAdminClientFromHeaders()
 
   const { data: updated, error } = await admin
     .from('booking_payments')

@@ -14,7 +14,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const schema = z.object({
   mute_days: z.number().int().min(0).max(365).optional(),
@@ -43,7 +43,7 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
 
   const partUpdate: Record<string, unknown> = {}
   if (parsed.data.mute_days !== undefined) {

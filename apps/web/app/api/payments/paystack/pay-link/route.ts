@@ -10,7 +10,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { initBookingPayment } from '@/lib/booking-payment'
 import { sendPaymentLink } from '@/lib/sms'
 import { sendEmail, invoicePayLinkHtml } from '@/lib/email'
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: tenant } = await supabase
     .from('tenants')

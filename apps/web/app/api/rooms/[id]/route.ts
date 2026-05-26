@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 const schema = z.object({
@@ -28,7 +28,7 @@ export async function PUT(
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Validate category_id (if provided) belongs to this tenant so a cross-tenant
   // id cannot be saved through the API.
@@ -77,7 +77,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Block delete if room has any bookings (FK is RESTRICT)
   const { count } = await supabase

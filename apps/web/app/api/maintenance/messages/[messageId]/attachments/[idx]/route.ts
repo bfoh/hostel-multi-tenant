@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { signedUrlFor } from '@/lib/maintenance/attachments'
 
 export async function GET(
@@ -18,7 +18,7 @@ export async function GET(
   const i = Number(idx)
   if (!Number.isFinite(i) || i < 0) return NextResponse.json({ error: 'Bad index' }, { status: 400 })
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
   const { data: msg } = await admin
     .from('maintenance_messages')
     .select('attachments')

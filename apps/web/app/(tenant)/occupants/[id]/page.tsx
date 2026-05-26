@@ -8,7 +8,7 @@ import { formatGHS, formatDate, initials } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DocumentsCard } from '@/components/occupants/documents-card'
 import { SendCredentialsButton } from '@/components/occupants/send-credentials-button'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -30,7 +30,7 @@ export default async function OccupantDetailPage({ params }: { params: Promise<{
 
   if (!occupant) notFound()
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data: documents } = await supabase
     .from('occupant_documents')
     .select('*')

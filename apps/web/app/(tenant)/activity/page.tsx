@@ -5,7 +5,7 @@ import {
   Settings, HardHat, Shield, FileText, RefreshCw,
   ClipboardList,
 } from 'lucide-react'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 export const metadata: Metadata = { title: 'Activity Log' }
 
@@ -72,7 +72,7 @@ export default async function ActivityPage({
   searchParams: Promise<{ filter?: string; actor?: string }>
 }) {
   const { filter = 'all', actor = '' } = await searchParams
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   let query = supabase
     .from('audit_log')

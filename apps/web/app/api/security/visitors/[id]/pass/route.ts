@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 /**
  * GET /api/security/visitors/[id]/pass
@@ -19,7 +19,7 @@ export async function GET(
 
   const { id } = await params
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { data: visitor } = await admin
     .from('visitor_logs')
     .select('id, visitor_name, host_name, pass_token, expected_at, pass_status, purpose')

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 export async function GET(
   _req: NextRequest,
@@ -16,7 +16,7 @@ export async function GET(
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
   const { id: occupantId } = await params
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const { data } = await admin
     .from('occupant_documents')
@@ -54,7 +54,7 @@ export async function POST(
   const ext = file.name.split('.').pop()
   const path = `${tenantId}/${occupantId}/${Date.now()}.${ext}`
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const { data: upload, error: uploadErr } = await admin.storage
     .from('occupant-documents')

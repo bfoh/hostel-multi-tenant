@@ -7,7 +7,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { initializeTransaction } from '@/lib/paystack'
 import { sendPaymentLink } from '@/lib/sms'
 
@@ -36,7 +36,7 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Load installment + plan + booking + tenant in parallel where independent
   const { data: installment } = await supabase

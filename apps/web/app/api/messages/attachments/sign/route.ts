@@ -13,7 +13,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const MB = 1024 * 1024
 const LIMITS: { test: (m: string) => boolean; max: number }[] = [
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Too big (max ${Math.round(limit.max / MB)} MB)` }, { status: 413 })
   }
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
 
   // Participation check
   const { data: part } = await admin

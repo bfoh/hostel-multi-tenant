@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { sendEmail, baseTemplate, button } from '@/lib/email'
 import { sendPushToTenant } from '@/lib/push'
 import { formatPhone } from '@/lib/sms'
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const body = await req.json()
   const { target, channels, subject, message } = body as {

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { RoomHKCard } from '@/components/housekeeping/room-hk-card'
 import { HkTaskRow } from '@/components/housekeeping/hk-task-row'
 
@@ -24,8 +24,9 @@ const PRIORITY_STYLE: Record<string, string> = {
   low:    'text-text-tertiary',
 }
 
-async function getRooms(filter: string) {
-  const supabase = createAdminClient()
+async function getRooms(filter: string, tenantId: string) {
+  if (!tenantId) return []
+  const supabase = createTenantAdminClient(tenantId)
 
   let query = supabase
     .from('rooms')
@@ -45,7 +46,8 @@ async function getRooms(filter: string) {
 }
 
 async function getPendingTasks(tenantId: string) {
-  const supabase = createAdminClient()
+  if (!tenantId) return []
+  const supabase = createTenantAdminClient(tenantId)
   const { data } = await supabase
     .from('housekeeping_tasks')
     .select(`
@@ -53,7 +55,6 @@ async function getPendingTasks(tenantId: string) {
       rooms(id, room_number, block),
       staff_profiles(id, first_name, last_name)
     `)
-    .eq('tenant_id', tenantId)
     .not('status', 'in', '("done","skipped")')
     .order('due_by', { ascending: true, nullsFirst: false })
     .order('priority')
@@ -72,12 +73,12 @@ export default async function HousekeepingPage({
   const tenantId    = headersList.get('x-tenant-id') ?? ''
 
   const [rooms, tasks] = await Promise.all([
-    getRooms(status),
+    getRooms(status, tenantId),
     getPendingTasks(tenantId),
   ])
 
   // Counts for summary bar (always fetch all for counts)
-  const supabase = createAdminClient()
+  const supabase = createTenantAdminClient(tenantId)
   const { data: allRooms } = await supabase
     .from('rooms')
     .select('housekeeping_status')

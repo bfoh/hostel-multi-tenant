@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { invalidateTenantCache } from '@/lib/tenant/resolve'
 
@@ -30,7 +30,7 @@ export async function PATCH(request: NextRequest) {
   // Use the admin client so RLS on the tenants table (which has no UPDATE
   // policy for authenticated sessions) doesn't silently drop the update.
   // The middleware has already proven tenant ownership via x-tenant-id.
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Reject if another tenant already owns this domain
   if (domain) {
@@ -107,7 +107,7 @@ export async function GET(_req: NextRequest) {
   const tenantId = await getServerTenantId()
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data: tenant } = await supabase
     .from('tenants')
     .select('custom_domain')

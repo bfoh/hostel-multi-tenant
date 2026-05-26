@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 interface RoomRow {
   room_number: string
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   if (rawRows.length === 0) return NextResponse.json({ error: 'No rows found' }, { status: 400 })
   if (rawRows.length > 500) return NextResponse.json({ error: 'Maximum 500 rows per import' }, { status: 400 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Load categories for this tenant
   const { data: categories } = await supabase

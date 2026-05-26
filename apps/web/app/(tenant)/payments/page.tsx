@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { headers } from 'next/headers'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { formatGHS, formatDate } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Payments' }
@@ -30,8 +31,9 @@ const FILTERS = [
   { value: 'reversed', label: 'Reversed' },
 ]
 
-async function getPayments(status: string, search: string) {
-  const supabase = createAdminClient()
+async function getPayments(status: string, search: string, tenantId: string) {
+  if (!tenantId) return []
+  const supabase = createTenantAdminClient(tenantId)
 
   let query = supabase
     .from('booking_payments')
@@ -78,7 +80,8 @@ export default async function PaymentsPage({
   searchParams: Promise<{ status?: string; q?: string }>
 }) {
   const { status = 'all', q = '' } = await searchParams
-  const payments = await getPayments(status, q)
+  const tenantId = (await headers()).get('x-tenant-id') ?? ''
+  const payments = await getPayments(status, q, tenantId)
 
   const totalSuccess  = payments.filter((p) => p.status === 'success').reduce((s, p) => s + p.amount, 0)
   const totalPending  = payments.filter((p) => p.status === 'pending').reduce((s, p) => s + p.amount, 0)

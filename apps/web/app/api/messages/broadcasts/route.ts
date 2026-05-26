@@ -16,7 +16,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import {
   ensureBroadcastConversation,
   postMessage,
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
   }
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
 
   // Resolve conversation: default hostel-wide, or a filtered slice.
   let conversationId: string
@@ -150,7 +150,7 @@ async function resolveTargetOccupantIds(
   tenantId: string,
   filter:   { block?: string; occupant_ids?: string[] },
 ): Promise<string[]> {
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
 
   if (filter.occupant_ids?.length) {
     // Validate those are real occupants in this tenant
@@ -177,7 +177,7 @@ async function resolveTargetOccupantIds(
 }
 
 async function seedAllOccupants(tenantId: string, conversationId: string) {
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
   const { data } = await admin
     .from('occupants')
     .select('user_id')

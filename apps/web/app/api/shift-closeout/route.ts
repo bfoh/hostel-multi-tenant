@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 /**
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   const shiftDate = body.shift_date ?? new Date().toISOString().slice(0, 10)
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   // Calculate system totals for this staff member today
   const { data: payments } = await admin

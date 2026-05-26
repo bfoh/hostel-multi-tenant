@@ -9,7 +9,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { resolveParticipantKind } from '@/lib/messages/server'
 
 const LIMIT = 20
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const q    = (req.nextUrl.searchParams.get('q') ?? '').trim()
   const kind = (req.nextUrl.searchParams.get('kind') ?? 'all').toLowerCase()
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
 
   // Caller's kind (staff / occupant) — used to gate occupant→occupant
   const meKind = await resolveParticipantKind(tenantId, user.id)

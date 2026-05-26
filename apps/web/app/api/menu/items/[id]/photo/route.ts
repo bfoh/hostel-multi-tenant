@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const ALLOWED = new Set(['image/jpeg','image/png','image/webp'])
 
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const path     = `${tenantId}/menu/${id}/${Date.now()}_${safeName}`
   const buf      = Buffer.from(await file.arrayBuffer())
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
   const { error: upErr } = await admin.storage.from('menu-photos').upload(path, buf, {
     contentType: file.type, upsert: false,
   })

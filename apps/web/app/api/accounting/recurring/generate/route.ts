@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { computeNextRunDate } from '@/lib/data/recurring'
 
 /**
@@ -26,7 +26,7 @@ export async function POST(_req: NextRequest) {
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const today = new Date().toISOString().slice(0, 10)
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const [{ data: dueBills }, { data: dueJournals }] = await Promise.all([
     (admin as any)

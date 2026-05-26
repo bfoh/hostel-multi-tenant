@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { occupantSchema as schema } from '@/lib/validation/occupant'
 
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Use admin client so RLS doesn't block the insert when JWT claims are stale
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { data, error } = await admin
     .from('occupants')
     .insert({ ...parsed.data, tenant_id: tenantId })

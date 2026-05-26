@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const schema = z.object({
   housekeeping_status: z.enum(['clean', 'dirty', 'inspecting', 'out_of_order']),
@@ -18,7 +18,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const extra: Record<string, unknown> = {}
   if (parsed.data.housekeeping_status === 'clean') {

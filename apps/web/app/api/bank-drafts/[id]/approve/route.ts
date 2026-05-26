@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest, after } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
 import { dispatchDraftApproved } from '@/lib/bank-draft'
@@ -15,7 +15,7 @@ export async function POST(
   if (ctx instanceof NextResponse) return ctx
 
   const { id } = await params
-  const admin  = createAdminClient()
+  const admin  = await createTenantAdminClientFromHeaders()
   const now    = new Date().toISOString()
 
   // Optimistic-lock UPDATE: only flip if still pending. .select() is

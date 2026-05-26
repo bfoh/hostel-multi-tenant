@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 /**
  * POST /api/revenue-points/sales/[id]/settle
@@ -24,7 +24,7 @@ export async function POST(
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const { id } = await params
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const { data: sale } = await (admin as any)
     .from('revenue_point_sales')

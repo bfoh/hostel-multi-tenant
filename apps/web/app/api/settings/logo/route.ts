@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { invalidateTenantCache } from '@/lib/tenant/resolve'
 
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const logoUrl = `${publicUrl}?t=${Date.now()}`
 
   // Use admin client for tenant table update (bypasses RLS)
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   // Fetch slug so we can bust the right Redis cache key
   const { data: tenant } = await admin

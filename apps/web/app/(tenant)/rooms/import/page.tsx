@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import Link from 'next/link'
 import { RoomImportClient } from '@/components/rooms/room-import-client'
 
 export const metadata: Metadata = { title: 'Import Rooms' }
 
 export default async function RoomImportPage() {
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data: categories } = await supabase
     .from('room_categories')
     .select('id, name')

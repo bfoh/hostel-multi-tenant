@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { PmScheduleForm } from '@/components/maintenance/pm-schedule-form'
 
 export const metadata: Metadata = { title: 'New PM Schedule' }
 
 export default async function NewPmSchedulePage() {
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const [{ data: rooms }, { data: contractors }] = await Promise.all([
     supabase.from('rooms').select('id, room_number, block').order('room_number'),
     supabase.from('contractors').select('id, name').eq('is_active', true).order('name'),

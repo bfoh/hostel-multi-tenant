@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft, Inbox } from 'lucide-react'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { SelfCheckinConfirmPanel } from '@/components/bookings/self-checkin-confirm-panel'
 import { formatGHS } from '@/lib/utils'
@@ -41,7 +41,7 @@ export default async function SelfCheckinsPage() {
   const tenantId = await getServerTenantId()
   if (!tenantId) return null
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   const { data: rawBookings } = await admin
     .from('bookings')

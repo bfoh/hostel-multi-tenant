@@ -7,7 +7,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const recipientSchema = z.object({
   name:  z.string().max(120).optional(),
@@ -37,7 +37,7 @@ export async function GET() {
   const { data: { user } } = await auth.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data } = await supabase
     .from('tenants')
     .select('daily_digest_enabled, daily_digest_time, daily_digest_channels, daily_digest_recipients, timezone')
@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { error } = await (supabase.from('tenants') as any)
     .update(update)
     .eq('id', tenantId)

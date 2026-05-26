@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import Link from 'next/link'
 import { RenewalClient } from '@/components/bookings/renewal-client'
 
 export const metadata: Metadata = { title: 'Lease Renewals' }
 
 export default async function RenewalsPage() {
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const today    = new Date().toISOString().slice(0, 10)
   const in30     = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 

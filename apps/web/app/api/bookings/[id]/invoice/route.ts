@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createElement } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { InvoiceDocument } from '@/components/bookings/invoice-document'
 
 export async function GET(
@@ -22,7 +22,7 @@ export async function GET(
 
   // Data fetch via admin client + explicit tenant_id filter so stale JWT
   // claims can't make a valid booking 404.
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: booking } = await supabase
     .from('bookings')

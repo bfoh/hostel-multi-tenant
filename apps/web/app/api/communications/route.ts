@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { createClient } from '@/lib/supabase/server'
 
 const schema = z.object({
@@ -17,7 +17,7 @@ export async function GET() {
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data, error } = await supabase
     .from('sms_blasts')
     .select('*')
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   // Use the admin client for every DB read/write so RLS doesn't silently
   // return empty arrays / block inserts.
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   // Resolve recipient phone numbers (always tenant-scoped)
   let phoneNumbers: string[] = []
@@ -134,7 +134,7 @@ async function sendBulkSMS(
   message: string,
   phones: string[],
   tenantId: string,
-  supabase: ReturnType<typeof createAdminClient>,
+  supabase: Awaited<ReturnType<typeof createTenantAdminClientFromHeaders>>,
 ) {
   const apiKey = process.env.ARKESEL_API_KEY!
   const senderName = process.env.ARKESEL_SENDER_ID ?? 'GH Hostels'

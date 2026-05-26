@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { insertSystemMessage } from '@/lib/maintenance/messages'
 import { sendPushToUsers } from '@/lib/push'
 import { sendMaintenanceReopened } from '@/lib/sms'
@@ -17,7 +17,7 @@ export async function POST(
   if (ctx instanceof NextResponse) return ctx
 
   const { id } = await params
-  const admin  = createAdminClient() as any
+  const admin  = await createTenantAdminClientFromHeaders() as any
 
   const { data: mr } = await admin
     .from('maintenance_requests')

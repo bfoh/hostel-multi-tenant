@@ -4,7 +4,7 @@ import { headers } from 'next/headers'
 import React, { createElement } from 'react'
 
 import { getInvoiceById } from '@/lib/data/invoices'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { InvoicePDF } from '@/components/invoices/invoice-pdf'
 
 export async function GET(
@@ -31,7 +31,7 @@ export async function GET(
 
   if (tenantId) {
     // Admin client so a stale JWT can't blank out the tenant header
-    const supabase = createAdminClient()
+    const supabase = await createTenantAdminClientFromHeaders()
     const { data: tenant } = await supabase
       .from('tenants')
       .select('name, tagline, address_line1, address_city, contact_phone, contact_email, logo_url, tin, vat_reg_number, is_vat_registered')

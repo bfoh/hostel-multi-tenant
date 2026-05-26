@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 interface VoidBody {
   reason?:   string
@@ -38,7 +38,7 @@ export async function POST(
   const { id } = await params
   const body: VoidBody = await req.json().catch(() => ({}))
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
   const { data: entry } = await (admin as any)
     .from('journal_entries')
     .select('id, entry_date, description, source, voided_at, reverses_entry_id')

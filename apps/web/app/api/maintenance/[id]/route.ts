@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { insertSystemMessage } from '@/lib/maintenance/messages'
 import { sendPushToUsers } from '@/lib/push'
 import { sendMaintenanceStatusChange } from '@/lib/sms'
@@ -29,7 +29,7 @@ export async function PATCH(
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
 
-  const supabase = createAdminClient() as any
+  const supabase = await createTenantAdminClientFromHeaders() as any
 
   // Capture previous status for system-message + notification logic
   const { data: existing } = await supabase
@@ -107,7 +107,7 @@ export async function DELETE(
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { error } = await supabase
     .from('maintenance_requests')
     .delete()

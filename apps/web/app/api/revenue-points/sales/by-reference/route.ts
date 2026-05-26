@@ -4,7 +4,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 export async function GET(req: NextRequest) {
   const reference = req.nextUrl.searchParams.get('reference')
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data } = await supabase
     .from('revenue_point_sales')
     .select('id, total_amount, payment_method, sold_at, description, reference')

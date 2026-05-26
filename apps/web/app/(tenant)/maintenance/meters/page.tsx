@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { MeterReadingsClient } from '@/components/maintenance/meter-readings-client'
 
 export const metadata: Metadata = { title: 'Meter Readings' }
 
 export default async function MeterReadingsPage() {
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: rooms } = await supabase
     .from('rooms')

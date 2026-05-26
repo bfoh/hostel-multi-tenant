@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { getLfItemById } from '@/lib/data/lost-found'
 import { LfItemForm } from '@/components/lost-found/lf-item-form'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 export const metadata: Metadata = { title: 'Lost & Found Item' }
 
@@ -17,7 +17,7 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
 
 export default async function LfItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const [item, { data: occupants }, { data: rooms }] = await Promise.all([
     getLfItemById(id),

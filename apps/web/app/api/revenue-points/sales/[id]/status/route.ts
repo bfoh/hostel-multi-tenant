@@ -6,7 +6,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 const schema = z.object({
   status: z.enum(['received', 'washing', 'ready', 'collected']),
@@ -35,7 +35,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid status' }, { status: 422 })
   }
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: existing } = await supabase
     .from('revenue_point_sales')

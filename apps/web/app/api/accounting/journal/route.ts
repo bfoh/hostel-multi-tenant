@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 interface InputLine {
   account_id:  string
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const admin = await createTenantAdminClientFromHeaders()
 
   // Verify all account IDs belong to this tenant
   const accountIds = Array.from(new Set(body.lines.map((l) => l.account_id)))

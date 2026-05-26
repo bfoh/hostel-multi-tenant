@@ -4,7 +4,7 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { resolvePeerDisplayNames } from '@/lib/messages/peers'
 import { ThreadView } from '@/components/messages/thread-view'
 import { ConversationMenu } from '@/components/messages/conversation-menu'
@@ -27,7 +27,7 @@ export default async function ThreadPage({ params }: PageProps) {
   const { data: { user } } = await auth.auth.getUser()
   if (!user) redirect('/login')
 
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
 
   const { data: conv } = await admin
     .from('conversations')

@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { createElement } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { LeaseDocument } from '@/components/bookings/lease-document'
 
 export async function GET(
@@ -19,7 +19,7 @@ export async function GET(
   const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: booking } = await supabase
     .from('bookings')

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 
 export async function GET(
   _req: NextRequest,
@@ -17,7 +17,7 @@ export async function GET(
 
   const { id: bookingId } = await params
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data, error } = await supabase
     .from('payment_plans')
     .select('*, payment_plan_installments(*)')
@@ -43,7 +43,7 @@ export async function POST(
 
   const { id: bookingId } = await params
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const body = await req.json()
   const { name, installments_count, start_date, interval_days } = body
 

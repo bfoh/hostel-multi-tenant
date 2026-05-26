@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { sendPaymentReceipt } from '@/lib/sms'
 import { formatGHS } from '@/lib/utils'
@@ -40,7 +40,7 @@ export async function POST(
 
   // Use admin client + explicit tenant scope so RLS can't 404 a valid booking
   // when JWT claims are stale (same pattern as POST /api/occupants).
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: booking } = await supabase
     .from('bookings')

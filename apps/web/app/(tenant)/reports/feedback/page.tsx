@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -16,7 +16,7 @@ function Stars({ rating, max = 5 }: { rating: number; max?: number }) {
 }
 
 export default async function FeedbackPage() {
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data: rows } = await supabase
     .from('occupant_feedback')
     .select('*, bookings(booking_ref, check_in_date, check_out_date, occupants(first_name, last_name))')

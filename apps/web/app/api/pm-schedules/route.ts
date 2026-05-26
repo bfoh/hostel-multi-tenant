@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { computeNextDue, type PmFrequency } from '@/lib/data/pm-schedules'
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   const d = parsed.data
   const next_due_date = computeNextDue(d.start_date, d.frequency as PmFrequency, d.interval_value)
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   const { data, error } = await supabase
     .from('pm_schedules')
     .insert({ ...d, tenant_id: tenantId, next_due_date })

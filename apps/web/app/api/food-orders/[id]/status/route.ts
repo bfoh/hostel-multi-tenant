@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { requireTenantRole } from '@/lib/auth/tenant-role'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { advanceStatus } from '@/lib/food/orders'
 import { refundFoodOrder } from '@/lib/food/refund'
 import { recordFoodSale, reverseFoodSale } from '@/lib/food/revenue'
@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: 400 })
 
   const order = result.order
-  const admin = createAdminClient() as any
+  const admin = await createTenantAdminClientFromHeaders() as any
   const { data: occ } = await admin
     .from('occupants')
     .select('user_id, phone, first_name')

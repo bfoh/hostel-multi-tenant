@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 function generateApiKey(): string {
@@ -16,7 +16,7 @@ export async function POST() {
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
   const key      = generateApiKey()
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { error } = await supabase
     .from('tenants')
@@ -33,7 +33,7 @@ export async function DELETE() {
   const tenantId = await getServerTenantId()
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
-  const supabase = createAdminClient()
+  const supabase = await createTenantAdminClientFromHeaders()
   await supabase.from('tenants').update({ public_api_key: null }).eq('id', tenantId)
 
   return NextResponse.json({ ok: true })
