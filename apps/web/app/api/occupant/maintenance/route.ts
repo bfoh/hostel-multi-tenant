@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { listMaintenanceStaffUserIds } from '@/lib/maintenance/messages'
 import { sendPushToUsers } from '@/lib/push'
@@ -14,7 +14,7 @@ const createSchema = z.object({
 })
 
 async function getOccupantContext(userId: string, tenantId: string) {
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(tenantId)
   const { data: occupant } = await admin
     .from('occupants')
     .select('id')
@@ -50,7 +50,7 @@ export async function GET(_req: NextRequest) {
 
   if (!ctx.booking?.room_id) return NextResponse.json([])
 
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(tenantId)
   const { data } = await admin
     .from('maintenance_requests')
     .select('id, title, category, priority, status, description, created_at, resolved_at')
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'Occupant not found' }, { status: 404 })
   if (!ctx.booking) return NextResponse.json({ error: 'No active booking found' }, { status: 400 })
 
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(tenantId)
   const { data: request, error } = await (admin as any)
     .from('maintenance_requests')
     .insert({
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
   // Fire-and-forget so push failures never block the response.
   const recipients = await listMaintenanceStaffUserIds(tenantId)
   if (recipients.length > 0) {
-    sendPushToUsers(recipients, {
+    sendPushToUsers(tenantId, recipients, {
       title: 'New maintenance request',
       body:  `${parsed.data.priority.toUpperCase()} · ${parsed.data.title.slice(0, 80)}`,
       url:   `/maintenance/${request.id}`,

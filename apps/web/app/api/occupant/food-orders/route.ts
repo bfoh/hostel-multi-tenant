@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { placeOrder } from '@/lib/food/orders'
 import { sendPushToUsers } from '@/lib/push'
 import { initializeTransaction } from '@/lib/paystack'
@@ -14,7 +14,7 @@ const schema = z.object({
 const KITCHEN_ROLES = ['owner','manager','housekeeper','receptionist'] as const
 
 async function pingKitchen(tenantId: string, orderRef: string, orderId: string) {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
   const { data: members } = await admin
     .from('tenant_members')
     .select('user_id')
@@ -23,7 +23,7 @@ async function pingKitchen(tenantId: string, orderRef: string, orderId: string) 
     .in('role', [...KITCHEN_ROLES])
   const userIds = ((members ?? []) as any[]).map(m => m.user_id as string)
   if (userIds.length === 0) return
-  await sendPushToUsers(userIds, {
+  await sendPushToUsers(tenantId, userIds, {
     title: 'New food order',
     body:  `${orderRef} · placed`,
     url:   `/food/orders`,
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(json)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid' }, { status: 422 })
 
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(session.tenantId) as any
   const { data: tenant } = await admin
     .from('tenants')
     .select('food_orders_enabled, paystack_subaccount_code')

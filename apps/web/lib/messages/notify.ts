@@ -10,7 +10,7 @@
  * Fire-and-forget from the request handler. We swallow errors so a flaky
  * push doesn't fail message delivery.
  */
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { sendPushToUsers } from '@/lib/push'
 
 interface NotifyOpts {
@@ -27,7 +27,7 @@ const RECENT_READ_WINDOW_MS = 30 * 1000
 
 export async function notifyParticipants(opts: NotifyOpts): Promise<void> {
   try {
-    const admin = createAdminClient() as any
+    const admin = createTenantAdminClient(opts.tenantId) as any
     const now = Date.now()
 
     // Load conversation context for title + type
@@ -60,14 +60,14 @@ export async function notifyParticipants(opts: NotifyOpts): Promise<void> {
     const body  = buildBody(opts.body, opts.kind, opts.attachmentCount)
     const url   = conversationDeepLink(opts.conversationId)
 
-    await sendPushToUsers(userIds, { title, body, url })
+    await sendPushToUsers(opts.tenantId, userIds, { title, body, url })
   } catch (err) {
     console.error('[messages.notifyParticipants]', err)
   }
 }
 
 async function resolveSenderLabel(tenantId: string, userId: string): Promise<string> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
   // Try occupant
   const { data: occ } = await admin
     .from('occupants')

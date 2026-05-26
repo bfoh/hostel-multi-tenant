@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (parsed.data.status === 'ready') {
     if (occ?.user_id) {
-      sendPushToUsers([occ.user_id], {
+      sendPushToUsers(tenantId, [occ.user_id], {
         title: 'Order ready for pickup',
         body:  `Order ${order.order_ref ?? id.slice(0, 8)} is ready`,
         url:   `/occupant-portal/food/orders/${id}`,
@@ -65,7 +65,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (parsed.data.status === 'cancelled') {
     if (occ?.user_id) {
-      sendPushToUsers([occ.user_id], {
+      sendPushToUsers(tenantId, [occ.user_id], {
         title: 'Order cancelled',
         body:  parsed.data.reason ?? 'Cancelled by hostel',
         url:   `/occupant-portal/food/orders/${id}`,

@@ -11,6 +11,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { sendPushToTenant } from '@/lib/push'
 import {
   sendBankDraftSubmittedToAdmin,
@@ -62,9 +63,9 @@ interface DispatchSubmittedArgs {
 }
 
 export async function dispatchDraftSubmitted(args: DispatchSubmittedArgs): Promise<void> {
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(args.tenantId)
   const { data: tenant } = await admin
-    .from('tenants')
+    .fromGlobal('tenants')
     .select('name, contact_phone')
     .eq('id', args.tenantId)
     .single()
@@ -85,7 +86,7 @@ export async function dispatchDraftSubmitted(args: DispatchSubmittedArgs): Promi
   // Anchor filters on tenant_members so PostgREST applies them as SQL WHERE
   // clauses (filtering on joined-table columns via dot notation isn't reliable).
   const { data: members } = await admin
-    .from('tenant_members')
+    .fromGlobal('tenant_members')
     .select('staff_profiles!inner(phone, is_active)')
     .eq('tenant_id', args.tenantId)
     .eq('is_active', true)
@@ -125,11 +126,11 @@ interface DispatchDecisionArgs {
 }
 
 export async function dispatchDraftApproved(args: DispatchDecisionArgs): Promise<void> {
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(args.tenantId)
   const [{ data: occupant }, { data: booking }, { data: tenant }] = await Promise.all([
     admin.from('occupants').select('first_name, phone').eq('id', args.occupantId).single(),
     admin.from('bookings').select('final_amount, paid_amount').eq('id', args.bookingId).single(),
-    admin.from('tenants').select('name').eq('id', args.tenantId).single(),
+    admin.fromGlobal('tenants').select('name').eq('id', args.tenantId).single(),
   ])
 
   if (!occupant?.phone) return
@@ -150,10 +151,10 @@ export async function dispatchDraftApproved(args: DispatchDecisionArgs): Promise
 export async function dispatchDraftRejected(
   args: DispatchDecisionArgs & { reason: string },
 ): Promise<void> {
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(args.tenantId)
   const [{ data: occupant }, { data: tenant }] = await Promise.all([
     admin.from('occupants').select('first_name, phone').eq('id', args.occupantId).single(),
-    admin.from('tenants').select('name').eq('id', args.tenantId).single(),
+    admin.fromGlobal('tenants').select('name').eq('id', args.tenantId).single(),
   ])
 
   if (!occupant?.phone) return

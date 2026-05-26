@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
 import { getCart, setCart } from '@/lib/food/cart'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 
 const setSchema = z.object({
   items: z.array(z.object({
@@ -15,10 +15,10 @@ export async function GET() {
   const session = await getOccupantSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const cart = await getCart(session.occupantId)
+  const cart = await getCart(session.occupantId, session.tenantId)
   if (cart.length === 0) return NextResponse.json({ items: [], total_pesewas: 0 })
 
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(session.tenantId) as any
   const { data: items } = await admin
     .from('menu_items')
     .select('id, name, price_pesewas, photo_url, is_available, is_sold_out, publish_date')

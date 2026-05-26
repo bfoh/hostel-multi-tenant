@@ -7,7 +7,7 @@
  */
 
 import { randomBytes } from 'crypto'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 
 interface FindOrCreateArgs {
   tenantId:  string
@@ -18,7 +18,7 @@ interface FindOrCreateArgs {
 }
 
 export async function findOrCreateGuestOccupant(args: FindOrCreateArgs): Promise<{ id: string } | { error: string }> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(args.tenantId) as any
 
   const { data: existing } = await admin
     .from('occupants')

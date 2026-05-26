@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest, after } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
 import {
   BANK_DRAFTS_BUCKET,
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid input', details: parsed.error.flatten() }, { status: 422 })
   }
 
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(session.tenantId)
 
   // Tenant must allow bank deposits.
   const { data: tenant } = await admin

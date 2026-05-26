@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getCart, clearCart, type CartLine } from './cart'
 
 const REF_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  // no 0/O/1/I
@@ -28,8 +28,8 @@ interface PlaceArgs {
 }
 
 export async function placeOrder(args: PlaceArgs) {
-  const admin = createAdminClient() as any
-  const cart  = args.cartLines ?? await getCart(args.occupantId)
+  const admin = createTenantAdminClient(args.tenantId) as any
+  const cart  = args.cartLines ?? await getCart(args.occupantId, args.tenantId)
   if (cart.length === 0) return { error: 'Cart is empty' as const }
 
   const ids = cart.map(c => c.menu_item_id)
@@ -99,7 +99,7 @@ export async function placeOrder(args: PlaceArgs) {
   // Only clear the server-persisted cart for the resident channel.
   // Guests don't have a server cart — their cart was passed via cartLines.
   if (!args.cartLines) {
-    await clearCart(args.occupantId)
+    await clearCart(args.occupantId, args.tenantId)
   }
   return { ok: true as const, order }
 }
@@ -113,7 +113,7 @@ const TRANSITIONS: Record<string, string[]> = {
 }
 
 export async function advanceStatus(orderId: string, tenantId: string, next: string, reason?: string) {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
   const { data: order } = await admin
     .from('food_orders')
     .select('id, status, occupant_id, payment_method, paid_at, total_pesewas, paystack_reference, order_ref, customer_kind')

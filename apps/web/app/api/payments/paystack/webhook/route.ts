@@ -415,7 +415,7 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
     if (userIds.length > 0) {
       try {
         const { sendPushToUsers } = await import('@/lib/push')
-        await sendPushToUsers(userIds, {
+        await sendPushToUsers(tenantId, userIds, {
           title: 'New paid food order',
           body:  `Order ${(metadata as any)?.order_ref ?? orderId.slice(0, 8)} · paid online`,
           url:   '/food/orders',

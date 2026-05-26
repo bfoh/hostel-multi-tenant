@@ -1,11 +1,11 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
 export async function getBookings(filter?: { status?: string; search?: string }) {
   const tenantId = await getServerTenantId()
   if (!tenantId) return []
 
-  const supabase = createAdminClient()
+  const supabase = createTenantAdminClient(tenantId)
 
   let query = supabase
     .from('bookings')
@@ -33,7 +33,7 @@ export async function getBookingById(id: string) {
   const tenantId = await getServerTenantId()
   if (!tenantId) return null
 
-  const supabase = createAdminClient()
+  const supabase = createTenantAdminClient(tenantId)
 
   const { data, error } = await supabase
     .from('bookings')
@@ -67,7 +67,7 @@ export async function getAvailableRooms(checkIn: string, checkOut: string) {
   const tenantId = await getServerTenantId()
   if (!tenantId) return []
 
-  const supabase = createAdminClient()
+  const supabase = createTenantAdminClient(tenantId)
 
   // Count active bookings per room that overlap the requested period
   const { data: activeBookings } = await supabase

@@ -54,7 +54,7 @@ export async function POST(
     const hostelName = tenantRow?.name ?? 'Hostel'
 
     if (occ?.user_id) {
-      sendPushToUsers([occ.user_id], {
+      sendPushToUsers(tenantId, [occ.user_id], {
         title: 'Request reopened',
         body:  'Hostel staff reopened your request',
         url:   `/occupant-portal/maintenance/${id}`,

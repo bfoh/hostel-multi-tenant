@@ -22,6 +22,6 @@ export async function POST(
   const { data: { user } } = await auth.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  await markRead({ conversationId: id, userId: user.id })
+  await markRead({ tenantId, conversationId: id, userId: user.id })
   return NextResponse.json({ ok: true })
 }

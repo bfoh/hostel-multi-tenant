@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { listInbox, ensureBroadcastConversation } from '@/lib/messages/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { resolvePeerDisplayNames } from '@/lib/messages/peers'
 import { InboxList } from '@/components/messages/inbox-list'
 import { NewMessageButton } from '@/components/messages/new-message-button'
@@ -21,7 +21,7 @@ export default async function OccupantInboxPage() {
   const { data: { user } } = await auth.auth.getUser()
   if (!user) redirect('/login')
 
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
 
   // Ensure the occupant is a participant of the hostel-wide broadcast
   // conversation, so announcements show up in their inbox even before

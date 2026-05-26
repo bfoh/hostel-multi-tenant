@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { createHmac } from 'crypto'
 
 /**
@@ -10,12 +10,11 @@ export async function fireWebhook(
   eventType: string,
   payload: Record<string, unknown>
 ) {
-  const supabase = createAdminClient()
+  const supabase = createTenantAdminClient(tenantId)
 
   const { data: endpoints } = await supabase
     .from('webhook_endpoints')
     .select('id, url, secret, events')
-    .eq('tenant_id', tenantId)
     .eq('is_active', true)
 
   if (!endpoints?.length) return

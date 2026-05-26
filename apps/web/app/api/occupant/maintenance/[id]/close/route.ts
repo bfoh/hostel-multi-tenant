@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { insertSystemMessage, listMaintenanceStaffUserIds } from '@/lib/maintenance/messages'
 import { sendPushToUsers } from '@/lib/push'
 
@@ -12,7 +12,7 @@ export async function POST(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const admin  = createAdminClient() as any
+  const admin  = createTenantAdminClient(session.tenantId) as any
 
   const { data: mr } = await admin
     .from('maintenance_requests')
@@ -40,7 +40,7 @@ export async function POST(
 
   const recipients = await listMaintenanceStaffUserIds(session.tenantId)
   if (recipients.length > 0) {
-    sendPushToUsers(recipients, {
+    sendPushToUsers(session.tenantId, recipients, {
       title: 'Request closed by resident',
       body:  'Maintenance request resolved',
       url:   `/maintenance/${id}`,

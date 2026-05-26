@@ -17,7 +17,7 @@ export default async function CartPage() {
   const session = await getOccupantSession()
   if (!session) redirect('/login')
 
-  const cart = await getCart(session.occupantId)
+  const cart = await getCart(session.occupantId, session.tenantId)
   if (cart.length === 0) {
     return (
       <div className="space-y-3">

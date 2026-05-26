@@ -7,6 +7,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { sendEmail, baseTemplate } from '@/lib/email'
 import { notifyEnquirySms } from '@/lib/enquiries/notify'
 
@@ -32,7 +33,7 @@ export async function insertEnquiry(
   tenant: IntakeTenant,
   input: EnquiryInput,
 ): Promise<{ id: string } | { error: string }> {
-  const supabase = createAdminClient()
+  const supabase = createTenantAdminClient(tenant.id)
 
   const messageBody = [
     input.room_of_interest ? `Room of interest: ${input.room_of_interest}` : null,

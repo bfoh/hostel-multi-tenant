@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { initializeTransaction } from '@/lib/paystack'
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 422 })
 
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(tenantId)
 
   // Verify the booking belongs to this occupant + tenant
   const { data: occupant } = await admin

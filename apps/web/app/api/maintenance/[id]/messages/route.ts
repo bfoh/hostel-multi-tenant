@@ -75,7 +75,7 @@ export async function POST(
     const hostelName = tenantRow?.name ?? 'Hostel'
 
     if (occ?.user_id) {
-      sendPushToUsers([occ.user_id], {
+      sendPushToUsers(tenantId, [occ.user_id], {
         title: isFirstStaffMessage ? 'Reply from hostel staff' : 'New reply',
         body:  body ? body.slice(0, 120) : '(attachment)',
         url:   `/occupant-portal/maintenance/${id}`,

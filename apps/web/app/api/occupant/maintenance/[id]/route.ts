@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getThread } from '@/lib/maintenance/messages'
 
 export async function GET(
@@ -11,7 +11,7 @@ export async function GET(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const admin  = createAdminClient()
+  const admin  = createTenantAdminClient(session.tenantId)
 
   const { data: req } = await (admin as any)
     .from('maintenance_requests')

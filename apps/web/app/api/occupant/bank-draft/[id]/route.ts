@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
 import { BANK_DRAFTS_BUCKET } from '@/lib/bank-draft'
 
@@ -11,7 +11,7 @@ export async function DELETE(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(session.tenantId)
 
   // Verify the row belongs to this occupant + tenant AND is pending.
   const { data: rowRaw } = await admin

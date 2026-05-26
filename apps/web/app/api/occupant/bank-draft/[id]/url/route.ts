@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
 import { getSignedDraftUrl } from '@/lib/bank-draft'
 
@@ -11,7 +11,7 @@ export async function GET(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const admin  = createAdminClient()
+  const admin  = createTenantAdminClient(session.tenantId)
 
   const { data: rowRaw } = await admin
     .from('booking_payments')

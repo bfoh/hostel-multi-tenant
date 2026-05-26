@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { advanceStatus } from '@/lib/food/orders'
 import { refundFoodOrder } from '@/lib/food/refund'
 
@@ -8,7 +8,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const session = await getOccupantSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(session.tenantId) as any
   const { data: order } = await admin
     .from('food_orders')
     .select('*, food_order_items(*)')
@@ -24,7 +24,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const session = await getOccupantSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(session.tenantId) as any
 
   const { data: order } = await admin
     .from('food_orders')

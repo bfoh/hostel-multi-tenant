@@ -8,7 +8,7 @@
  * with the service role.
  */
 
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 
 export type AuthorKind = 'occupant' | 'staff' | 'system'
 
@@ -25,7 +25,7 @@ export interface Message {
 const SELECT_COLS = 'id, request_id, author_user_id, author_kind, body, attachments, created_at'
 
 export async function getThread(requestId: string, tenantId: string): Promise<Message[]> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
   const { data, error } = await admin
     .from('maintenance_messages')
     .select(SELECT_COLS)
@@ -51,7 +51,7 @@ interface InsertArgs {
 }
 
 export async function insertMessage(args: InsertArgs): Promise<{ id: string; created_at: string } | { error: string }> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(args.tenantId) as any
   const { data, error } = await admin
     .from('maintenance_messages')
     .insert({
@@ -85,7 +85,7 @@ export async function insertSystemMessage(args: { tenantId: string; requestId: s
 
 /** Has staff replied to this request previously? Drives "first reply" SMS rule. */
 export async function hasPriorStaffMessage(requestId: string, tenantId: string): Promise<boolean> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
   const { count } = await admin
     .from('maintenance_messages')
     .select('id', { count: 'exact', head: true })
@@ -97,7 +97,7 @@ export async function hasPriorStaffMessage(requestId: string, tenantId: string):
 
 /** Will the about-to-be-inserted occupant reply be the first since the latest staff message? */
 export async function isFirstOccupantReplySinceStaff(requestId: string, tenantId: string): Promise<boolean> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
   const { data: latestStaff } = await admin
     .from('maintenance_messages')
     .select('created_at')
@@ -124,7 +124,7 @@ export async function isFirstOccupantReplySinceStaff(requestId: string, tenantId
 export const MAINTENANCE_ROLES = ['owner', 'manager', 'housekeeper'] as const
 
 export async function listMaintenanceStaffUserIds(tenantId: string): Promise<string[]> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
   const { data } = await admin
     .from('tenant_members')
     .select('user_id')

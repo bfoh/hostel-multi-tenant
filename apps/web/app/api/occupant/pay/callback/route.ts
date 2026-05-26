@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { createClient } from '@/lib/supabase/server'
 
 // GET /api/occupant/pay/callback — Paystack redirects here after payment
@@ -42,9 +43,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
   }
 
-  const admin = createAdminClient()
-
-  const { data: occupant } = await admin
+  // First-step lookup uses the raw admin client because we do not yet know
+  // which tenant the user belongs to. The query is keyed on the globally
+  // unique user_id, so it cannot leak data across tenants.
+  const bootstrap = createAdminClient()
+  const { data: occupant } = await bootstrap
     .from('occupants')
     .select('tenant_id')
     .eq('user_id', user.id)
@@ -54,11 +57,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
   }
 
+  // From here on we know the tenant — use the scoped client.
+  const admin = createTenantAdminClient(occupant.tenant_id)
+
   const { data: booking } = await admin
     .from('bookings')
     .select('id, tenant_id, paid_amount, final_amount, status')
     .eq('id', bookingId)
-    .eq('tenant_id', occupant.tenant_id)
     .maybeSingle()
 
   if (!booking) {
@@ -74,7 +79,7 @@ export async function GET(req: NextRequest) {
 
   if (!existing) {
     await admin.from('booking_payments').insert({
-      tenant_id:          booking.tenant_id,
+      tenant_id:          occupant.tenant_id,
       booking_id:         bookingId,
       amount,
       method:             'card',
@@ -86,7 +91,7 @@ export async function GET(req: NextRequest) {
 
     const newPaid = booking.paid_amount + amount
     if (newPaid >= booking.final_amount && booking.status === 'pending_payment') {
-      await admin.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId).eq('tenant_id', booking.tenant_id)
+      await admin.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId)
     }
   }
 

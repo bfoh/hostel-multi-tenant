@@ -158,7 +158,7 @@ async function pingKitchen(tenantId: string, orderRef: string, orderId: string) 
     .in('role', [...KITCHEN_ROLES])
   const userIds = ((members ?? []) as any[]).map(m => m.user_id as string)
   if (userIds.length === 0) return
-  await sendPushToUsers(userIds, {
+  await sendPushToUsers(tenantId, userIds, {
     title: 'New food order',
     body:  `${orderRef} · placed`,
     url:   `/food/orders`,

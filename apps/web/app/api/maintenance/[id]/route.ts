@@ -75,7 +75,7 @@ export async function PATCH(
       const hostelName = tenantRow?.name ?? 'Hostel'
 
       if (occ?.user_id) {
-        sendPushToUsers([occ.user_id], {
+        sendPushToUsers(tenantId, [occ.user_id], {
           title: `Request ${String(parsed.data.status).replace('_', ' ')}`,
           body:  'Status updated by hostel staff',
           url:   `/occupant-portal/maintenance/${id}`,

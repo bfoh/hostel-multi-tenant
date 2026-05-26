@@ -7,7 +7,7 @@
  *   VAPID_EMAIL                   — e.g. mailto:admin@yoursite.com
  */
 import webpush from 'web-push'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 
 function getVapid() {
   const publicKey  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -33,11 +33,10 @@ export async function sendPushToTenant(tenantId: string, payload: PushPayload) {
 
   webpush.setVapidDetails(email, publicKey, privateKey)
 
-  const supabase = createAdminClient()
+  const supabase = createTenantAdminClient(tenantId)
   const { data: subs } = await supabase
     .from('push_subscriptions')
     .select('id, endpoint, p256dh, auth_key')
-    .eq('tenant_id', tenantId)
 
   if (!subs || subs.length === 0) return
 
@@ -69,18 +68,21 @@ export async function sendPushToTenant(tenantId: string, payload: PushPayload) {
 }
 
 /**
- * Send a push to one or more specific user_ids. Used for direct addressing
- * (e.g. resident getting a reply). Silently no-ops when VAPID isn't configured
- * or the users have no subscriptions.
+ * Send a push to one or more specific user_ids inside a tenant. Used for
+ * direct addressing (e.g. resident getting a reply). Silently no-ops when
+ * VAPID isn't configured or the users have no subscriptions.
+ *
+ * Tenant scoping is mandatory — without it a user_id collision across
+ * tenants could deliver a notification to the wrong hostel.
  */
-export async function sendPushToUsers(userIds: string[], payload: PushPayload) {
+export async function sendPushToUsers(tenantId: string, userIds: string[], payload: PushPayload) {
   if (userIds.length === 0) return
   const { publicKey, privateKey, email } = getVapid()
   if (!publicKey || !privateKey) return
 
   webpush.setVapidDetails(email, publicKey, privateKey)
 
-  const supabase = createAdminClient()
+  const supabase = createTenantAdminClient(tenantId)
   const { data: subs } = await supabase
     .from('push_subscriptions')
     .select('id, endpoint, p256dh, auth_key')

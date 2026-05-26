@@ -4,7 +4,7 @@ import React, { createElement } from 'react'
 
 import { getOccupantSession } from '@/lib/auth/occupant-session'
 import { getOccupantInvoiceById } from '@/lib/data/occupant-invoices'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { InvoicePDF } from '@/components/invoices/invoice-pdf'
 
 export async function GET(
@@ -19,7 +19,7 @@ export async function GET(
   if (!inv) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
 
   // Tenant header info for the PDF letterhead.
-  const admin = createAdminClient()
+  const admin = createTenantAdminClient(session.tenantId)
   const { data: tenant } = await admin
     .from('tenants')
     .select('name, tagline, address_line1, address_city, contact_phone, contact_email, logo_url, tin, vat_reg_number, is_vat_registered')

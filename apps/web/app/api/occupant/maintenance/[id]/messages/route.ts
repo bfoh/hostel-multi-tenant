@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { randomUUID } from 'crypto'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { isFirstOccupantReplySinceStaff, listMaintenanceStaffUserIds } from '@/lib/maintenance/messages'
 import { uploadAttachments } from '@/lib/maintenance/attachments'
 import { sendPushToUsers } from '@/lib/push'
@@ -14,7 +14,7 @@ export async function POST(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const admin  = createAdminClient()
+  const admin  = createTenantAdminClient(session.tenantId)
 
   const { data: mr } = await (admin as any)
     .from('maintenance_requests')
@@ -92,7 +92,7 @@ export async function POST(
   if (shouldPing) {
     const recipients = await listMaintenanceStaffUserIds(session.tenantId)
     if (recipients.length > 0) {
-      sendPushToUsers(recipients, {
+      sendPushToUsers(session.tenantId, recipients, {
         title: `New reply from ${session.firstName}`,
         body:  body ? body.slice(0, 120) : '(attachment)',
         url:   `/maintenance/${id}`,

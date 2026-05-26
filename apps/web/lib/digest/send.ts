@@ -158,7 +158,7 @@ export async function sendDailyDigestForTenant(
       const userIds = ((members ?? []) as any[]).map((m: any) => m.user_id as string)
       if (userIds.length > 0) {
         const payload = buildDigestPush({ hostelName: tenant.name, report })
-        await sendPushToUsers(userIds, payload)
+        await sendPushToUsers(tenantId, userIds, payload)
         pushCount = userIds.length
       }
     } catch (err) {

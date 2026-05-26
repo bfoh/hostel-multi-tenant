@@ -7,7 +7,7 @@
  *   • idempotent direct-DM lookup-or-create via `conversations.direct_key`
  *   • participant kind snapshot (staff/occupant) used by broadcast gating
  */
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 
 const STAFF_ROLES = ['owner', 'manager', 'receptionist', 'accountant', 'housekeeper'] as const
 
@@ -51,7 +51,7 @@ export async function resolveParticipantKind(
   tenantId: string,
   userId:   string,
 ): Promise<ParticipantKind> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
 
   const [{ data: staff }, { data: occ }] = await Promise.all([
     admin
@@ -100,7 +100,7 @@ export async function createOrFindDirect(opts: {
     return { error: 'Cannot DM yourself' }
   }
 
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(opts.tenantId) as any
   const key = directKey(opts.initiatorId, opts.peerId)
 
   // Fast path — existing conversation
@@ -160,7 +160,7 @@ export async function createOrFindDirect(opts: {
 }
 
 async function ensureParticipants(tenantId: string, conversationId: string, userIds: string[]) {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
   for (const uid of userIds) {
     const kind = await resolveParticipantKind(tenantId, uid)
     await admin
@@ -180,7 +180,7 @@ export async function createGroup(opts: {
   title:       string
   memberIds:   string[]   // initial members (creator added automatically)
 }): Promise<{ conversation: ConversationRow } | { error: string }> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(opts.tenantId) as any
 
   // Only staff can create groups in v1
   const kind = await resolveParticipantKind(opts.tenantId, opts.createdBy)
@@ -227,7 +227,7 @@ export async function ensureBroadcastConversation(opts: {
   tenantId:  string
   createdBy: string
 }): Promise<{ conversation: ConversationRow } | { error: string }> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(opts.tenantId) as any
 
   const { data: existing } = await admin
     .from('conversations')
@@ -265,7 +265,7 @@ export async function postMessage(opts: {
   attachments?:    unknown[]
   metadata?:       Record<string, unknown>
 }): Promise<{ message: MessageRow } | { error: string }> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(opts.tenantId) as any
 
   const body = (opts.body ?? '').toString().trim()
   const attachments = opts.attachments ?? []
@@ -310,11 +310,12 @@ export async function postMessage(opts: {
 }
 
 export async function markRead(opts: {
+  tenantId:       string
   conversationId: string
   userId:         string
   at?:            string
 }): Promise<void> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(opts.tenantId) as any
   await admin
     .from('conversation_participants')
     .update({ last_read_at: opts.at ?? new Date().toISOString() })
@@ -352,7 +353,7 @@ export async function listInbox(opts: {
   userId:   string
   limit?:   number
 }): Promise<InboxItem[]> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(opts.tenantId) as any
   const limit = opts.limit ?? 50
 
   const { data: parts } = await admin

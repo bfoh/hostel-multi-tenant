@@ -9,7 +9,7 @@
  * (realtime double-fire, page refresh) skip if a row already exists.
  */
 
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 
 const FALLBACK_NAME = 'Restaurant'
 
@@ -25,7 +25,7 @@ const FALLBACK_NAME = 'Restaurant'
  * orders will collapse onto whichever restaurant-type point is left.
  */
 async function getOrCreateFoodRevenuePoint(tenantId: string): Promise<string | null> {
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
 
   // Pick any existing restaurant point first
   const { data: existing } = await admin
@@ -72,7 +72,7 @@ interface FoodOrderForRevenue {
 /** Insert a sale row for this picked-up food order. No-op if already recorded. */
 export async function recordFoodSale(order: FoodOrderForRevenue): Promise<void> {
   if (!order.id || !order.tenant_id) return
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(order.tenant_id) as any
 
   // Idempotency: bail if a sale already references this order
   const { data: dup } = await admin
@@ -113,7 +113,7 @@ export async function recordFoodSale(order: FoodOrderForRevenue): Promise<void> 
  */
 export async function reverseFoodSale(orderId: string, tenantId: string): Promise<void> {
   if (!orderId || !tenantId) return
-  const admin = createAdminClient() as any
+  const admin = createTenantAdminClient(tenantId) as any
   const { error } = await admin
     .from('revenue_point_sales')
     .delete()

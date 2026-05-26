@@ -54,7 +54,7 @@ export async function PATCH(
       .eq('id', mr.occupant_id)
       .maybeSingle()
     if (occ?.user_id) {
-      sendPushToUsers([occ.user_id], {
+      sendPushToUsers(tenantId, [occ.user_id], {
         title: `Priority: ${priority}`,
         body:  'Updated by hostel staff',
         url:   `/occupant-portal/maintenance/${id}`,
