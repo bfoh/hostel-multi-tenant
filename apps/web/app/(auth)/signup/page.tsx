@@ -11,7 +11,14 @@ import { CheckCircle2, XCircle, Loader2, Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { PasswordInput } from '@/components/ui/password-input'
 
-const FROST = 'rgba(214,235,253,0.19)'
+const HAIR = 'rgba(245,233,210,0.18)'
+const IVORY = '#F5E9D2'
+const IVORY_MUTED = 'rgba(245,233,210,0.6)'
+const IVORY_DIM = 'rgba(245,233,210,0.4)'
+const GOLD = '#D4A24C'
+const GOLD_SOFT = '#F5C26B'
+const GOLD_DEEP = '#B8842E'
+const FOREST_DEEP = '#0A3729'
 
 const VALID_PLANS = ['starter', 'growth', 'pro', 'trial'] as const
 type SelectedPlan = typeof VALID_PLANS[number]
@@ -41,8 +48,8 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 const inputClass =
-  `w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] transition-all duration-200 focus:outline-none focus:border-[#3b9eff]/50`
-const inputBorder = { borderColor: FROST }
+  `w-full rounded-xl border bg-[rgba(245,233,210,0.03)] px-4 py-3 text-[14px] text-[#F5E9D2] placeholder:text-[rgba(245,233,210,0.35)] transition-all duration-200 focus:outline-none focus:border-[#D4A24C]/60 focus:bg-[rgba(212,162,76,0.05)]`
+const inputBorder = { borderColor: HAIR }
 
 function toSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
@@ -118,26 +125,27 @@ export default function SignupPage() {
       <div className="space-y-5 text-center">
         <div
           className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
-          style={{ background: 'rgba(34,255,153,0.08)', border: '1px solid rgba(34,255,153,0.2)' }}
+          style={{ background: 'rgba(212,162,76,0.10)', border: `1px solid ${GOLD}40` }}
         >
-          <svg className="h-7 w-7 text-[#22ff99]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="h-7 w-7" style={{ color: GOLD }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
         <div className="space-y-2">
           <h2
-            className="text-[20px] font-normal tracking-[-0.5px] text-white"
-            style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+            className="text-[20px] font-normal tracking-[-0.5px]"
+            style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
           >
             Check your email
           </h2>
-          <p className="text-[13px] text-[#a1a4a5] leading-relaxed max-w-[300px] mx-auto">
+          <p className="text-[13px] leading-relaxed max-w-[300px] mx-auto" style={{ color: IVORY_MUTED }}>
             We&apos;ve sent a confirmation link. Click it to activate your account and start setting up your hostel.
           </p>
         </div>
         <Link
           href="/login"
-          className="inline-block text-[13px] font-semibold text-white transition-colors hover:text-white/80"
+          className="inline-block text-[13px] font-semibold transition-colors hover:opacity-80"
+          style={{ color: GOLD }}
         >
           ← Back to sign in
         </Link>
@@ -152,18 +160,18 @@ export default function SignupPage() {
       {/* Header */}
       <div className="space-y-2 text-center">
         <h1
-          className="text-[24px] font-normal tracking-[-0.5px] text-white"
-          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+          className="text-[26px] font-normal tracking-[-0.5px]"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
         >
           {selectedPlan === 'trial' || !selectedPlan ? 'Start your free trial' : 'Create your account'}
         </h1>
-        <p className="text-[14px] text-[#a1a4a5]">
+        <p className="text-[14px]" style={{ color: IVORY_MUTED }}>
           Set up your hostel in minutes. {selectedPlan === 'trial' || !selectedPlan ? 'No credit card required.' : 'You\u2019ll subscribe after email confirmation.'}
         </p>
         {selectedPlan && (
           <div
-            className="mx-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold text-[#3b9eff]"
-            style={{ border: '1px solid rgba(59,158,255,0.3)', background: 'rgba(59,158,255,0.08)' }}
+            className="mx-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold"
+            style={{ border: `1px solid ${GOLD}40`, background: `${GOLD}14`, color: GOLD_SOFT }}
           >
             <Sparkles className="h-3 w-3" />
             {PLAN_LABEL[selectedPlan]}
@@ -174,7 +182,7 @@ export default function SignupPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         {/* Hostel name */}
         <div className="space-y-1.5">
-          <label htmlFor="hostelName" className="text-[13px] font-medium text-[#a1a4a5]">
+          <label htmlFor="hostelName" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
             Hostel name
           </label>
           <input
@@ -188,25 +196,25 @@ export default function SignupPage() {
             placeholder="Acacia Hostel"
           />
           {errors.hostelName && (
-            <p className="text-[12px] text-[#ff2047] mt-1">{errors.hostelName.message}</p>
+            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.hostelName.message}</p>
           )}
 
           {/* Slug preview */}
           {slugPreview.length >= 2 && (
             <div
               className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[12px]"
-              style={{ border: `1px solid ${FROST}`, background: 'rgba(255,255,255,0.02)' }}
+              style={{ border: `1px solid ${HAIR}`, background: 'rgba(245,233,210,0.02)' }}
             >
-              <span className="text-[#464a4d]">Your URL:</span>
-              <span className="font-mono text-[#a1a4a5] font-medium">
+              <span style={{ color: IVORY_DIM }}>Your URL:</span>
+              <span className="font-mono font-medium" style={{ color: IVORY_MUTED }}>
                 {slugPreview}.{appDomain}
               </span>
-              {slugStatus === 'checking' && <Loader2 className="ml-auto h-3 w-3 animate-spin text-[#464a4d]" />}
-              {slugStatus === 'available' && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-[#22ff99]" />}
+              {slugStatus === 'checking' && <Loader2 className="ml-auto h-3 w-3 animate-spin" style={{ color: IVORY_DIM }} />}
+              {slugStatus === 'available' && <CheckCircle2 className="ml-auto h-3.5 w-3.5" style={{ color: GOLD }} />}
               {slugStatus === 'taken' && (
                 <>
-                  <XCircle className="ml-auto h-3.5 w-3.5 text-[#ff2047]" />
-                  <span className="text-[#ff2047] font-medium">taken</span>
+                  <XCircle className="ml-auto h-3.5 w-3.5 text-[#ff6b6b]" />
+                  <span className="text-[#ff6b6b] font-medium">taken</span>
                 </>
               )}
             </div>
@@ -215,7 +223,7 @@ export default function SignupPage() {
 
         {/* Email */}
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-[13px] font-medium text-[#a1a4a5]">
+          <label htmlFor="email" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
             Email
           </label>
           <input
@@ -228,13 +236,13 @@ export default function SignupPage() {
             placeholder="kwame@acaciahostel.com"
           />
           {errors.email && (
-            <p className="text-[12px] text-[#ff2047] mt-1">{errors.email.message}</p>
+            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.email.message}</p>
           )}
         </div>
 
         {/* Password */}
         <div className="space-y-1.5">
-          <label htmlFor="password" className="text-[13px] font-medium text-[#a1a4a5]">
+          <label htmlFor="password" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
             Password
           </label>
           <PasswordInput
@@ -247,13 +255,13 @@ export default function SignupPage() {
             tone="dark"
           />
           {errors.password && (
-            <p className="text-[12px] text-[#ff2047] mt-1">{errors.password.message}</p>
+            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.password.message}</p>
           )}
         </div>
 
         {/* Confirm password */}
         <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="text-[13px] font-medium text-[#a1a4a5]">
+          <label htmlFor="confirmPassword" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
             Confirm password
           </label>
           <PasswordInput
@@ -266,14 +274,14 @@ export default function SignupPage() {
             tone="dark"
           />
           {errors.confirmPassword && (
-            <p className="text-[12px] text-[#ff2047] mt-1">{errors.confirmPassword.message}</p>
+            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.confirmPassword.message}</p>
           )}
         </div>
 
         {serverError && (
           <div
-            className="rounded-xl px-4 py-3 text-[13px] text-[#ff2047]"
-            style={{ border: '1px solid rgba(255,32,71,0.2)', background: 'rgba(255,32,71,0.06)' }}
+            className="rounded-xl px-4 py-3 text-[13px] text-[#ff8a8a]"
+            style={{ border: '1px solid rgba(255,107,107,0.3)', background: 'rgba(255,107,107,0.08)' }}
           >
             {serverError}
           </div>
@@ -282,28 +290,33 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={isSubmitting || slugStatus === 'taken'}
-          className="w-full rounded-full bg-white px-4 py-3 text-[14px] font-semibold text-black transition-all hover:bg-white/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+          className="w-full rounded-full px-4 py-3 text-[14px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+          style={{
+            background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
+            color: FOREST_DEEP,
+            boxShadow: '0 10px 28px -10px rgba(212,162,76,0.55)',
+          }}
         >
           {isSubmitting ? 'Creating account\u2026' : 'Create account'}
         </button>
 
-        <p className="text-center text-[11px] text-[#464a4d]">
+        <p className="text-center text-[11px]" style={{ color: IVORY_DIM }}>
           By signing up you agree to our{' '}
-          <a href="#" className="text-white hover:text-white/80 underline underline-offset-2">Terms</a>
+          <a href="#" className="underline underline-offset-2 transition-colors hover:opacity-80" style={{ color: IVORY }}>Terms</a>
           {' '}and{' '}
-          <a href="#" className="text-white hover:text-white/80 underline underline-offset-2">Privacy Policy</a>.
+          <a href="#" className="underline underline-offset-2 transition-colors hover:opacity-80" style={{ color: IVORY }}>Privacy Policy</a>.
         </p>
       </form>
 
       {/* Divider */}
       <div className="relative">
-        <div className="absolute inset-0 flex items-center"><div className="w-full" style={{ borderTop: `1px solid ${FROST}` }} /></div>
-        <div className="relative flex justify-center"><span className="bg-black px-3 text-[12px] text-[#464a4d]">or</span></div>
+        <div className="absolute inset-0 flex items-center"><div className="w-full" style={{ borderTop: `1px solid ${HAIR}` }} /></div>
+        <div className="relative flex justify-center"><span className="px-3 text-[12px]" style={{ background: '#0A0A08', color: IVORY_DIM }}>or</span></div>
       </div>
 
-      <p className="text-center text-[13px] text-[#a1a4a5]">
+      <p className="text-center text-[13px]" style={{ color: IVORY_MUTED }}>
         Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-white transition-colors hover:text-white/80">
+        <Link href="/login" className="font-semibold transition-colors hover:opacity-80" style={{ color: GOLD }}>
           Sign in
         </Link>
       </p>

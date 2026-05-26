@@ -10,7 +10,13 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/client'
 import { PasswordInput } from '@/components/ui/password-input'
 
-const FROST = 'rgba(214,235,253,0.19)'
+const HAIR = 'rgba(245,233,210,0.18)'
+const IVORY = '#F5E9D2'
+const IVORY_MUTED = 'rgba(245,233,210,0.6)'
+const GOLD = '#D4A24C'
+const GOLD_SOFT = '#F5C26B'
+const GOLD_DEEP = '#B8842E'
+const FOREST_DEEP = '#0A3729'
 
 const schema = z
   .object({
@@ -31,8 +37,14 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 const inputClass =
-  `w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] transition-all duration-200 focus:outline-none focus:border-[#3b9eff]/50`
-const inputBorder = { borderColor: FROST }
+  `w-full rounded-xl border bg-[rgba(245,233,210,0.03)] px-4 py-3 text-[14px] text-[#F5E9D2] placeholder:text-[rgba(245,233,210,0.35)] transition-all duration-200 focus:outline-none focus:border-[#D4A24C]/60 focus:bg-[rgba(212,162,76,0.05)]`
+const inputBorder = { borderColor: HAIR }
+
+const goldButtonStyle = {
+  background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
+  color: FOREST_DEEP,
+  boxShadow: '0 10px 28px -10px rgba(212,162,76,0.55)',
+} as const
 
 function ResetPasswordForm() {
   const router = useRouter()
@@ -85,19 +97,19 @@ function ResetPasswordForm() {
     <div className="space-y-6">
       <div className="space-y-2 text-center">
         <h1
-          className="text-[24px] font-normal tracking-[-0.5px] text-white"
-          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+          className="text-[26px] font-normal tracking-[-0.5px]"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
         >
           Set new password
         </h1>
-        <p className="text-[14px] text-[#a1a4a5]">
+        <p className="text-[14px]" style={{ color: IVORY_MUTED }}>
           Enter the code from your email, then choose a new password.
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-[13px] font-medium text-[#a1a4a5]">
+          <label htmlFor="email" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
             Email
           </label>
           <input
@@ -110,12 +122,12 @@ function ResetPasswordForm() {
             placeholder="kwame@example.com"
           />
           {errors.email && (
-            <p className="text-[12px] text-[#ff2047] mt-1">{errors.email.message}</p>
+            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.email.message}</p>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="code" className="text-[13px] font-medium text-[#a1a4a5]">
+          <label htmlFor="code" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
             Reset code
           </label>
           <input
@@ -124,17 +136,17 @@ function ResetPasswordForm() {
             autoComplete="one-time-code"
             maxLength={10}
             {...register('code')}
-            className={`${inputClass} tracking-[4px] text-center font-mono`}
+            className={`${inputClass} text-center font-mono tracking-[4px]`}
             style={inputBorder}
             placeholder="Code from email"
           />
           {errors.code && (
-            <p className="text-[12px] text-[#ff2047] mt-1">{errors.code.message}</p>
+            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.code.message}</p>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="password" className="text-[13px] font-medium text-[#a1a4a5]">
+          <label htmlFor="password" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
             New password
           </label>
           <PasswordInput
@@ -147,12 +159,12 @@ function ResetPasswordForm() {
             tone="dark"
           />
           {errors.password && (
-            <p className="text-[12px] text-[#ff2047] mt-1">{errors.password.message}</p>
+            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.password.message}</p>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="text-[13px] font-medium text-[#a1a4a5]">
+          <label htmlFor="confirmPassword" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
             Confirm new password
           </label>
           <PasswordInput
@@ -165,14 +177,14 @@ function ResetPasswordForm() {
             tone="dark"
           />
           {errors.confirmPassword && (
-            <p className="text-[12px] text-[#ff2047] mt-1">{errors.confirmPassword.message}</p>
+            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.confirmPassword.message}</p>
           )}
         </div>
 
         {serverError && (
           <div
-            className="rounded-xl px-4 py-3 text-[13px] text-[#ff2047]"
-            style={{ border: '1px solid rgba(255,32,71,0.2)', background: 'rgba(255,32,71,0.06)' }}
+            className="rounded-xl px-4 py-3 text-[13px] text-[#ff8a8a]"
+            style={{ border: '1px solid rgba(255,107,107,0.3)', background: 'rgba(255,107,107,0.08)' }}
           >
             {serverError}
           </div>
@@ -181,15 +193,20 @@ function ResetPasswordForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-full bg-white px-4 py-3 text-[14px] font-semibold text-black transition-all hover:bg-white/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+          className="w-full rounded-full px-4 py-3 text-[14px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+          style={goldButtonStyle}
         >
           {isSubmitting ? 'Updating password…' : 'Update password'}
         </button>
       </form>
 
-      <p className="text-center text-[13px] text-[#a1a4a5]">
+      <p className="text-center text-[13px]" style={{ color: IVORY_MUTED }}>
         Didn&apos;t get a code?{' '}
-        <Link href="/forgot-password" className="font-semibold text-white transition-colors hover:text-white/80">
+        <Link
+          href="/forgot-password"
+          className="font-semibold transition-colors hover:opacity-80"
+          style={{ color: GOLD }}
+        >
           Request a new one
         </Link>
       </p>

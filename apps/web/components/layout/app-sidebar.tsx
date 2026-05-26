@@ -351,12 +351,11 @@ function NavLink({ item, pathname, collapsed }: { item: NavItem; pathname: strin
 
 function BuildingIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-      <path d="M3 11L12 3l9 8" stroke="#f0f0f0" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <rect x="5" y="11" width="14" height="10" rx="1" fill="#f0f0f0" opacity="0.15"/>
-      <rect x="7" y="13" width="3" height="3" rx="0.4" fill="#f0f0f0" opacity="0.9"/>
-      <rect x="14" y="13" width="3" height="3" rx="0.4" fill="#f0f0f0" opacity="0.9"/>
-      <rect x="9.5" y="16.5" width="5" height="4.5" rx="0.4" fill="#f0f0f0" opacity="0.95"/>
+    <svg viewBox="0 0 64 64" fill="none" className="h-5 w-5">
+      <path d="M14 38 Q14 18 32 14 Q50 18 50 38" stroke="#D4A24C" strokeWidth="3" strokeLinecap="round" fill="none"/>
+      <path d="M22 42 Q22 26 32 22 Q42 26 42 42" stroke="#F5E9D2" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.85"/>
+      <rect x="22" y="42" width="20" height="2.5" rx="1.25" fill="#D4A24C"/>
+      <path d="M32 28 L33.4 32 L37.6 32 L34.2 34.6 L35.5 38.6 L32 36.2 L28.5 38.6 L29.8 34.6 L26.4 32 L30.6 32 Z" fill="#F5E9D2"/>
     </svg>
   )
 }

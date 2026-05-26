@@ -4,11 +4,11 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'GH Hostels',
     short_name: 'GH Hostels',
-    description: 'Modern hostel management for Ghana.',
+    description: 'Modern hostel management software for Ghana — bookings, MoMo, GRA accounting, payroll.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#2563EB',
+    background_color: '#0A0A08',
+    theme_color: '#0F4C3A',
     orientation: 'portrait-primary',
     icons: [
       {

@@ -13,7 +13,7 @@ const BYPASS_PATHS = [
   '/sitemap.xml',
   '/api/debug-env',
 ]
-const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/api/public', '/api/widget']
+const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/api/public', '/api/widget']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']
 const PORTAL_PATHS  = ['/staff-portal', '/occupant-portal']
 

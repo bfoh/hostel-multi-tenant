@@ -21,9 +21,9 @@ const ORDER: Record<string, number> = {
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ saleId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { saleId } = await params
+  const { id } = await params
 
   const h = await headers()
   const tenantId = h.get('x-tenant-id')
@@ -40,7 +40,7 @@ export async function PATCH(
   const { data: existing } = await supabase
     .from('revenue_point_sales')
     .select('id, status')
-    .eq('id', saleId)
+    .eq('id', id)
     .eq('tenant_id', tenantId)
     .maybeSingle()
 
@@ -58,7 +58,7 @@ export async function PATCH(
 
   const { data, error } = await (supabase.from('revenue_point_sales') as any)
     .update({ status: parsed.data.status })
-    .eq('id', saleId)
+    .eq('id', id)
     .eq('tenant_id', tenantId)
     .select('id, status, customer_name, weight_kg, entry_token, sold_at')
     .single()

@@ -1,14 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <rect width="512" height="512" rx="96" fill="url(#g)"/>
-  <path d="M112 236 L256 108 L400 236" stroke="white" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <rect x="150" y="236" width="212" height="168" rx="8" fill="white" opacity="0.18"/>
-  <rect x="172" y="262" width="60" height="56" rx="8" fill="white" opacity="0.88"/>
-  <rect x="280" y="262" width="60" height="56" rx="8" fill="white" opacity="0.88"/>
-  <rect x="214" y="328" width="84" height="76" rx="8" fill="white" opacity="0.95"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-label="GH Hostels">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#1E40AF"/>
+    <radialGradient id="g" cx="256" cy="180" r="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1B6E54"/>
+      <stop offset="100%" stop-color="#0F4C3A"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="160" y1="112" x2="352" y2="416" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F5C26B"/>
+      <stop offset="55%" stop-color="#D4A24C"/>
+      <stop offset="100%" stop-color="#B8842E"/>
     </linearGradient>
   </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <!-- Outer Adinkra arch -->
+  <path d="M112 304 Q112 144 256 112 Q400 144 400 304" stroke="url(#gold)" stroke-width="26" fill="none" stroke-linecap="round"/>
+  <!-- Inner arch -->
+  <path d="M176 336 Q176 208 256 176 Q336 208 336 336" stroke="#F5E9D2" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.85"/>
+  <!-- Threshold -->
+  <rect x="176" y="336" width="160" height="20" rx="10" fill="url(#gold)"/>
+  <!-- Black star inside arch -->
+  <path d="M256 224 L267.2 256 L300.8 256 L273.6 276.8 L284 308.8 L256 289.6 L228 308.8 L238.4 276.8 L211.2 256 L244.8 256 Z" fill="#F5E9D2"/>
+  <!-- Base tick -->
+  <rect x="144" y="368" width="224" height="12" rx="6" fill="#F5E9D2" opacity="0.35"/>
 </svg>

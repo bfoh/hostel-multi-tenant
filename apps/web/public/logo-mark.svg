@@ -1,14 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <rect width="48" height="48" rx="12" fill="url(#g)"/>
-  <path d="M10 22 L24 10 L38 22" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <rect x="14" y="22" width="20" height="16" rx="1" fill="white" opacity="0.2"/>
-  <rect x="17" y="25" width="5" height="5" rx="1" fill="white" opacity="0.85"/>
-  <rect x="26" y="25" width="5" height="5" rx="1" fill="white" opacity="0.85"/>
-  <rect x="20" y="31" width="8" height="7" rx="1" fill="white" opacity="0.9"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="GH Hostels mark">
+  <!-- Outer rounded square: deep forest -->
+  <rect width="64" height="64" rx="14" fill="#0F4C3A"/>
+
+  <!-- Inner subtle radial highlight -->
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#1D4ED8"/>
+    <radialGradient id="ghm-glow" cx="32" cy="22" r="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1B6E54"/>
+      <stop offset="100%" stop-color="#0F4C3A"/>
+    </radialGradient>
+    <linearGradient id="ghm-gold" x1="20" y1="14" x2="44" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F5C26B"/>
+      <stop offset="55%" stop-color="#D4A24C"/>
+      <stop offset="100%" stop-color="#B8842E"/>
     </linearGradient>
   </defs>
+  <rect width="64" height="64" rx="14" fill="url(#ghm-glow)"/>
+
+  <!-- Adinkra-inspired arched gateway (Dwennimmen/Sankofa nod via twin curves) -->
+  <!-- Outer arch: roof shelter representing 'hostel' -->
+  <path
+    d="M14 38 Q14 18 32 14 Q50 18 50 38"
+    stroke="url(#ghm-gold)"
+    stroke-width="3"
+    fill="none"
+    stroke-linecap="round"
+  />
+
+  <!-- Inner arch: doorway / belonging -->
+  <path
+    d="M22 42 Q22 26 32 22 Q42 26 42 42"
+    stroke="#F5E9D2"
+    stroke-width="2"
+    fill="none"
+    stroke-linecap="round"
+    opacity="0.85"
+  />
+
+  <!-- Threshold / base -->
+  <rect x="22" y="42" width="20" height="2.5" rx="1.25" fill="url(#ghm-gold)"/>
+
+  <!-- Black star — Ghana motif, subtle inside the arch -->
+  <path
+    d="M32 28 L33.4 32 L37.6 32 L34.2 34.6 L35.5 38.6 L32 36.2 L28.5 38.6 L29.8 34.6 L26.4 32 L30.6 32 Z"
+    fill="#F5E9D2"
+    opacity="0.95"
+  />
+
+  <!-- Foundation tick -->
+  <rect x="18" y="46" width="28" height="1.5" rx="0.75" fill="#F5E9D2" opacity="0.35"/>
 </svg>
