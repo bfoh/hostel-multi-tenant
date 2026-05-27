@@ -413,6 +413,72 @@ export function checkoutSummaryHtml(opts: {
   return baseTemplate(hostelName, primaryColor, content, logoUrl)
 }
 
+/* ── Trial warning email (T-3, T-1) ─────────────────────────────────────── */
+
+export function trialWarningHtml(opts: {
+  hostelName:    string
+  primaryColor:  string
+  logoUrl?:      string | null
+  ownerName?:    string | null
+  daysLeft:      number
+  trialEndsAt:   string
+  billingUrl:    string
+}) {
+  const { hostelName, primaryColor, logoUrl, ownerName, daysLeft, trialEndsAt, billingUrl } = opts
+  const dayWord = daysLeft === 1 ? 'day' : 'days'
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">
+      Your trial ends in ${daysLeft} ${dayWord}
+    </p>
+    <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">
+      Hi${ownerName ? ` ${ownerName}` : ''}, your <strong>${hostelName}</strong> free trial on GH Hostels expires on
+      <strong>${trialEndsAt}</strong>. Pick a plan now to keep bookings, payments, and reports running without interruption.
+    </p>
+    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:24px;">
+      <p style="margin:0;font-size:13px;color:#92400e;">
+        After the trial ends, the dashboard pauses for new bookings and payment links stop generating. Your data is kept safe — pick a plan any time to resume.
+      </p>
+    </div>
+    ${button(billingUrl, 'Choose a plan', primaryColor)}
+    <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;">
+      Questions? Reply to this email and we will get back the same day.
+    </p>
+  `
+
+  return baseTemplate(hostelName, primaryColor, content, logoUrl)
+}
+
+/* ── Trial-expired email (T+0) ──────────────────────────────────────────── */
+
+export function trialExpiredHtml(opts: {
+  hostelName:    string
+  primaryColor:  string
+  logoUrl?:      string | null
+  ownerName?:    string | null
+  billingUrl:    string
+}) {
+  const { hostelName, primaryColor, logoUrl, ownerName, billingUrl } = opts
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Your trial has ended</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">
+      Hi${ownerName ? ` ${ownerName}` : ''}, your <strong>${hostelName}</strong> trial on GH Hostels ended today. Your account is paused until you pick a plan.
+    </p>
+    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:24px;">
+      <p style="margin:0;font-size:13px;color:#92400e;">
+        All your rooms, occupants, and history are preserved. You will not lose anything — sign up for a plan and pick up where you left off.
+      </p>
+    </div>
+    ${button(billingUrl, 'Reactivate now', primaryColor)}
+    <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;">
+      Need help choosing a plan or want a demo? Just reply to this email.
+    </p>
+  `
+
+  return baseTemplate(hostelName, primaryColor, content, logoUrl)
+}
+
 /* ── Internal ops: new-tenant lead notification ─────────────────────────── */
 
 export function newTenantLeadHtml(opts: {
