@@ -151,7 +151,7 @@ const FAQS = [
   },
   {
     q: 'How long does migration from Excel take?',
-    a: 'Typical 100-room hostel: one afternoon. You send us your existing room list, occupant directory, and current balances. We import them, you verify, and you’re live by the next morning. Growth and Pro plans include guided onboarding.',
+    a: 'Typical 100-room hostel: one afternoon. You send us your existing room list, occupant directory, and current balances. We import them, you verify, and you’re live by the next morning. Growth customers get guided onboarding included.',
   },
   {
     q: 'What if I want to keep a copy of the data in Excel?',
@@ -159,15 +159,15 @@ const FAQS = [
   },
   {
     q: 'Will my staff need training?',
-    a: 'Most front-desk workflows take 20 minutes to learn. Accounting/payroll modules need a couple of hours with the bursar. We do a guided onboarding session for Growth and Pro plans and provide WhatsApp support whenever you need it.',
+    a: 'Most front-desk workflows take 20 minutes to learn. Accounting/payroll modules need a couple of hours with the bursar. We do a guided onboarding session for Growth customers and provide WhatsApp support whenever you need it.',
   },
   {
     q: 'Is it really cheaper than running Excel?',
-    a: 'Excel is "free" only on the licence. The real cost is in admin hours, missed payments, GRA fines, payroll mistakes, and the lost revenue from rooms that sit empty because nobody updated the sheet. Most hostels recover the GH₵ 500–1,000/month subscription within the first month.',
+    a: 'Excel is "free" only on the licence. The real cost is in admin hours, missed payments, GRA fines, payroll mistakes, and the lost revenue from rooms that sit empty because nobody updated the sheet. Most hostels recover the GH₵ 800–1,000/month subscription within the first month.',
   },
   {
     q: 'Will my data stay in Ghana?',
-    a: 'Data is hosted on managed cloud infrastructure with daily backups. Each tenant is fully isolated using Postgres row-level security. We can configure regional residency on Enterprise plans if you require it.',
+    a: 'Data is hosted on managed cloud infrastructure with daily backups. Each tenant is fully isolated using Postgres row-level security. Contact us if you need a specific data-residency arrangement.',
   },
 ]
 

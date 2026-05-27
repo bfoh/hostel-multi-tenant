@@ -137,7 +137,7 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState('')
   const [finalSlug,  setFinalSlug]  = useState(initialSlug)
-  const [finalPlan,  setFinalPlan]  = useState<'starter' | 'growth' | 'pro' | 'trial' | null>(null)
+  const [finalPlan,  setFinalPlan]  = useState<'starter' | 'growth' | 'trial' | null>(null)
 
   // Slug check state
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
@@ -289,7 +289,7 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
 
   const isLocalhost = appDomain === 'localhost' || appDomain === '127.0.0.1'
 
-  const isPaidPlan = finalPlan === 'starter' || finalPlan === 'growth' || finalPlan === 'pro'
+  const isPaidPlan = finalPlan === 'starter' || finalPlan === 'growth'
 
   function getDashboardUrl() {
     const path = isPaidPlan ? `/settings/billing?autosubscribe=${finalPlan}` : '/dashboard'

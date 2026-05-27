@@ -39,7 +39,7 @@ export default async function DashboardPage() {
     }
 
     const pendingPlan = (tenant as any)?.selected_plan as string | null | undefined
-    if (pendingPlan && ['starter', 'growth', 'pro'].includes(pendingPlan)) {
+    if (pendingPlan && ['starter', 'growth'].includes(pendingPlan)) {
       const { data: activeSub } = await admin
         .from('tenant_subscriptions')
         .select('id')

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 
 interface Plan {
-  name: 'starter' | 'growth' | 'pro'
+  name: 'starter' | 'growth'
   displayName: string
   description: string
   amountPesewas: number
@@ -30,7 +30,7 @@ interface Subscription {
 interface Props {
   plans: Plan[]
   subscription: Subscription | null
-  currentPlan: string       // from tenants.plan (starter/growth/pro)
+  currentPlan: string       // from tenants.plan (starter/growth)
   tenantStatus: string      // from tenants.status (trial/active/suspended/cancelled)
   trialEndsAt: string | null
 }
@@ -43,7 +43,7 @@ const STATUS_STYLE: Record<string, string> = {
   incomplete: 'bg-warning/10 text-warning border-warning/30',
 }
 
-const PLAN_ORDER: Record<string, number> = { starter: 0, growth: 1, pro: 2 }
+const PLAN_ORDER: Record<string, number> = { starter: 0, growth: 1 }
 
 export function BillingClient({ plans, subscription, currentPlan, tenantStatus, trialEndsAt }: Props) {
   const router = useRouter()

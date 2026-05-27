@@ -148,7 +148,7 @@ const FEATURES = [
 const PLANS = [
   {
     name: 'Starter',
-    price: '500',
+    price: '800',
     interval: '/month',
     desc: 'For hostels up to 50 rooms',
     features: [
@@ -163,11 +163,11 @@ const PLANS = [
   },
   {
     name: 'Growth',
-    price: '800',
+    price: '1,000',
     interval: '/month',
-    desc: 'For hostels up to 200 rooms',
+    desc: 'Unlimited rooms, payroll, multi-property',
     features: [
-      'Up to 200 rooms',
+      'Unlimited rooms',
       'Staff payroll (SSNIT/PAYE)',
       'Full double-entry accounting',
       'Multi-property portfolio view',
@@ -175,21 +175,6 @@ const PLANS = [
     ],
     cta: 'Subscribe',
     highlight: true,
-  },
-  {
-    name: 'Pro',
-    price: '1,000',
-    interval: '/month',
-    desc: 'Unlimited rooms, AI, SLA',
-    features: [
-      'Unlimited rooms',
-      'AI booking agent (Twi + English)',
-      'Custom domain + branding',
-      'Anomaly & fraud detection',
-      'Dedicated SLA + onboarding',
-    ],
-    cta: 'Subscribe',
-    highlight: false,
   },
 ]
 
@@ -216,7 +201,7 @@ const FAQS = [
   },
   {
     q: 'Can I manage multiple hostels?',
-    a: 'The Growth and Pro plans include a portfolio view that lets you manage multiple properties from a single dashboard — consolidated occupancy, revenue, and financials across every site.',
+    a: 'The Growth plan includes a portfolio view that lets you manage multiple properties from a single dashboard — consolidated occupancy, revenue, and financials across every site.',
   },
   {
     q: 'Will it work in Accra, Kumasi, Cape Coast, Tamale?',
@@ -228,7 +213,7 @@ const FAQS = [
   },
   {
     q: 'Do you offer onboarding help?',
-    a: 'Yes. Growth and Pro customers get a guided onboarding call. Pro customers get a dedicated success manager and SLA. We help you import existing room and occupant data.',
+    a: 'Yes. Growth customers get a guided onboarding call and priority support. We help you import existing room and occupant data.',
   },
 ]
 
@@ -975,7 +960,7 @@ export default async function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
+          <div className="mt-14 grid gap-5 md:grid-cols-2 max-w-3xl mx-auto">
             {PLANS.map((plan, i) => (
               <div
                 key={plan.name}

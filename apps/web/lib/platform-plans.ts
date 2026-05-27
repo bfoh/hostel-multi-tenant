@@ -6,7 +6,7 @@
  * Amounts are in pesewas (GHS × 100).
  */
 
-export type PlatformPlanName = 'starter' | 'growth' | 'pro'
+export type PlatformPlanName = 'starter' | 'growth'
 
 export interface PlatformPlan {
   name:           PlatformPlanName
@@ -23,7 +23,7 @@ const PLAN_DEFS: Omit<PlatformPlan, 'planCode'>[] = [
     name:          'starter',
     displayName:   'Starter',
     description:   'Up to 50 rooms. Core booking, invoicing, payments.',
-    amountPesewas: 50_000,                   // GHS 500 / month
+    amountPesewas: 80_000,                   // GHS 800 / month
     planCodeEnv:   'PAYSTACK_PLAN_STARTER',
     features: [
       'Up to 50 rooms',
@@ -35,29 +35,15 @@ const PLAN_DEFS: Omit<PlatformPlan, 'planCode'>[] = [
   {
     name:          'growth',
     displayName:   'Growth',
-    description:   'Up to 200 rooms. Adds HR, payroll, and multi-property.',
-    amountPesewas: 80_000,                   // GHS 800 / month
+    description:   'Unlimited rooms. Adds HR, payroll, and multi-property.',
+    amountPesewas: 100_000,                  // GHS 1,000 / month
     planCodeEnv:   'PAYSTACK_PLAN_GROWTH',
     features: [
-      'Up to 200 rooms',
+      'Unlimited rooms',
       'Staff payroll (GRA tax engine)',
       'Full double-entry accounting',
       'Portfolio view',
       'Priority support',
-    ],
-  },
-  {
-    name:          'pro',
-    displayName:   'Pro',
-    description:   'Unlimited rooms. AI agent, custom domains, SLA.',
-    amountPesewas: 100_000,                  // GHS 1,000 / month
-    planCodeEnv:   'PAYSTACK_PLAN_PRO',
-    features: [
-      'Unlimited rooms',
-      'AI booking agent',
-      'Custom domain + branding',
-      'Anomaly detection',
-      'Dedicated SLA',
     ],
   },
 ]

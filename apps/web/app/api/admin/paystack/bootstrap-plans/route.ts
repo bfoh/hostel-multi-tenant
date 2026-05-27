@@ -9,7 +9,7 @@ import { listPlatformPlans } from '@/lib/platform-plans'
  *
  * One-time bootstrap: creates the GH Hostels subscription plans on the
  * platform Paystack merchant. Returns the generated plan codes — paste them
- * into env vars PAYSTACK_PLAN_STARTER / _GROWTH / _PRO.
+ * into env vars PAYSTACK_PLAN_STARTER / _GROWTH.
  *
  * Guarded by platform super-admin membership.
  *
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     results,
     force,
     note: force
-      ? 'Force-recreated. Paste the new plan codes into PAYSTACK_PLAN_STARTER/GROWTH/PRO and redeploy. Old plan codes on Paystack are now orphaned.'
-      : 'Paste the created plan codes into env vars PAYSTACK_PLAN_STARTER, PAYSTACK_PLAN_GROWTH, PAYSTACK_PLAN_PRO.',
+      ? 'Force-recreated. Paste the new plan codes into PAYSTACK_PLAN_STARTER/GROWTH and redeploy. Old plan codes on Paystack are now orphaned.'
+      : 'Paste the created plan codes into env vars PAYSTACK_PLAN_STARTER, PAYSTACK_PLAN_GROWTH.',
   })
 }

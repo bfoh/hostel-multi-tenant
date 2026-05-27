@@ -57,7 +57,7 @@ async function getTenant() {
 
 async function getBillingData(tenantId: string) {
   const plans = listPlatformPlans().map((p) => ({
-    name:          p.name as 'starter' | 'growth' | 'pro',
+    name:          p.name as 'starter' | 'growth',
     displayName:   p.displayName,
     description:   p.description,
     amountPesewas: p.amountPesewas,

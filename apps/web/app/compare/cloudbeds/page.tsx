@@ -60,7 +60,7 @@ const ROWS: CompareRow[] = [
     capability: 'Pricing in Ghana cedis',
     competitor: false,
     gh: true,
-    detail: 'From GH₵ 500/month. No FX swings. No card-only billing.',
+    detail: 'From GH₵ 800/month. No FX swings. No card-only billing.',
   },
   {
     capability: 'Bank draft / deposit slip workflow',
@@ -111,7 +111,7 @@ const ROWS: CompareRow[] = [
     capability: 'Onboarding included',
     competitor: 'addon',
     gh: true,
-    detail: 'Growth + Pro plans get a guided onboarding call at no extra cost.',
+    detail: 'Growth plan gets a guided onboarding call at no extra cost.',
   },
 ]
 
@@ -130,7 +130,7 @@ const REASONS = [
   },
   {
     title: 'Cedis pricing, no FX shock',
-    body: 'You pay GH₵ 500–1,000/month. No USD-to-GHS conversion bills that triple in a year. We price for the market we serve.',
+    body: 'You pay GH₵ 800–1,000/month. No USD-to-GHS conversion bills that triple in a year. We price for the market we serve.',
   },
   {
     title: 'Local support, in Accra',
@@ -149,11 +149,11 @@ const FAQS = [
   },
   {
     q: 'Can I migrate from Cloudbeds to GH Hostels?',
-    a: 'Yes. Export your rooms, occupants, bookings, and payment history from Cloudbeds. We import them for you during onboarding on Growth and Pro plans — typically completed in one afternoon for a 100-room hostel.',
+    a: 'Yes. Export your rooms, occupants, bookings, and payment history from Cloudbeds. We import them for you during onboarding on the Growth plan — typically completed in one afternoon for a 100-room hostel.',
   },
   {
     q: 'How does pricing compare?',
-    a: 'Cloudbeds bills in USD with per-room pricing that scales aggressively past 50 rooms. GH Hostels is fixed GHS pricing: GH₵ 500/month up to 50 rooms (Starter), GH₵ 800/month up to 200 rooms (Growth), GH₵ 1,000/month unlimited (Pro). No per-occupant fees.',
+    a: 'Cloudbeds bills in USD with per-room pricing that scales aggressively past 50 rooms. GH Hostels is fixed GHS pricing: GH₵ 800/month up to 50 rooms (Starter) and GH₵ 1,000/month unlimited (Growth). No per-occupant fees.',
   },
   {
     q: 'Does Cloudbeds support Paystack?',

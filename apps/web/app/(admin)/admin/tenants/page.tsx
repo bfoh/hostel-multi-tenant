@@ -33,8 +33,6 @@ const STATUS_COLOR: Record<string, string> = {
 const PLAN_LABEL: Record<string, string> = {
   starter: 'Starter',
   growth: 'Growth',
-  pro: 'Pro',
-  enterprise: 'Enterprise',
 }
 
 export default async function AdminTenantsPage({

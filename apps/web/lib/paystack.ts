@@ -389,7 +389,7 @@ export interface Plan {
 
 /**
  * Create a subscription plan on the platform merchant.
- * Run once per pricing tier (Starter / Pro / Enterprise).
+ * Run once per pricing tier (Starter / Growth).
  */
 export async function createPlan(params: {
   name: string

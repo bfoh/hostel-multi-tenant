@@ -11,7 +11,7 @@ import {
 import { getPlatformPlan, type PlatformPlanName } from '@/lib/platform-plans'
 
 const schema = z.object({
-  plan: z.enum(['starter', 'growth', 'pro']),
+  plan: z.enum(['starter', 'growth']),
 })
 
 /**

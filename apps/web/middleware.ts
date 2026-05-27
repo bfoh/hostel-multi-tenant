@@ -141,7 +141,7 @@ export async function middleware(request: NextRequest) {
     // to the billing page so autosubscribe fires, rather than discarding the
     // plan param and dropping them at /dashboard.
     const plan = request.nextUrl.searchParams.get('plan')
-    if (plan && ['starter', 'growth', 'pro'].includes(plan)) {
+    if (plan && ['starter', 'growth'].includes(plan)) {
       return NextResponse.redirect(new URL(`/settings/billing?autosubscribe=${plan}`, request.url))
     }
     return NextResponse.redirect(new URL('/dashboard', request.url))

@@ -5,7 +5,7 @@ export interface TenantRecord {
   slug: string
   name: string
   domain: string | null
-  plan: 'starter' | 'growth' | 'pro' | 'enterprise'
+  plan: 'starter' | 'growth'
   isActive: boolean
   branding: {
     primaryColor: string | null

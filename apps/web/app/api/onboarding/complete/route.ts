@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   // Billing page autosubscribe flow consumes it.
   const rawSelected = user?.user_metadata?.selected_plan as string | undefined
   const selectedPlan =
-    rawSelected && ['starter', 'growth', 'pro', 'trial'].includes(rawSelected)
+    rawSelected && ['starter', 'growth', 'trial'].includes(rawSelected)
       ? rawSelected
       : null
 

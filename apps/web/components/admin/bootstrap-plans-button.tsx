@@ -69,7 +69,7 @@ export function BootstrapPlansButton() {
         <div className="rounded-lg border border-white/10 bg-black/40 p-4 text-xs space-y-2">
           <p className="text-white/70">
             {forced
-              ? 'Recreated. Paste the NEW codes into env vars (PAYSTACK_PLAN_STARTER/GROWTH/PRO) and redeploy. Old codes are now orphaned.'
+              ? 'Recreated. Paste the NEW codes into env vars (PAYSTACK_PLAN_STARTER/GROWTH) and redeploy. Old codes are now orphaned.'
               : 'Paste these into env vars, then redeploy:'}
           </p>
           {results.map((r) => (

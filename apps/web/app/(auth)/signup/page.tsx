@@ -20,12 +20,11 @@ const GOLD_SOFT = '#F5C26B'
 const GOLD_DEEP = '#B8842E'
 const FOREST_DEEP = '#0A3729'
 
-const VALID_PLANS = ['starter', 'growth', 'pro', 'trial'] as const
+const VALID_PLANS = ['starter', 'growth', 'trial'] as const
 type SelectedPlan = typeof VALID_PLANS[number]
 const PLAN_LABEL: Record<SelectedPlan, string> = {
-  starter: 'Starter — GH₵ 500 / month',
-  growth:  'Growth — GH₵ 800 / month',
-  pro:     'Pro — GH₵ 1,000 / month',
+  starter: 'Starter — GH₵ 800 / month',
+  growth:  'Growth — GH₵ 1,000 / month',
   trial:   '30-day free trial',
 }
 
