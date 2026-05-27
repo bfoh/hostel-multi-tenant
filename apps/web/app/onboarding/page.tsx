@@ -16,23 +16,43 @@ export default async function OnboardingPage() {
 
   const admin = createAdminClient()
 
-  // Try to resolve tenant from header first, then DB lookup
-  let tenantRecord: { id: string; name: string; slug: string; onboarding_completed: boolean } | null = null
+  const TENANT_COLS = `id, name, slug, onboarding_completed,
+    custom_domain, tagline, contact_phone, contact_email,
+    address_city, address_region, currency, timezone,
+    primary_color, logo_url`
+
+  type TenantRow = {
+    id: string
+    name: string
+    slug: string
+    onboarding_completed: boolean
+    custom_domain:  string | null
+    tagline:        string | null
+    contact_phone:  string | null
+    contact_email:  string | null
+    address_city:   string | null
+    address_region: string | null
+    currency:       string | null
+    timezone:       string | null
+    primary_color:  string | null
+    logo_url:       string | null
+  }
+
+  let tenantRecord: TenantRow | null = null
 
   if (tenantId) {
     const { data } = await admin
       .from('tenants')
-      .select('id, name, slug, onboarding_completed')
+      .select(TENANT_COLS)
       .eq('id', tenantId)
       .single()
-    tenantRecord = data
+    tenantRecord = data as unknown as TenantRow | null
   }
 
   if (!tenantRecord) {
-    // Fallback: look up via tenant_members
     const { data: membership } = await admin
       .from('tenant_members')
-      .select('tenant_id, tenants(id, name, slug, onboarding_completed)')
+      .select(`tenant_id, tenants(${TENANT_COLS})`)
       .eq('user_id', user.id)
       .eq('is_active', true)
       .limit(1)
@@ -40,7 +60,7 @@ export default async function OnboardingPage() {
 
     if (membership) {
       const t = Array.isArray(membership.tenants) ? membership.tenants[0] : membership.tenants
-      tenantRecord = t as typeof tenantRecord
+      tenantRecord = t as unknown as TenantRow
     }
   }
 
@@ -65,7 +85,7 @@ export default async function OnboardingPage() {
     const { data: tenant } = await admin
       .from('tenants')
       .insert({ name: hostelName, slug, status: 'trial', onboarding_completed: false })
-      .select('id, name, slug, onboarding_completed')
+      .select(TENANT_COLS)
       .single()
 
     if (tenant) {
@@ -76,7 +96,7 @@ export default async function OnboardingPage() {
         is_active: true,
         joined_at: new Date().toISOString(),
       })
-      tenantRecord = tenant
+      tenantRecord = tenant as unknown as TenantRow
     }
   }
 
@@ -86,10 +106,21 @@ export default async function OnboardingPage() {
 
   return (
     <OnboardingWizard
-      initialName={tenantRecord.name}
-      initialSlug={tenantRecord.slug}
       tenantId={tenantRecord.id}
-      isNewUser
+      initial={{
+        name:           tenantRecord.name,
+        slug:           tenantRecord.slug,
+        custom_domain:  tenantRecord.custom_domain  ?? '',
+        tagline:        tenantRecord.tagline        ?? '',
+        contact_phone:  tenantRecord.contact_phone  ?? '',
+        contact_email:  tenantRecord.contact_email  ?? user.email ?? '',
+        address_city:   tenantRecord.address_city   ?? '',
+        address_region: tenantRecord.address_region ?? '',
+        currency:       tenantRecord.currency       ?? 'GHS',
+        timezone:       tenantRecord.timezone       ?? 'Africa/Accra',
+        primary_color:  tenantRecord.primary_color  ?? '#1B4F72',
+        logo_url:       tenantRecord.logo_url       ?? '',
+      }}
     />
   )
 }

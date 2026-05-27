@@ -122,22 +122,36 @@ function toSlug(name: string) {
 
 /* ── Main component ─────────────────────────────────────────────────── */
 
-interface OnboardingWizardProps {
-  initialName:   string
-  initialSlug:   string
-  tenantId:      string
-  isNewUser?:    boolean
+interface InitialIdentity {
+  name:           string
+  slug:           string
+  custom_domain:  string
+  tagline:        string
+  contact_phone:  string
+  contact_email:  string
+  address_city:   string
+  address_region: string
+  currency:       string
+  timezone:       string
+  primary_color:  string
+  logo_url:       string
 }
 
-export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser }: OnboardingWizardProps) {
+interface OnboardingWizardProps {
+  tenantId: string
+  initial:  InitialIdentity
+}
+
+export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
   const router = useRouter()
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
 
-  const [stepIdx,    setStepIdx]    = useState(0)
-  const [submitting, setSubmitting] = useState(false)
-  const [error,      setError]      = useState('')
-  const [finalSlug,  setFinalSlug]  = useState(initialSlug)
-  const [finalPlan,  setFinalPlan]  = useState<'starter' | 'growth' | 'trial' | null>(null)
+  const [stepIdx,        setStepIdx]        = useState(0)
+  const [submitting,     setSubmitting]     = useState(false)
+  const [savingIdentity, setSavingIdentity] = useState(false)
+  const [error,          setError]          = useState('')
+  const [finalSlug,      setFinalSlug]      = useState(initial.slug)
+  const [finalPlan,      setFinalPlan]      = useState<'starter' | 'growth' | 'trial' | null>(null)
 
   // Slug check state
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
@@ -150,18 +164,18 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState<FormData>({
-    name:           initialName,
-    slug:           initialSlug,
-    custom_domain:  '',
-    tagline:        '',
-    contact_phone:  '',
-    contact_email:  '',
-    address_city:   '',
-    address_region: '',
-    currency:       'GHS',
-    timezone:       'Africa/Accra',
-    primary_color:  '#1B4F72',
-    logo_url:       '',
+    name:           initial.name,
+    slug:           initial.slug,
+    custom_domain:  initial.custom_domain,
+    tagline:        initial.tagline,
+    contact_phone:  initial.contact_phone,
+    contact_email:  initial.contact_email,
+    address_city:   initial.address_city,
+    address_region: initial.address_region,
+    currency:       initial.currency,
+    timezone:       initial.timezone,
+    primary_color:  initial.primary_color,
+    logo_url:       initial.logo_url,
     category_name:  'Standard Room',
     category_type:  'single',
     base_rate_ghs:  '',
@@ -180,6 +194,41 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
 
   function next() { setStepIdx((i) => Math.min(i + 1, STEPS.length - 1)) }
   function back() { setStepIdx((i) => Math.max(i - 1, 0)) }
+
+  async function saveIdentityAndContinue() {
+    setError('')
+    setSavingIdentity(true)
+    try {
+      const res = await fetch('/api/onboarding/identity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId,
+          name:           form.name.trim(),
+          slug:           form.slug,
+          custom_domain:  form.custom_domain.trim() || null,
+          tagline:        form.tagline.trim() || null,
+          contact_phone:  form.contact_phone.trim() || null,
+          contact_email:  form.contact_email.trim() || null,
+          address_city:   form.address_city.trim() || null,
+          address_region: form.address_region.trim() || null,
+          currency:       form.currency,
+          timezone:       form.timezone,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        if (data.error === 'slug_taken') { setError('That URL is already taken — pick a different slug.'); return }
+        if (data.error === 'domain_taken') { setError('That custom domain is already registered to another hostel.'); return }
+        throw new Error(typeof data.error === 'string' ? data.error : 'Could not save. Try again.')
+      }
+      next()
+    } catch (e: any) {
+      setError(e?.message ?? 'Network error — try again.')
+    } finally {
+      setSavingIdentity(false)
+    }
+  }
 
   // Auto-generate slug when hostel name changes (identity step only)
   function handleNameChange(name: string) {
@@ -212,7 +261,7 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
 
   // Check initial slug on mount
   useEffect(() => {
-    if (initialSlug) checkSlug(initialSlug)
+    if (initial.slug) checkSlug(initial.slug)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -317,10 +366,13 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
                 />
               ))}
             </div>
-            <p className="text-xs text-text-secondary">
-              Step {stepIdx + 1} of {STEPS.length - 1} —{' '}
-              <span className="font-medium text-text-primary">{currentStep.label}</span>
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-text-secondary">
+                Step {stepIdx + 1} of {STEPS.length - 1} —{' '}
+                <span className="font-medium text-text-primary">{currentStep.label}</span>
+              </p>
+              <p className="text-[11px] text-text-tertiary">~3 minutes total · auto-saved</p>
+            </div>
           </div>
         )}
 
@@ -370,24 +422,24 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
                   )}
                 </Field>
 
-                <Field label="Tagline" hint="One sentence shown on invoices and your booking page">
+                <Field label="Tagline (optional)" hint="One sentence shown on invoices and your booking page">
                   <input className={inputCls} value={form.tagline} onChange={(e) => set('tagline', e.target.value)} placeholder="Modern rooms, fast WiFi, 24/7 security" maxLength={200} />
                 </Field>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Contact phone">
+                  <Field label="Contact phone (optional)">
                     <input type="tel" className={inputCls} value={form.contact_phone} onChange={(e) => set('contact_phone', e.target.value)} placeholder="0244 000 000" maxLength={30} />
                   </Field>
-                  <Field label="Contact email">
+                  <Field label="Contact email (optional)">
                     <input type="email" className={inputCls} value={form.contact_email} onChange={(e) => set('contact_email', e.target.value)} placeholder="info@hostel.com" maxLength={120} />
                   </Field>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="City / Town">
+                  <Field label="City / Town (optional)">
                     <input className={inputCls} value={form.address_city} onChange={(e) => set('address_city', e.target.value)} placeholder="Kumasi" maxLength={100} />
                   </Field>
-                  <Field label="Region">
+                  <Field label="Region (optional)">
                     <select className={inputCls} value={form.address_region} onChange={(e) => set('address_region', e.target.value)}>
                       <option value="">Select region…</option>
                       {GHANA_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -427,9 +479,16 @@ export function OnboardingWizard({ initialName, initialSlug, tenantId, isNewUser
                 </div>
               </div>
 
+              {error && (
+                <div className="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</div>
+              )}
+
               <NavButtons
-                onNext={next}
-                nextDisabled={!form.name.trim() || form.slug.length < 2 || slugStatus === 'taken' || slugStatus === 'checking'}
+                onNext={saveIdentityAndContinue}
+                nextLabel={savingIdentity ? 'Saving…' : 'Continue'}
+                nextIcon={savingIdentity ? Loader2 : ChevronRight}
+                nextIconSpin={savingIdentity}
+                nextDisabled={savingIdentity || !form.name.trim() || form.slug.length < 2 || slugStatus === 'taken' || slugStatus === 'checking'}
               />
             </>
           )}

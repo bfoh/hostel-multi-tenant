@@ -413,6 +413,57 @@ export function checkoutSummaryHtml(opts: {
   return baseTemplate(hostelName, primaryColor, content, logoUrl)
 }
 
+/* ── Internal ops: new-tenant lead notification ─────────────────────────── */
+
+export function newTenantLeadHtml(opts: {
+  hostelName:    string
+  ownerEmail:    string
+  ownerName?:    string | null
+  slug:          string
+  customDomain?: string | null
+  contactPhone?: string | null
+  contactEmail?: string | null
+  city?:         string | null
+  region?:       string | null
+  tagline?:      string | null
+  selectedPlan?: string | null
+  signupAt:      string
+  dashboardUrl?: string
+}) {
+  const {
+    hostelName, ownerEmail, ownerName, slug, customDomain, contactPhone,
+    contactEmail, city, region, tagline, selectedPlan, signupAt, dashboardUrl,
+  } = opts
+
+  const location = [city, region].filter(Boolean).join(', ') || '—'
+  const planLabel = selectedPlan ? selectedPlan[0].toUpperCase() + selectedPlan.slice(1) : 'Not selected'
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">New hostel signup</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">
+      A new tenant just finished the first step of onboarding. Reach out within 30 minutes for the best activation rate.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      ${row('Hostel', hostelName)}
+      ${row('Owner', ownerName ?? '—')}
+      ${row('Login email', ownerEmail)}
+      ${row('Subdomain', slug)}
+      ${customDomain ? row('Custom domain', customDomain) : ''}
+      ${row('Phone', contactPhone ?? '—')}
+      ${row('Hostel contact email', contactEmail ?? '—')}
+      ${row('Location', location)}
+      ${row('Tagline', tagline ?? '—')}
+      ${row('Plan picked', planLabel)}
+      ${row('Signed up', signupAt)}
+    </table>
+    ${dashboardUrl
+      ? `<p style="margin:0;font-size:13px;color:#374151;">Open in admin: <a href="${dashboardUrl}" style="color:#1B4F72;">${dashboardUrl}</a></p>`
+      : ''}
+  `
+
+  return baseTemplate('GH Hostels — Ops', '#0A3729', content, null)
+}
+
 /* ── Password reset email ───────────────────────────────────────────────── */
 
 export function passwordResetHtml(opts: {
