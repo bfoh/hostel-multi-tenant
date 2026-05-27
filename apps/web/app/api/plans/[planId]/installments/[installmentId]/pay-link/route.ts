@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { initializeTransaction } from '@/lib/paystack'
 import { sendPaymentLink } from '@/lib/sms'
+import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
   email:    z.string().email().nullable().optional(),
@@ -21,6 +22,9 @@ export async function POST(
   { params }: { params: Promise<{ planId: string; installmentId: string }> },
 ) {
   const { planId, installmentId } = await params
+
+  const limited = await enforceRateLimit(paymentLimiter, req, 'installment-pay-link')
+  if (limited) return limited
 
   if (!process.env.PAYSTACK_SECRET_KEY) {
     return NextResponse.json({ error: 'Paystack is not configured.' }, { status: 503 })

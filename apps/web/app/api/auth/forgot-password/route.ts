@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveTenant } from '@/lib/tenant/resolve'
 import { sendEmail, passwordResetHtml } from '@/lib/email'
+import { authLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/auth/forgot-password   body: { email, host? }
@@ -20,6 +21,9 @@ import { sendEmail, passwordResetHtml } from '@/lib/email'
  * Always responds 200 — never reveal whether an account exists.
  */
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(authLimiter, req, 'forgot-password')
+  if (limited) return limited
+
   let body: { email?: string; host?: string }
   try { body = await req.json() } catch { return NextResponse.json({ ok: true }) }
 

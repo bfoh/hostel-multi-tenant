@@ -9,6 +9,7 @@ import {
   disableSubscription,
 } from '@/lib/paystack'
 import { getPlatformPlan, type PlatformPlanName } from '@/lib/platform-plans'
+import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
   plan: z.enum(['starter', 'growth']),
@@ -28,6 +29,9 @@ const schema = z.object({
  * fires subscription.create — our webhook handler picks that up.
  */
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(paymentLimiter, req, 'billing-switch')
+  if (limited) return limited
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

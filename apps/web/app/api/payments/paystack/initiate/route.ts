@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { initiateMoMoCharge, type MoMoProvider } from '@/lib/paystack'
+import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
   booking_id:  z.string().uuid(),
@@ -19,6 +20,9 @@ const PROVIDER_METHOD: Record<string, string> = {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(paymentLimiter, req, 'paystack-initiate')
+  if (limited) return limited
+
   if (!process.env.PAYSTACK_SECRET_KEY) {
     return NextResponse.json({ error: 'Paystack is not configured. Add PAYSTACK_SECRET_KEY to .env.local.' }, { status: 503 })
   }

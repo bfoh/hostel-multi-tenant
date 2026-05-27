@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { withSentryConfig } from '@sentry/nextjs'
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -57,4 +58,23 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Source-map upload only runs when SENTRY_AUTH_TOKEN is present
+  // (i.e. in CI/Vercel build), so local dev is unaffected.
+  org:    process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent:  !process.env.CI,
+
+  // Strip Sentry SDK logger statements from the client bundle.
+  disableLogger: true,
+
+  // Tunnel through a same-origin route so ad-blockers don't drop events.
+  tunnelRoute: '/monitoring',
+
+  // Don't fail the build if source-map upload can't reach Sentry.
+  errorHandler: (err) => {
+    // eslint-disable-next-line no-console
+    console.warn('[sentry] source-map upload failed:', err.message)
+  },
+})

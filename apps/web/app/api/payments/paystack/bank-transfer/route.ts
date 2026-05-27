@@ -11,6 +11,7 @@ import { z } from 'zod'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { initiateBankTransferCharge } from '@/lib/paystack'
+import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
   booking_id: z.string().uuid(),
@@ -21,6 +22,9 @@ const schema = z.object({
 const EXPIRY_MS = 30 * 60 * 1000 // 30 minutes
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(paymentLimiter, req, 'paystack-bank-transfer')
+  if (limited) return limited
+
   if (!process.env.PAYSTACK_SECRET_KEY) {
     return NextResponse.json({ error: 'Paystack is not configured.' }, { status: 503 })
   }

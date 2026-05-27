@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { onboardingLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
+  const limited = await enforceRateLimit(onboardingLimiter, request, 'check-slug')
+  if (limited) return limited
+
   const slug      = request.nextUrl.searchParams.get('slug') ?? ''
   const excludeId = request.nextUrl.searchParams.get('excludeId') ?? ''
 

@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { invalidateTenantCache } from '@/lib/tenant/resolve'
+import { onboardingLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
   // Optional: wizard passes this after self-provisioning (cookie not set yet)
@@ -39,6 +40,9 @@ const schema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  const limited = await enforceRateLimit(onboardingLimiter, request, 'complete')
+  if (limited) return limited
+
   const body   = await request.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) {

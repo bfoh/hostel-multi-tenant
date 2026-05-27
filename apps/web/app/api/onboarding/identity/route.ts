@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { sendEmail, newTenantLeadHtml } from '@/lib/email'
+import { onboardingLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
   tenantId:       z.string().uuid().optional(),
@@ -32,6 +33,9 @@ const OPS_EMAIL = process.env.PLATFORM_OPS_EMAIL ?? 'bfoh2g@gmail.com'
  * The lead email is fire-and-forget; failures do not block the wizard.
  */
 export async function POST(request: NextRequest) {
+  const limited = await enforceRateLimit(onboardingLimiter, request, 'identity')
+  if (limited) return limited
+
   const body   = await request.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
