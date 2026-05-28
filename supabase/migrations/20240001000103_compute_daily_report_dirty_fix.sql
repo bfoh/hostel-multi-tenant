@@ -1,108 +1,11 @@
--- ═══════════════════════════════════════════════════════════════════════════
--- Migration: 072 — Owner daily operations report
+-- Fix compute_daily_report: the rooms aggregation compared
+-- rooms.status = 'dirty', but 'dirty' is a value of the
+-- housekeeping_status enum, not the room_status enum. The cast
+-- failed with: "invalid input value for enum room_status: 'dirty'",
+-- which made the RPC error out so the daily digest never sent.
 --
--- Pre-aggregated daily metrics per tenant. Powers:
---   • Owner dashboard (`/dashboard/owner`)
---   • Daily digest (SMS + email + push)
---   • Trend / week-over-week comparisons
---
--- One row per (tenant_id, report_date). Idempotently recomputed by
--- compute_daily_report(tenant_id, date).
--- ═══════════════════════════════════════════════════════════════════════════
-
-create table if not exists tenant_daily_reports (
-  id                  uuid primary key default gen_random_uuid(),
-  tenant_id           uuid not null references tenants(id) on delete cascade,
-  report_date         date not null,
-  computed_at         timestamptz not null default now(),
-  digest_sent_at      timestamptz,
-
-  -- Revenue (pesewas, tenant currency = GHS)
-  revenue_total       bigint not null default 0,
-  revenue_rooms       bigint not null default 0,
-  revenue_food        bigint not null default 0,
-  revenue_pos         bigint not null default 0,
-  revenue_walkin      bigint not null default 0,
-  revenue_deposits    bigint not null default 0,
-
-  -- Revenue by method
-  rev_cash            bigint not null default 0,
-  rev_momo            bigint not null default 0,
-  rev_card            bigint not null default 0,
-  rev_bank            bigint not null default 0,
-  rev_online_other    bigint not null default 0,
-
-  -- Receivables
-  outstanding_balance bigint not null default 0,
-  overdue_installments_count int not null default 0,
-  overdue_installments_amount bigint not null default 0,
-
-  -- Occupancy
-  rooms_total         int not null default 0,
-  rooms_occupied      int not null default 0,
-  rooms_reserved      int not null default 0,
-  rooms_dirty         int not null default 0,
-  rooms_maintenance   int not null default 0,
-  occupancy_pct       numeric(5,2) not null default 0,
-
-  -- Movement
-  arrivals_today      int not null default 0,
-  departures_today    int not null default 0,
-  no_shows_today      int not null default 0,
-  walkin_count        int not null default 0,
-  food_orders_count   int not null default 0,
-
-  -- Cash control
-  cash_expected       bigint not null default 0,
-  cash_counted        bigint not null default 0,
-  cash_variance       bigint not null default 0,
-  bank_drafts_pending int not null default 0,
-
-  -- Operations
-  maintenance_open    int not null default 0,
-  maintenance_resolved_today int not null default 0,
-  housekeeping_pending int not null default 0,
-  laundry_in_progress int not null default 0,
-
-  -- Anomalies
-  anomalies_critical  int not null default 0,
-  anomalies_warning   int not null default 0,
-  first_anomaly_msg   text,
-
-  -- Outlook (forward-looking, snapshotted at compute time)
-  arrivals_next_7d    int not null default 0,
-  renewals_due_30d    int not null default 0,
-  lease_expiry_30d    int not null default 0,
-
-  constraint tenant_daily_reports_unique unique (tenant_id, report_date)
-);
-
-create index if not exists idx_tenant_daily_reports_recent
-  on tenant_daily_reports (tenant_id, report_date desc);
-
-alter table tenant_daily_reports enable row level security;
-
-create policy "tenant members can view daily reports"
-  on tenant_daily_reports for select
-  using (
-    tenant_id in (select tenant_id from tenant_members where user_id = auth.uid())
-  );
-
--- ── Digest preferences on the tenant ────────────────────────────────────────
-
-alter table tenants
-  add column if not exists daily_digest_enabled      boolean not null default true,
-  add column if not exists daily_digest_time         time   not null default '19:00',
-  add column if not exists daily_digest_channels     jsonb  not null default '{"sms":true,"email":true,"push":true}'::jsonb,
-  add column if not exists daily_digest_recipients   jsonb  not null default '[]'::jsonb,
-  add column if not exists daily_digest_paused_until timestamptz;
-
-comment on column tenants.daily_digest_recipients is
-  'Additional recipient objects [{ name, phone, email }] beyond the primary owner.';
-
--- ═══════════════════════════════════════════════════════════════════════════
--- compute_daily_report(p_tenant_id, p_date) — idempotent UPSERT
--- ═══════════════════════════════════════════════════════════════════════════
+-- This migration replaces only the buggy SELECT block by recreating
+-- the whole function (Postgres has no partial-function edit).
 
 create or replace function compute_daily_report(
   p_tenant_id uuid,
@@ -156,19 +59,16 @@ declare
   v_expiry_30d        int := 0;
   v_result            tenant_daily_reports;
 begin
-  -- Resolve tenant timezone (defaults to Africa/Accra via schema)
   select coalesce(timezone, 'Africa/Accra') into v_tz from tenants where id = p_tenant_id;
   if v_tz is null then
     raise exception 'Tenant % not found', p_tenant_id;
   end if;
 
-  -- Local day boundaries (timestamptz, half-open: [start, end))
   v_day_start := (p_date::timestamp at time zone v_tz);
   v_day_end   := ((p_date + interval '1 day')::timestamp at time zone v_tz);
   v_seven_days_out  := p_date + 7;
   v_thirty_days_out := p_date + 30;
 
-  -- ── Revenue: rooms (booking_payments) ────────────────────────────────────
   select coalesce(sum(amount), 0),
          coalesce(sum(case when method = 'cash' then amount else 0 end), 0),
          coalesce(sum(case when method in ('momo_mtn','momo_vodafone','momo_airteltigo') then amount else 0 end), 0),
@@ -180,7 +80,6 @@ begin
      and status = 'success'
      and paid_at >= v_day_start and paid_at < v_day_end;
 
-  -- ── Revenue: food orders ────────────────────────────────────────────────
   select coalesce(sum(total_pesewas), 0), count(*)
     into v_revenue_food, v_food_count
     from food_orders
@@ -188,9 +87,6 @@ begin
      and paid_at is not null
      and paid_at >= v_day_start and paid_at < v_day_end;
 
-  -- ── Revenue: revenue point sales (POS + walk-in) ────────────────────────
-  --   Walk-in subset = sales with visitor_id (means they came through QR portal).
-  --   POS = the rest.
   select coalesce(sum(case when visitor_id is null then total_amount else 0 end), 0),
          coalesce(sum(case when visitor_id is not null then total_amount else 0 end), 0),
          count(*) filter (where visitor_id is not null)
@@ -199,7 +95,6 @@ begin
    where tenant_id = p_tenant_id
      and sold_at >= v_day_start and sold_at < v_day_end;
 
-  -- Add POS payment-method breakdown to the same buckets
   with pos as (
     select payment_method, total_amount
       from revenue_point_sales
@@ -214,14 +109,12 @@ begin
     into v_rev_cash, v_rev_momo, v_rev_card, v_rev_bank, v_rev_online_other
     from pos;
 
-  -- ── Revenue: damage deposits collected today ────────────────────────────
   select coalesce(sum(amount), 0)
     into v_revenue_deposits
     from damage_deposits
    where tenant_id = p_tenant_id
      and collected_at >= v_day_start and collected_at < v_day_end;
 
-  -- ── Receivables (point-in-time) ─────────────────────────────────────────
   select coalesce(sum(greatest(0, final_amount - paid_amount)), 0)
     into v_outstanding
     from bookings
@@ -236,7 +129,9 @@ begin
      and status = 'pending'
      and due_date < p_date;
 
-  -- ── Occupancy ───────────────────────────────────────────────────────────
+  -- ── Occupancy (fixed) ───────────────────────────────────────────────────
+  -- 'dirty' lives on housekeeping_status, not room_status. The previous
+  -- comparison cast 'dirty' to room_status and raised an enum error.
   select count(*),
          count(*) filter (where status = 'occupied'),
          count(*) filter (where status = 'reserved'),
@@ -246,7 +141,6 @@ begin
     from rooms
    where tenant_id = p_tenant_id;
 
-  -- ── Movement (today) ────────────────────────────────────────────────────
   select count(*) filter (where status = 'checked_in' and check_in_date = p_date),
          count(*) filter (where status = 'checked_out' and check_out_date = p_date),
          count(*) filter (where status = 'pending_payment' and check_in_date = p_date)
@@ -255,7 +149,6 @@ begin
    where tenant_id = p_tenant_id
      and (check_in_date = p_date or check_out_date = p_date);
 
-  -- ── Cash control (today's closeouts) ────────────────────────────────────
   select coalesce(sum(system_cash), 0),
          coalesce(sum(declared_cash), 0)
     into v_cash_expected, v_cash_counted
@@ -268,7 +161,6 @@ begin
    where tenant_id = p_tenant_id
      and status = 'submitted';
 
-  -- ── Operations counters ─────────────────────────────────────────────────
   select count(*) filter (where status in ('open','in_progress')),
          count(*) filter (where status = 'completed' and completed_at >= v_day_start and completed_at < v_day_end)
     into v_maint_open, v_maint_resolved
@@ -285,7 +177,6 @@ begin
    where tenant_id = p_tenant_id
      and status in ('received','washing','ready');
 
-  -- ── Anomalies (today) ───────────────────────────────────────────────────
   select count(*) filter (where severity = 'critical'),
          count(*) filter (where severity = 'warning')
     into v_anom_crit, v_anom_warn
@@ -301,7 +192,6 @@ begin
    order by created_at desc
    limit 1;
 
-  -- ── Outlook (forward) ───────────────────────────────────────────────────
   select count(*) into v_arr_7d
     from bookings
    where tenant_id = p_tenant_id
@@ -309,8 +199,6 @@ begin
      and check_in_date > p_date
      and check_in_date <= v_seven_days_out;
 
-  -- Renewals + expiries: bookings whose check_out_date is in the 30-day window.
-  -- "Renewals due" approximates as confirmed/checked_in nearing their end date.
   select count(*) filter (where status in ('confirmed','checked_in')),
          count(*) filter (where status = 'checked_in')
     into v_renew_30d, v_expiry_30d
@@ -320,7 +208,6 @@ begin
      and check_out_date > p_date
      and check_out_date <= v_thirty_days_out;
 
-  -- ── UPSERT report row ───────────────────────────────────────────────────
   insert into tenant_daily_reports as r (
     tenant_id, report_date, computed_at,
     revenue_total, revenue_rooms, revenue_food, revenue_pos, revenue_walkin, revenue_deposits,
@@ -393,6 +280,3 @@ begin
   return v_result;
 end;
 $$;
-
-comment on function compute_daily_report(uuid, date) is
-  'Idempotently aggregates one day''s operational metrics into tenant_daily_reports. Safe to recompute.';
