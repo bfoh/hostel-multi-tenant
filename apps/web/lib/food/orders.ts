@@ -90,7 +90,10 @@ export async function placeOrder(args: PlaceArgs) {
   if (!order) return { error: 'Could not generate unique ref' as const }
 
   const linkedRows = rows.map(r => ({ ...r, order_id: order.id }))
-  const { error: itemErr } = await admin.from('food_order_items').insert(linkedRows)
+  // food_order_items has no tenant_id column — it inherits scope via
+  // order_id → food_orders.tenant_id. Bypass the wrapper's auto-stamp so the
+  // insert doesn't fail with "column tenant_id does not exist".
+  const { error: itemErr } = await admin.fromGlobal('food_order_items').insert(linkedRows)
   if (itemErr) {
     await admin.from('food_orders').delete().eq('id', order.id)
     return { error: itemErr.message }
