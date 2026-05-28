@@ -336,16 +336,22 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
     if (updated) {
       const { data: bk } = await adminAny
         .from('bookings')
-        .select('paid_amount, final_amount')
+        .select('paid_amount, final_amount, status')
         .eq('id', bookingId)
         .single()
       if (bk) {
         const newPaid = (bk.paid_amount as number) + amountPesewas
-        const newPaymentStatus = newPaid >= bk.final_amount ? 'paid'
+        const fullyPaid = newPaid >= bk.final_amount
+        const newPaymentStatus = fullyPaid ? 'paid'
           : newPaid > 0 ? 'partial' : 'unpaid'
+        const patch: Record<string, unknown> = {
+          paid_amount:    newPaid,
+          payment_status: newPaymentStatus,
+        }
+        if (fullyPaid && bk.status === 'pending_payment') patch.status = 'confirmed'
         await adminAny
           .from('bookings')
-          .update({ paid_amount: newPaid, payment_status: newPaymentStatus })
+          .update(patch)
           .eq('id', bookingId)
       }
     }

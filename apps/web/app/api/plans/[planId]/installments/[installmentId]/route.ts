@@ -50,17 +50,22 @@ export async function PATCH(
     if (plan) {
       const { data: booking } = await supabase
         .from('bookings')
-        .select('paid_amount, final_amount')
+        .select('paid_amount, final_amount, status')
         .eq('id', plan.booking_id)
         .single()
 
       if (booking) {
         const newPaid = booking.paid_amount + data.amount
-        const newPaymentStatus = newPaid >= booking.final_amount ? 'paid'
+        const fullyPaid = newPaid >= booking.final_amount
+        const newPaymentStatus = fullyPaid ? 'paid'
           : newPaid > 0 ? 'partial' : 'unpaid'
-        await supabase
-          .from('bookings')
-          .update({ paid_amount: newPaid, payment_status: newPaymentStatus })
+        const patch: Record<string, unknown> = {
+          paid_amount:    newPaid,
+          payment_status: newPaymentStatus,
+        }
+        if (fullyPaid && booking.status === 'pending_payment') patch.status = 'confirmed'
+        await (supabase.from('bookings') as any)
+          .update(patch)
           .eq('id', plan.booking_id)
       }
     }

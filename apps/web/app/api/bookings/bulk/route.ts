@@ -40,14 +40,35 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'mark_paid') {
-    const { error } = await supabase
+    // Fetch each booking so we can sync paid_amount = final_amount and
+    // promote pending_payment → confirmed atomically per row.
+    const { data: rows, error: fetchErr } = await supabase
       .from('bookings')
-      .update({ payment_status: 'paid' })
+      .select('id, final_amount, status')
       .in('id', ids)
       .eq('tenant_id', tenantId)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ ok: true, affected: ids.length })
+    if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 })
+
+    const updates = (rows ?? []).map((b) => {
+      const patch: Record<string, unknown> = {
+        payment_status: 'paid',
+        paid_amount:    b.final_amount,
+      }
+      if (b.status === 'pending_payment') patch.status = 'confirmed'
+
+      return supabase
+        .from('bookings')
+        .update(patch as any)
+        .eq('id', b.id)
+        .eq('tenant_id', tenantId)
+    })
+
+    const results = await Promise.all(updates)
+    const failed  = results.find((r) => r.error)
+    if (failed?.error) return NextResponse.json({ error: failed.error.message }, { status: 500 })
+
+    return NextResponse.json({ ok: true, affected: rows?.length ?? 0 })
   }
 
   if (action === 'delete') {
