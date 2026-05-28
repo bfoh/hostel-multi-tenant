@@ -29,6 +29,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
+    const { data: rows, error: fetchErr } = await supabase
+      .from('bookings')
+      .select('id, occupant_id')
+      .in('id', ids)
+      .eq('tenant_id', tenantId)
+
+    if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 })
+
     const { error } = await supabase
       .from('bookings')
       .update({ status: value as any })
@@ -36,6 +44,37 @@ export async function POST(req: NextRequest) {
       .eq('tenant_id', tenantId)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Sync occupant lifecycle to mirror the booking transition.
+    const occupantIds = Array.from(
+      new Set((rows ?? []).map((r) => r.occupant_id).filter(Boolean) as string[]),
+    )
+
+    if (occupantIds.length > 0) {
+      if (value === 'checked_in') {
+        await (supabase.from('occupants') as any)
+          .update({ status: 'active' })
+          .in('id', occupantIds)
+          .neq('status', 'active')
+      } else if (value === 'checked_out') {
+        // Only mark occupants checked_out if they have no other active stay.
+        for (const occupantId of occupantIds) {
+          const { count: stillActive } = await supabase
+            .from('bookings')
+            .select('id', { count: 'exact', head: true })
+            .eq('occupant_id', occupantId)
+            .not('id', 'in', `(${ids.join(',')})`)
+            .in('status', ['confirmed', 'checked_in', 'pending_payment'])
+
+          if (!stillActive) {
+            await (supabase.from('occupants') as any)
+              .update({ status: 'checked_out' })
+              .eq('id', occupantId)
+          }
+        }
+      }
+    }
+
     return NextResponse.json({ ok: true, affected: ids.length })
   }
 

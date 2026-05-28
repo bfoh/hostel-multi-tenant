@@ -29,7 +29,7 @@ export async function PATCH(
   const { data: booking } = await supabase
     .from('bookings')
     .select(`
-      id, status, room_id, check_in_date, check_out_date, final_amount, paid_amount,
+      id, status, room_id, occupant_id, check_in_date, check_out_date, final_amount, paid_amount,
       occupants(first_name, last_name, email),
       rooms(room_number, room_categories(name)),
       tenants(name, primary_color, logo_url, contact_phone, slug)
@@ -64,6 +64,30 @@ export async function PATCH(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Promote occupant lifecycle to match the booking transition.
+  if (booking.occupant_id) {
+    if (nextStatus === 'checked_in') {
+      await (supabase.from('occupants') as any)
+        .update({ status: 'active' })
+        .eq('id', booking.occupant_id)
+        .neq('status', 'active')
+    } else if (nextStatus === 'checked_out') {
+      // Only mark the occupant checked_out if they have no other active stay.
+      const { count: stillActive } = await supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('occupant_id', booking.occupant_id)
+        .neq('id', id)
+        .in('status', ['confirmed', 'checked_in', 'pending_payment'])
+
+      if (!stillActive) {
+        await (supabase.from('occupants') as any)
+          .update({ status: 'checked_out' })
+          .eq('id', booking.occupant_id)
+      }
+    }
   }
 
   // Send transactional email (non-blocking)

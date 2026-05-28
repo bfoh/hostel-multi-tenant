@@ -88,9 +88,26 @@ export default async function OccupantsPage({
       ) : (
         <OccupantsTable
           occupants={occupants.map((o): OccupantRow => {
-            const activeBooking = (Array.isArray(o.bookings) ? o.bookings : []).find(
-              (b) => b.status === 'checked_in'
-            )
+            // Pick the most relevant booking with a room:
+            // checked_in > confirmed > pending_payment, prefer one that
+            // covers today, then latest check_in_date.
+            const STATUS_RANK: Record<string, number> = {
+              checked_in: 0, confirmed: 1, pending_payment: 2,
+            }
+            const today = new Date().toISOString().slice(0, 10)
+            const bookings = (Array.isArray(o.bookings) ? o.bookings : [])
+              .filter((b) => STATUS_RANK[b.status] !== undefined && b.room)
+
+            const activeBooking = bookings.sort((a, b) => {
+              const ra = STATUS_RANK[a.status] ?? 99
+              const rb = STATUS_RANK[b.status] ?? 99
+              if (ra !== rb) return ra - rb
+              const aCovers = a.check_in_date <= today && a.check_out_date > today ? 0 : 1
+              const bCovers = b.check_in_date <= today && b.check_out_date > today ? 0 : 1
+              if (aCovers !== bCovers) return aCovers - bCovers
+              return b.check_in_date.localeCompare(a.check_in_date)
+            })[0]
+
             const room = activeBooking?.room
               ? Array.isArray(activeBooking.room) ? activeBooking.room[0] : activeBooking.room
               : null
