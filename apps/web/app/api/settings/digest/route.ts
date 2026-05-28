@@ -23,7 +23,9 @@ const channelsSchema = z.object({
 
 const patchSchema = z.object({
   enabled:    z.boolean().optional(),
-  time:       z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  // Accept both HH:MM and HH:MM:SS so we don't 422 when the client round-trips
+  // the value loaded from Postgres `time` (which serialises as HH:MM:SS).
+  time:       z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
   channels:   channelsSchema.optional(),
   recipients: z.array(recipientSchema).max(10).optional(),
 })
@@ -58,12 +60,16 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 422 })
+    const issues = parsed.error.issues
+      .map((i) => `${i.path.join('.') || 'body'}: ${i.message}`)
+      .join('; ')
+    return NextResponse.json({ error: issues || 'Invalid payload' }, { status: 422 })
   }
 
   const update: Record<string, unknown> = {}
   if (parsed.data.enabled !== undefined)    update.daily_digest_enabled = parsed.data.enabled
-  if (parsed.data.time !== undefined)       update.daily_digest_time    = parsed.data.time
+  if (parsed.data.time !== undefined)       update.daily_digest_time    =
+    parsed.data.time.length === 5 ? `${parsed.data.time}:00` : parsed.data.time
   if (parsed.data.channels !== undefined)   update.daily_digest_channels = parsed.data.channels
   if (parsed.data.recipients !== undefined) update.daily_digest_recipients = parsed.data.recipients
 

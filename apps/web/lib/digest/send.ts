@@ -35,6 +35,8 @@ export interface DigestSendResult {
   push_sent:   number
   skipped:     boolean
   reason?:     string
+  errors?:     string[]
+  recipients_total?: number
 }
 
 const DEFAULT_CHANNELS: ChannelToggles = { sms: true, email: true, push: true }
@@ -69,7 +71,13 @@ export async function sendDailyDigestForTenant(
 
   // Snapshot — always recompute so the digest reflects end-of-day
   const report = await recomputeDailyReport(tenantId, date)
-  if (!report) return zeroResult(tenantId, date, 'compute failed')
+  if (!report) {
+    return zeroResult(
+      tenantId,
+      date,
+      'compute_daily_report returned no rows — check server logs for the RPC error',
+    )
+  }
 
   // Skip if already sent today (unless forced)
   if (report.digest_sent_at && !opts.force) {
@@ -97,50 +105,69 @@ export async function sendDailyDigestForTenant(
   let smsCount = 0
   let emailCount = 0
   let pushCount = 0
+  const errors: string[] = []
 
   // ── SMS ────────────────────────────────────────────────────────────────
   if (channels.sms) {
-    const body = buildDigestSms({
-      hostelName:   tenant.name,
-      report,
-      yesterday,
-      dashboardUrl,
-    })
-    for (const r of recipients) {
-      if (!r.phone) continue
-      try {
-        await sendSmsRaw(r.phone, body)
-        smsCount++
-      } catch (err) {
-        console.error(`[digest sms] ${tenantId} ${r.phone}`, err)
+    if (!process.env.ARKESEL_API_KEY) {
+      errors.push('SMS skipped: ARKESEL_API_KEY env var is not set')
+    } else {
+      const body = buildDigestSms({
+        hostelName:   tenant.name,
+        report,
+        yesterday,
+        dashboardUrl,
+      })
+      const withPhone = recipients.filter((r) => r.phone)
+      if (withPhone.length === 0) {
+        errors.push('SMS skipped: no recipient has a phone number')
+      }
+      for (const r of withPhone) {
+        try {
+          await sendSmsRaw(r.phone!, body)
+          smsCount++
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          errors.push(`SMS to ${r.phone}: ${msg}`)
+          console.error(`[digest sms] ${tenantId} ${r.phone}`, err)
+        }
       }
     }
   }
 
   // ── Email ──────────────────────────────────────────────────────────────
   if (channels.email) {
-    const { subject, html } = buildDigestEmail({
-      hostelName:    tenant.name,
-      primaryColor:  brand,
-      logoUrl:       tenant.logo_url,
-      report,
-      yesterday,
-      sameDayLastWeek,
-      dashboardUrl,
-    })
-    const { sendEmail } = await import('@/lib/email')
-    for (const r of recipients) {
-      if (!r.email) continue
-      try {
-        await sendEmail({
-          to:         r.email,
-          senderName: tenant.name,
-          subject,
-          html,
-        })
-        emailCount++
-      } catch (err) {
-        console.error(`[digest email] ${tenantId} ${r.email}`, err)
+    if (!process.env.RESEND_API_KEY) {
+      errors.push('Email skipped: RESEND_API_KEY env var is not set')
+    } else {
+      const { subject, html } = buildDigestEmail({
+        hostelName:    tenant.name,
+        primaryColor:  brand,
+        logoUrl:       tenant.logo_url,
+        report,
+        yesterday,
+        sameDayLastWeek,
+        dashboardUrl,
+      })
+      const { sendEmail } = await import('@/lib/email')
+      const withEmail = recipients.filter((r) => r.email)
+      if (withEmail.length === 0) {
+        errors.push('Email skipped: no recipient has an email')
+      }
+      for (const r of withEmail) {
+        try {
+          await sendEmail({
+            to:         r.email!,
+            senderName: tenant.name,
+            subject,
+            html,
+          })
+          emailCount++
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          errors.push(`Email to ${r.email}: ${msg}`)
+          console.error(`[digest email] ${tenantId} ${r.email}`, err)
+        }
       }
     }
   }
@@ -156,12 +183,21 @@ export async function sendDailyDigestForTenant(
         .eq('is_active', true)
         .in('role', ['owner', 'manager'])
       const userIds = ((members ?? []) as any[]).map((m: any) => m.user_id as string)
-      if (userIds.length > 0) {
+      if (userIds.length === 0) {
+        errors.push('Push skipped: no active owner/manager members on this tenant')
+      } else {
         const payload = buildDigestPush({ hostelName: tenant.name, report })
-        await sendPushToUsers(tenantId, userIds, payload)
-        pushCount = userIds.length
+        const sent = await sendPushToUsers(tenantId, userIds, payload)
+        pushCount = sent.delivered
+        if (pushCount === 0) {
+          errors.push(
+            `Push skipped: ${sent.reason ?? 'no recipients have an active web-push subscription'}`,
+          )
+        }
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      errors.push(`Push: ${msg}`)
       console.error(`[digest push] ${tenantId}`, err)
     }
   }
@@ -180,6 +216,8 @@ export async function sendDailyDigestForTenant(
     email_sent: emailCount,
     push_sent:  pushCount,
     skipped:    false,
+    recipients_total: recipients.length,
+    ...(errors.length ? { errors } : {}),
   }
 }
 

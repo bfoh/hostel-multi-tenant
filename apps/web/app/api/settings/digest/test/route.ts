@@ -19,5 +19,8 @@ export async function POST() {
 
   const today = await getTenantToday(tenantId)
   const result = await sendDailyDigestForTenant(tenantId, today, { force: true })
+
+  // If everything skipped, return a 200 with structured detail so the UI can
+  // explain why nothing was delivered (env missing, no recipients, etc.).
   return NextResponse.json(result)
 }

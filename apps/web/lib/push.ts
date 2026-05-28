@@ -75,10 +75,14 @@ export async function sendPushToTenant(tenantId: string, payload: PushPayload) {
  * Tenant scoping is mandatory — without it a user_id collision across
  * tenants could deliver a notification to the wrong hostel.
  */
-export async function sendPushToUsers(tenantId: string, userIds: string[], payload: PushPayload) {
-  if (userIds.length === 0) return
+export async function sendPushToUsers(
+  tenantId: string,
+  userIds: string[],
+  payload: PushPayload,
+): Promise<{ delivered: number; reason?: string }> {
+  if (userIds.length === 0) return { delivered: 0, reason: 'no users' }
   const { publicKey, privateKey, email } = getVapid()
-  if (!publicKey || !privateKey) return
+  if (!publicKey || !privateKey) return { delivered: 0, reason: 'VAPID keys not configured' }
 
   webpush.setVapidDetails(email, publicKey, privateKey)
 
@@ -88,10 +92,11 @@ export async function sendPushToUsers(tenantId: string, userIds: string[], paylo
     .select('id, endpoint, p256dh, auth_key')
     .in('user_id', userIds)
 
-  if (!subs || subs.length === 0) return
+  if (!subs || subs.length === 0) return { delivered: 0, reason: 'no active subscriptions' }
 
   const body = JSON.stringify(payload)
   const expiredIds: string[] = []
+  let delivered = 0
 
   await Promise.allSettled(
     subs.map(async (sub) => {
@@ -100,6 +105,7 @@ export async function sendPushToUsers(tenantId: string, userIds: string[], paylo
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
           body,
         )
+        delivered++
       } catch (err: any) {
         if (err?.statusCode === 410 || err?.statusCode === 404) {
           expiredIds.push(sub.id)
@@ -111,4 +117,5 @@ export async function sendPushToUsers(tenantId: string, userIds: string[], paylo
   if (expiredIds.length > 0) {
     await supabase.from('push_subscriptions').delete().in('id', expiredIds)
   }
+  return { delivered }
 }
