@@ -10,7 +10,7 @@
  * (daily_digest_enabled, daily_digest_channels, daily_digest_recipients).
  */
 import { createAdminClient } from '@/lib/supabase/admin'
-import { recomputeDailyReport, getDailyReport, type DailyReport } from '@/lib/reports/daily'
+import { getDailyReport, type DailyReport } from '@/lib/reports/daily'
 import { buildDigestSms } from './sms'
 import { buildDigestEmail } from './email'
 import { buildDigestPush } from './push'
@@ -69,14 +69,23 @@ export async function sendDailyDigestForTenant(
     return zeroResult(tenantId, date, 'digest disabled')
   }
 
-  // Snapshot — always recompute so the digest reflects end-of-day
-  const report = await recomputeDailyReport(tenantId, date)
-  if (!report) {
+  // Snapshot — always recompute so the digest reflects end-of-day.
+  // Call the RPC inline so we can surface the exact Postgres error string
+  // to the caller (the previous helper swallowed it as null).
+  const { data: rpcData, error: rpcErr } = await admin.rpc('compute_daily_report', {
+    p_tenant_id: tenantId,
+    p_date:      date,
+  })
+  if (rpcErr) {
     return zeroResult(
       tenantId,
       date,
-      'compute_daily_report returned no rows — check server logs for the RPC error',
+      `compute_daily_report failed: ${rpcErr.message}${rpcErr.hint ? ` (hint: ${rpcErr.hint})` : ''}`,
     )
+  }
+  const report = (Array.isArray(rpcData) ? rpcData[0] : rpcData) as DailyReport | null
+  if (!report) {
+    return zeroResult(tenantId, date, 'compute_daily_report returned no rows')
   }
 
   // Skip if already sent today (unless forced)
