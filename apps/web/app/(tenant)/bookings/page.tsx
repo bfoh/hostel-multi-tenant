@@ -5,8 +5,11 @@ import { Plus, CalendarCheck, LayoutGrid, Upload } from 'lucide-react'
 import { getBookings } from '@/lib/data/bookings'
 import { BookingsBulkList } from '@/components/bookings/bookings-bulk-list'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { Inbox } from 'lucide-react'
+
+const MANAGE_ROLES = ['owner', 'manager'] as const
 
 export const metadata: Metadata = { title: 'Bookings' }
 
@@ -29,8 +32,9 @@ export default async function BookingsPage({
 
   const activeStatus = status ?? 'all'
 
-  // Self check-in pending count
+  // Self check-in pending count + caller role for management gating.
   let pendingSelfCheckins = 0
+  let canManage = false
   const tenantId = await getServerTenantId()
   if (tenantId) {
     const admin = createAdminClient()
@@ -41,6 +45,20 @@ export default async function BookingsPage({
       .not('self_checkin_submitted_at', 'is', null)
       .is('self_checkin_confirmed_at', null)
     pendingSelfCheckins = count ?? 0
+
+    // Resolve role from DB (header can be stale).
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    if (user) {
+      const { data: member } = await admin
+        .from('tenant_members')
+        .select('role, is_active')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      const role = (member as any)?.is_active ? (member as any).role : null
+      canManage = !!role && (MANAGE_ROLES as readonly string[]).includes(role)
+    }
   }
 
   // Normalise bookings for client component
@@ -155,7 +173,7 @@ export default async function BookingsPage({
           </Link>
         </div>
       ) : (
-        <BookingsBulkList bookings={rows} />
+        <BookingsBulkList bookings={rows} canManage={canManage} />
       )}
     </div>
   )

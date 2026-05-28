@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 const ALLOWED_STATUSES = ['pending_payment', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show']
+const MANAGE_ROLES = ['owner', 'manager'] as const
 
 /**
  * POST /api/bookings/bulk
@@ -111,6 +113,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'delete') {
+    const gate = await requireTenantRole(tenantId, MANAGE_ROLES)
+    if (gate instanceof NextResponse) return gate
+
     const { error } = await supabase
       .from('bookings')
       .delete()

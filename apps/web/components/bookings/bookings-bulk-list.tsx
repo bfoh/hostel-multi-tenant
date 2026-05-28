@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Loader2, CheckSquare, Square, CheckCheck, Trash2 } from 'lucide-react'
+import { Loader2, CheckSquare, Square, CheckCheck, Trash2, Pencil } from 'lucide-react'
 import { formatGHS, formatDate } from '@/lib/utils'
 
 interface Booking {
@@ -42,7 +42,13 @@ const BULK_STATUSES = [
   { value: 'pending_payment', label: 'Pending Payment' },
 ]
 
-export function BookingsBulkList({ bookings }: { bookings: Booking[] }) {
+export function BookingsBulkList({
+  bookings,
+  canManage = false,
+}: {
+  bookings: Booking[]
+  canManage?: boolean
+}) {
   const router = useRouter()
   const [selected, setSelected]  = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
@@ -139,18 +145,20 @@ export function BookingsBulkList({ bookings }: { bookings: Booking[] }) {
               <CheckCheck className="h-3 w-3" />
               Mark paid
             </button>
-            <button
-              disabled={isPending}
-              onClick={() => {
-                if (confirm(`Delete ${selected.size} booking(s)? This cannot be undone.`)) {
-                  bulkAction('delete')
-                }
-              }}
-              className="flex items-center gap-1 rounded-md border border-danger/30 bg-danger/5 px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
-            >
-              <Trash2 className="h-3 w-3" />
-              Delete
-            </button>
+            {canManage && (
+              <button
+                disabled={isPending}
+                onClick={() => {
+                  if (confirm(`Delete ${selected.size} booking(s)? This cannot be undone.`)) {
+                    bulkAction('delete')
+                  }
+                }}
+                className="flex items-center gap-1 rounded-md border border-danger/30 bg-danger/5 px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete
+              </button>
+            )}
           </div>
           {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />}
           {error && <span className="text-xs text-danger">{error}</span>}
@@ -180,7 +188,7 @@ export function BookingsBulkList({ bookings }: { bookings: Booking[] }) {
               <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary md:table-cell">Check in</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Status</th>
               <th className="hidden px-4 py-3 text-right text-xs font-medium text-text-tertiary lg:table-cell">Amount</th>
-              <th className="w-10 px-2 py-3"></th>
+              {canManage && <th className="w-20 px-2 py-3"></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -239,16 +247,27 @@ export function BookingsBulkList({ bookings }: { bookings: Booking[] }) {
                   <td className="hidden px-4 py-3 text-right lg:table-cell">
                     <p className="text-sm font-medium text-text-primary">{formatGHS(b.final_amount)}</p>
                   </td>
-                  <td className="px-2 py-3">
-                    <button
-                      onClick={() => deleteSingle(b.id)}
-                      disabled={deletingId === b.id}
-                      title="Delete booking"
-                      className="rounded-md p-1 text-text-tertiary hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
+                  {canManage && (
+                    <td className="px-2 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/bookings/${b.id}`}
+                          title="Edit booking"
+                          className="rounded-md p-1 text-text-tertiary hover:bg-surface-raised hover:text-brand transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Link>
+                        <button
+                          onClick={() => deleteSingle(b.id)}
+                          disabled={deletingId === b.id}
+                          title="Delete booking"
+                          className="rounded-md p-1 text-text-tertiary hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               )
             })}
