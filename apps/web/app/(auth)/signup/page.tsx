@@ -63,6 +63,7 @@ export default function SignupPage() {
   }, [search])
 
   const [serverError, setServerError] = useState<string | null>(null)
+  const [fixing, setFixing]           = useState(false)
   const [success, setSuccess]         = useState(false)
   const [slugPreview, setSlugPreview] = useState('')
   const [slugStatus, setSlugStatus]   = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
@@ -111,6 +112,36 @@ export default function SignupPage() {
     })
 
     if (error) {
+      if (error.message === 'Database error saving new user') {
+        // Trigger the automatic database repair and retry once
+        setFixing(true)
+        try {
+          const fix = await fetch('/api/setup/fix-auth-trigger', { method: 'POST' })
+          if (fix.ok) {
+            // Retry signup after the fix
+            const { error: retryError } = await supabase.auth.signUp({
+              email: values.email,
+              password: values.password,
+              options: {
+                data: {
+                  hostel_name: values.hostelName,
+                  ...(selectedPlan ? { selected_plan: selectedPlan } : {}),
+                },
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+              },
+            })
+            if (!retryError) { setSuccess(true); return }
+            setServerError(retryError.message)
+          } else {
+            setServerError('Database setup required. Ask your administrator to run the auth-trigger fix or apply migration 107 in the Supabase SQL Editor.')
+          }
+        } catch {
+          setServerError(error.message)
+        } finally {
+          setFixing(false)
+        }
+        return
+      }
       setServerError(error.message)
       return
     }
@@ -288,7 +319,7 @@ export default function SignupPage() {
 
         <button
           type="submit"
-          disabled={isSubmitting || slugStatus === 'taken'}
+          disabled={isSubmitting || fixing || slugStatus === 'taken'}
           className="w-full rounded-full px-4 py-3 text-[14px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
           style={{
             background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
@@ -296,7 +327,7 @@ export default function SignupPage() {
             boxShadow: '0 10px 28px -10px rgba(212,162,76,0.55)',
           }}
         >
-          {isSubmitting ? 'Creating account\u2026' : 'Create account'}
+          {fixing ? 'Repairing database\u2026' : isSubmitting ? 'Creating account\u2026' : 'Create account'}
         </button>
 
         <p className="text-center text-[11px]" style={{ color: IVORY_DIM }}>
