@@ -152,7 +152,7 @@ export default function SignupPage() {
     )
   }
 
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+  const appDomain = (process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com').replace(/^https?:\/\//, '')
 
   return (
     <div className="space-y-6">
