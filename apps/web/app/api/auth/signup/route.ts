@@ -1,0 +1,69 @@
+import { NextResponse, type NextRequest } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail } from '@/lib/email'
+
+export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => null)
+  if (!body?.email || !body?.password || !body?.hostelName) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+
+  const { email, password, hostelName, selectedPlan } = body as {
+    email:        string
+    password:     string
+    hostelName:   string
+    selectedPlan: string | null
+  }
+
+  const admin   = createAdminClient()
+  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin
+  const redirectTo = `${appUrl}/auth/callback`
+
+  // Use generateLink so we control email delivery via Resend — this bypasses
+  // Supabase's own email hook (which can cause "Database error saving new user"
+  // when a custom send_email hook is configured but misconfigured).
+  const { data, error } = await admin.auth.admin.generateLink({
+    type:     'signup',
+    email,
+    password,
+    options: {
+      data: {
+        hostel_name: hostelName,
+        ...(selectedPlan ? { selected_plan: selectedPlan } : {}),
+      },
+      redirectTo,
+    },
+  })
+
+  if (error) {
+    console.error('[signup] generateLink error:', error.message)
+    return NextResponse.json({ error: error.message }, { status: 400 })
+  }
+
+  const confirmUrl = data.properties.action_link
+
+  // Send the confirmation email via Resend instead of through Supabase
+  await sendEmail({
+    to:          email,
+    subject:     `Confirm your ${hostelName} account`,
+    senderName:  'GH Hostels',
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;">
+        <h2 style="font-size:22px;font-weight:700;color:#111827;margin:0 0 8px;">Confirm your email</h2>
+        <p style="font-size:14px;color:#6b7280;margin:0 0 24px;">
+          Click the button below to activate your <strong>${hostelName}</strong> account on GH Hostels.
+          The link expires in 24 hours.
+        </p>
+        <a href="${confirmUrl}"
+           style="display:inline-block;padding:12px 28px;background:#D4A24C;color:#0A3729;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+          Confirm my account
+        </a>
+        <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;word-break:break-all;">
+          Or copy this link into your browser:<br/>${confirmUrl}
+        </p>
+      </div>
+    `,
+  })
+
+  return NextResponse.json({ ok: true })
+}
