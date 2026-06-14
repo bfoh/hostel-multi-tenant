@@ -7,6 +7,8 @@ const BYPASS_PATHS = [
   '/api/webhooks',
   '/api/payments/paystack/webhook',
   '/api/auth/forgot-password',
+  '/api/auth/signup',
+  '/api/auth/resend-confirmation',
   '/_next',
   '/favicon.ico',
   '/robots.txt',
