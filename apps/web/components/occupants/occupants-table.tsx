@@ -35,7 +35,71 @@ export function OccupantsTable({ occupants }: { occupants: OccupantRow[] }) {
         <BulkActionBar bulk={bulk} resource="occupants" itemNoun="resident" />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
+      {/* ── Mobile: card list ──────────────────────────────────── */}
+      <ul className="space-y-2.5 md:hidden">
+        {occupants.map((o) => (
+          <li key={o.id} className="rounded-xl border border-border bg-surface p-3.5">
+            <div className="flex items-center gap-3">
+              {bulk.selectMode && (
+                <input
+                  type="checkbox"
+                  checked={bulk.isSelected(o.id)}
+                  onChange={() => bulk.toggle(o.id)}
+                  className="h-5 w-5 shrink-0 rounded border-border text-brand focus:ring-brand"
+                  aria-label={`Select ${o.first_name}`}
+                />
+              )}
+              <Link href={`/occupants/${o.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-sm font-semibold text-brand">
+                  {o.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={o.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+                  ) : (
+                    initials(`${o.first_name} ${o.last_name}`)
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-text-primary">
+                    {o.first_name} {o.last_name}
+                  </p>
+                  <p className="truncate text-xs text-text-tertiary">
+                    {o.student_id ?? o.institution ?? 'No ID'}
+                  </p>
+                </div>
+              </Link>
+              <span
+                className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize ${
+                  STATUS_STYLES[o.status] ?? 'bg-surface-sunken text-text-secondary border-border'
+                }`}
+              >
+                {o.status.replace('_', ' ')}
+              </span>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+              <div className="min-w-0 text-xs text-text-secondary">
+                <span className="ref-number">{o.phone ?? '—'}</span>
+                {o.roomLabel && <span className="text-text-tertiary"> · {o.roomLabel}</span>}
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <Link
+                  href={`/occupants/${o.id}/edit`}
+                  aria-label="Edit occupant"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:text-brand hover:bg-brand/10 transition-colors"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Link>
+                <DeleteOccupantButton
+                  occupantId={o.id}
+                  occupantName={`${o.first_name} ${o.last_name}`}
+                />
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* ── Desktop: table ─────────────────────────────────────── */}
+      <div className="hidden overflow-hidden rounded-xl border border-border bg-surface md:block">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">

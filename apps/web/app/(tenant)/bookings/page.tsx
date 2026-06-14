@@ -90,7 +90,7 @@ export default async function BookingsPage({
   return (
     <div className="space-y-6">
       {/* ── Header ───────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Bookings</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
@@ -98,7 +98,7 @@ export default async function BookingsPage({
             {activeStatus !== 'all' ? ` · ${activeStatus.replace('_', ' ')}` : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/bookings/self-checkins"
             className="relative flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"

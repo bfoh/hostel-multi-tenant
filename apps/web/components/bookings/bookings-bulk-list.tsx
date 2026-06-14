@@ -171,7 +171,73 @@ export function BookingsBulkList({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
+      {/* ── Mobile: card list ──────────────────────────────────── */}
+      <ul className="space-y-2.5 md:hidden">
+        {bookings.map((b) => {
+          const isSelected = selected.has(b.id)
+          return (
+            <li
+              key={b.id}
+              className={`rounded-xl border bg-surface p-3.5 transition-colors ${isSelected ? 'border-brand/40 bg-brand/5' : 'border-border'}`}
+            >
+              <div className="flex items-start gap-3">
+                <button
+                  onClick={() => toggle(b.id)}
+                  className="mt-0.5 shrink-0 text-text-tertiary hover:text-brand"
+                  aria-label="Select booking"
+                >
+                  {isSelected ? <CheckSquare className="h-5 w-5 text-brand" /> : <Square className="h-5 w-5" />}
+                </button>
+                <Link href={`/bookings/${b.id}`} className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-text-primary">
+                      {b.occupant?.first_name} {b.occupant?.last_name}
+                    </p>
+                    <span
+                      className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                        STATUS_STYLES[b.status] ?? 'bg-surface-sunken text-text-secondary border-border'
+                      }`}
+                    >
+                      {b.status.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <p className="ref-number mt-0.5 text-[11px] text-text-tertiary">{b.booking_ref}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
+                    {b.room && <span>Room {b.room.room_number}</span>}
+                    <span>{formatDate(b.check_in_date)}</span>
+                    <span className={PAYMENT_STYLES[b.payment_status] ?? 'text-text-tertiary'}>
+                      {b.payment_status}
+                    </span>
+                    <span className="ml-auto font-semibold text-text-primary">{formatGHS(b.final_amount)}</span>
+                  </div>
+                </Link>
+              </div>
+              {canManage && (
+                <div className="mt-3 flex items-center justify-end gap-1 border-t border-border pt-2.5">
+                  <Link
+                    href={`/bookings/${b.id}`}
+                    aria-label="Edit booking"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:text-brand hover:bg-brand/10 transition-colors"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Link>
+                  <button
+                    onClick={() => deleteSingle(b.id)}
+                    disabled={deletingId === b.id}
+                    aria-label="Delete booking"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+                  >
+                    {deletingId === b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </button>
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+
+      {/* ── Desktop: table ─────────────────────────────────────── */}
+      <div className="hidden overflow-hidden rounded-xl border border-border bg-surface md:block">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
