@@ -1177,8 +1177,8 @@ export default async function LandingPage() {
               © {new Date().getFullYear()} GH Hostels · Made in Accra, Ghana
             </p>
             <div className="flex gap-6 text-[12px]" style={{ color: 'rgba(245,233,210,0.4)' }}>
-              <a href="#" className="transition-colors hover:text-[#F5E9D2]">Privacy</a>
-              <a href="#" className="transition-colors hover:text-[#F5E9D2]">Terms</a>
+              <Link href="/privacy" className="transition-colors hover:text-[#F5E9D2]">Privacy</Link>
+              <Link href="/terms" className="transition-colors hover:text-[#F5E9D2]">Terms</Link>
               <a href="mailto:support@gh-hostels.com" className="transition-colors hover:text-[#F5E9D2]">Support</a>
             </div>
           </div>
