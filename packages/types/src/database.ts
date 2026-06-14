@@ -117,6 +117,7 @@ export type Database = {
           is_vat_registered: boolean
           ai_config: Json | null
           onboarding_completed: boolean
+          enquiry_webhook_secret: string
           website_content: Json | null
           widget_domains: string[]
           public_api_key: string | null
@@ -173,6 +174,7 @@ export type Database = {
           is_vat_registered?: boolean
           ai_config?: Json | null
           onboarding_completed?: boolean
+          enquiry_webhook_secret?: string
           website_content?: Json | null
           widget_domains?: string[]
           public_api_key?: string | null
@@ -226,6 +228,7 @@ export type Database = {
           is_vat_registered?: boolean
           ai_config?: Json | null
           onboarding_completed?: boolean
+          enquiry_webhook_secret?: string
           website_content?: Json | null
           widget_domains?: string[]
           public_api_key?: string | null

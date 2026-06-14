@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       slug,
       status: 'trial',
       onboarding_completed: false,
+      enquiry_webhook_secret: crypto.randomUUID(),
     })
     .select('id, slug')
     .single()

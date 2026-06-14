@@ -44,7 +44,7 @@ export async function GET() {
 
     const { data: tenant, error: tenantErr } = await admin
       .from('tenants')
-      .insert({ name: hostelName, slug, status: 'trial', onboarding_completed: false })
+      .insert({ name: hostelName, slug, status: 'trial', onboarding_completed: false, enquiry_webhook_secret: crypto.randomUUID() })
       .select('id, slug')
       .single()
 
