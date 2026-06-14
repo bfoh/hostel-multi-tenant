@@ -5,6 +5,8 @@ import { Loader2, Zap, RefreshCcw } from 'lucide-react'
 
 interface Result {
   name: string
+  interval: string
+  env: string
   planCode: string
   amount: number
   created: boolean
@@ -69,12 +71,13 @@ export function BootstrapPlansButton() {
         <div className="rounded-lg border border-white/10 bg-black/40 p-4 text-xs space-y-2">
           <p className="text-white/70">
             {forced
-              ? 'Recreated. Paste the NEW codes into env vars (PAYSTACK_PLAN_STARTER/GROWTH) and redeploy. Old codes are now orphaned.'
-              : 'Paste these into env vars, then redeploy:'}
+              ? 'Recreated. Paste the NEW env vars below and redeploy. Old codes are now orphaned.'
+              : 'Paste these into env vars (PAYSTACK_PLAN_<TIER>_<INTERVAL>), then redeploy:'}
           </p>
           {results.map((r) => (
-            <div key={r.name} className="flex items-baseline gap-3 font-mono">
-              <span className="w-20 text-white/40 uppercase">{r.name}</span>
+            <div key={r.env} className="flex items-baseline gap-3 font-mono">
+              <span className="text-white/80">{r.env}</span>
+              <span className="text-white/40">=</span>
               <span className={r.created ? 'text-green-400' : 'text-white/60'}>
                 {r.planCode}
               </span>
