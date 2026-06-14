@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email'
 
 /**
@@ -12,18 +11,11 @@ import { sendEmail } from '@/lib/email'
  * platform admin. Delete once email delivery is confirmed working.
  */
 export async function GET(req: NextRequest) {
-  // Platform-admin guard (cookie session).
+  // Any authenticated user (temporary diagnostic — deleted after delivery is
+  // confirmed). Sends only to the logged-in user's own email by default.
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-
-  const admin = createAdminClient()
-  const { data: isAdmin } = await admin
-    .from('platform_admins')
-    .select('id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (!isAdmin) return NextResponse.json({ error: 'platform admin only' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const to = searchParams.get('to') ?? user.email
