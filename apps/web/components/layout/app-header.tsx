@@ -2,20 +2,23 @@
 
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
-import { Bell, Sun, Moon, LogOut } from 'lucide-react'
+import { Bell, Sun, Moon, LogOut, Menu } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useState } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
+import { useTenant } from '@/components/providers/tenant-provider'
 import { cn } from '@/lib/utils'
 
 interface AppHeaderProps {
   user: User
+  onMenuClick?: () => void
 }
 
-export function AppHeader({ user: _ }: AppHeaderProps) {
+export function AppHeader({ user: _, onMenuClick }: AppHeaderProps) {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { tenantName } = useTenant()
   const [loggingOut, setLoggingOut] = useState(false)
 
   async function handleSignOut() {
@@ -27,7 +30,21 @@ export function AppHeader({ user: _ }: AppHeaderProps) {
   }
 
   return (
-    <header className="flex h-14 items-center justify-end gap-1 border-b border-border bg-surface px-4">
+    <header className="flex h-14 items-center justify-between gap-1 border-b border-border bg-surface px-3 sm:px-4">
+      {/* Mobile: hamburger + hostel name */}
+      <div className="flex min-w-0 items-center gap-2 md:hidden">
+        <button
+          onClick={onMenuClick}
+          aria-label="Open menu"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <span className="truncate text-sm font-semibold text-text-primary">{tenantName ?? ''}</span>
+      </div>
+
+      {/* Right-aligned actions */}
+      <div className="flex items-center gap-1 md:ml-auto">
       {/* Theme toggle */}
       <button
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -69,6 +86,7 @@ export function AppHeader({ user: _ }: AppHeaderProps) {
       >
         <LogOut className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 group-hover:translate-x-0.5" />
       </button>
+      </div>
     </header>
   )
 }
