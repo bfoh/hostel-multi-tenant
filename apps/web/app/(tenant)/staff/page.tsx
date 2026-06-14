@@ -167,7 +167,7 @@ export default async function StaffPage({
         </ul>
 
         {/* ── Desktop: table ─────────────────────────────────────── */}
-        <div className="hidden overflow-hidden rounded-xl border border-border bg-surface md:block">
+        <div className="hidden overflow-x-auto rounded-xl border border-border bg-surface md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">

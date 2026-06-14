@@ -30,7 +30,7 @@ export function LostFoundTable({ items }: { items: LfRow[] }) {
         <BulkActionBar bulk={bulk} resource="lost_found" itemNoun="item" />
       </div>
 
-      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+      <div className="rounded-xl border border-border bg-surface overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-surface-raised">
             <tr>

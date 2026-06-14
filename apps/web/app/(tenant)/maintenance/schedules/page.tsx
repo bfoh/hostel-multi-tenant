@@ -96,7 +96,7 @@ export default async function PmSchedulesPage({
           </Link>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-surface overflow-hidden">
+        <div className="rounded-xl border border-border bg-surface overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-raised">
               <tr>

@@ -118,7 +118,7 @@ export default async function CloseoutReviewPage({
           <p className="font-medium text-text-primary">No close-outs to review</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-sunken">
               <tr>

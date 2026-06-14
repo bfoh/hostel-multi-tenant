@@ -97,7 +97,7 @@ export default async function SecurityPage({
         visitors.length === 0 ? (
           <EmptyState icon={<Eye className="h-10 w-10 text-text-disabled" />} label="No visitors logged today" />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+          <div className="overflow-x-auto rounded-xl border border-border bg-surface">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
@@ -178,7 +178,7 @@ export default async function SecurityPage({
         lostFound.length === 0 ? (
           <EmptyState icon={<Package className="h-10 w-10 text-text-disabled" />} label="No lost & found items" />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+          <div className="overflow-x-auto rounded-xl border border-border bg-surface">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">

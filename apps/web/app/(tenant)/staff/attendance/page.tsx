@@ -106,7 +106,7 @@ export default async function AttendancePage({
           <p className="text-sm text-text-secondary">Use the clock-in button to start tracking attendance.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">

@@ -51,7 +51,7 @@ export default async function PayrollPage() {
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">

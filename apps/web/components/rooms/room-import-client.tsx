@@ -175,7 +175,7 @@ export function RoomImportClient({ categories }: { categories: Category[] }) {
             <CheckCircle className="h-4 w-4 text-success" />
             <p className="text-sm font-semibold text-success">{preview.length} room{preview.length > 1 ? 's' : ''} ready to import</p>
           </div>
-          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+          <div className="overflow-x-auto rounded-xl border border-border bg-surface">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface-raised">

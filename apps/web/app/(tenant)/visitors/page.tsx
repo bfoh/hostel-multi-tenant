@@ -160,7 +160,7 @@ export default async function VisitorsPage({ searchParams }: PageProps) {
         </button>
       </form>
 
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead className="bg-surface-sunken/50">
             <tr>

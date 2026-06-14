@@ -192,7 +192,7 @@ export function KeysClient({ initialKeys, rooms }: { initialKeys: RoomKey[]; roo
       {displayed.length === 0 ? (
         <p className="py-16 text-center text-sm text-text-tertiary">No keys {filter !== 'all' ? `with status "${filter}"` : ''}</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-surface-raised">

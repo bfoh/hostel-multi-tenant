@@ -210,7 +210,7 @@ export default async function PaymentsPage({
         </ul>
 
         {/* ── Desktop: table ─────────────────────────────────────── */}
-        <div className="hidden overflow-hidden rounded-xl border border-border md:block">
+        <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-sunken">
               <tr>
