@@ -43,10 +43,10 @@ export async function POST(req: NextRequest) {
 
     // Build a verifyOtp URL from the token_hash (the raw action_link relies on
     // PKCE, which breaks for admin-generated links). /auth/callback handles it.
-    const props = data?.properties
+    const props = data?.properties as { hashed_token?: string; verification_type?: string; action_link?: string } | undefined
     const confirmUrl = props?.hashed_token
       ? `${appUrl}/auth/callback?token_hash=${props.hashed_token}&type=${props.verification_type ?? 'magiclink'}`
-      : undefined
+      : props?.action_link
     // No such user, already-confirmed edge, or generateLink failed — respond
     // ok anyway so we never leak account existence.
     if (error || !confirmUrl) {

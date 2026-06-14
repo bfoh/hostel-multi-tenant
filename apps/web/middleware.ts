@@ -12,6 +12,7 @@ const BYPASS_PATHS = [
   '/robots.txt',
   '/sitemap.xml',
   '/api/debug-env',
+  '/api/debug-props',
 ]
 const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/api/public', '/api/widget']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']

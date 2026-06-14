@@ -45,10 +45,12 @@ export async function POST(request: NextRequest) {
   // Build our own confirmation URL from the token_hash so /auth/callback can
   // verify it with verifyOtp (the raw Supabase action_link relies on PKCE,
   // which breaks for admin-generated links — the click has no code_verifier).
-  const confirmUrlFrom = (props: { hashed_token?: string; verification_type?: string } | undefined) =>
+  const confirmUrlFrom = (
+    props: { hashed_token?: string; verification_type?: string; action_link?: string } | undefined,
+  ) =>
     props?.hashed_token
       ? `${appUrl}/auth/callback?token_hash=${props.hashed_token}&type=${props.verification_type ?? 'signup'}`
-      : undefined
+      : props?.action_link
 
   let confirmUrl = confirmUrlFrom(data?.properties as any)
 
