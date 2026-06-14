@@ -250,7 +250,7 @@ export function BillingClient({ plans, pricing, intervals, subscription, current
       {/* Active subscription card */}
       {isLive && subscription && (
         <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-text-primary capitalize">
