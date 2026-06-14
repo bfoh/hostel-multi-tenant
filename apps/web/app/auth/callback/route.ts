@@ -10,15 +10,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
  *   - Password reset (redirects to /reset-password)
  *   - OAuth callback
  */
-export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url)
-  const code       = searchParams.get('code')
-  const tokenHash  = searchParams.get('token_hash')
-  const type       = searchParams.get('type') // 'recovery' for password reset; also 'signup'/'magiclink'
-
-  if (!code && !tokenHash) {
-    return NextResponse.redirect(new URL('/login?error=link_expired', origin))
-  }
+async function verifyAndRoute(
+  request: NextRequest,
+  code: string | null,
+  tokenHash: string | null,
+  type: string | null,
+) {
+  const { origin } = new URL(request.url)
 
   // We need a mutable response so Supabase can write session cookies
   const response = NextResponse.redirect(new URL('/onboarding', origin))
@@ -147,4 +145,46 @@ export async function GET(request: NextRequest) {
 
   // Localhost: stay on current origin, middleware will resolve tenant via DB
   return response
+}
+
+/**
+ * GET — OAuth/PKCE callback (?code=). A token_hash arriving here (e.g. a stray
+ * old link) is handed to /auth/confirm rather than verified inline, so email
+ * scanners that prefetch the link can't burn the single-use token.
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams, origin } = new URL(request.url)
+  const code      = searchParams.get('code')
+  const tokenHash = searchParams.get('token_hash')
+  const type      = searchParams.get('type')
+
+  if (!code && !tokenHash) {
+    return NextResponse.redirect(new URL('/login?error=link_expired', origin))
+  }
+
+  if (tokenHash && !code) {
+    const url = new URL('/auth/confirm', origin)
+    url.searchParams.set('token_hash', tokenHash)
+    if (type) url.searchParams.set('type', type)
+    return NextResponse.redirect(url)
+  }
+
+  return verifyAndRoute(request, code, null, type)
+}
+
+/**
+ * POST — human-confirmed token_hash verification (from the /auth/confirm
+ * button). Only a real user submit reaches here; scanner GETs do not.
+ */
+export async function POST(request: NextRequest) {
+  const { origin } = new URL(request.url)
+  const form      = await request.formData()
+  const tokenHash = (form.get('token_hash') as string | null) || null
+  const type      = (form.get('type') as string | null) || null
+
+  if (!tokenHash) {
+    return NextResponse.redirect(new URL('/login?error=link_expired', origin))
+  }
+
+  return verifyAndRoute(request, null, tokenHash, type)
 }

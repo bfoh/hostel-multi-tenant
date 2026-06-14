@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     props: { hashed_token?: string; verification_type?: string; action_link?: string } | undefined,
   ) =>
     props?.hashed_token
-      ? `${appUrl}/auth/callback?token_hash=${props.hashed_token}&type=${props.verification_type ?? 'signup'}`
+      ? `${appUrl}/auth/confirm?token_hash=${props.hashed_token}&type=${props.verification_type ?? 'signup'}`
       : props?.action_link
 
   let confirmUrl = confirmUrlFrom(data?.properties as any)

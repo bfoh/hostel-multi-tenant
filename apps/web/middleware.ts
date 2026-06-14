@@ -9,12 +9,13 @@ const BYPASS_PATHS = [
   '/api/auth/forgot-password',
   '/api/auth/signup',
   '/api/auth/resend-confirmation',
+  '/auth/callback',
+  '/auth/confirm',
   '/_next',
   '/favicon.ico',
   '/robots.txt',
   '/sitemap.xml',
   '/api/debug-env',
-  '/api/debug-confirm',
 ]
 const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/api/public', '/api/widget']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']

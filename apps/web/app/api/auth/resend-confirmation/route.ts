@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     // PKCE, which breaks for admin-generated links). /auth/callback handles it.
     const props = data?.properties as { hashed_token?: string; verification_type?: string; action_link?: string } | undefined
     const confirmUrl = props?.hashed_token
-      ? `${appUrl}/auth/callback?token_hash=${props.hashed_token}&type=${props.verification_type ?? 'magiclink'}`
+      ? `${appUrl}/auth/confirm?token_hash=${props.hashed_token}&type=${props.verification_type ?? 'magiclink'}`
       : props?.action_link
     // No such user, already-confirmed edge, or generateLink failed — respond
     // ok anyway so we never leak account existence.
