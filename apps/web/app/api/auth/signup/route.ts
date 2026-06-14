@@ -42,7 +42,15 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  let confirmUrl = data?.properties?.action_link
+  // Build our own confirmation URL from the token_hash so /auth/callback can
+  // verify it with verifyOtp (the raw Supabase action_link relies on PKCE,
+  // which breaks for admin-generated links — the click has no code_verifier).
+  const confirmUrlFrom = (props: { hashed_token?: string; verification_type?: string } | undefined) =>
+    props?.hashed_token
+      ? `${appUrl}/auth/callback?token_hash=${props.hashed_token}&type=${props.verification_type ?? 'signup'}`
+      : undefined
+
+  let confirmUrl = confirmUrlFrom(data?.properties as any)
 
   // A 'signup' link fails when the email already exists — which is common here
   // because an earlier (failed-delivery) attempt may have created an
@@ -55,14 +63,15 @@ export async function POST(request: NextRequest) {
       email,
       options: { redirectTo },
     })
-    if (retry.error || !retry.data?.properties?.action_link) {
+    const retryUrl = confirmUrlFrom(retry.data?.properties as any)
+    if (retry.error || !retryUrl) {
       console.error('[signup] generateLink error:', error?.message ?? retry.error?.message)
       return NextResponse.json(
         { error: 'Could not start signup. If you already have an account, please log in instead.' },
         { status: 400 },
       )
     }
-    confirmUrl = retry.data.properties.action_link
+    confirmUrl = retryUrl
   }
 
   // Send the confirmation email via Brevo instead of through Supabase

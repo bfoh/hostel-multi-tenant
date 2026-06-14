@@ -12,10 +12,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  const type = searchParams.get('type') // 'recovery' for password reset
+  const code       = searchParams.get('code')
+  const tokenHash  = searchParams.get('token_hash')
+  const type       = searchParams.get('type') // 'recovery' for password reset; also 'signup'/'magiclink'
 
-  if (!code) {
+  if (!code && !tokenHash) {
     return NextResponse.redirect(new URL('/login?error=link_expired', origin))
   }
 
@@ -38,7 +39,16 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+  // Admin-generated email links (signup confirmation, magic-link activation,
+  // password recovery) carry a token_hash and must be verified with
+  // verifyOtp — they are NOT PKCE, so exchangeCodeForSession would fail.
+  // The OAuth/PKCE path still arrives with ?code=.
+  const { error: exchangeError } = tokenHash
+    ? await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type:       (type ?? 'email') as 'signup' | 'magiclink' | 'recovery' | 'email' | 'invite' | 'email_change',
+      })
+    : await supabase.auth.exchangeCodeForSession(code!)
   if (exchangeError) {
     return NextResponse.redirect(new URL('/login?error=link_expired', origin))
   }
