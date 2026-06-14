@@ -89,7 +89,7 @@ export function DraftReviewPanel({ row, onClose, onProcessed }: Props) {
   return (
     <>
       <div onClick={onClose} className="fixed inset-0 z-40 bg-slate-900/30" />
-      <aside className="fixed inset-y-0 right-0 z-50 flex w-[380px] flex-col bg-white shadow-2xl">
+      <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[380px] flex-col bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
           <h3 className="text-sm font-bold text-slate-900">Review draft</h3>
           <button onClick={onClose} className="rounded p-1 hover:bg-slate-100"><X className="h-4 w-4 text-slate-500" /></button>

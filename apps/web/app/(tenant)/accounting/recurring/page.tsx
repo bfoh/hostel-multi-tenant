@@ -37,7 +37,7 @@ export default async function RecurringPage() {
       </div>
 
       {/* Recurring bills */}
-      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+      <div className="rounded-xl border border-border bg-surface overflow-x-auto">
         <div className="border-b border-border bg-surface-raised px-4 py-3 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Recurring bills</h2>

@@ -72,7 +72,7 @@ export default async function SupplierDetailPage({
       <div className="grid gap-6 lg:grid-cols-[2fr_3fr]">
         <SupplierForm expenseAccounts={expenseAccounts} initial={supplier} />
 
-        <div className="rounded-xl border border-border bg-surface overflow-hidden">
+        <div className="rounded-xl border border-border bg-surface overflow-x-auto">
           <div className="border-b border-border bg-surface-raised px-4 py-2.5 flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-text-secondary">Bills</h2>
             <p className="text-xs text-text-tertiary">

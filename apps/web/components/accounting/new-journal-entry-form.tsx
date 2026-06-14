@@ -256,7 +256,7 @@ export function NewJournalEntryForm({ accounts }: { accounts: AccountOption[] })
           </button>
         </div>
 
-        <div className="border-t border-border bg-surface px-4 py-3 grid grid-cols-3 gap-3 text-sm">
+        <div className="border-t border-border bg-surface px-4 py-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
           <div>
             <p className="text-xs text-text-tertiary">Total debits</p>
             <p className="mt-1 font-semibold text-text-primary tabular-nums">GH₵ {fmtPesewas(totals.debit)}</p>

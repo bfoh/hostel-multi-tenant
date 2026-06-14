@@ -214,7 +214,7 @@ export function NewRecurringJournalForm({ accounts }: { accounts: AccountOption[
           <button type="button" onClick={() => addLine('debit')}  className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"><Plus className="h-3 w-3" /> Add debit</button>
           <button type="button" onClick={() => addLine('credit')} className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"><Plus className="h-3 w-3" /> Add credit</button>
         </div>
-        <div className="border-t border-border bg-surface px-4 py-3 grid grid-cols-3 gap-3 text-sm">
+        <div className="border-t border-border bg-surface px-4 py-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
           <div><p className="text-xs text-text-tertiary">Debits</p><p className="mt-1 font-semibold text-text-primary tabular-nums">GH₵ {fmt(totals.d)}</p></div>
           <div><p className="text-xs text-text-tertiary">Credits</p><p className="mt-1 font-semibold text-text-primary tabular-nums">GH₵ {fmt(totals.c)}</p></div>
           <div><p className="text-xs text-text-tertiary">Balanced</p><p className={`mt-1 font-semibold ${totals.balanced ? 'text-success' : 'text-danger'}`}>{totals.balanced ? 'Yes' : `Off by ${fmt(Math.abs(totals.d - totals.c))}`}</p></div>
