@@ -51,16 +51,6 @@ export function AppShell({
     }
   }, [open])
 
-  const sidebar = (
-    <AppSidebar
-      user={user}
-      tenantRole={tenantRole}
-      tenantId={tenantId}
-      initialDraftCount={initialDraftCount}
-      initialEnquiryCount={initialEnquiryCount}
-    />
-  )
-
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-background">
       {isImpersonating && (
@@ -70,33 +60,35 @@ export function AppShell({
         </div>
       )}
 
-      {/* Desktop sidebar — static column */}
-      <div className="hidden md:flex">{sidebar}</div>
+      {/* Mobile scrim */}
+      <div
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+        className={cn(
+          'fixed inset-0 z-40 bg-black/60 transition-opacity duration-300 md:hidden',
+          open ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+      />
 
-      {/* Mobile drawer */}
-      <div className={cn('md:hidden', open ? 'pointer-events-auto' : 'pointer-events-none')}>
-        {/* Scrim */}
-        <div
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-          className={cn(
-            'fixed inset-0 z-50 bg-black/60 transition-opacity duration-300',
-            open ? 'opacity-100' : 'opacity-0',
-          )}
+      {/* Sidebar — single instance: off-canvas drawer on mobile, static column on desktop */}
+      <div
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-out',
+          'md:static md:z-auto md:translate-x-0',
+          open ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <AppSidebar
+          user={user}
+          tenantRole={tenantRole}
+          tenantId={tenantId}
+          initialDraftCount={initialDraftCount}
+          initialEnquiryCount={initialEnquiryCount}
         />
-        {/* Panel */}
-        <div
-          className={cn(
-            'fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-out',
-            open ? 'translate-x-0' : '-translate-x-full',
-          )}
-        >
-          {sidebar}
-        </div>
       </div>
 
       {/* Main column */}
-      <div className={cn('flex flex-1 flex-col overflow-hidden', isImpersonating && 'mt-8')}>
+      <div className={cn('flex min-w-0 flex-1 flex-col overflow-hidden', isImpersonating && 'mt-8')}>
         <AppHeader user={user} onMenuClick={() => setOpen(true)} />
         {trialBanner}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
