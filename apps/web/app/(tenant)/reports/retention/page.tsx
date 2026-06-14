@@ -97,7 +97,7 @@ export default async function RetentionPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Retention Analytics</h1>
           <p className="mt-0.5 text-sm text-text-secondary">Repeat guests, loyalty patterns, and top spenders</p>

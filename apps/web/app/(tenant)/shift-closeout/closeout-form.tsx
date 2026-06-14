@@ -105,7 +105,7 @@ export function ShiftCloseoutForm({ today }: { today: string }) {
               {result.discrepancy === 0 ? 'Cash matches!' : 'Discrepancy detected'}
             </h3>
           </div>
-          <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3 sm:gap-4">
             <div>
               <p className="text-xs text-text-tertiary">System Cash</p>
               <p className="font-mono font-semibold text-text-primary">

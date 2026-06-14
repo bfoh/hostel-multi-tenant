@@ -38,6 +38,7 @@ export default async function ShiftCloseoutPage() {
           <div className="border-b border-border bg-surface-sunken px-5 py-3">
             <h2 className="font-semibold text-text-primary text-sm">Recent Close-Outs</h2>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-surface-sunken/50">
               <tr>
@@ -81,6 +82,7 @@ export default async function ShiftCloseoutPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
