@@ -15,8 +15,8 @@ export async function GET() {
     providers: {
       arkesel_api_key:     !!process.env.ARKESEL_API_KEY,
       arkesel_sender_id:   process.env.ARKESEL_SENDER_ID ?? null,
-      resend_api_key:      !!process.env.RESEND_API_KEY,
-      resend_from_email:   process.env.RESEND_FROM_EMAIL ?? null,
+      brevo_api_key:       !!process.env.BREVO_API_KEY,
+      brevo_from_email:    process.env.BREVO_FROM_EMAIL ?? process.env.RESEND_FROM_EMAIL ?? null,
       anthropic_api_key:   !!process.env.ANTHROPIC_API_KEY,
       paystack_secret_key: !!process.env.PAYSTACK_SECRET_KEY,
       paystack_public_key: !!process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,

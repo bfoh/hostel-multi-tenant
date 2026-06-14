@@ -161,8 +161,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Email via Resend ───────────────────────────────────────────────────────
-  if (channels.includes('email') && process.env.RESEND_API_KEY) {
+  // ── Email via Brevo ────────────────────────────────────────────────────────
+  if (channels.includes('email') && (process.env.BREVO_API_KEY ?? process.env.RESEND_API_KEY)) {
     const emailTargets = targets.filter((t) => t.email)
     for (const t of emailTargets) {
       const html = baseTemplate(

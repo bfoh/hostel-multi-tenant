@@ -22,7 +22,7 @@ export default async function CommunicationsPage() {
     .limit(50)
 
   const hasSms   = !!process.env.ARKESEL_API_KEY
-  const hasEmail = !!process.env.RESEND_API_KEY
+  const hasEmail = !!(process.env.BREVO_API_KEY ?? process.env.RESEND_API_KEY)
   const hasPush  = !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
   return (

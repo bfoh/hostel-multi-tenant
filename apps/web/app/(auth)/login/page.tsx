@@ -97,8 +97,12 @@ export default function LoginPage() {
     const email = (document.getElementById('email') as HTMLInputElement)?.value
     if (!email) return
     setResendState('sending')
-    const supabase = createClient()
-    await supabase.auth.resend({ type: 'signup', email })
+    // Send via our Brevo-backed route (Supabase's built-in SMTP is unused).
+    await fetch('/api/auth/resend-confirmation', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email }),
+    }).catch(() => {})
     setResendState('sent')
   }
 

@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin
   const redirectTo = `${appUrl}/auth/callback`
 
-  // Use generateLink so we control email delivery via Resend — this bypasses
+  // Use generateLink so we control email delivery via Brevo — this bypasses
   // Supabase's own email hook (which can cause "Database error saving new user"
   // when a custom send_email hook is configured but misconfigured).
   const { data, error } = await admin.auth.admin.generateLink({
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   const confirmUrl = data.properties.action_link
 
-  // Send the confirmation email via Resend instead of through Supabase
+  // Send the confirmation email via Brevo instead of through Supabase
   await sendEmail({
     to:          email,
     subject:     `Confirm your ${hostelName} account`,

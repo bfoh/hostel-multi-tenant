@@ -1,9 +1,9 @@
 /**
- * Transactional email via Resend.
- * Gracefully no-ops when RESEND_API_KEY is absent (local dev without email).
+ * Transactional email via Brevo (https://www.brevo.com).
+ * Gracefully no-ops when BREVO_API_KEY is absent (local dev without email).
  */
 
-const RESEND_API = 'https://api.resend.com/emails'
+const BREVO_API = 'https://api.brevo.com/v3/smtp/email'
 
 interface SendParams {
   to:         string | string[]
@@ -15,7 +15,7 @@ interface SendParams {
 
 /**
  * Returns `{ ok: true }` on accept, `{ ok: false, error }` on any failure
- * (missing key, network error, Resend rejection). Errors are also logged
+ * (missing key, network error, Brevo rejection). Errors are also logged
  * to console so they show up in the Vercel function log.
  *
  * Most callers can fire-and-forget by ignoring the result, but invite /
@@ -23,38 +23,45 @@ interface SendParams {
  * about delivery.
  */
 export async function sendEmail(params: SendParams): Promise<{ ok: boolean; error?: string }> {
-  const apiKey = process.env.RESEND_API_KEY
+  const apiKey = process.env.BREVO_API_KEY
   if (!apiKey) {
-    console.warn('[email] RESEND_API_KEY missing — email skipped:', params.subject)
-    return { ok: false, error: 'RESEND_API_KEY missing' }
+    console.warn('[email] BREVO_API_KEY missing — email skipped:', params.subject)
+    return { ok: false, error: 'BREVO_API_KEY missing' }
   }
 
-  const address = process.env.RESEND_FROM_EMAIL ?? 'no-reply@updates.gh-hostels.com'
+  // Verified sender on the gh-hostels domain. BREVO_FROM_EMAIL is preferred;
+  // RESEND_FROM_EMAIL is honoured as a fallback during the migration.
+  const address =
+    process.env.BREVO_FROM_EMAIL ??
+    process.env.RESEND_FROM_EMAIL ??
+    'no-reply@updates.gh-hostels.com'
+
   // Display name is the tenant/hostel — recipients see the hostel, not the
   // platform. The sending domain stays the verified gh-hostels domain.
-  const from = params.senderName
-    ? `${params.senderName} <${address}>`
-    : `Hostel Notifications <${address}>`
+  const senderName = params.senderName ?? 'Hostel Notifications'
+
+  const recipients = (Array.isArray(params.to) ? params.to : [params.to]).map((email) => ({ email }))
 
   try {
-    const res = await fetch(RESEND_API, {
+    const res = await fetch(BREVO_API, {
       method: 'POST',
       headers: {
-        Authorization:  `Bearer ${apiKey}`,
+        'api-key':      apiKey,
         'Content-Type': 'application/json',
+        accept:         'application/json',
       },
       body: JSON.stringify({
-        from,
-        to:      Array.isArray(params.to) ? params.to : [params.to],
-        subject: params.subject,
-        html:    params.html,
-        reply_to: params.replyTo,
+        sender:      { name: senderName, email: address },
+        to:          recipients,
+        subject:     params.subject,
+        htmlContent: params.html,
+        ...(params.replyTo ? { replyTo: { email: params.replyTo } } : {}),
       }),
     })
     if (!res.ok) {
       const text = await res.text().catch(() => '')
-      console.error('[email] Resend rejected:', res.status, text)
-      return { ok: false, error: `Resend ${res.status}: ${text || 'unknown error'}` }
+      console.error('[email] Brevo rejected:', res.status, text)
+      return { ok: false, error: `Brevo ${res.status}: ${text || 'unknown error'}` }
     }
     return { ok: true }
   } catch (err) {

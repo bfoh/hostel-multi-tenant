@@ -146,8 +146,8 @@ export async function sendDailyDigestForTenant(
 
   // ── Email ──────────────────────────────────────────────────────────────
   if (channels.email) {
-    if (!process.env.RESEND_API_KEY) {
-      errors.push('Email skipped: RESEND_API_KEY env var is not set')
+    if (!(process.env.BREVO_API_KEY ?? process.env.RESEND_API_KEY)) {
+      errors.push('Email skipped: BREVO_API_KEY env var is not set')
     } else {
       const { subject, html } = buildDigestEmail({
         hostelName:    tenant.name,
