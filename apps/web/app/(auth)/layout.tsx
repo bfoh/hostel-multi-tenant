@@ -139,7 +139,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         >
           {isTenantPage
             ? `© ${new Date().getFullYear()} ${tenantName}. Powered by GH-HOSTELS.`
-            : `© ${new Date().getFullYear()} GH-HOSTELS. Made in Accra, Ghana. 🇬🇭`}
+            : `© ${new Date().getFullYear()} GH-HOSTELS · Made in Accra, Ghana`}
         </p>
       </div>
 
