@@ -47,7 +47,7 @@ export default async function InvoicesPage({
       </div>
 
       {/* Summary bar */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {[
           { label: 'Total invoiced', value: totalInvoiced, color: 'text-text-primary' },
           { label: 'Total received', value: totalPaid,     color: 'text-success' },
@@ -61,7 +61,7 @@ export default async function InvoicesPage({
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Link
             key={f.value}

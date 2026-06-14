@@ -32,14 +32,14 @@ export default async function StaffPage({
   return (
     <div className="space-y-6">
       {/* ── Header ───────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Staff</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
             {total} team member{total !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/staff/performance"
             className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
@@ -65,27 +65,27 @@ export default async function StaffPage({
       </div>
 
       {/* ── KPI cards ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center gap-2 text-text-secondary text-sm">
-            <Users className="h-4 w-4" />
-            Total staff
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+        <div className="rounded-xl border border-border bg-surface p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-text-secondary text-xs sm:text-sm">
+            <Users className="h-4 w-4 shrink-0" />
+            <span className="truncate">Total</span>
           </div>
-          <p className="mt-1.5 text-2xl font-bold text-text-primary">{total}</p>
+          <p className="mt-1 text-xl font-bold text-text-primary sm:text-2xl">{total}</p>
         </div>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center gap-2 text-text-secondary text-sm">
-            <UserCheck className="h-4 w-4" />
-            Active
+        <div className="rounded-xl border border-border bg-surface p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-text-secondary text-xs sm:text-sm">
+            <UserCheck className="h-4 w-4 shrink-0" />
+            <span className="truncate">Active</span>
           </div>
-          <p className="mt-1.5 text-2xl font-bold text-success">{active}</p>
+          <p className="mt-1 text-xl font-bold text-success sm:text-2xl">{active}</p>
         </div>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center gap-2 text-text-secondary text-sm">
-            <Clock className="h-4 w-4" />
-            Full-time
+        <div className="rounded-xl border border-border bg-surface p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-text-secondary text-xs sm:text-sm">
+            <Clock className="h-4 w-4 shrink-0" />
+            <span className="truncate">Full-time</span>
           </div>
-          <p className="mt-1.5 text-2xl font-bold text-text-primary">{fullTime}</p>
+          <p className="mt-1 text-xl font-bold text-text-primary sm:text-2xl">{fullTime}</p>
         </div>
       </div>
 
@@ -126,7 +126,48 @@ export default async function StaffPage({
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <>
+        {/* ── Mobile: card list ──────────────────────────────────── */}
+        <ul className="space-y-2.5 md:hidden">
+          {staff.map((s) => (
+            <li key={s.id} className="rounded-xl border border-border bg-surface p-3.5">
+              <div className="flex items-center gap-3">
+                <Link href={`/staff/${s.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-sm font-semibold text-brand">
+                    {s.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={s.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+                    ) : (
+                      initials(`${s.first_name} ${s.last_name}`)
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-text-primary">{s.first_name} {s.last_name}</p>
+                    <p className="truncate text-xs text-text-tertiary">
+                      {s.job_title ?? '—'}{s.department ? ` · ${s.department}` : ''}
+                    </p>
+                  </div>
+                </Link>
+                <span className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${s.is_active ? 'bg-success-subtle text-success border-success/20' : 'bg-surface-sunken text-text-secondary border-border'}`}>
+                  {s.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+                <div className="min-w-0 text-xs text-text-secondary">
+                  <span className="capitalize">{(s.employment_type ?? 'full_time').replace('_', ' ')}</span>
+                  {s.basic_salary ? <span className="text-text-tertiary"> · {formatGHS(s.basic_salary)}/mo</span> : null}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <InviteStaffButton staffId={s.id} hasEmail={!!s.email} hasAccount={!!(s as any).user_id} compact />
+                  <DeleteStaffButton staffId={s.id} staffName={`${s.first_name} ${s.last_name}`} />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* ── Desktop: table ─────────────────────────────────────── */}
+        <div className="hidden overflow-hidden rounded-xl border border-border bg-surface md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
@@ -202,6 +243,7 @@ export default async function StaffPage({
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* ── Quick links ──────────────────────────────────────────── */}
