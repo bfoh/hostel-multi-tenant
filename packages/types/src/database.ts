@@ -2454,6 +2454,7 @@ export type Database = {
           paystack_subscription_code: string | null
           paystack_email_token: string | null
           plan_name: string
+          billing_interval: string
           amount: number
           currency: string
           status: SubscriptionStatus
@@ -2473,6 +2474,7 @@ export type Database = {
           paystack_subscription_code?: string | null
           paystack_email_token?: string | null
           plan_name: string
+          billing_interval?: string
           amount: number
           currency?: string
           status?: SubscriptionStatus
@@ -2488,6 +2490,7 @@ export type Database = {
           paystack_subscription_code?: string | null
           paystack_email_token?: string | null
           plan_name?: string
+          billing_interval?: string
           amount?: number
           status?: SubscriptionStatus
           current_period_start?: string | null

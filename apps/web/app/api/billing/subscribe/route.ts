@@ -4,11 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { initializeTransaction, createCustomer } from '@/lib/paystack'
-import { getPlatformPlan, type PlatformPlanName } from '@/lib/platform-plans'
+import { getPlatformPlan, type PlatformPlanName, type BillingInterval } from '@/lib/platform-plans'
 import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
-  plan: z.enum(['starter', 'growth']),
+  plan:     z.enum(['starter', 'growth']),
+  interval: z.enum(['monthly', 'quarterly', 'biannual', 'annual']).default('monthly'),
 })
 
 /**
@@ -42,11 +43,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Billing not configured' }, { status: 503 })
   }
 
-  const plan = getPlatformPlan(parsed.data.plan as PlatformPlanName)
+  const plan = getPlatformPlan(
+    parsed.data.plan as PlatformPlanName,
+    parsed.data.interval as BillingInterval,
+  )
   if (!plan) return NextResponse.json({ error: 'Unknown plan' }, { status: 422 })
   if (!plan.planCode) {
     return NextResponse.json(
-      { error: `Plan ${plan.name} is not linked to a Paystack plan code. Run the admin bootstrap first.` },
+      { error: `Plan ${plan.name} (${plan.intervalLabel}) is not linked to a Paystack plan code. Run the admin bootstrap first.` },
       { status: 503 },
     )
   }
@@ -115,9 +119,10 @@ export async function POST(req: NextRequest) {
       channels:      ['card'],                   // subscriptions: card only (tokenizable)
       plan:          plan.planCode,
       metadata: {
-        source:       'platform_subscription',
-        tenant_id:    tenantId,
-        plan_name:    plan.name,
+        source:           'platform_subscription',
+        tenant_id:        tenantId,
+        plan_name:        plan.name,
+        billing_interval: plan.interval,
       },
     })
 

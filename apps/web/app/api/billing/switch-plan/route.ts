@@ -8,11 +8,12 @@ import {
   createCustomer,
   disableSubscription,
 } from '@/lib/paystack'
-import { getPlatformPlan, type PlatformPlanName } from '@/lib/platform-plans'
+import { getPlatformPlan, type PlatformPlanName, type BillingInterval } from '@/lib/platform-plans'
 import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
-  plan: z.enum(['starter', 'growth']),
+  plan:     z.enum(['starter', 'growth']),
+  interval: z.enum(['monthly', 'quarterly', 'biannual', 'annual']).default('monthly'),
 })
 
 /**
@@ -47,11 +48,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Billing not configured' }, { status: 503 })
   }
 
-  const newPlan = getPlatformPlan(parsed.data.plan as PlatformPlanName)
+  const newPlan = getPlatformPlan(
+    parsed.data.plan as PlatformPlanName,
+    parsed.data.interval as BillingInterval,
+  )
   if (!newPlan) return NextResponse.json({ error: 'Unknown plan' }, { status: 422 })
   if (!newPlan.planCode) {
     return NextResponse.json(
-      { error: `Plan ${newPlan.name} is not linked to a Paystack plan code. Run the admin bootstrap first.` },
+      { error: `Plan ${newPlan.name} (${newPlan.intervalLabel}) is not linked to a Paystack plan code. Run the admin bootstrap first.` },
       { status: 503 },
     )
   }
@@ -61,13 +65,16 @@ export async function POST(req: NextRequest) {
   // 1. Find the current active subscription
   const { data: currentSub } = await admin
     .from('tenant_subscriptions')
-    .select('id, paystack_subscription_code, paystack_email_token, plan_name, status')
+    .select('id, paystack_subscription_code, paystack_email_token, plan_name, billing_interval, status')
     .eq('tenant_id', tenantId)
     .in('status', ['trialing', 'active', 'past_due'])
     .maybeSingle()
 
-  // Block if trying to switch to the same plan
-  if (currentSub?.plan_name === parsed.data.plan) {
+  // Block only if the target tier AND interval both match the current plan
+  if (
+    currentSub?.plan_name === parsed.data.plan &&
+    (currentSub as any)?.billing_interval === parsed.data.interval
+  ) {
     return NextResponse.json({ error: 'Already on this plan' }, { status: 409 })
   }
 
@@ -139,10 +146,11 @@ export async function POST(req: NextRequest) {
       channels:      ['card'],
       plan:          newPlan.planCode,
       metadata: {
-        source:       'plan_switch',
-        tenant_id:    tenantId,
-        plan_name:    newPlan.name,
-        previous_plan: currentSub?.plan_name ?? 'none',
+        source:           'plan_switch',
+        tenant_id:        tenantId,
+        plan_name:        newPlan.name,
+        billing_interval: newPlan.interval,
+        previous_plan:    currentSub?.plan_name ?? 'none',
       },
     })
 

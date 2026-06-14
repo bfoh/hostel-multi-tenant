@@ -3,7 +3,10 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
-import { listPlatformPlans, findPlanByCode } from '@/lib/platform-plans'
+import {
+  listPlatformPlans, listAllPlanVariants, findPlanByCode,
+  BILLING_INTERVALS, type BillingInterval,
+} from '@/lib/platform-plans'
 import { listSubscriptions } from '@/lib/paystack'
 import { BillingClient } from '@/components/settings/billing-client'
 
@@ -13,14 +16,36 @@ export const dynamic = 'force-dynamic'
 export default async function BillingPage() {
   const tenantId = await getServerTenantId()
 
+  // Tier-level metadata (interval-agnostic)
   const plans = listPlatformPlans().map((p) => ({
-    name:          p.name as 'starter' | 'growth',
-    displayName:   p.displayName,
-    description:   p.description,
-    amountPesewas: p.amountPesewas,
-    features:      p.features,
-    available:     !!p.planCode,
+    name:               p.name as 'starter' | 'growth',
+    displayName:        p.displayName,
+    description:        p.description,
+    baseMonthlyPesewas: p.baseMonthlyPesewas,
+    features:           p.features,
   }))
+
+  // Selectable billing intervals (for the toggle)
+  const intervals = BILLING_INTERVALS.map((iv) => ({
+    id:              iv.id,
+    label:           iv.label,
+    months:          iv.months,
+    discountPercent: Math.round(iv.discount * 100),
+  }))
+
+  // Price matrix: pricing[tier][interval] = { amountPesewas, monthlyPesewas, discountPercent, available }
+  const pricing: Record<string, Record<string, {
+    amountPesewas: number; monthlyPesewas: number; discountPercent: number; available: boolean
+  }>> = {}
+  for (const v of listAllPlanVariants()) {
+    pricing[v.name] ??= {}
+    pricing[v.name][v.interval] = {
+      amountPesewas:   v.amountPesewas,
+      monthlyPesewas:  v.monthlyPesewas,
+      discountPercent: v.discountPercent,
+      available:       !!v.planCode,
+    }
+  }
 
   // Fetch tenant plan info
   let tenantPlan = 'starter'
@@ -42,7 +67,7 @@ export default async function BillingPage() {
       trialEndsAt = tenantRow.trial_ends_at ?? null
     }
     const selectCols = `
-      id, plan_name, amount, currency, status,
+      id, plan_name, billing_interval, amount, currency, status,
       current_period_start, current_period_end,
       next_payment_at, last_payment_at, canceled_at
     `
@@ -94,6 +119,7 @@ export default async function BillingPage() {
                   paystack_subscription_code: sub.subscription_code,
                   paystack_email_token:       sub.email_token,
                   plan_name:                  plan?.name ?? sub.plan.name ?? 'starter',
+                  billing_interval:           plan?.interval ?? 'monthly',
                   amount:                     sub.amount ?? sub.plan.amount ?? 0,
                   currency:                   sub.plan.currency ?? 'GHS',
                   status,
@@ -141,6 +167,8 @@ export default async function BillingPage() {
 
       <BillingClient
         plans={plans}
+        pricing={pricing}
+        intervals={intervals}
         subscription={subscription}
         currentPlan={tenantPlan}
         tenantStatus={tenantStatus}
@@ -150,7 +178,7 @@ export default async function BillingPage() {
       <div className="rounded-xl border border-border bg-surface-sunken p-5 text-xs text-text-secondary space-y-2">
         <p className="font-medium text-text-primary">Billing notes</p>
         <ul className="space-y-1 list-disc pl-4">
-          <li>Subscriptions are billed monthly by card through Paystack.</li>
+          <li>Subscriptions are billed by card through Paystack on your chosen cycle — monthly, quarterly, every 6 months, or yearly. Longer cycles are discounted up to 15%.</li>
           <li>Cancelling keeps access until the current period ends.</li>
           <li>Update your card anytime via the Paystack-hosted manage link — we never see your card details.</li>
         </ul>

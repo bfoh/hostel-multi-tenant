@@ -521,6 +521,7 @@ async function handleSubscriptionCreate(event: PaystackWebhookPayload, supabase:
         paystack_subscription_code:  subscriptionCode,
         paystack_email_token:        emailToken ?? null,
         plan_name:                   plan?.name ?? data.plan?.name ?? 'starter',
+        billing_interval:            plan?.interval ?? 'monthly',
         amount,
         currency:                    data.plan?.currency ?? 'GHS',
         status:                      'active',

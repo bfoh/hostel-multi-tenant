@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createPlan } from '@/lib/paystack'
-import { listPlatformPlans } from '@/lib/platform-plans'
+import { listAllPlanVariants } from '@/lib/platform-plans'
 
 /**
  * POST /api/admin/paystack/bootstrap-plans
@@ -54,33 +54,49 @@ export async function POST(req: Request) {
   const body  = await req.json().catch(() => ({}))
   const force = body?.force === true
 
-  const plans   = listPlatformPlans()
-  const results: Array<{ name: string; planCode: string; amount: number; created: boolean }> = []
+  const plans   = listAllPlanVariants()
+  const results: Array<{
+    name: string; interval: string; env: string; planCode: string; amount: number; created: boolean
+  }> = []
 
   for (const plan of plans) {
     if (plan.planCode && !force) {
-      results.push({ name: plan.name, planCode: plan.planCode, amount: plan.amountPesewas, created: false })
+      results.push({
+        name: plan.name, interval: plan.interval, env: plan.planCodeEnv,
+        planCode: plan.planCode, amount: plan.amountPesewas, created: false,
+      })
       continue
     }
     try {
+      const stamp   = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
       const created = await createPlan({
-        name:          `GH Hostels — ${plan.displayName}${force ? ` (${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')})` : ''}`,
+        name:          `GH Hostels — ${plan.displayName} (${plan.intervalLabel})${force ? ` ${stamp}` : ''}`,
         amountPesewas: plan.amountPesewas,
-        interval:      'monthly',
-        description:   plan.description,
+        interval:      plan.paystackInterval,
+        description:   `${plan.description} Billed ${plan.intervalLabel.toLowerCase()}${plan.discountPercent ? ` (${plan.discountPercent}% off)` : ''}.`,
         currency:      'GHS',
       })
-      results.push({ name: plan.name, planCode: created.plan_code, amount: created.amount, created: true })
+      results.push({
+        name: plan.name, interval: plan.interval, env: plan.planCodeEnv,
+        planCode: created.plan_code, amount: created.amount, created: true,
+      })
     } catch (err: any) {
-      return NextResponse.json({ error: `Failed to create plan ${plan.name}: ${err.message}` }, { status: 502 })
+      return NextResponse.json(
+        { error: `Failed to create plan ${plan.name}/${plan.interval}: ${err.message}`, partial: results },
+        { status: 502 },
+      )
     }
   }
 
+  // Convenient env block to paste straight into Vercel / .env
+  const envBlock = results.map((r) => `${r.env}=${r.planCode}`).join('\n')
+
   return NextResponse.json({
     results,
+    envBlock,
     force,
     note: force
-      ? 'Force-recreated. Paste the new plan codes into PAYSTACK_PLAN_STARTER/GROWTH and redeploy. Old plan codes on Paystack are now orphaned.'
-      : 'Paste the created plan codes into env vars PAYSTACK_PLAN_STARTER, PAYSTACK_PLAN_GROWTH.',
+      ? 'Force-recreated. Paste the env block into your environment and redeploy. Old plan codes on Paystack are now orphaned.'
+      : 'Paste the env block into your environment (PAYSTACK_PLAN_<TIER>_<INTERVAL>) and redeploy.',
   })
 }

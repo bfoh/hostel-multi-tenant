@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
                 paystack_subscription_code: sub.subscription_code,
                 paystack_email_token:       sub.email_token,
                 plan_name:                  plan?.name ?? sub.plan.name ?? 'starter',
+                billing_interval:           plan?.interval ?? 'monthly',
                 amount:                     sub.amount ?? sub.plan.amount ?? 0,
                 currency:                   sub.plan.currency ?? 'GHS',
                 status:                     'active',

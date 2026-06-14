@@ -11,7 +11,9 @@ import { NotificationsForm } from '@/components/settings/notifications-form'
 import { PasswordForm } from '@/components/settings/password-form'
 import { PushToggle } from '@/components/settings/push-toggle'
 import { BillingClient } from '@/components/settings/billing-client'
-import { listPlatformPlans, findPlanByCode } from '@/lib/platform-plans'
+import {
+  listPlatformPlans, listAllPlanVariants, findPlanByCode, BILLING_INTERVALS,
+} from '@/lib/platform-plans'
 import { listSubscriptions } from '@/lib/paystack'
 import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode, ChevronRight, AlertTriangle, CheckCircle2, Inbox } from 'lucide-react'
 
@@ -57,18 +59,37 @@ async function getTenant() {
 
 async function getBillingData(tenantId: string) {
   const plans = listPlatformPlans().map((p) => ({
-    name:          p.name as 'starter' | 'growth',
-    displayName:   p.displayName,
-    description:   p.description,
-    amountPesewas: p.amountPesewas,
-    features:      p.features,
-    available:     !!p.planCode,
+    name:               p.name as 'starter' | 'growth',
+    displayName:        p.displayName,
+    description:        p.description,
+    baseMonthlyPesewas: p.baseMonthlyPesewas,
+    features:           p.features,
   }))
+
+  const intervals = BILLING_INTERVALS.map((iv) => ({
+    id:              iv.id,
+    label:           iv.label,
+    months:          iv.months,
+    discountPercent: Math.round(iv.discount * 100),
+  }))
+
+  const pricing: Record<string, Record<string, {
+    amountPesewas: number; monthlyPesewas: number; discountPercent: number; available: boolean
+  }>> = {}
+  for (const v of listAllPlanVariants()) {
+    pricing[v.name] ??= {}
+    pricing[v.name][v.interval] = {
+      amountPesewas:   v.amountPesewas,
+      monthlyPesewas:  v.monthlyPesewas,
+      discountPercent: v.discountPercent,
+      available:       !!v.planCode,
+    }
+  }
 
   let subscription: any = null
   const admin = createAdminClient()
   const selectCols = `
-    id, plan_name, amount, currency, status,
+    id, plan_name, billing_interval, amount, currency, status,
     current_period_start, current_period_end,
     next_payment_at, last_payment_at, canceled_at
   `
@@ -118,6 +139,7 @@ async function getBillingData(tenantId: string) {
                 paystack_subscription_code: sub.subscription_code,
                 paystack_email_token:       sub.email_token,
                 plan_name:                  plan?.name ?? sub.plan.name ?? 'starter',
+                billing_interval:           plan?.interval ?? 'monthly',
                 amount:                     sub.amount ?? sub.plan.amount ?? 0,
                 currency:                   sub.plan.currency ?? 'GHS',
                 status,
@@ -144,7 +166,7 @@ async function getBillingData(tenantId: string) {
     }
   }
 
-  return { plans, subscription }
+  return { plans, pricing, intervals, subscription }
 }
 
 export default async function SettingsPage({
@@ -470,6 +492,8 @@ export default async function SettingsPage({
                   <>
                     <BillingClient
                       plans={billingData.plans}
+                      pricing={billingData.pricing}
+                      intervals={billingData.intervals}
                       subscription={billingData.subscription}
                       currentPlan={tenant?.plan ?? 'starter'}
                       tenantStatus={tenant?.status ?? 'trial'}
@@ -479,7 +503,7 @@ export default async function SettingsPage({
                     <div className="rounded-xl border border-border bg-surface-sunken p-5 text-xs text-text-secondary space-y-2">
                       <p className="font-medium text-text-primary">Billing notes</p>
                       <ul className="space-y-1 list-disc pl-4">
-                        <li>Subscriptions are billed monthly by card through Paystack.</li>
+                        <li>Subscriptions are billed by card through Paystack on your chosen cycle — monthly, quarterly, every 6 months, or yearly. Longer cycles are discounted up to 15%.</li>
                         <li>Cancelling keeps access until the current period ends.</li>
                         <li>Update your card anytime via the Paystack-hosted manage link — we never see your card details.</li>
                       </ul>

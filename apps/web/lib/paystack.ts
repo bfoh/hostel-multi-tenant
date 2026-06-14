@@ -394,7 +394,7 @@ export interface Plan {
 export async function createPlan(params: {
   name: string
   amountPesewas: number
-  interval: 'daily' | 'weekly' | 'monthly' | 'biannually' | 'annually'
+  interval: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'biannually' | 'annually'
   description?: string
   currency?: string
 }): Promise<Plan> {

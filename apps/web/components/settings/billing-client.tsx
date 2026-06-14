@@ -7,18 +7,34 @@ import {
   ArrowUpRight, ArrowDownRight, Sparkles, Clock,
 } from 'lucide-react'
 
+type IntervalId = 'monthly' | 'quarterly' | 'biannual' | 'annual'
+
 interface Plan {
   name: 'starter' | 'growth'
   displayName: string
   description: string
-  amountPesewas: number
+  baseMonthlyPesewas: number
   features: string[]
+}
+
+interface PriceCell {
+  amountPesewas: number   // total charged per cycle
+  monthlyPesewas: number  // discounted per-month (display)
+  discountPercent: number
   available: boolean
+}
+
+interface IntervalOpt {
+  id: IntervalId
+  label: string
+  months: number
+  discountPercent: number
 }
 
 interface Subscription {
   id: string
   plan_name: string
+  billing_interval: string | null
   amount: number
   currency: string
   status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete'
@@ -29,10 +45,16 @@ interface Subscription {
 
 interface Props {
   plans: Plan[]
+  pricing: Record<string, Record<string, PriceCell>>
+  intervals: IntervalOpt[]
   subscription: Subscription | null
   currentPlan: string       // from tenants.plan (starter/growth)
   tenantStatus: string      // from tenants.status (trial/active/suspended/cancelled)
   trialEndsAt: string | null
+}
+
+const INTERVAL_LABEL: Record<string, string> = {
+  monthly: 'month', quarterly: 'quarter', biannual: '6 months', annual: 'year',
 }
 
 const STATUS_STYLE: Record<string, string> = {
@@ -45,13 +67,28 @@ const STATUS_STYLE: Record<string, string> = {
 
 const PLAN_ORDER: Record<string, number> = { starter: 0, growth: 1 }
 
-export function BillingClient({ plans, subscription, currentPlan, tenantStatus, trialEndsAt }: Props) {
+export function BillingClient({ plans, pricing, intervals, subscription, currentPlan, tenantStatus, trialEndsAt }: Props) {
   const router = useRouter()
   const search = useSearchParams()
   const flash  = search.get('sub')
 
   const [busy, setBusy]   = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Selected billing interval. Seed from URL (?billing=) then the live sub.
+  const liveInterval = (subscription?.billing_interval as IntervalId | undefined) ?? undefined
+  const urlInterval  = search.get('billing') as IntervalId | null
+  const validIds     = intervals.map((i) => i.id)
+  const seedInterval: IntervalId =
+    (urlInterval && validIds.includes(urlInterval) && urlInterval) ||
+    (liveInterval && validIds.includes(liveInterval) && liveInterval) ||
+    'monthly'
+  const [interval, setInterval] = useState<IntervalId>(seedInterval)
+
+  const priceFor = (tier: string): PriceCell =>
+    pricing[tier]?.[interval] ?? { amountPesewas: 0, monthlyPesewas: 0, discountPercent: 0, available: false }
+
+  const ghs = (pesewas: number) => (pesewas / 100).toLocaleString('en-GH')
 
   // Auto-fire subscribe when user arrives with ?autosubscribe=<plan>
   const autosubscribeFired = useRef(false)
@@ -60,7 +97,7 @@ export function BillingClient({ plans, subscription, currentPlan, tenantStatus, 
     const raw = search.get('autosubscribe')
     if (!raw) return
     if (subscription && ['trialing', 'active', 'past_due'].includes(subscription.status)) return
-    const target = plans.find((p) => p.name === raw && p.available)
+    const target = plans.find((p) => p.name === raw && priceFor(p.name).available)
     if (!target) return
     autosubscribeFired.current = true
     subscribe(target.name)
@@ -73,7 +110,7 @@ export function BillingClient({ plans, subscription, currentPlan, tenantStatus, 
       const res = await fetch('/api/billing/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, interval }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Could not start subscription')
@@ -88,11 +125,13 @@ export function BillingClient({ plans, subscription, currentPlan, tenantStatus, 
     if (!target) return
     const isUpgrade = PLAN_ORDER[plan] > PLAN_ORDER[currentPlan]
     const action = isUpgrade ? 'upgrade' : 'downgrade'
+    const cell = priceFor(plan)
+    const cycle = INTERVAL_LABEL[interval] ?? 'month'
 
     if (!confirm(
       `${isUpgrade ? 'Upgrade' : 'Downgrade'} to ${target.displayName}?\n\n` +
       `Your current subscription will be cancelled and a new ${target.displayName} ` +
-      `subscription (GH₵ ${(target.amountPesewas / 100).toLocaleString()}/mo) will be created.\n\n` +
+      `subscription (GH₵ ${ghs(cell.amountPesewas)} / ${cycle}) will be created.\n\n` +
       `You'll be redirected to Paystack to complete payment.`
     )) return
 
@@ -101,7 +140,7 @@ export function BillingClient({ plans, subscription, currentPlan, tenantStatus, 
       const res = await fetch('/api/billing/switch-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, interval }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : `Could not ${action}`)
@@ -223,7 +262,7 @@ export function BillingClient({ plans, subscription, currentPlan, tenantStatus, 
               </div>
               <p className="mt-1 text-sm text-text-secondary">
                 {(subscription.amount / 100).toLocaleString('en-GH', { style: 'currency', currency: subscription.currency })}
-                {' '} / month
+                {' '} / {INTERVAL_LABEL[subscription.billing_interval ?? 'monthly'] ?? 'month'}
               </p>
             </div>
 
@@ -278,25 +317,58 @@ export function BillingClient({ plans, subscription, currentPlan, tenantStatus, 
 
       {/* ── Plan grid — always visible ────────────────────────────────── */}
       <div>
-        <h3 className="text-sm font-semibold text-text-primary mb-3">
-          {isLive ? 'Switch plan' : 'Choose a plan'}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-text-primary">
+            {isLive ? 'Switch plan' : 'Choose a plan'}
+          </h3>
+          {/* Billing-interval toggle */}
+          <div className="inline-flex flex-wrap gap-1 rounded-lg border border-border bg-surface-sunken p-1">
+            {intervals.map((iv) => {
+              const active = iv.id === interval
+              return (
+                <button
+                  key={iv.id}
+                  type="button"
+                  onClick={() => setInterval(iv.id)}
+                  className={[
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                    active ? 'bg-brand text-white' : 'text-text-secondary hover:text-text-primary',
+                  ].join(' ')}
+                >
+                  {iv.label}
+                  {iv.discountPercent > 0 && (
+                    <span className={active ? 'ml-1 opacity-90' : 'ml-1 text-success'}>
+                      −{iv.discountPercent}%
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {plans.map((p) => {
-            const isCurrent = p.name === activePlanName && (isLive || isTrial)
+            const cell      = priceFor(p.name)
+            const sameTier  = p.name === activePlanName
+            const liveIv    = (subscription?.billing_interval ?? 'monthly') as IntervalId
+            const isActiveExact = !!isLive && sameTier && liveIv === interval
+            const highlight = isActiveExact || (isTrial && sameTier)
             const isHigher  = PLAN_ORDER[p.name] > PLAN_ORDER[activePlanName]
-            const isLower   = PLAN_ORDER[p.name] < PLAN_ORDER[activePlanName]
             const planBusy  = busy === `subscribe-${p.name}` || busy === `switch-${p.name}`
+            const months    = intervals.find((iv) => iv.id === interval)?.months ?? 1
+            const cycleWord = INTERVAL_LABEL[interval] ?? 'month'
 
             let buttonLabel = 'Subscribe'
             let buttonAction = () => subscribe(p.name)
             let ButtonIcon: typeof ArrowUpRight | null = null
 
-            if (isCurrent) {
+            if (isActiveExact) {
               buttonLabel = 'Current plan'
             } else if (isLive) {
-              // Has an active sub — switch
-              if (isHigher) {
+              // Has an active sub — switching tier and/or billing interval
+              if (sameTier) {
+                buttonLabel = 'Switch billing'
+              } else if (isHigher) {
                 buttonLabel = 'Upgrade'
                 ButtonIcon = ArrowUpRight
               } else {
@@ -304,9 +376,6 @@ export function BillingClient({ plans, subscription, currentPlan, tenantStatus, 
                 ButtonIcon = ArrowDownRight
               }
               buttonAction = () => switchPlan(p.name)
-            } else if (isTrial) {
-              // Trial — subscribe
-              buttonLabel = 'Subscribe'
             }
 
             return (
@@ -314,23 +383,35 @@ export function BillingClient({ plans, subscription, currentPlan, tenantStatus, 
                 key={p.name}
                 className={[
                   'rounded-xl border p-5 flex flex-col transition-colors',
-                  isCurrent
+                  highlight
                     ? 'border-brand/50 bg-brand/5 ring-1 ring-brand/20'
                     : 'border-border bg-surface hover:border-border/80',
                 ].join(' ')}
               >
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-semibold text-text-primary">{p.displayName}</h3>
-                  {isCurrent && (
+                  {highlight && (
                     <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand uppercase tracking-wide">
-                      Current
+                      {isActiveExact ? 'Current' : 'Trial'}
                     </span>
                   )}
                 </div>
                 <p className="mt-1 text-xs text-text-secondary">{p.description}</p>
                 <p className="mt-4 text-2xl font-bold text-text-primary">
-                  GH₵ {(p.amountPesewas / 100).toLocaleString()}
+                  GH₵ {ghs(cell.monthlyPesewas)}
                   <span className="text-sm font-normal text-text-secondary"> / mo</span>
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  {months > 1 ? (
+                    <>
+                      GH₵ {ghs(cell.amountPesewas)} billed every {cycleWord}
+                      {cell.discountPercent > 0 && (
+                        <span className="text-success"> · save {cell.discountPercent}%</span>
+                      )}
+                    </>
+                  ) : (
+                    'Billed monthly'
+                  )}
                 </p>
 
                 <ul className="mt-4 space-y-1.5 text-xs text-text-secondary flex-1">
@@ -344,20 +425,20 @@ export function BillingClient({ plans, subscription, currentPlan, tenantStatus, 
 
                 <button
                   onClick={buttonAction}
-                  disabled={isCurrent || !p.available || !!planBusy}
+                  disabled={isActiveExact || !cell.available || !!planBusy}
                   className={[
                     'mt-5 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50',
-                    isCurrent
+                    isActiveExact
                       ? 'bg-brand/10 text-brand cursor-default'
                       : isHigher || !isLive
                         ? 'bg-brand text-white hover:bg-brand-hover'
                         : 'bg-surface border border-border text-text-primary hover:bg-surface-sunken',
                   ].join(' ')}
-                  title={!p.available ? 'Plan is not yet configured. Run admin bootstrap first.' : undefined}
+                  title={!cell.available ? 'Plan is not yet configured. Run admin bootstrap first.' : undefined}
                 >
                   {planBusy && <Loader2 className="h-4 w-4 animate-spin" />}
                   {ButtonIcon && !planBusy && <ButtonIcon className="h-4 w-4" />}
-                  {!p.available ? 'Unavailable' : buttonLabel}
+                  {!cell.available ? 'Unavailable' : buttonLabel}
                 </button>
               </div>
             )
