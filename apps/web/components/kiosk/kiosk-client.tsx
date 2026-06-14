@@ -99,10 +99,10 @@ export function KioskClient() {
   return (
     <div className="min-h-screen bg-surface-sunken flex flex-col">
       {/* ── Top bar ──────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between border-b border-border bg-surface px-6 py-3">
-        <div>
-          <h1 className="text-lg font-bold text-text-primary">Reception Kiosk</h1>
-          <p className="text-xs text-text-tertiary">{new Date().toLocaleDateString('en-GH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 sm:px-6">
+        <div className="min-w-0">
+          <h1 className="text-base font-bold text-text-primary sm:text-lg">Reception Kiosk</h1>
+          <p className="truncate text-xs text-text-tertiary">{new Date().toLocaleDateString('en-GH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
         <div className="flex items-center gap-3">
           {phase !== 'idle' && (
@@ -117,12 +117,12 @@ export function KioskClient() {
       </header>
 
       {/* ── Main ─────────────────────────────────────────────────── */}
-      <main className="flex flex-1 items-center justify-center p-6">
+      <main className="flex flex-1 items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-md space-y-6">
 
           {/* ── IDLE — search form ─────────────────────────────── */}
           {phase === 'idle' && (
-            <div className="rounded-2xl border border-border bg-surface p-8 space-y-6 shadow-sm">
+            <div className="rounded-2xl border border-border bg-surface p-6 space-y-6 shadow-sm sm:p-8">
               <div className="text-center space-y-2">
                 <UserCircle2 className="mx-auto h-16 w-16 text-text-disabled" />
                 <h2 className="text-xl font-bold text-text-primary">Welcome</h2>
