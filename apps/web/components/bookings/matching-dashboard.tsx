@@ -536,13 +536,13 @@ export function MatchingDashboard({ rooms, bookings, profiles, matchingEnabled }
   }, [selectedBooking, selectedProfile, compareRoomId, sharedRooms, activeBookingsByRoom, profileMap])
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col gap-6 overflow-hidden">
+    <div className="flex flex-col gap-6 lg:h-[calc(100vh-8rem)] lg:overflow-hidden">
       
       {/* ── Top Header Bar ─────────────────────────────────────────── */}
       <div className="flex items-start justify-between border-b border-border pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-text-primary tracking-tight">Roommate Matching Workspace</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-bold text-text-primary tracking-tight sm:text-2xl">Roommate Matching Workspace</h1>
             {matchingEnabled ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-500 ring-1 ring-emerald-500/20">
                 <Check className="h-3 w-3" /> Enabled
@@ -581,10 +581,10 @@ export function MatchingDashboard({ rooms, bookings, profiles, matchingEnabled }
       )}
 
       {/* ── Workspace ──────────────────────────────────────────────── */}
-      <div className="flex flex-1 gap-6 overflow-hidden">
+      <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:gap-6 lg:overflow-hidden">
         
         {/* ── LEFT PANEL: Pending Bookings Queue ────────────────────── */}
-        <div className="flex w-80 flex-col rounded-xl border border-border bg-surface overflow-hidden shrink-0">
+        <div className="flex w-full flex-col rounded-xl border border-border bg-surface overflow-hidden shrink-0 lg:w-80">
           <div className="p-4 border-b border-border bg-surface-sunken">
             <h2 className="font-bold text-text-primary flex items-center gap-2">
               <Users className="h-4 w-4 text-brand" />
