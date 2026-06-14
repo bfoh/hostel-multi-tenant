@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendEmail } from '@/lib/email'
 
 /**
  * GET /api/debug-signup?email=<allowlisted>
@@ -41,11 +42,41 @@ export async function GET(req: NextRequest) {
     options: { redirectTo: `${appUrl}/auth/callback` },
   })
 
+  // Replicate the real signup path: generateLink('signup') on a throwaway
+  // email, then actually send via Brevo, then delete the throwaway user.
+  const throwaway = `debug-signup-${Date.now()}@gh-hostels.com`
+  const signup = await admin.auth.admin.generateLink({
+    type:     'signup',
+    email:    throwaway,
+    password: `Dbg-${Date.now()}-Aa1!`,
+    options:  { data: { hostel_name: 'Debug Hostel' }, redirectTo: `${appUrl}/auth/callback` },
+  })
+  const signupLink = signup.data?.properties?.action_link
+
+  // Send the resulting confirmation to the allowlisted inbox (not the throwaway).
+  let sendResult: { ok: boolean; error?: string } = { ok: false, error: 'no link' }
+  if (signupLink) {
+    sendResult = await sendEmail({
+      to:         email,
+      subject:    'GH Hostels — signup-path test',
+      senderName: 'GH Hostels',
+      html:       `<p>Signup-path test. Link generated OK.</p><p>${signupLink}</p>`,
+    })
+  }
+
+  // Clean up the throwaway user.
+  if (signup.data?.user?.id) {
+    await admin.auth.admin.deleteUser(signup.data.user.id).catch(() => {})
+  }
+
   return NextResponse.json({
     email,
-    user_exists:   !!found,
-    confirmed:     found?.confirmed ?? null,
-    magiclink_ok:  !!magic.data?.properties?.action_link,
-    magiclink_err: magic.error?.message ?? null,
+    user_exists:    !!found,
+    confirmed:      found?.confirmed ?? null,
+    magiclink_ok:   !!magic.data?.properties?.action_link,
+    magiclink_err:  magic.error?.message ?? null,
+    signuplink_ok:  !!signupLink,
+    signuplink_err: signup.error?.message ?? null,
+    send_result:    sendResult,
   })
 }
