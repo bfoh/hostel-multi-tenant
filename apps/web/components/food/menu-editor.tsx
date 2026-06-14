@@ -183,7 +183,7 @@ export function MenuEditor({ initialCategories, initialItems }: {
         <NewItemForm cats={cats} nextSortOrder={items.length} onCreated={appendItem} onError={setError} />
         <ul className="mt-3 divide-y divide-border">
           {items.map(it => (
-            <li key={it.id} className="relative grid grid-cols-12 items-center gap-3 py-3">
+            <li key={it.id} className="relative flex flex-col gap-3 py-3 md:grid md:grid-cols-12 md:items-center">
               {bulk.selectMode && (
                 <input
                   type="checkbox"
@@ -192,8 +192,8 @@ export function MenuEditor({ initialCategories, initialItems }: {
                   className="absolute left-0 top-4 z-10 h-4 w-4 rounded border-border text-brand focus:ring-brand"
                 />
               )}
-              <div className={`col-span-2 ${bulk.selectMode ? 'pl-6' : ''}`}><PhotoUpload itemId={it.id} currentUrl={it.photo_url} onUploaded={url => setItems(prev => prev.map(i => i.id === it.id ? { ...i, photo_url: url } : i))} /></div>
-              <div className="col-span-4">
+              <div className={`md:col-span-2 ${bulk.selectMode ? 'pl-6' : ''}`}><PhotoUpload itemId={it.id} currentUrl={it.photo_url} onUploaded={url => setItems(prev => prev.map(i => i.id === it.id ? { ...i, photo_url: url } : i))} /></div>
+              <div className="md:col-span-4">
                 <input defaultValue={it.name} onBlur={e => e.target.value !== it.name && patchItem(it.id, { name: e.target.value })}
                   className="w-full rounded border border-border px-2 py-1 text-sm font-medium" />
                 <select value={it.category_id ?? ''} onChange={e => patchItem(it.id, { category_id: e.target.value || null })}
@@ -202,7 +202,7 @@ export function MenuEditor({ initialCategories, initialItems }: {
                   {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <div className="col-span-2">
+              <div className="md:col-span-2">
                 <input type="number" defaultValue={(it.price_pesewas / 100).toFixed(2)}
                   onBlur={e => {
                     const cents = Math.round(parseFloat(e.target.value || '0') * 100)
@@ -211,7 +211,7 @@ export function MenuEditor({ initialCategories, initialItems }: {
                   className="w-full rounded border border-border px-2 py-1 text-sm" />
                 <p className="mt-0.5 text-[10px] text-text-tertiary">GHS</p>
               </div>
-              <div className="col-span-3 space-y-1 text-xs">
+              <div className="md:col-span-3 space-y-1 text-xs">
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={it.is_available} onChange={e => patchItem(it.id, { is_available: e.target.checked })} />
                   Available
@@ -224,7 +224,7 @@ export function MenuEditor({ initialCategories, initialItems }: {
                   onChange={e => patchItem(it.id, { publish_date: e.target.value || null })}
                   className="w-full rounded border border-border px-2 py-0.5 text-[11px]" />
               </div>
-              <div className="col-span-1 text-right">
+              <div className="md:col-span-1 text-right">
                 <button type="button" onClick={() => delItem(it.id)} disabled={busy === `item-${it.id}`}
                   className="text-text-secondary hover:text-danger">
                   {busy === `item-${it.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -305,14 +305,14 @@ function NewItemForm({ cats, nextSortOrder, onCreated, onError }: {
   }
 
   return (
-    <form onSubmit={submit} className="mt-3 grid grid-cols-12 gap-2 rounded-lg border border-dashed border-border p-3">
-      <input className="col-span-5 rounded border border-border px-2 py-1.5 text-sm" placeholder="Item name" value={name} onChange={e => setName(e.target.value)} />
-      <input type="number" step="0.01" className="col-span-2 rounded border border-border px-2 py-1.5 text-sm" placeholder="GHS" value={price} onChange={e => setPrice(e.target.value)} />
-      <select className="col-span-3 rounded border border-border px-2 py-1.5 text-sm" value={cat} onChange={e => setCat(e.target.value)}>
+    <form onSubmit={submit} className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-dashed border-border p-3 md:grid-cols-12">
+      <input className="col-span-2 rounded border border-border px-2 py-1.5 text-sm md:col-span-5" placeholder="Item name" value={name} onChange={e => setName(e.target.value)} />
+      <input type="number" step="0.01" className="col-span-1 rounded border border-border px-2 py-1.5 text-sm md:col-span-2" placeholder="GHS" value={price} onChange={e => setPrice(e.target.value)} />
+      <select className="col-span-1 rounded border border-border px-2 py-1.5 text-sm md:col-span-3" value={cat} onChange={e => setCat(e.target.value)}>
         <option value="">— Category —</option>
         {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
-      <button type="submit" disabled={busy || !name.trim() || !price.trim()} className="col-span-2 rounded bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg disabled:opacity-50">
+      <button type="submit" disabled={busy || !name.trim() || !price.trim()} className="col-span-2 rounded bg-brand px-3 py-1.5 text-sm font-semibold text-brand-fg disabled:opacity-50 md:col-span-2">
         {busy ? '…' : 'Add item'}
       </button>
     </form>
