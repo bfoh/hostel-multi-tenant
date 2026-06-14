@@ -13,6 +13,7 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
 import { PlatformFX } from '@/components/public/platform-fx'
+import { PricingPlans } from '@/components/public/pricing-plans'
 
 /* ──────────────────────────────────────────────────────────────────────────────
    GH HOSTELS — Premium Ghanaian SaaS landing
@@ -960,79 +961,7 @@ export default async function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-5 md:grid-cols-2 max-w-3xl mx-auto">
-            {PLANS.map((plan, i) => (
-              <div
-                key={plan.name}
-                className={`platform-glow-card relative flex flex-col rounded-2xl p-7`}
-                style={{
-                  border: `1px solid ${plan.highlight ? GOLD : HAIR_STRONG}`,
-                  background: plan.highlight
-                    ? `linear-gradient(180deg, rgba(212,162,76,0.10) 0%, rgba(212,162,76,0.02) 100%)`
-                    : 'linear-gradient(180deg, rgba(245,233,210,0.025) 0%, rgba(245,233,210,0.005) 100%)',
-                  boxShadow: plan.highlight ? `0 30px 60px -30px ${GOLD}55` : undefined,
-                }}
-                data-platform-reveal
-                data-platform-reveal-delay={String(i * 80)}
-              >
-                {plan.highlight && (
-                  <span
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
-                    style={{
-                      background: `linear-gradient(135deg, ${GOLD_SOFT}, ${GOLD_DEEP})`,
-                      color: FOREST_DEEP,
-                    }}
-                  >
-                    Most popular
-                  </span>
-                )}
-                <p className="text-[14px] font-semibold tracking-tight" style={{ color: IVORY }}>
-                  {plan.name}
-                </p>
-                <p className="mt-1.5 text-[13px]" style={{ color: 'rgba(245,233,210,0.45)' }}>
-                  {plan.desc}
-                </p>
-                <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-[13px]" style={{ color: 'rgba(245,233,210,0.45)' }}>GH₵</span>
-                  <span
-                    className="text-[40px] font-bold tracking-tight tabular-nums sm:text-[48px]"
-                    style={{ color: IVORY, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
-                  >
-                    {plan.price}
-                  </span>
-                  <span className="text-[14px]" style={{ color: 'rgba(245,233,210,0.45)' }}>
-                    {plan.interval}
-                  </span>
-                </div>
-                <ul className="mt-7 flex-1 space-y-3.5">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-[14px]" style={{ color: 'rgba(245,233,210,0.78)' }}>
-                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: GOLD }} strokeWidth={2.5} />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={`/signup?plan=${plan.name.toLowerCase()}`}
-                  className={`platform-cta mt-8 block rounded-full py-3.5 text-center text-[14px] font-semibold transition-all`}
-                  style={
-                    plan.highlight
-                      ? {
-                          background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
-                          color: FOREST_DEEP,
-                          boxShadow: '0 10px 28px -10px rgba(212,162,76,0.55)',
-                        }
-                      : {
-                          border: `1px solid ${HAIR_STRONG}`,
-                          color: IVORY,
-                        }
-                  }
-                >
-                  {plan.cta} <ArrowRight className="ml-1.5 inline h-3.5 w-3.5" />
-                </Link>
-              </div>
-            ))}
-          </div>
+          <PricingPlans plans={PLANS} />
 
           <div
             className="mx-auto mt-12 flex max-w-2xl flex-col items-center justify-between gap-4 rounded-2xl p-6 sm:flex-row"
