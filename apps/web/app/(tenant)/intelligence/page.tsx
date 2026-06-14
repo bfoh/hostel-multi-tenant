@@ -86,7 +86,7 @@ export default async function IntelligencePage() {
     <div className="space-y-6">
 
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Intelligence</h1>
           <p className="mt-0.5 text-sm text-text-secondary">Owner's control room — live property pulse</p>

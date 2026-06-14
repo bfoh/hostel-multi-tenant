@@ -40,7 +40,7 @@ export default async function MaintenancePage({
   return (
     <div className="space-y-6">
       {/* ── Header ───────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Maintenance</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
@@ -48,7 +48,7 @@ export default async function MaintenancePage({
             {activeStatus !== 'all' ? ` · ${activeStatus.replace('_', ' ')}` : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/maintenance/schedules"
             className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-raised transition-colors"
@@ -74,7 +74,7 @@ export default async function MaintenancePage({
       </div>
 
       {/* ── KPI strip ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
         <KpiCard label="Open" value={stats.open} color="warning" />
         <KpiCard label="In progress" value={stats.in_progress} color="brand" />
         <KpiCard label="Completed" value={stats.completed} color="success" />

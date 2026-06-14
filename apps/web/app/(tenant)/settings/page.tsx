@@ -195,7 +195,7 @@ export default async function SettingsPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Settings</h1>
           <p className="mt-0.5 text-sm text-text-secondary">

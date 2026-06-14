@@ -27,7 +27,7 @@ export default async function MessagesInboxPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <header className="flex items-start justify-between gap-3">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Messages</h1>
           <p className="mt-0.5 text-sm text-text-secondary">

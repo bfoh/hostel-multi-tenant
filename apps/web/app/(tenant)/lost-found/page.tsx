@@ -19,7 +19,7 @@ export default async function LostFoundPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Lost &amp; Found</h1>
           <p className="mt-1 text-sm text-text-secondary">Log found items and track their return to occupants.</p>

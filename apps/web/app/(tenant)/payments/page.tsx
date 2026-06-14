@@ -173,7 +173,44 @@ export default async function PaymentsPage({
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border">
+        <>
+        {/* ── Mobile: card list ──────────────────────────────────── */}
+        <ul className="space-y-2.5 md:hidden">
+          {payments.map((p) => {
+            const booking  = Array.isArray(p.booking) ? p.booking[0] : p.booking
+            const occupant = Array.isArray(booking?.occupant) ? booking?.occupant[0] : booking?.occupant
+            return (
+              <li key={p.id} className="rounded-xl border border-border bg-surface p-3.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-text-primary">
+                      {occupant ? `${occupant.first_name} ${occupant.last_name}` : '—'}
+                    </p>
+                    <p className="text-xs text-text-tertiary">
+                      {p.paid_at ? formatDate(p.paid_at) : formatDate(p.created_at)}
+                      {' · '}{METHOD_LABEL[p.method] ?? p.method}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-mono text-sm font-semibold text-text-primary">{formatGHS(p.amount)}</p>
+                    <span className={`mt-0.5 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize ${STATUS_STYLES[p.status] ?? 'bg-surface-sunken text-text-secondary border-border'}`}>
+                      {p.status}
+                    </span>
+                  </div>
+                </div>
+                {booking && (
+                  <div className="mt-2.5 flex items-center justify-between border-t border-border pt-2.5 text-xs">
+                    <span className="font-mono text-text-tertiary">{booking.booking_ref}</span>
+                    <Link href={`/bookings/${booking.id}`} className="font-medium text-brand hover:text-brand-hover">View →</Link>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+
+        {/* ── Desktop: table ─────────────────────────────────────── */}
+        <div className="hidden overflow-hidden rounded-xl border border-border md:block">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-sunken">
               <tr>
@@ -257,6 +294,7 @@ export default async function PaymentsPage({
             </p>
           </div>
         </div>
+        </>
       )}
     </div>
   )
