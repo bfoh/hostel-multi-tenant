@@ -140,7 +140,9 @@ async function verifyAndRoute(
   await supabase.auth.refreshSession()
 
   // ── Redirect to tenant subdomain for onboarding ────────────────────────────
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+  const appDomain = (process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/+$/, '')
   const hostname  = request.headers.get('host') ?? ''
   const isLocalhost = hostname.includes('localhost')
 

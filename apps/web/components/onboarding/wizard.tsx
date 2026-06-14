@@ -144,7 +144,9 @@ interface OnboardingWizardProps {
 
 export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
   const router = useRouter()
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+  const appDomain = (process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/+$/, '')
 
   const [stepIdx,        setStepIdx]        = useState(0)
   const [submitting,     setSubmitting]     = useState(false)
