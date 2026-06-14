@@ -133,6 +133,12 @@ async function verifyAndRoute(
     slug = tenant.slug
   }
 
+  // The access token was minted during verification, BEFORE the owner
+  // membership above existed — so it lacks the tenant_role claim and the app
+  // would treat the owner as 'staff'. Refresh the session now so the new
+  // token (via the JWT hook) carries tenant_role=owner.
+  await supabase.auth.refreshSession()
+
   // ── Redirect to tenant subdomain for onboarding ────────────────────────────
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
   const hostname  = request.headers.get('host') ?? ''
