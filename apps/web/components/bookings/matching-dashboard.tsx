@@ -3,8 +3,8 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
-  Sparkles, User, Calendar, ArrowRight, Search, 
-  CheckCircle2, AlertTriangle, XCircle, Info, Settings, 
+  User, Calendar, ArrowRight, Search,
+  CheckCircle2, AlertTriangle, XCircle, Info, Settings,
   Loader2, Home, Users, Check, AlertCircle, RefreshCw
 } from 'lucide-react'
 import { calculateCompatibility, calculateRoomHarmonyScore, type OccupantMatchingProfile } from '@/lib/matching'

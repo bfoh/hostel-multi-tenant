@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { Sparkles, Clock } from 'lucide-react'
+import { Gift, Clock } from 'lucide-react'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -57,7 +57,7 @@ export async function TrialBanner() {
         {expired ? (
           <Clock className="h-4 w-4 shrink-0" />
         ) : (
-          <Sparkles className="h-4 w-4 shrink-0 text-brand" />
+          <Gift className="h-4 w-4 shrink-0 text-brand" />
         )}
         <p className="truncate">
           {expired ? (

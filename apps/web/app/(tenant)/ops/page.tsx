@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
-  LogIn, LogOut, Sparkles, Wrench, Utensils, UserCheck,
+  LogIn, LogOut, SprayCan, Wrench, Utensils, UserCheck,
   AlertTriangle, Clock, ArrowRight, Flame,
 } from 'lucide-react'
 
@@ -37,7 +37,7 @@ export default async function OpsDashboardPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
         <Kpi label="Arrivals due"    value={o.arrivals.yetToCheckIn}     icon={LogIn}    tone="brand"   sublabel={`${o.arrivals.checkedInToday} already in`} />
         <Kpi label="Departures due"  value={o.departures.yetToCheckOut}  icon={LogOut}   tone={o.departures.overdue > 0 ? 'danger' : 'brand'} sublabel={`${o.departures.overdue} overdue`} />
-        <Kpi label="HK in progress"  value={o.housekeeping.in_progress}  icon={Sparkles} tone={o.housekeeping.urgent_open > 0 ? 'warning' : 'neutral'} sublabel={`${o.housekeeping.pending} pending · ${o.housekeeping.urgent_open} urgent`} />
+        <Kpi label="HK in progress"  value={o.housekeeping.in_progress}  icon={SprayCan} tone={o.housekeeping.urgent_open > 0 ? 'warning' : 'neutral'} sublabel={`${o.housekeeping.pending} pending · ${o.housekeeping.urgent_open} urgent`} />
         <Kpi label="Maintenance open"value={o.maintenance.open + o.maintenance.in_progress} icon={Wrench} tone={o.maintenance.overdue7d > 0 ? 'warning' : 'neutral'} sublabel={`${o.maintenance.overdue7d} > 7d old`} />
         <Kpi label="Food orders"     value={o.food.preparing + o.food.ready} icon={Utensils} tone="neutral" sublabel={`${o.food.placed_today} placed today · ${formatGHS(o.food.revenue_today)}`} />
         <Kpi label="Visitors inside" value={o.visitors.currently_inside}  icon={UserCheck} tone="neutral" sublabel={`${o.visitors.checked_in_today} signed in today`} />
@@ -79,7 +79,7 @@ export default async function OpsDashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <ListCard
           title="Housekeeping queue"
-          icon={Sparkles}
+          icon={SprayCan}
           link={{ href: '/housekeeping', label: 'Open board' }}
           rows={o.housekeeping.list.map((t) => ({
             id:      t.id,

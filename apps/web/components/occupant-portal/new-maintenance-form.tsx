@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Loader2, CheckCircle2,
-  Droplets, Zap, Wind, Building2, Sofa, Cpu, Sparkles, Bug, Shield, MoreHorizontal,
+  Droplets, Zap, Wind, Building2, Sofa, Cpu, SprayCan, Bug, Shield, MoreHorizontal,
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -14,7 +14,7 @@ const CATEGORIES = [
   { value: 'structural',  label: 'Structural',   Icon: Building2   },
   { value: 'furniture',   label: 'Furniture',    Icon: Sofa        },
   { value: 'appliance',   label: 'Appliance',    Icon: Cpu         },
-  { value: 'cleaning',    label: 'Cleaning',     Icon: Sparkles    },
+  { value: 'cleaning',    label: 'Cleaning',     Icon: SprayCan    },
   { value: 'pest_control',label: 'Pest Control', Icon: Bug         },
   { value: 'security',    label: 'Security',     Icon: Shield      },
   { value: 'other',       label: 'Other',        Icon: MoreHorizontal },

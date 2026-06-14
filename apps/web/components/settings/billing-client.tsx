@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Loader2, Check, CreditCard, AlertTriangle,
-  ArrowUpRight, ArrowDownRight, Sparkles, Clock,
+  ArrowUpRight, ArrowDownRight, Gift, Clock,
 } from 'lucide-react'
 
 type IntervalId = 'monthly' | 'quarterly' | 'biannual' | 'annual'
@@ -222,7 +222,7 @@ export function BillingClient({ plans, pricing, intervals, subscription, current
             {trialExpired ? (
               <Clock className="h-5 w-5 text-danger" />
             ) : (
-              <Sparkles className="h-5 w-5 text-brand" />
+              <Gift className="h-5 w-5 text-brand" />
             )}
             <h3 className={`text-base font-semibold ${trialExpired ? 'text-danger' : 'text-text-primary'}`}>
               {trialExpired ? 'Trial expired' : 'Free trial'}

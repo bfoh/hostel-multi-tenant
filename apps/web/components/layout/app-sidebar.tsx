@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import {
   LayoutDashboard, Users, BedDouble, CalendarCheck,
-  FileText, Sparkles, Wrench, DollarSign, BarChart3,
+  FileText, UsersRound, Lightbulb, Wrench, DollarSign, BarChart3,
   Settings, ChevronLeft, ChevronRight, HardHat, Shield,
   MessageSquare, MessageCircle, UserCog, ClipboardList, BookOpen, Bot,
   Package, Search, Building2, ListOrdered, TrendingDown,
@@ -62,7 +62,7 @@ const OPS_ITEMS: NavItem[] = [
   { label: 'Occupants',      href: '/occupants',      icon: Users,           anim: 'bounce' },
   { label: 'Rooms',          href: '/rooms',           icon: BedDouble,       anim: 'tilt'   },
   { label: 'Bookings',       href: '/bookings',        icon: CalendarCheck,   anim: 'flip'   },
-  { label: 'Roommate Match', href: '/bookings/matching', icon: Sparkles,        anim: 'pop'    },
+  { label: 'Roommate Match', href: '/bookings/matching', icon: UsersRound,      anim: 'pop'    },
   { label: 'Housekeeping',   href: '/housekeeping',    icon: Wrench,          anim: 'swing'  },
   { label: 'Maintenance',    href: '/maintenance',     icon: HardHat,         anim: 'bounce' },
   { label: 'Food Menu',      href: '/food/menu',       icon: Utensils,        anim: 'pop'    },
@@ -86,7 +86,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { label: 'Assets',         href: '/assets',              icon: Package,      anim: 'tilt'   },
   { label: 'Waiting List',   href: '/waiting-list',        icon: ListOrdered,  anim: 'slide'  }, // badge injected below
   { label: 'Reports',        href: '/reports',             icon: BarChart3,    anim: 'pulse'  },
-  { label: 'Intelligence',   href: '/intelligence',        icon: Sparkles,     anim: 'pop'    },
+  { label: 'Intelligence',   href: '/intelligence',        icon: Lightbulb,    anim: 'pop'    },
   { label: 'AI Assistant',   href: '/ai',                  icon: Bot,          anim: 'ring'   },
   { label: 'Activity log',   href: '/activity',            icon: ClipboardList,anim: 'shake'  },
   { label: 'Shift Close-Out', href: '/shift-closeout',      icon: ClipboardCheck, anim: 'flip' },

@@ -16,7 +16,7 @@ import {
 import { formatGHS } from '@/lib/utils'
 import {
   ArrowUpRight, ArrowDownRight, RefreshCw, AlertTriangle,
-  TrendingUp, Bed, Coffee, Dumbbell, Shirt, Wrench, Sparkles, FileWarning, ChevronRight,
+  TrendingUp, Bed, Coffee, Dumbbell, Shirt, Wrench, ShoppingBag, SprayCan, FileWarning, ChevronRight,
 } from 'lucide-react'
 import { RefreshButton } from '@/components/dashboard/refresh-button'
 import { ExportCsvButton } from '@/components/dashboard/export-csv-button'
@@ -254,7 +254,7 @@ function HeroCard({
         <StreamPill icon={<Bed className="h-3 w-3" />}    label="Rooms"    amount={ranged ? rollup?.revenue_rooms ?? 0   : primary?.revenue_rooms ?? 0} />
         <StreamPill icon={<Coffee className="h-3 w-3" />} label="Food"     amount={ranged ? rollup?.revenue_food ?? 0    : primary?.revenue_food ?? 0} />
         <StreamPill icon={<Dumbbell className="h-3 w-3" />} label="Walk-in" amount={ranged ? rollup?.revenue_walkin ?? 0 : primary?.revenue_walkin ?? 0} />
-        <StreamPill icon={<Sparkles className="h-3 w-3" />} label="POS"    amount={ranged ? rollup?.revenue_pos ?? 0    : primary?.revenue_pos ?? 0} />
+        <StreamPill icon={<ShoppingBag className="h-3 w-3" />} label="POS"    amount={ranged ? rollup?.revenue_pos ?? 0    : primary?.revenue_pos ?? 0} />
         <StreamPill icon={<Shirt className="h-3 w-3" />}  label="Deposits" amount={!ranged ? (primary?.revenue_deposits ?? 0) : 0} dim={ranged} />
       </div>
     </div>
@@ -493,7 +493,7 @@ function OpenIssuesCard({ primary, ranged }: { primary: DailyReport | null; rang
 
   const items: { label: string; value: number; icon: React.ReactNode; href: string; alert?: boolean }[] = [
     { label: 'Maintenance open',   value: primary.maintenance_open,    icon: <Wrench className="h-3.5 w-3.5" />, href: '/maintenance?status=open' },
-    { label: 'Housekeeping pending', value: primary.housekeeping_pending, icon: <Sparkles className="h-3.5 w-3.5" />, href: '/housekeeping' },
+    { label: 'Housekeeping pending', value: primary.housekeeping_pending, icon: <SprayCan className="h-3.5 w-3.5" />, href: '/housekeeping' },
     { label: 'Laundry in progress', value: primary.laundry_in_progress, icon: <Shirt className="h-3.5 w-3.5" />, href: '/revenue-points' },
     { label: 'Bank drafts pending', value: primary.bank_drafts_pending, icon: <FileWarning className="h-3.5 w-3.5" />, href: '/payments/drafts' },
     { label: 'Anomalies (critical)', value: primary.anomalies_critical, icon: <AlertTriangle className="h-3.5 w-3.5" />, href: '/intelligence/anomalies', alert: primary.anomalies_critical > 0 },

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
   Wrench, Plus, CheckCircle2, Clock, AlertCircle,
-  Zap, Droplets, Wind, Building2, Sofa, Cpu, Sparkles, Shield, Bug, MoreHorizontal,
+  Zap, Droplets, Wind, Building2, Sofa, Cpu, SprayCan, Shield, Bug, MoreHorizontal,
 } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Maintenance · My Portal' }
@@ -27,7 +27,7 @@ const CATEGORY_ICON: Record<string, React.ElementType> = {
   structural:  Building2,
   furniture:   Sofa,
   appliance:   Cpu,
-  cleaning:    Sparkles,
+  cleaning:    SprayCan,
   pest_control: Bug,
   security:    Shield,
   other:       MoreHorizontal,

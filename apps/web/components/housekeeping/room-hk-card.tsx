@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCheck, Loader2, Search, AlertTriangle, Sparkles } from 'lucide-react'
+import { CheckCheck, Loader2, Search, AlertTriangle, SprayCan } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 type HKStatus = 'clean' | 'dirty' | 'inspecting' | 'out_of_order'
@@ -21,7 +21,7 @@ const STATUS_CONFIG: Record<HKStatus, {
     text: 'text-success',
     border: 'border-success/20',
     dot: 'bg-success',
-    icon: <Sparkles className="h-3.5 w-3.5" />,
+    icon: <SprayCan className="h-3.5 w-3.5" />,
   },
   dirty: {
     label: 'Dirty',

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {
   BedDouble, Shield, Check, ArrowRight,
-  Building2, CreditCard, FileText, Users, Globe, Sparkles,
+  Building2, CreditCard, FileText, Users, Globe, Gift,
   ChevronDown, BarChart3, Bot, ChevronRight, MapPin, Star,
   PhoneCall, Smartphone, Lock, FileSpreadsheet, Wrench, ClipboardList,
 } from 'lucide-react'
@@ -976,7 +976,7 @@ export default async function LandingPage() {
             data-platform-reveal
           >
             <div className="flex items-center gap-3">
-              <Sparkles className="h-5 w-5" style={{ color: GOLD }} />
+              <Gift className="h-5 w-5" style={{ color: GOLD }} />
               <div>
                 <p className="text-[14px] font-semibold" style={{ color: IVORY }}>
                   Not ready to commit?

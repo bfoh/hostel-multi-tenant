@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Check, Users, Wifi, Wind, Droplets, Zap, Shield, Car, Utensils, Dumbbell, BookOpen, Share2, Phone, Flame, Clock, ArrowUpRight, BedDouble, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, Users, Wifi, Wind, Droplets, Zap, Shield, Car, Utensils, Dumbbell, BookOpen, Share2, Phone, Flame, Clock, ArrowUpRight, BedDouble, UsersRound } from 'lucide-react'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -336,7 +336,6 @@ function RoomPicker({
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4 opacity-90" />
                       Book now
                       <ArrowUpRight className="h-4 w-4 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
                     </>
@@ -705,7 +704,7 @@ function DetailsForm({
       {roommate_matching_enabled && category.capacity > 1 && (
         <fieldset className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-6">
           <legend className="px-1 text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-            <Sparkles className="h-4 w-4 text-indigo-500 animate-pulse" />
+            <UsersRound className="h-4 w-4 text-indigo-500" />
             Roommate Matching Survey (Optional)
           </legend>
           <p className="text-xs text-gray-500 -mt-2">

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { CheckCircle2, XCircle, Loader2, Sparkles } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, BadgeCheck } from 'lucide-react'
 
 import { PasswordInput } from '@/components/ui/password-input'
 
@@ -178,7 +178,7 @@ export default function SignupPage() {
             className="mx-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold"
             style={{ border: `1px solid ${GOLD}40`, background: `${GOLD}14`, color: GOLD_SOFT }}
           >
-            <Sparkles className="h-3 w-3" />
+            <BadgeCheck className="h-3 w-3" />
             {PLAN_LABEL[selectedPlan]}
           </div>
         )}
