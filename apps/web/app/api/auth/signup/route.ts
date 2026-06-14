@@ -42,12 +42,28 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  if (error) {
-    console.error('[signup] generateLink error:', error.message)
-    return NextResponse.json({ error: error.message }, { status: 400 })
-  }
+  let confirmUrl = data?.properties?.action_link
 
-  const confirmUrl = data.properties.action_link
+  // A 'signup' link fails when the email already exists — which is common here
+  // because an earlier (failed-delivery) attempt may have created an
+  // unconfirmed user. Fall back to a magic-link activation so the user still
+  // gets an email instead of a dead end. Clicking it confirms the account and
+  // lands on /auth/callback, same as the original confirmation link.
+  if (error || !confirmUrl) {
+    const retry = await admin.auth.admin.generateLink({
+      type:    'magiclink',
+      email,
+      options: { redirectTo },
+    })
+    if (retry.error || !retry.data?.properties?.action_link) {
+      console.error('[signup] generateLink error:', error?.message ?? retry.error?.message)
+      return NextResponse.json(
+        { error: 'Could not start signup. If you already have an account, please log in instead.' },
+        { status: 400 },
+      )
+    }
+    confirmUrl = retry.data.properties.action_link
+  }
 
   // Send the confirmation email via Brevo instead of through Supabase
   await sendEmail({
