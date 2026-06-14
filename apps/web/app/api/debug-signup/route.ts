@@ -69,7 +69,12 @@ export async function GET(req: NextRequest) {
     await admin.auth.admin.deleteUser(signup.data.user.id).catch(() => {})
   }
 
+  // List any triggers still on auth.users (the "Database error saving new
+  // user" culprit is usually one of these throwing).
+  const { data: triggers, error: trigErr } = await admin.rpc('pg_get_auth_triggers' as never)
+
   return NextResponse.json({
+    auth_triggers: trigErr ? `lookup failed: ${trigErr.message}` : triggers,
     email,
     user_exists:    !!found,
     confirmed:      found?.confirmed ?? null,
