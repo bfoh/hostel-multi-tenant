@@ -21,6 +21,8 @@ const FOREST_DEEP = '#0A3729'
 
 const VALID_PLANS = ['starter', 'growth', 'trial'] as const
 type SelectedPlan = typeof VALID_PLANS[number]
+const VALID_INTERVALS = ['monthly', 'quarterly', 'biannual', 'annual'] as const
+type SelectedInterval = typeof VALID_INTERVALS[number]
 const PLAN_LABEL: Record<SelectedPlan, string> = {
   starter: 'Starter — GH₵ 800 / month',
   growth:  'Growth — GH₵ 1,000 / month',
@@ -59,6 +61,10 @@ export default function SignupPage() {
   const selectedPlan = useMemo<SelectedPlan | null>(() => {
     const p = search.get('plan') as SelectedPlan | null
     return p && (VALID_PLANS as readonly string[]).includes(p) ? p : null
+  }, [search])
+  const selectedInterval = useMemo<SelectedInterval | null>(() => {
+    const i = search.get('billing') as SelectedInterval | null
+    return i && (VALID_INTERVALS as readonly string[]).includes(i) ? i : null
   }, [search])
 
   const [serverError, setServerError] = useState<string | null>(null)
@@ -104,6 +110,7 @@ export default function SignupPage() {
         password:     values.password,
         hostelName:   values.hostelName,
         selectedPlan: selectedPlan ?? null,
+        selectedInterval: selectedInterval ?? null,
       }),
     })
 

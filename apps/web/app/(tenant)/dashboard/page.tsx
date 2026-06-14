@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     const admin = createAdminClient()
     const { data: tenant } = await admin
       .from('tenants')
-      .select('onboarding_completed, selected_plan')
+      .select('onboarding_completed, selected_plan, selected_interval')
       .eq('id', tenantId)
       .single()
 
@@ -47,7 +47,11 @@ export default async function DashboardPage() {
         .in('status', ['trialing', 'active', 'past_due'])
         .maybeSingle()
       if (!activeSub) {
-        redirect(`/settings/billing?autosubscribe=${pendingPlan}`)
+        const iv = (tenant as any)?.selected_interval as string | null | undefined
+        const billingQs = iv && ['monthly', 'quarterly', 'biannual', 'annual'].includes(iv)
+          ? `&billing=${iv}`
+          : ''
+        redirect(`/settings/billing?autosubscribe=${pendingPlan}${billingQs}`)
       }
     }
   }

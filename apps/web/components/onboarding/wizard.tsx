@@ -152,6 +152,7 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
   const [error,          setError]          = useState('')
   const [finalSlug,      setFinalSlug]      = useState(initial.slug)
   const [finalPlan,      setFinalPlan]      = useState<'starter' | 'growth' | 'trial' | null>(null)
+  const [finalInterval,  setFinalInterval]  = useState<string | null>(null)
 
   // Slug check state
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
@@ -328,6 +329,7 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
       }
       setFinalSlug(data.slug ?? form.slug)
       setFinalPlan(data.selected_plan ?? null)
+      setFinalInterval(data.selected_interval ?? null)
       next() // → done
     } catch (e: any) {
       setError(e.message)
@@ -341,7 +343,8 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
   const isPaidPlan = finalPlan === 'starter' || finalPlan === 'growth'
 
   function getDashboardUrl() {
-    const path = isPaidPlan ? `/settings/billing?autosubscribe=${finalPlan}` : '/dashboard'
+    const billingQs = finalInterval ? `&billing=${finalInterval}` : ''
+    const path = isPaidPlan ? `/settings/billing?autosubscribe=${finalPlan}${billingQs}` : '/dashboard'
     if (isLocalhost) return path
     return `https://${finalSlug}.${appDomain}${path}`
   }

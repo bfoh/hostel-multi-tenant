@@ -75,6 +75,12 @@ export async function POST(request: NextRequest) {
       ? rawSelected
       : null
 
+  const rawInterval = user?.user_metadata?.selected_interval as string | undefined
+  const selectedInterval =
+    rawInterval && ['monthly', 'quarterly', 'biannual', 'annual'].includes(rawInterval)
+      ? rawInterval
+      : null
+
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
   const supabase = createAdminClient()
@@ -118,6 +124,7 @@ export async function POST(request: NextRequest) {
       custom_domain:        d.custom_domain ?? null,
       onboarding_completed: true,
       ...(selectedPlan ? { selected_plan: selectedPlan } : {}),
+      ...(selectedInterval ? { selected_interval: selectedInterval } : {}),
     })
     .eq('id', tenantId)
 
@@ -161,5 +168,5 @@ export async function POST(request: NextRequest) {
   await invalidateTenantCache(`${d.slug}.${appDomain}`)
   if (d.custom_domain) await invalidateTenantCache(d.custom_domain)
 
-  return NextResponse.json({ ok: true, slug: d.slug, selected_plan: selectedPlan })
+  return NextResponse.json({ ok: true, slug: d.slug, selected_plan: selectedPlan, selected_interval: selectedInterval })
 }
