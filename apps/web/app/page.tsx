@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
 import { PlatformFX } from '@/components/public/platform-fx'
 import { PricingPlans } from '@/components/public/pricing-plans'
+import { MobileNav } from '@/components/public/mobile-nav'
 
 /* ──────────────────────────────────────────────────────────────────────────────
    GH HOSTELS — Premium Ghanaian SaaS landing
@@ -408,13 +409,13 @@ export default async function LandingPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="text-[13px] font-medium text-[#a8a89e] transition-colors hover:text-[#F5E9D2]"
+              className="hidden text-[13px] font-medium text-[#a8a89e] transition-colors hover:text-[#F5E9D2] md:inline-flex"
             >
               Log in
             </Link>
             <Link
               href="/signup?plan=trial"
-              className="platform-cta hidden rounded-full px-4 py-2 text-[13px] font-semibold sm:inline-flex"
+              className="platform-cta hidden rounded-full px-4 py-2 text-[13px] font-semibold md:inline-flex"
               style={{
                 background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 60%, ${GOLD_DEEP} 100%)`,
                 color: FOREST_DEEP,
@@ -423,6 +424,9 @@ export default async function LandingPage() {
             >
               Start free trial
             </Link>
+
+            {/* Mobile hamburger + slide-down menu */}
+            <MobileNav />
           </div>
         </div>
       </nav>
@@ -588,12 +592,14 @@ export default async function LandingPage() {
                   app.abremponghostel.com/dashboard
                 </div>
               </div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/dashboard-hero.jpg"
                 alt="GH Hostels dashboard preview"
-                className="w-full"
-                loading="eager"
+                width={1024}
+                height={1024}
+                className="h-auto w-full"
+                priority
+                sizes="(max-width: 1024px) 100vw, 1024px"
               />
             </div>
             <div
@@ -829,10 +835,10 @@ export default async function LandingPage() {
             </h2>
           </div>
 
+          <div className="mt-14 -mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0" data-platform-reveal>
           <div
-            className="mt-14 overflow-hidden rounded-2xl"
+            className="min-w-[560px] overflow-hidden rounded-2xl"
             style={{ border: `1px solid ${HAIR_STRONG}` }}
-            data-platform-reveal
           >
             <div
               className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-1 px-5 py-4 text-[12px] font-medium uppercase tracking-[0.14em]"
@@ -871,6 +877,7 @@ export default async function LandingPage() {
                 <ComparisonCell value={row.gh} highlight />
               </div>
             ))}
+          </div>
           </div>
         </div>
       </section>
@@ -1167,7 +1174,7 @@ export default async function LandingPage() {
             style={{ borderTop: `1px solid ${HAIR}` }}
           >
             <p className="text-[12px]" style={{ color: 'rgba(245,233,210,0.4)' }}>
-              © {new Date().getFullYear()} GH Hostels. Made in Accra, Ghana. 🇬🇭
+              © {new Date().getFullYear()} GH Hostels · Made in Accra, Ghana
             </p>
             <div className="flex gap-6 text-[12px]" style={{ color: 'rgba(245,233,210,0.4)' }}>
               <a href="#" className="transition-colors hover:text-[#F5E9D2]">Privacy</a>
