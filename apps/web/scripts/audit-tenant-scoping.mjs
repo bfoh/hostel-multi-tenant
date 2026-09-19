@@ -17,6 +17,31 @@
  * change must either filter explicitly or switch to the scoped wrapper
  * before it can land.
  *
+ * KNOWN LIMITATIONS (read this before trusting a clean run as proof of
+ * tenant isolation — it isn't, on its own):
+ *
+ *   1. Text-window heuristic, not an AST. "Does `.eq('tenant_id'` appear
+ *      within 800 characters" and "which client construction is nearest
+ *      going backwards" are both string-proximity guesses, not real
+ *      variable/scope tracking. A file with more than one client instance
+ *      can fool the "which client does this .from() belong to" check in
+ *      either direction — a false positive (safe code flagged) or, more
+ *      importantly, a false negative (unsafe code missed).
+ *   2. `.rpc()` and `.storage` calls are never scoped by this script or by
+ *      `createTenantAdminClient` — both pass them straight through by
+ *      design (see lib/supabase/tenant-admin.ts's own comment on this).
+ *      Any SECURITY DEFINER Postgres function called via `.rpc()` is
+ *      trusted to enforce its own tenant check internally. This script
+ *      does not verify that — see scripts/audit-function-grants.mjs, which
+ *      checks a different but related thing: whether such a function is
+ *      even reachable by a role other than service_role in the first
+ *      place. Neither script confirms the function's *internal* logic
+ *      actually scopes correctly by whatever ID it's given.
+ *   3. Joined/nested selects (`.from('a').select('*, b(*)')`) only get the
+ *      top-level table's tenant_id filter checked; a joined table is only
+ *      actually tenant-safe if its foreign-key relationship structurally
+ *      guarantees same-tenant rows, which this script doesn't verify.
+ *
  * Usage:
  *   node apps/web/scripts/audit-tenant-scoping.mjs       # from repo root
  *   npm --workspace @gh-hostels/web run audit:tenant-scoping
@@ -25,9 +50,25 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, posix, relative, sep } from 'node:path'
 
 // Resolve from this script's location so it works regardless of CWD.
-const WEB_ROOT = new URL('..', import.meta.url).pathname
+const WEB_ROOT  = new URL('..', import.meta.url).pathname
+const REPO_ROOT = new URL('../../..', import.meta.url).pathname
 
-const SCAN_DIRS = ['app', 'lib']
+// Each root is scanned independently; `label` becomes the prefix on
+// reported paths (and what SAFE_BY_DESIGN_PREFIXES below is matched
+// against), so entries written before this script scanned `packages/`
+// (all of the form 'app/...' or 'lib/...') keep working unchanged.
+const SCAN_ROOTS = [
+  { dir: join(WEB_ROOT, 'app'), label: 'app' },
+  { dir: join(WEB_ROOT, 'lib'), label: 'lib' },
+  // Shared packages — notably packages/widget, which ships to third-party
+  // tenant websites. It doesn't touch Supabase directly today (it calls
+  // the app's own /api/widget/* routes instead, which are already covered
+  // by scanning `app` above), but if that ever changes, this is exactly
+  // the kind of cross-tenant-by-construction surface this audit exists
+  // for — so it's scanned defensively rather than waiting for an incident.
+  { dir: join(REPO_ROOT, 'packages/widget/src'), label: 'packages/widget/src' },
+  { dir: join(REPO_ROOT, 'packages/ui/src'),     label: 'packages/ui/src' },
+]
 
 const CROSS_TENANT_TABLES = new Set([
   'tenants',
@@ -62,7 +103,13 @@ const SAFE_BY_DESIGN_PREFIXES = [
 ]
 
 function* walk(dir) {
-  for (const entry of readdirSync(dir)) {
+  let entries
+  try {
+    entries = readdirSync(dir)
+  } catch {
+    return // root doesn't exist (e.g. a package with no src dir yet) — skip quietly
+  }
+  for (const entry of entries) {
     const full = join(dir, entry)
     const st = statSync(full)
     if (st.isDirectory()) yield* walk(full)
@@ -92,17 +139,11 @@ function lineOf(src, index) {
 function audit() {
   const findings = []
 
-  for (const root of SCAN_DIRS) {
-    const abs = join(WEB_ROOT, root)
-    let files
-    try {
-      files = [...walk(abs)]
-    } catch {
-      continue
-    }
+  for (const { dir: abs, label } of SCAN_ROOTS) {
+    const files = [...walk(abs)]
     for (const fullPath of files) {
       if (!isScannable(fullPath)) continue
-      const rel = relative(WEB_ROOT, fullPath).split(sep).join(posix.sep)
+      const rel = label + posix.sep + relative(abs, fullPath).split(sep).join(posix.sep)
       const src = readFileSync(fullPath, 'utf8')
       if (!src.includes('createAdminClient')) continue
 

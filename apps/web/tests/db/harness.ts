@@ -66,6 +66,20 @@ const MIGRATIONS = [
   '20240001000116_fix_occupants_self_select_policy.sql', // fix: finding #4
 ]
 
+/**
+ * migration 117 (finding #5 follow-up) revokes/re-grants EXECUTE on five
+ * functions defined in migrations 069/070/072/077. Those migrations pull
+ * in an unrelated, deep dependency chain (070 needs a booking_status enum
+ * value added in 064, which needs occupant_documents from 028, ...) that
+ * has nothing to do with what's being tested here. tests/db/rpc-grants.test.ts
+ * creates minimal stand-ins for the five functions instead — matching their
+ * real signatures and original grant statements exactly (verified against
+ * the source migrations), with trivial bodies since only the grant
+ * boundary is under test, not the business logic — then applies the real
+ * 20240001000117_lock_down_tenant_scoped_rpc_grants.sql on top unmodified.
+ */
+export const RPC_GRANTS_FIX_MIGRATION = '20240001000117_lock_down_tenant_scoped_rpc_grants.sql'
+
 const SHIM_SQL = `
 -- Roles the real migrations/policies reference via GRANT / "to <role>".
 do $$
@@ -174,7 +188,12 @@ export interface TestDb {
   teardown: () => Promise<void>
 }
 
-export async function startTestDb(): Promise<TestDb> {
+export async function startTestDb(opts?: {
+  /** Extra raw SQL run after the base MIGRATIONS list, before extraMigrationFiles. */
+  beforeExtraMigrations?: string
+  /** Extra real migration files (by filename, resolved against MIGRATIONS_DIR) applied last. */
+  extraMigrationFiles?: string[]
+}): Promise<TestDb> {
   const dataDir = mkdtempSync(path.join(tmpdir(), 'ghh-pgtest-'))
   const port = 55432 + Math.floor(Math.random() * 4000)
 
@@ -203,6 +222,19 @@ export async function startTestDb(): Promise<TestDb> {
       if (POST_MIGRATION_FIXUPS[file]) {
         await client.query(POST_MIGRATION_FIXUPS[file])
       }
+    } catch (err) {
+      throw new Error(`Migration ${file} failed to replay against the test DB: ${(err as Error).message}`)
+    }
+  }
+
+  if (opts?.beforeExtraMigrations) {
+    await client.query(opts.beforeExtraMigrations)
+  }
+
+  for (const file of opts?.extraMigrationFiles ?? []) {
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8')
+    try {
+      await client.query(sql)
     } catch (err) {
       throw new Error(`Migration ${file} failed to replay against the test DB: ${(err as Error).message}`)
     }

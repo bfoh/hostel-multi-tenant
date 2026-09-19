@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "audit:tenant-scoping": "node scripts/audit-tenant-scoping.mjs",
+    "audit:function-grants": "node scripts/audit-function-grants.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "rm -rf .next"

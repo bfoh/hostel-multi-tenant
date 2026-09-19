@@ -39,6 +39,9 @@ jobs:
       - name: Tenant-scoping audit
         run: npm --workspace @gh-hostels/web run audit:tenant-scoping
 
+      - name: Function-grant audit
+        run: npm --workspace @gh-hostels/web run audit:function-grants
+
   # ── Test ───────────────────────────────────────────────────────────────────
   test:
     name: Test
