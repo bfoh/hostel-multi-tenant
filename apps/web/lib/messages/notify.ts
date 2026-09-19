@@ -44,23 +44,39 @@ export async function notifyParticipants(opts: NotifyOpts): Promise<void> {
     // All eligible participants
     const { data: parts } = await admin
       .from('conversation_participants')
-      .select('user_id, last_read_at, muted_until')
+      .select('user_id, participant_kind, last_read_at, muted_until')
       .eq('conversation_id', opts.conversationId)
       .neq('user_id', opts.senderId)
 
-    const userIds: string[] = []
+    // Staff and occupants land on different portals, so a conversation
+    // with a mix of both (e.g. a staff<->resident DM) needs two different
+    // deep links, not one. participant_kind is stamped on each row at
+    // conversation-creation time (see lib/messages/server.ts).
+    const staffUserIds:    string[] = []
+    const occupantUserIds: string[] = []
     for (const p of (parts ?? []) as any[]) {
       if (p.muted_until && new Date(p.muted_until).getTime() > now) continue
       if (p.last_read_at && now - new Date(p.last_read_at).getTime() < RECENT_READ_WINDOW_MS) continue
-      userIds.push(p.user_id)
+      if (p.participant_kind === 'occupant') occupantUserIds.push(p.user_id)
+      else staffUserIds.push(p.user_id)
     }
-    if (userIds.length === 0) return
+    if (staffUserIds.length === 0 && occupantUserIds.length === 0) return
 
     const title = buildTitle(conv.type, conv.title, senderLabel)
     const body  = buildBody(opts.body, opts.kind, opts.attachmentCount)
-    const url   = conversationDeepLink(opts.conversationId)
 
-    await sendPushToUsers(opts.tenantId, userIds, { title, body, url })
+    await Promise.all([
+      staffUserIds.length > 0
+        ? sendPushToUsers(opts.tenantId, staffUserIds, {
+            title, body, url: conversationDeepLink(opts.conversationId, 'staff'),
+          })
+        : Promise.resolve(),
+      occupantUserIds.length > 0
+        ? sendPushToUsers(opts.tenantId, occupantUserIds, {
+            title, body, url: conversationDeepLink(opts.conversationId, 'occupant'),
+          })
+        : Promise.resolve(),
+    ])
   } catch (err) {
     console.error('[messages.notifyParticipants]', err)
   }
@@ -113,9 +129,10 @@ function buildBody(body: string | null, kind: string, attCount: number): string 
   return text.length > 120 ? text.slice(0, 117) + '…' : text
 }
 
-function conversationDeepLink(conversationId: string): string {
-  // Staff app default. Service worker can route to occupant portal if needed.
-  return `/messages/${conversationId}`
+function conversationDeepLink(conversationId: string, recipientKind: 'staff' | 'occupant'): string {
+  return recipientKind === 'occupant'
+    ? `/occupant-portal/messages/${conversationId}`
+    : `/messages/${conversationId}`
 }
 
 function titleCase(s: string): string {

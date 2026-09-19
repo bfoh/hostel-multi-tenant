@@ -14,7 +14,6 @@ import { getDailyReport, type DailyReport } from '@/lib/reports/daily'
 import { buildDigestSms } from './sms'
 import { buildDigestEmail } from './email'
 import { buildDigestPush } from './push'
-import { fanoutToTenantOwners } from '@/lib/push/fanout'
 
 interface Recipient {
   name?:  string
@@ -210,23 +209,10 @@ export async function sendDailyDigestForTenant(
       errors.push(`Push: ${msg}`)
       console.error(`[digest push] ${tenantId}`, err)
     }
-
-    // ── Push (native — mobile app) ────────────────────────────────────────
-    // Owner-only per spec (docs/superpowers/specs/2026-05-22-mobile-app-design.md).
-    // Web-push above covers owner + manager browsers; native covers iOS/Android.
-    try {
-      const webPayload = buildDigestPush({ hostelName: tenant.name, report })
-      const nativeResults = await fanoutToTenantOwners(tenantId, {
-        title: webPayload.title,
-        body:  webPayload.body,
-        path:  '/owner-digest',
-        data:  { type: 'daily_digest', report_date: date },
-      })
-      const nativeSent = nativeResults.reduce((acc, r) => acc + r.sent, 0)
-      if (nativeSent > 0) console.log('[digest native push]', { tenantId, nativeSent })
-    } catch (err) {
-      console.error(`[digest native push] ${tenantId}`, err)
-    }
+    // Native (mobile app) fanout happens automatically inside sendPushToUsers
+    // above — see lib/push.ts. buildDigestPush's nativePath/nativeData fields
+    // (owner-digest, not the full web /dashboard/owner) are what make that
+    // native call open the right screen.
   }
 
   // ── Stamp ──────────────────────────────────────────────────────────────

@@ -61,3 +61,21 @@ export async function fanoutToTenantOwners(tenantId: string, payload: NativePush
   if (userIds.length === 0) return []
   return Promise.all(userIds.map(id => fanoutToUser(id, payload)))
 }
+
+/**
+ * Send to every device registered while the tenant `tenantId` was active
+ * (device_push_tokens.tenant_id is stamped at registration time — see
+ * app/api/push/register/route.ts). General-purpose native push: unlike
+ * fanoutToTenantOwners, not restricted to any one role.
+ */
+export async function fanoutToTenant(tenantId: string, payload: NativePushPayload): Promise<FanoutResult[]> {
+  const admin = createAdminClient() as any
+  const { data: rows } = await admin
+    .from('device_push_tokens')
+    .select('user_id')
+    .eq('tenant_id', tenantId)
+
+  const userIds = [...new Set(((rows ?? []) as { user_id: string }[]).map(r => r.user_id))]
+  if (userIds.length === 0) return []
+  return Promise.all(userIds.map(id => fanoutToUser(id, payload)))
+}

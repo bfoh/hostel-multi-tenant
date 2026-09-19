@@ -8,7 +8,7 @@ import { ghs, isCashVarianceConcerning, formatDate } from './format'
 export function buildDigestPush(opts: {
   hostelName: string
   report:     DailyReport
-}): { title: string; body: string; url: string } {
+}): { title: string; body: string; url: string; nativePath: string; nativeData: Record<string, string> } {
   const { hostelName, report } = opts
 
   const bits: string[] = []
@@ -24,6 +24,10 @@ export function buildDigestPush(opts: {
   return {
     title: `${hostelName} · ${formatDate(report.report_date)}`,
     body:  bits.join(' · '),
-    url:   '/dashboard/owner',
+    // Browsers go to the full web dashboard; the native app only has the
+    // slim /owner-digest route (see lib/push.ts's PushPayload.nativePath).
+    url:        '/dashboard/owner',
+    nativePath: '/owner-digest',
+    nativeData: { type: 'daily_digest', report_date: report.report_date },
   }
 }
