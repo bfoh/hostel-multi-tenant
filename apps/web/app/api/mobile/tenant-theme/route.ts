@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveMobileContext } from '@/lib/auth/mobile-context'
 
 /**
  * GET /api/mobile/tenant-theme
@@ -10,39 +11,22 @@ import { createAdminClient } from '@/lib/supabase/admin'
  *   { tenant_name, logo_url, primary_color }
  *
  * Falls back through tenant_members (owners/staff) then occupants
- * (residents). Unauthenticated → 200 with empty payload.
+ * (residents) via resolveMobileContext. Unauthenticated → 200 with empty
+ * payload.
  */
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({})
 
+  const ctx = await resolveMobileContext(user.id)
+  if (!ctx.tenantId) return NextResponse.json({})
+
   const admin = createAdminClient() as any
-
-  const { data: member } = await admin
-    .from('tenant_members')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-
-  let tenantId: string | null = member?.tenant_id ?? null
-
-  if (!tenantId) {
-    const { data: occ } = await admin
-      .from('occupants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    tenantId = occ?.tenant_id ?? null
-  }
-
-  if (!tenantId) return NextResponse.json({})
-
   const { data: tenant } = await admin
     .from('tenants')
     .select('name, logo_url, primary_color')
-    .eq('id', tenantId)
+    .eq('id', ctx.tenantId)
     .maybeSingle()
 
   if (!tenant) return NextResponse.json({})

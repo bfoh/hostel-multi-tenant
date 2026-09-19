@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveMobileContext } from '@/lib/auth/mobile-context'
 
 /**
  * GET /api/mobile/role
@@ -21,26 +21,11 @@ export async function GET() {
     return NextResponse.json({ role: null, is_occupant: false, tenant_id: null })
   }
 
-  const admin = createAdminClient() as any
-
-  const [{ data: member }, { data: occupant }] = await Promise.all([
-    admin
-      .from('tenant_members')
-      .select('tenant_id, role')
-      .eq('user_id', user.id)
-      .eq('role', 'owner')
-      .eq('is_active', true)
-      .maybeSingle(),
-    admin
-      .from('occupants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .maybeSingle(),
-  ])
+  const ctx = await resolveMobileContext(user.id)
 
   return NextResponse.json({
-    role:        member?.role        ?? null,
-    is_occupant: !!occupant,
-    tenant_id:   member?.tenant_id ?? occupant?.tenant_id ?? null,
+    role:        ctx.role === 'owner' ? 'owner' : null,
+    is_occupant: ctx.role === 'occupant',
+    tenant_id:   ctx.tenantId,
   })
 }

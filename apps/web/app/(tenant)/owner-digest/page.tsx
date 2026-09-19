@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveMobileContext } from '@/lib/auth/mobile-context'
 import { getDailyReport, getTenantToday } from '@/lib/reports/daily'
 import { DigestCard } from './_components/digest-card'
 
@@ -21,17 +21,9 @@ export default async function OwnerDigestTodayPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const admin = createAdminClient() as any
-  const { data: member } = await admin
-    .from('tenant_members')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .eq('role', 'owner')
-    .eq('is_active', true)
-    .maybeSingle()
-
-  if (!member) redirect('/login')
-  const tenantId: string = member.tenant_id
+  const ctx = await resolveMobileContext(user.id)
+  if (ctx.role !== 'owner' || !ctx.tenantId) redirect('/login')
+  const tenantId: string = ctx.tenantId
 
   const today          = await getTenantToday(tenantId)
   const yesterdayIso   = isoMinus(today, 1)

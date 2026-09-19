@@ -98,8 +98,15 @@ const SAFE_BY_DESIGN_PREFIXES = [
   'app/(public)/checkin/',
   // Globally-keyed session lookups
   'lib/auth/occupant-session.ts',
+  'lib/auth/mobile-context.ts',
   // Multi-tenant insert (each row carries its own tenant_id)
   'lib/anomaly-detector.ts',
+  // device_push_tokens is intentionally user-scoped, not tenant-scoped —
+  // a device token belongs to a person, not a hostel, and the same
+  // physical device should receive pushes regardless of which tenant
+  // triggered them. Its own RLS policies (migration 096) are entirely
+  // auth.uid()-based; tenant_id on that table is nullable/informational.
+  'lib/push/fanout.ts',
 ]
 
 function* walk(dir) {

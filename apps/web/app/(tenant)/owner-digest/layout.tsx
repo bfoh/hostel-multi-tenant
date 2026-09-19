@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveMobileContextForTenant } from '@/lib/auth/mobile-context'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,31 +17,13 @@ export default async function OwnerDigestLayout({ children }: { children: React.
   if (!user) redirect('/login')
 
   const h = await headers()
-  let tenantId = h.get('x-tenant-id')
+  const tenantId = h.get('x-tenant-id')
 
-  const admin = createAdminClient() as any
+  const ctx = await resolveMobileContextForTenant(user.id, tenantId)
 
-  // Find a tenant_members row where this user is an owner. We do not require
-  // x-tenant-id (some entry paths arrive without it on cold mobile launch).
-  let query = admin
-    .from('tenant_members')
-    .select('tenant_id, role, is_active')
-    .eq('user_id', user.id)
-    .eq('role', 'owner')
-    .eq('is_active', true)
-
-  if (tenantId) query = query.eq('tenant_id', tenantId)
-
-  const { data: member } = await query.maybeSingle()
-
-  if (!member) {
+  if (ctx.role !== 'owner') {
     // Not an owner here. If the user is an occupant, send them to their portal.
-    const { data: occ } = await admin
-      .from('occupants')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    redirect(occ ? '/occupant-portal' : '/login')
+    redirect(ctx.role === 'occupant' ? '/occupant-portal' : '/login')
   }
 
   return <>{children}</>

@@ -31,12 +31,20 @@ export async function getOccupantSession(): Promise<OccupantSession | null> {
   if (!user) redirect('/login')
 
   const admin = createAdminClient()
-  const { data } = await admin
+  // .single()/.maybeSingle() would throw (and, destructured here, silently
+  // resolve to `data: null`) for a user with more than one occupants row —
+  // a real case for a returning student re-enrolled at a different hostel
+  // in a later year. Order + limit instead so this degrades to "pick the
+  // most recent one" rather than treating a legitimate multi-tenant user
+  // as if they had no occupant record at all.
+  const { data: rows } = await admin
     .from('occupants')
     .select('id, tenant_id, first_name, last_name, tenants(name, primary_color)')
     .eq('user_id', user.id)
-    .single()
+    .order('created_at', { ascending: false })
+    .limit(1)
 
+  const data = rows?.[0]
   if (!data) return null
 
   const tenant = Array.isArray(data.tenants) ? data.tenants[0] : data.tenants as any
