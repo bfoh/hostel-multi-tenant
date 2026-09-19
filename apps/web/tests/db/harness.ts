@@ -63,6 +63,7 @@ const MIGRATIONS = [
   '20240001000113_scope_tenant_logos_storage.sql', // fix: finding #1
   '20240001000114_scope_messages_storage_upload.sql', // fix: finding #3
   '20240001000115_fix_conversation_participants_rls_recursion.sql', // fix: recursion bug found while testing #3
+  '20240001000116_fix_occupants_self_select_policy.sql', // fix: finding #4
 ]
 
 const SHIM_SQL = `
