@@ -4,6 +4,7 @@ import { setupDeepLinks, navigateWebview } from './deep-links'
 import { gateBiometric } from './biometric'
 import { setupCameraBridge } from './camera-bridge'
 import { setupHapticsBridge } from './haptics-bridge'
+import { setupAppLifecycle } from './app-lifecycle'
 import { applyCachedTheme, refreshTheme } from './theming'
 import { log } from './log'
 
@@ -17,10 +18,12 @@ const PORTAL_BASE = 'https://app.gh-hostels.com'
  *   3. Biometric gate (native; skipped on non-native / no enrolment)
  *   4. Install JS bridges on `window` so the portal can call native
  *   5. Wire deep-link listener (push taps + universal links)
- *   6. Request push permission + register token
- *   7. Resolve role → owners go to /owner-digest; occupants stay on portal default
- *   8. Refresh tenant theme in the background (cache for next cold launch)
- *   9. Hide splash so the webview takes over
+ *   6. Wire app-lifecycle listener (reload/reconnect after backgrounding —
+ *      see app-lifecycle.ts for why this matters for realtime messaging)
+ *   7. Request push permission + register token
+ *   8. Resolve role → owners go to /owner-digest; occupants stay on portal default
+ *   9. Refresh tenant theme in the background (cache for next cold launch)
+ *  10. Hide splash so the webview takes over
  */
 async function main(): Promise<void> {
   log.info('boot: start')
@@ -33,6 +36,7 @@ async function main(): Promise<void> {
   setupCameraBridge()
   setupHapticsBridge()
   setupDeepLinks()
+  setupAppLifecycle()
 
   await setupPush((path) => navigateWebview(path))
   await routeByRole()
