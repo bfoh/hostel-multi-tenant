@@ -1,15 +1,42 @@
 # Testing Plan
 
-Last updated: 2026-04-11
+Last updated: 2026-09-19
 
 This document covers the full testing checklist for GH Hostels — from localhost to production.
 Work through phases in order. Each phase builds on the previous.
+
+See the **Feature Coverage Map** near the end for which modules have a phase here and which
+don't yet — check that before assuming "not listed" means "not shippable," and update it
+whenever you add or remove a phase so this doc doesn't quietly go stale again.
+
+---
+
+## Automated tests (run these first)
+
+Before any manual QA below, run the automated suite — it catches regressions in minutes that
+this checklist would take an hour to find by hand:
+
+```bash
+npm run type-check                              # whole monorepo
+npm --workspace @gh-hostels/web run lint
+npm --workspace @gh-hostels/web run test        # unit tests + real-Postgres RLS/grant tests
+npm --workspace @gh-hostels/web run audit:tenant-scoping   # static: admin-client queries scoped by tenant_id?
+npm --workspace @gh-hostels/web run audit:function-grants  # static: SECURITY DEFINER RPCs over-exposed?
+```
+
+The `test` script boots a throwaway Postgres cluster (via `embedded-postgres`) and replays real
+migration SQL against it — no Supabase project or `.env.local` needed for this step. It covers
+tenant isolation (RLS), the two storage-bucket policies, the tenant-admin client wrapper, and the
+RPC grant boundary. It does **not** cover anything below this line: UI flows, third-party
+integrations (Paystack, Arkesel, Brevo, Paystack webhooks), or business logic that only runs
+inside a real Next.js request. All CI-enforced; a red run here means don't bother with manual QA
+until it's green.
 
 ---
 
 ## Prerequisites
 
-Complete these before running any test phase.
+Complete these before running any manual test phase below.
 
 ### 1. Environment variables (`apps/web/.env.local`)
 
@@ -21,22 +48,28 @@ SUPABASE_SERVICE_ROLE_KEY=        # same (never expose publicly)
 NEXT_PUBLIC_APP_DOMAIN=localhost  # keeps subdomain routing dormant on local
 ```
 
-**Optional for localhost (required for production):**
+**Optional for localhost (required for production, or for the specific phase that needs them):**
 ```bash
 UPSTASH_REDIS_REST_URL=           # Upstash console → REST API (degrades gracefully without)
 UPSTASH_REDIS_REST_TOKEN=
-RESEND_API_KEY=                   # transactional email (invites, receipts)
-RESEND_FROM_EMAIL=no-reply@yourdomain.com
+BREVO_API_KEY=                    # transactional email (invites, receipts) — replaced Resend
+BREVO_FROM_EMAIL=no-reply@yourdomain.com
 ARKESEL_API_KEY=                  # SMS gateway (Ghana)
 ARKESEL_SENDER_ID=                # max 11 chars, registered with Arkesel
 NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=  # Paystack test keys first, then live
 PAYSTACK_SECRET_KEY=
-VERCEL_API_TOKEN=                 # for custom domain provisioning via Vercel API
+PAYSTACK_PLAN_STARTER_MONTHLY=    # + QUARTERLY/BIANNUAL/ANNUAL, same for GROWTH — needed for
+PAYSTACK_PLAN_GROWTH_MONTHLY=     #   the Subscription Billing phase only; bootstrap via
+                                   #   POST /api/admin/paystack/bootstrap-plans (platform-admin)
+VERCEL_ACCESS_TOKEN=              # for custom domain provisioning via Vercel API
 VERCEL_PROJECT_ID=
 VERCEL_TEAM_ID=                   # only for team accounts
+VAPI_API_KEY=                     # voice AI agent — only needed if testing that channel
+OPENAI_API_KEY=                   # embeddings for the AI assistant's knowledge base
+ANTHROPIC_API_KEY=                # powers the AI Assistant (Claude)
 ```
 
-> If Resend is not configured, invite emails won't send but the API returns success.
+> If Brevo is not configured, invite emails won't send but the API returns success.
 > Get the magic link from **Supabase Dashboard → Authentication → Users** instead.
 
 ### 2. Apply all database migrations
@@ -159,7 +192,7 @@ Once all phases pass locally, do the following before going live:
 
 - [ ] Set `NEXT_PUBLIC_APP_DOMAIN` to your real domain (e.g. `gh-hostels.com`)
 - [ ] Provision an **Upstash Redis** instance and add env vars — subdomain routing needs it
-- [ ] Configure **Resend** so invite and receipt emails actually deliver
+- [ ] Configure **Brevo** so invite and receipt emails actually deliver
 - [ ] Add **Paystack test keys**, run a live payment through Phase 5, then swap to live keys
 - [ ] Configure **Arkesel** for SMS receipts on booking payments
 - [ ] Deploy to **Vercel** with all env vars set in the Vercel dashboard
@@ -176,7 +209,7 @@ Once all phases pass locally, do the following before going live:
 |------|----------------------|
 | Subdomain routing | Disabled — all routes on `localhost:3000` |
 | Redis cache | Optional — falls back to direct DB lookup automatically |
-| Email (Resend) | Won't send — use Supabase Auth dashboard to get magic links |
+| Email (Brevo) | Won't send — use Supabase Auth dashboard to get magic links |
 | SMS (Arkesel) | Won't send — no impact on core flows |
 | Paystack | Only works if test keys are configured |
 | Custom domains | Cannot be tested locally |
@@ -504,4 +537,243 @@ Pre-requisites:
 
 - [ ] Tracker poll every ~4s while order not in terminal state.
 - [ ] Stop polling once `picked_up` or `cancelled`.
+
+---
+
+## Phase — Platform Super-Admin
+
+Pre-requisites:
+- A user in `platform_admins` (there's no self-service signup for this — insert directly, or via
+  whatever the current internal onboarding process is).
+- At least two tenants to exercise cross-tenant listing/impersonation.
+
+- [ ] Log in as a platform admin → `/admin` loads on the platform root domain (`app.<domain>` or
+      `localhost`), listing every tenant with plan/status/billing info.
+- [ ] Visiting `/admin` on a tenant subdomain redirects to the platform root domain (middleware
+      guard — see `pathname.startsWith('/admin')` handling).
+- [ ] A non-platform-admin (even a tenant owner) hitting `/admin` directly does not see tenant data
+      from other tenants.
+- [ ] Suspend a tenant → that tenant's staff logging in land on `/suspended`, not `/dashboard`.
+- [ ] Un-suspend → normal access restored.
+- [ ] Impersonate a tenant (`/api/admin/impersonate`) → browsing shows that tenant's real data,
+      `x-admin-impersonating` cookie set; the platform-admin identity is re-verified server-side
+      each request (not just trusted from the cookie) — confirm by tampering with the impersonation
+      cookie value in devtools and reloading: access should NOT be granted for an unverified admin.
+- [ ] Stop impersonating → returns to the platform admin's own session, not logged out.
+- [ ] Platform usage metrics page reflects real counts across tenants (not just the first one).
+
+---
+
+## Phase — Subscription Billing (Platform SaaS Plans)
+
+Pre-requisites:
+- Paystack test keys + `PAYSTACK_PLAN_*` env vars bootstrapped (see Prerequisites above).
+- A test tenant on the free/trial plan.
+
+- [ ] `/settings/billing` shows current plan, trial countdown (if on trial), and available plans.
+- [ ] Subscribe to Starter (monthly) → Paystack checkout → success → plan updates immediately
+      without waiting for the webhook (optimistic) and is confirmed by the webhook shortly after.
+- [ ] Switch plan (Starter → Growth) → proration/change reflected; no duplicate active
+      subscriptions in Paystack dashboard.
+- [ ] Switch billing interval (monthly → annual) → discount applied per `.env.example`'s documented
+      rates (quarterly 5%, 6-month 10%, yearly 15%).
+- [ ] Cancel subscription → `/api/billing/cancel` — plan reverts to free/trial state at period end,
+      not immediately (unless that's the intended UX — confirm against current copy).
+- [ ] `/api/billing/reconcile` (or its cron) correctly resolves a tenant whose Paystack state and
+      local `tenant_subscriptions` row have drifted (simulate by editing one directly).
+- [ ] `/api/cron/trial-expiry` run manually — tenants past trial end without a paid plan flip to a
+      restricted/suspended state; one with a paid plan is untouched.
+- [ ] Non-owner role (manager, receptionist, ...) cannot access `/settings/billing` actions that
+      mutate the subscription (view may be fine; mutation should be owner-gated).
+
+---
+
+## Phase — Accounting & Finance
+
+Pre-requisites:
+- A tenant with at least one confirmed booking with a recorded payment (so the journal has
+  existing entries), and one manually-logged expense.
+
+### Core ledger
+
+- [ ] `/accounting/chart` lists the default chart of accounts (assets/liabilities/equity/
+      revenue/expenses) seeded for a new tenant.
+- [ ] `/accounting/journal` shows a debit/credit entry pair for the booking payment recorded in
+      Phase 2 — debits and credits balance (sum to zero) for every entry.
+- [ ] `/accounting/trial-balance` — total debits equal total credits for the period.
+- [ ] `/accounting/pnl` for the current month shows the booking revenue and the logged expense.
+- [ ] `/accounting/balance-sheet` — assets = liabilities + equity holds.
+- [ ] `/accounting/cash-flow` groups the same payment by its real source (booking payment vs.
+      manual expense).
+
+### Expenses, budgets, AP/AR
+
+- [ ] `/accounting/expenses` → log a new expense with a category → appears in P&L for that period.
+- [ ] `/accounting/budgets` → set a budget for a category → actual-vs-budget reflects the logged
+      expense.
+- [ ] `/accounting/ap` (payables) and `/accounting/ar` (receivables) reflect outstanding supplier
+      bills / occupant balances respectively.
+- [ ] `/accounting/recurring` → a recurring expense template posts on its schedule (or via manual
+      "run now" if that's exposed) without duplicating an already-posted period.
+
+### Reconciliation & period close
+
+- [ ] `/accounting/reconcile` → upload a bank statement CSV → matches against journal entries;
+      unmatched rows are clearly flagged, not silently dropped.
+- [ ] `/accounting/close` → closing a period blocks further postings into it (attempt to backdate
+      an expense into a closed period and confirm it's rejected or requires an explicit override).
+- [ ] `/accounting/depreciation` → an asset with a depreciation schedule posts its periodic
+      depreciation entry to the journal.
+- [ ] `/accounting/fx` → a transaction in a non-default currency converts using the rate from
+      `/accounting/fx` (or `/api/accounting/fx-rates`) at time of posting, not today's rate.
+
+### Access control
+
+- [ ] Receptionist / housekeeper / security roles cannot reach any `/accounting/*` page (redirect,
+      per the `ADMIN_ONLY_PATHS` guard in `middleware.ts`).
+- [ ] Accountant role (if distinct from owner/manager) has the access level the product intends —
+      confirm against current role definitions rather than assuming.
+
+---
+
+## Phase — Self Check-in (Public QR)
+
+Pre-requisites:
+- A confirmed booking with `self_checkin` enabled for the tenant (`/settings/self-checkin`).
+- A Ghana Card (or configured ID type) image to upload.
+
+- [ ] `/settings/self-checkin` toggle "Enabled" on for the tenant.
+- [ ] Visit `/checkin/<slug>` (no login) → shows the tenant's available self-checkin flow.
+- [ ] Submit ID documents (front + back) + confirm details → booking flips toward
+      `pending_confirmation`/checked-in state per current design; room/bed hold reflects it
+      (`room_occupancy_v` counts it, per the pending-payment-holds-a-bed logic).
+- [ ] Staff `/bookings/self-checkins` inbox shows the new submission for confirmation.
+- [ ] Staff confirms → booking fully checked in; occupant portal reflects it.
+- [ ] Abandoned self-checkin (submitted but never confirmed) older than the stale-release window
+      frees the held bed — trigger via `release_stale_self_checkin_reservations` (service-role
+      only as of migration 117; don't test this by calling the RPC directly as a regular user,
+      that's exactly what's now blocked).
+- [ ] Self-checkin on an already-checked-in or cancelled booking is rejected, not silently accepted.
+
+---
+
+## Phase — Security, Assets & Lost & Found
+
+- [ ] `/security/visitors` → log a visitor pass; check-out timestamp recorded on visitor leaving.
+- [ ] `/security/blacklist` → blacklist an occupant with a reason and expiry → their profile page
+      shows a blacklist banner; expiry date past → banner clears (or is marked expired, per current
+      design) without manual intervention.
+- [ ] `/security/keys` → issue a physical key to an occupant/room; mark returned; a key shown as
+      "issued" for a checked-out booking is visible as an outstanding-key flag somewhere (don't
+      let it get silently lost from tracking).
+- [ ] `/assets` → register an asset (category, brand, serial) → QR code generates; scanning it
+      (or visiting the QR's target URL directly) opens that asset's detail page.
+- [ ] Mark an asset "under maintenance" / "disposed" / "lost" → status reflected in the list and
+      detail view.
+- [ ] `/lost-found` → log a found item, later mark it claimed/returned, optionally linked to an
+      occupant.
+
+---
+
+## Phase — Reports, Intelligence & AI Assistant
+
+- [ ] `/reports` standard reports (occupancy, revenue, housekeeping, staff) render non-empty data
+      for a tenant with real activity.
+- [ ] `/reports/custom` → pick a metric + date range + group-by → results table renders; CSV export
+      downloads and the CSV content matches what's on screen.
+- [ ] `/reports/schedules` → a scheduled report actually fires on its cadence
+      (`/api/report-schedules/run`, or the cron that calls it) and is delivered via the configured
+      channel.
+- [ ] `/reports/debt-aging`, `/reports/retention`, `/reports/revenue`, `/reports/staff-revenue`,
+      `/reports/feedback` each load without error for a tenant with relevant data.
+- [ ] `/intelligence/anomalies` → after seeding an obviously anomalous pattern (e.g. a sudden
+      occupancy drop or payment spike), the anomaly appears; `/api/cron/anomaly-check` run manually
+      confirms detection isn't purely reliant on the UI's own polling.
+- [ ] `/ai` → ask "What rooms are available this weekend?" and "What's our revenue this month?" —
+      responses reflect real tenant data, not hallucinated numbers (spot-check one answer against
+      the actual dashboard figures).
+- [ ] AI assistant refuses or safely handles a question about a different tenant's data if asked
+      (it should have no way to access it, but worth confirming the tool-calling layer is scoped).
+- [ ] AI escalate-to-human path (if configured) actually notifies a real staff member.
+
+---
+
+## Phase — Messaging (Staff, Broadcast, Group)
+
+Distinct from the maintenance-request threading covered above — this is general in-app messaging.
+
+- [ ] Staff-to-staff direct message: two staff accounts, message sent from one appears live in the
+      other's `/messages` view without refresh.
+- [ ] `/messages/broadcast` → hostel-wide announcement reaches all active occupants' message list.
+- [ ] `/messages/group` → a group conversation with a subset of participants only shows to those
+      participants — a staff member not in the group cannot see or read it (this is exactly the
+      class of bug fixed in migration 115's RLS recursion fix — worth explicitly re-confirming
+      participant isolation still holds after any future messaging change).
+- [ ] Occupant-to-occupant DMs respect the tenant's `inter_occupant_dm_enabled` toggle — off means
+      the feature is unreachable, not just hidden in the UI.
+- [ ] File attachment upload/read follows the same participant-only access as text messages.
+
+---
+
+## Phase — Booking Widget (Embeddable)
+
+Pre-requisites:
+- `/settings/widget` configured and enabled for a test tenant.
+
+- [ ] Embed the generated `<script>`/iframe snippet on a plain HTML test page (not the app itself).
+- [ ] Widget loads the tenant's available room categories via `/api/widget/<slug>/rooms` — no
+      authentication, no other tenant's data visible from the same embed code path.
+- [ ] Submit a booking through the widget (`/api/widget/<slug>/book`) → booking appears in the
+      tenant's admin `/bookings` list with source `widget`.
+- [ ] Widget on a domain not matching the tenant's registered `website_url` — confirm current
+      behavior matches intent (this is the same origin-check pattern documented in
+      `docs/external-enquiry-snippet.md` for the enquiry form; verify the booking widget follows
+      an equivalent check, or note here if it currently doesn't).
+
+---
+
+## Feature Coverage Map
+
+What has a phase in this document vs. what doesn't yet. Update this whenever you add, remove, or
+retire a phase — the point of this table is to make gaps visible instead of silently stale.
+
+| Area | Covered? |
+|---|---|
+| Signup, onboarding, auth | ✅ Phase 1 |
+| Rooms, bookings, occupants, invoices (core) | ✅ Phase 2 |
+| Occupant portal (home, payments, maintenance, notices, settings) | ✅ Phase 3 |
+| Staff portal (tasks, requests, profile) | ✅ Phase 4 |
+| Public booking page | ✅ Phase 5 |
+| Access control / role routing | ✅ Phase 6 |
+| Communications / notices | ✅ Phase 7 |
+| Bank draft payments | ✅ dedicated phase |
+| Occupant invoice viewing/download | ✅ dedicated phase |
+| Real-time maintenance threading | ✅ dedicated phase |
+| Food ordering (resident + kitchen) | ✅ dedicated phase |
+| Public food ordering (walk-in QR + online) | ✅ dedicated phase |
+| Platform super-admin | ✅ dedicated phase |
+| Subscription billing (SaaS plans) | ✅ dedicated phase |
+| Accounting & finance | ✅ dedicated phase (not exhaustive — this module is large) |
+| Self check-in | ✅ dedicated phase |
+| Security, assets, lost & found | ✅ dedicated phase |
+| Reports, anomaly detection, AI assistant | ✅ dedicated phase |
+| General messaging (staff/broadcast/group) | ✅ dedicated phase |
+| Embeddable booking widget | ✅ dedicated phase |
+| HR: payroll, shifts, attendance, leave, performance | ⚠️ not covered |
+| Housekeeping (tenant-side task board) | ⚠️ partially — only via staff portal's task-completion flow in Phase 4 |
+| Preventive maintenance schedules + meter readings | ⚠️ not covered |
+| Portfolio (multi-property owner view) | ⚠️ not covered |
+| Waiting list | ⚠️ not covered |
+| Bulk import (bookings/occupants/rooms) | ⚠️ not covered |
+| Booking renewals | ⚠️ not covered |
+| Roommate matching | ⚠️ not covered |
+| Revenue points / walk-in patronage | ⚠️ not covered |
+| Shift closeout | ⚠️ not covered |
+| ID verification queue | ⚠️ not covered |
+| Kiosk mode | ⚠️ not covered |
+| Daily/weekly digest emails | ⚠️ not covered |
+| Website CMS / public site builder | ⚠️ not covered |
+| Mobile app (`feat/mobile-app` branch) | ⚠️ not merged to `main` yet — out of scope until it is |
+
+If you pick up one of the ⚠️ rows, add a phase for it above and flip this row to ✅ in the same PR.
 
