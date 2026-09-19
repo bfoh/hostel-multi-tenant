@@ -60,6 +60,21 @@ export async function middleware(request: NextRequest) {
   // API routes. Setting response.headers only sends them to the browser.
   const reqHeaders = new Headers(request.headers)
 
+  // SECURITY: strip any client-supplied tenant/portal/impersonation headers
+  // before anything below sets its own trusted values. Without this, a
+  // request that never gets a tenant resolved below (e.g. hitting the app
+  // root domain on a NO_AUTH_PATHS route, where injection is conditional)
+  // would forward the caller's own forged `x-tenant-id` straight through —
+  // and pages like /book and /portal read that header directly with no
+  // other verification. Only this middleware may ever set these headers.
+  for (const h of [
+    'x-tenant-id', 'x-tenant-slug', 'x-tenant-name', 'x-tenant-color',
+    'x-tenant-logo', 'x-tenant-favicon', 'x-tenant-domain', 'x-tenant-role',
+    'x-portal-role', 'x-occupant-id', 'x-admin-impersonating',
+  ]) {
+    reqHeaders.delete(h)
+  }
+
   // ── No-auth paths ─────────────────────────────────────────────────────────
   if (isNoAuth) {
     if (tenant) injectHeaders(reqHeaders, tenant)

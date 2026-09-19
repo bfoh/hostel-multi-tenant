@@ -32,6 +32,9 @@
     "type-check": {
       "dependsOn": ["^type-check"]
     },
+    "test": {
+      "cache": false
+    },
     "clean": {
       "cache": false
     }
