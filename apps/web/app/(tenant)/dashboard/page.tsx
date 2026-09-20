@@ -13,15 +13,17 @@ import { RecentBookings } from '@/components/dashboard/recent-bookings'
 import { StatCardSkeleton } from '@/components/dashboard/stat-card-skeleton'
 import { SetupChecklist } from '@/components/dashboard/setup-checklist'
 import { AuxRevenueCard } from '@/components/dashboard/aux-revenue-card'
+import { MinimalDashboardView } from '@/components/dashboard/minimal-dashboard-view'
 
 export const metadata: Metadata = {
   title: 'Dashboard',
 }
 
 export default async function DashboardPage() {
-  const headersList = await headers()
-  const tenantName = headersList.get('x-tenant-name') ?? 'Your Hostel'
-  const tenantId   = headersList.get('x-tenant-id')
+  const headersList  = await headers()
+  const tenantName   = headersList.get('x-tenant-name') ?? 'Your Hostel'
+  const tenantId     = headersList.get('x-tenant-id')
+  const tenantStatus = headersList.get('x-tenant-status')
 
   // Redirect new owners to onboarding if they haven't completed it yet.
   // Also catch the case where a user chose a paid plan during signup but closed
@@ -54,6 +56,10 @@ export default async function DashboardPage() {
         redirect(`/settings/billing?autosubscribe=${pendingPlan}${billingQs}`)
       }
     }
+  }
+
+  if (tenantStatus === 'trial_expired') {
+    return <MinimalDashboardView tenantName={tenantName} />
   }
 
   return (

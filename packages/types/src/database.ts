@@ -15,7 +15,7 @@ type Json = string | number | boolean | null | { [key: string]: Json } | Json[]
 // ── Enum string unions ───────────────────────────────────────────────────────
 
 type SubscriptionPlan   = 'starter' | 'growth' | 'pro' | 'enterprise'
-type TenantStatus       = 'trial' | 'active' | 'suspended' | 'cancelled'
+type TenantStatus       = 'trial' | 'active' | 'trial_expired' | 'suspended' | 'cancelled'
 type TenantRole         = 'owner' | 'manager' | 'receptionist' | 'housekeeper' | 'accountant' | 'security' | 'occupant'
 type RoomStatus         = 'available' | 'occupied' | 'reserved' | 'maintenance' | 'blocked'
 type HousekeepingStatus = 'clean' | 'dirty' | 'inspecting' | 'out_of_order'
@@ -122,6 +122,8 @@ export type Database = {
           widget_domains: string[]
           public_api_key: string | null
           roommate_matching_enabled: boolean
+          listed_publicly: boolean
+          booking_payment_mode: 'online' | 'pay_at_hostel'
           created_at: string
           updated_at: string
         }
@@ -179,6 +181,8 @@ export type Database = {
           widget_domains?: string[]
           public_api_key?: string | null
           roommate_matching_enabled?: boolean
+          listed_publicly?: boolean
+          booking_payment_mode?: 'online' | 'pay_at_hostel'
         }
         Update: {
           slug?: string
@@ -233,6 +237,8 @@ export type Database = {
           widget_domains?: string[]
           public_api_key?: string | null
           roommate_matching_enabled?: boolean
+          listed_publicly?: boolean
+          booking_payment_mode?: 'online' | 'pay_at_hostel'
         }
         Relationships: []
       }

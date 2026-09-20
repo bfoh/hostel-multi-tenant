@@ -299,6 +299,38 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // ── Trial-expired minimal-dashboard guard ───────────────────────────────────
+  // A tenant whose trial lapsed without subscribing (status='trial_expired')
+  // keeps its public listing alive but loses full management-tool access —
+  // only room-price editing, a read-only bookings view, and billing/account
+  // basics stay reachable. Inverse of ADMIN_ONLY_PATHS above: an allow-list
+  // keyed on tenant status rather than a deny-list keyed on role.
+  const MINIMAL_DASHBOARD_ALLOWED_PATHS = [
+    '/dashboard', '/rooms/categories', '/bookings',
+    '/settings/billing', '/settings/listing', '/my-account', '/onboarding',
+  ]
+  const tenantStatus = reqHeaders.get('x-tenant-status')
+  if (
+    !isPortalPath && !isAuthPath &&
+    portalRole !== 'occupant' &&
+    tenantStatus === 'trial_expired' &&
+    !MINIMAL_DASHBOARD_ALLOWED_PATHS.some(p => pathname.startsWith(p))
+  ) {
+    if (pathname.startsWith('/api/')) {
+      // Read access stays available (historical reports, etc.) — only
+      // mutation is blocked, so this doesn't need to enumerate every
+      // read-only endpoint individually.
+      if (request.method !== 'GET') {
+        return NextResponse.json(
+          { error: 'Your trial has ended — subscribe to unlock this feature.' },
+          { status: 402 },
+        )
+      }
+    } else {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
   // ── Subdomain redirect (production only) ──────────────────────────────────
   // Authenticated users landing on the app/root domain are redirected to their
   // tenant subdomain so the app always runs at slug.gh-hostels.com.

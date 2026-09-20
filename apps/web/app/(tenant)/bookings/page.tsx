@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { Plus, CalendarCheck, LayoutGrid, Upload } from 'lucide-react'
 
 import { getBookings } from '@/lib/data/bookings'
@@ -32,6 +33,12 @@ export default async function BookingsPage({
 
   const activeStatus = status ?? 'all'
 
+  // Trial expired without subscribing: bookings stay viewable but not
+  // creatable/editable — see middleware.ts's minimal-dashboard allow-list,
+  // which also 402s any mutating API call as defense-in-depth.
+  const tenantStatus = (await headers()).get('x-tenant-status')
+  const readOnly = tenantStatus === 'trial_expired'
+
   // Self check-in pending count + caller role for management gating.
   let pendingSelfCheckins = 0
   let canManage = false
@@ -60,6 +67,7 @@ export default async function BookingsPage({
       canManage = !!role && (MANAGE_ROLES as readonly string[]).includes(role)
     }
   }
+  if (readOnly) canManage = false
 
   // Normalise bookings for client component
   const rows = bookings.map((b) => {
@@ -118,20 +126,24 @@ export default async function BookingsPage({
             <LayoutGrid className="h-4 w-4" />
             Calendar
           </Link>
-          <Link
-            href="/bookings/bulk-import"
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
-          >
-            <Upload className="h-4 w-4" />
-            Import
-          </Link>
-          <Link
-            href="/bookings/new"
-            className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            New booking
-          </Link>
+          {!readOnly && (
+            <>
+              <Link
+                href="/bookings/bulk-import"
+                className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                Import
+              </Link>
+              <Link
+                href="/bookings/new"
+                className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                New booking
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -164,13 +176,15 @@ export default async function BookingsPage({
                 : 'Create your first booking to get started.'}
             </p>
           </div>
-          <Link
-            href="/bookings/new"
-            className="mt-2 flex items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            New booking
-          </Link>
+          {!readOnly && (
+            <Link
+              href="/bookings/new"
+              className="mt-2 flex items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              New booking
+            </Link>
+          )}
         </div>
       ) : (
         <BookingsBulkList bookings={rows} canManage={canManage} />
