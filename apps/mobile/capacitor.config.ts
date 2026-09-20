@@ -22,7 +22,13 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
   },
   ios: {
-    contentInset: 'always',
+    // 'never': the webview renders truly edge-to-edge and the web pages
+    // handle their own safe-area padding via CSS env(safe-area-inset-*)
+    // (see app/layout.tsx's viewportFit: 'cover' + the per-page padding
+    // fixes). 'always' was stacking a second, native-level inset on top
+    // of that CSS padding, shrinking the effective content frame on all
+    // four sides and revealing this backgroundColor as a visible border.
+    contentInset: 'never',
     backgroundColor: '#ffffff',
   },
   android: {
