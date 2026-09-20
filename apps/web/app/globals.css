@@ -10,6 +10,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* iOS (Safari/WKWebView) auto-zooms the whole page on focus of any
+ * input/select/textarea whose computed font-size is under 16px, to keep
+ * the text legible. Inside our Capacitor WKWebView shell (no browser chrome
+ * to reset the zoom) this leaves the page visibly zoomed in and pannable
+ * after any field is tapped, which read as a horizontal-overflow/border
+ * bug. Force 16px on mobile widths regardless of each form's own type
+ * scale so focusing a field never triggers the zoom. */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 @layer base {
   /* ── PRIMITIVE COLOR TOKENS (Volta Blue scale) ──────────────── */
   :root {
