@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Search, MapPin, LayoutGrid, List as ListIcon, ChevronRight } from 'lucide-react'
 import { searchHostels } from '@/lib/directory'
 import { HostelCard } from '@/components/public/hostel-card'
 import { HostelListRow } from '@/components/public/hostel-list-row'
 import { HostelSortSelect } from '@/components/public/hostel-sort-select'
+import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
+import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
+import { MP } from '@/lib/marketplace-theme'
 
 const GHANA_REGIONS = [
   'Ahafo', 'Ashanti', 'Bono', 'Bono East', 'Central', 'Eastern',
@@ -37,7 +39,7 @@ export default async function HostelsDirectoryPage({
   const sort = (['name', 'price_asc', 'price_desc'].includes(sp.sort ?? '') ? sp.sort : 'name') as 'name' | 'price_asc' | 'price_desc'
   const view = sp.view === 'grid' ? 'grid' : 'list'
 
-  const { hostels: allResults, total } = await searchHostels({
+  const { hostels: allResults } = await searchHostels({
     city: sp.city, region: sp.region, q: sp.q, sort, limit: 1000,
   })
 
@@ -55,40 +57,44 @@ export default async function HostelsDirectoryPage({
     : { lo: 0, hi: 0 }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="relative min-h-screen" style={{ background: MP.bg }}>
+      <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg-light" aria-hidden="true" />
+
+      <MarketplaceNav />
+
       {/* ── Search bar ─────────────────────────────────────────── */}
-      <div className="bg-[#003580] py-4">
+      <div className="py-6" style={{ background: MP.surfaceSoft, borderBottom: `1px solid ${MP.border}` }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mb-3 flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-2">
-              <Image src="/logo-mark.svg" alt="GH Hostels" width={28} height={28} className="rounded" />
-              <span className="text-[13px] font-bold tracking-wide text-white">GH-HOSTELS</span>
-            </Link>
-          </div>
-          <form action="/hostels" method="get" className="flex flex-col gap-2 rounded-lg bg-white p-2 shadow-lg sm:flex-row">
-            <div className="flex flex-1 items-center gap-2 border-b border-neutral-200 px-3 py-2.5 sm:border-b-0 sm:border-r">
-              <Search className="h-4 w-4 shrink-0 text-neutral-400" />
+          <form action="/hostels" method="get" className="flex flex-col gap-2 rounded-xl bg-white p-2 shadow-sm sm:flex-row" style={{ border: `1px solid ${MP.border}` }}>
+            <div className="flex flex-1 items-center gap-2 border-b border-neutral-100 px-3 py-2.5 sm:border-b-0 sm:border-r">
+              <Search className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
               <input
                 name="q"
                 defaultValue={sp.q ?? ''}
                 placeholder="Hostel name or campus"
-                className="w-full text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
+                className="w-full text-sm outline-none placeholder:text-neutral-400"
+                style={{ color: MP.ink }}
               />
             </div>
-            <div className="flex flex-1 items-center gap-2 border-b border-neutral-200 px-3 py-2.5 sm:border-b-0 sm:border-r">
-              <MapPin className="h-4 w-4 shrink-0 text-neutral-400" />
+            <div className="flex flex-1 items-center gap-2 border-b border-neutral-100 px-3 py-2.5 sm:border-b-0 sm:border-r">
+              <MapPin className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
               <input
                 name="city"
                 defaultValue={sp.city ?? ''}
                 placeholder="City / area"
-                className="w-full text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
+                className="w-full text-sm outline-none placeholder:text-neutral-400"
+                style={{ color: MP.ink }}
               />
             </div>
-            <select name="region" defaultValue={sp.region ?? ''} className="rounded-md px-3 py-2.5 text-sm text-neutral-900 sm:w-44">
+            <select name="region" defaultValue={sp.region ?? ''} className="rounded-md px-3 py-2.5 text-sm sm:w-44" style={{ color: MP.ink }}>
               <option value="">All regions</option>
               {GHANA_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
-            <button type="submit" className="rounded-md bg-[#0071c2] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#00487a]">
+            <button
+              type="submit"
+              className="rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-colors"
+              style={{ background: MP.green }}
+            >
               Search
             </button>
           </form>
@@ -96,12 +102,12 @@ export default async function HostelsDirectoryPage({
       </div>
 
       {/* ── Breadcrumb ─────────────────────────────────────────── */}
-      <div className="mx-auto max-w-6xl px-4 py-3 text-[13px] text-neutral-500 sm:px-6">
-        <Link href="/" className="text-[#0071c2] hover:underline">Home</Link>
+      <div className="mx-auto max-w-6xl px-4 py-3 text-[13px] sm:px-6" style={{ color: MP.textSecondary }}>
+        <Link href="/" className="hover:underline" style={{ color: MP.green }}>Home</Link>
         <span className="mx-1.5">›</span>
         {sp.region ? (
           <>
-            <Link href="/hostels" className="text-[#0071c2] hover:underline">Hostels</Link>
+            <Link href="/hostels" className="hover:underline" style={{ color: MP.green }}>Hostels</Link>
             <span className="mx-1.5">›</span>
             <span>{sp.region}</span>
           </>
@@ -113,8 +119,8 @@ export default async function HostelsDirectoryPage({
       <div className="mx-auto max-w-6xl gap-6 px-4 pb-20 sm:px-6 lg:flex">
         {/* ── Filters sidebar ─────────────────────────────────── */}
         <aside className="mb-6 w-full shrink-0 lg:mb-0 lg:w-64">
-          <div className="rounded-xl border border-neutral-200 bg-white p-4">
-            <h2 className="text-[15px] font-bold text-neutral-900">Filter by</h2>
+          <div className="rounded-xl bg-white p-4" style={{ border: `1px solid ${MP.border}` }}>
+            <h2 className="text-[15px] font-bold" style={{ color: MP.ink }}>Filter by</h2>
 
             <form action="/hostels" method="get" className="mt-4 space-y-5">
               {sp.q && <input type="hidden" name="q" value={sp.q} />}
@@ -122,37 +128,40 @@ export default async function HostelsDirectoryPage({
               {sp.region && <input type="hidden" name="region" value={sp.region} />}
 
               <div>
-                <p className="text-[13px] font-semibold text-neutral-800">Your budget (per stay)</p>
+                <p className="text-[13px] font-semibold" style={{ color: MP.ink }}>Your budget (per stay)</p>
                 {allResults.length > 0 && (
-                  <p className="mt-0.5 text-[12px] text-neutral-500">
+                  <p className="mt-0.5 text-[12px]" style={{ color: MP.textSecondary }}>
                     GH₵{priceBounds.lo.toFixed(0)} – GH₵{priceBounds.hi.toFixed(0)}
                   </p>
                 )}
                 <div className="mt-2 flex items-center gap-2">
                   <input
                     name="min" type="number" defaultValue={sp.min ?? ''} placeholder="Min"
-                    className="w-full rounded-md border border-neutral-300 px-2.5 py-1.5 text-[13px] text-neutral-900 outline-none focus:border-[#0071c2]"
+                    className="w-full rounded-md border px-2.5 py-1.5 text-[13px] outline-none"
+                    style={{ borderColor: MP.border, color: MP.ink }}
                   />
-                  <span className="text-neutral-400">–</span>
+                  <span style={{ color: MP.textSecondary }}>–</span>
                   <input
                     name="max" type="number" defaultValue={sp.max ?? ''} placeholder="Max"
-                    className="w-full rounded-md border border-neutral-300 px-2.5 py-1.5 text-[13px] text-neutral-900 outline-none focus:border-[#0071c2]"
+                    className="w-full rounded-md border px-2.5 py-1.5 text-[13px] outline-none"
+                    style={{ borderColor: MP.border, color: MP.ink }}
                   />
                 </div>
-                <button type="submit" className="mt-2 text-[12px] font-semibold text-[#0071c2] hover:underline">
+                <button type="submit" className="mt-2 text-[12px] font-semibold hover:underline" style={{ color: MP.green }}>
                   Apply
                 </button>
               </div>
             </form>
 
-            <div className="mt-6 border-t border-neutral-200 pt-4">
-              <p className="text-[13px] font-semibold text-neutral-800">Region</p>
+            <div className="mt-6 pt-4" style={{ borderTop: `1px solid ${MP.border}` }}>
+              <p className="text-[13px] font-semibold" style={{ color: MP.ink }}>Region</p>
               <ul className="mt-2 space-y-1.5">
                 {GHANA_REGIONS.map((r) => (
                   <li key={r}>
                     <Link
                       href={`/hostels?${buildQuery(sp, { region: sp.region === r ? undefined : r, page: undefined })}`}
-                      className={`text-[13px] transition-colors ${sp.region === r ? 'font-semibold text-[#0071c2]' : 'text-neutral-600 hover:text-[#0071c2]'}`}
+                      className="text-[13px] transition-colors hover:underline"
+                      style={{ color: sp.region === r ? MP.green : MP.textSecondary, fontWeight: sp.region === r ? 600 : 400 }}
                     >
                       {r}
                     </Link>
@@ -166,25 +175,27 @@ export default async function HostelsDirectoryPage({
         {/* ── Results ────────────────────────────────────────── */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-[20px] font-bold text-neutral-900">
+            <h1 className="text-[20px] font-bold" style={{ color: MP.ink }}>
               {filtered.length} hostel{filtered.length === 1 ? '' : 's'} found
               {sp.region ? ` in ${sp.region}` : sp.city ? ` in ${sp.city}` : ''}
             </h1>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-[13px] text-neutral-600">
+              <div className="flex items-center gap-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
                 <span>Sort:</span>
                 <HostelSortSelect current={sort} />
               </div>
-              <div className="flex overflow-hidden rounded-md border border-neutral-300">
+              <div className="flex overflow-hidden rounded-md" style={{ border: `1px solid ${MP.border}` }}>
                 <Link
                   href={`/hostels?${buildQuery(sp, { view: 'list' })}`}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[12px] ${view === 'list' ? 'bg-[#0071c2] text-white' : 'bg-white text-neutral-600'}`}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px]"
+                  style={view === 'list' ? { background: MP.green, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
                 >
                   <ListIcon className="h-3.5 w-3.5" /> List
                 </Link>
                 <Link
                   href={`/hostels?${buildQuery(sp, { view: 'grid' })}`}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[12px] ${view === 'grid' ? 'bg-[#0071c2] text-white' : 'bg-white text-neutral-600'}`}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px]"
+                  style={view === 'grid' ? { background: MP.green, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" /> Grid
                 </Link>
@@ -193,9 +204,9 @@ export default async function HostelsDirectoryPage({
           </div>
 
           {hostels.length === 0 ? (
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-neutral-300 bg-white py-20 text-center">
-              <p className="font-medium text-neutral-700">No hostels found</p>
-              <p className="text-sm text-neutral-500">Try a different search or check back soon — new hostels list every week.</p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-white py-20 text-center" style={{ borderColor: MP.borderStrong }}>
+              <p className="font-medium" style={{ color: MP.ink }}>No hostels found</p>
+              <p className="text-sm" style={{ color: MP.textSecondary }}>Try a different search or check back soon — new hostels list every week.</p>
             </div>
           ) : view === 'grid' ? (
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -213,7 +224,10 @@ export default async function HostelsDirectoryPage({
                 <Link
                   key={p}
                   href={`/hostels?${buildQuery(sp, { page: String(p) })}`}
-                  className={`rounded-md px-3 py-1.5 text-sm ${p === page ? 'bg-[#0071c2] text-white' : 'border border-neutral-300 text-neutral-700 hover:bg-neutral-100'}`}
+                  className="rounded-md px-3 py-1.5 text-sm"
+                  style={p === page
+                    ? { background: MP.green, color: '#fff' }
+                    : { border: `1px solid ${MP.border}`, color: MP.textSecondary }}
                 >
                   {p}
                 </Link>
@@ -221,14 +235,16 @@ export default async function HostelsDirectoryPage({
             </div>
           )}
 
-          <div className="mt-10 flex items-center justify-center gap-1.5 text-[13px] text-neutral-500">
+          <div className="mt-10 flex items-center justify-center gap-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
             Run a hostel?
-            <Link href="/signup?plan=trial&source=directory" className="font-semibold text-[#0071c2] hover:underline">
+            <Link href="/signup?plan=trial&source=directory" className="font-semibold hover:underline" style={{ color: MP.green }}>
               List yours free <ChevronRight className="inline h-3 w-3" />
             </Link>
           </div>
         </div>
       </div>
+
+      <MarketplaceFooter />
     </div>
   )
 }

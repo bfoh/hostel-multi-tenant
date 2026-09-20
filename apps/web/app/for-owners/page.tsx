@@ -3,14 +3,16 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {
   BedDouble, Shield, Check, ArrowRight,
-  Building2, CreditCard, FileText, Users, Globe, Gift,
+  Building2, CreditCard, Users, Globe, Gift,
   ChevronDown, BarChart3, Bot, ChevronRight, Star,
-  PhoneCall, Smartphone, Lock, FileSpreadsheet, Wrench, ClipboardList,
+  PhoneCall, FileSpreadsheet, Wrench, ClipboardList,
 } from 'lucide-react'
 
 import { PlatformFX } from '@/components/public/platform-fx'
 import { PricingPlans } from '@/components/public/pricing-plans'
-import { MobileNav } from '@/components/public/mobile-nav'
+import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
+import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
+import { MP } from '@/lib/marketplace-theme'
 
 /* ──────────────────────────────────────────────────────────────────────────────
    GH HOSTELS — Hostel management SaaS pitch, for hostel owners/operators.
@@ -74,17 +76,21 @@ export const metadata: Metadata = {
   category: 'business',
 }
 
-/* ── Design tokens (Ghanaian palette) ─────────────────────────── */
-const FOREST_DEEP = '#0A3729'
-const FOREST_MID = '#1B6E54'
-const GOLD = '#D4A24C'
-const GOLD_SOFT = '#F5C26B'
-const GOLD_DEEP = '#B8842E'
-const IVORY = '#F5E9D2'
-const INK = '#0A0A08'
+/* ── Design tokens — remapped to the shared light marketplace palette
+   (lib/marketplace-theme.ts). Names kept as-is to minimize the diff across
+   the rest of this file; FOREST_DEEP/IVORY/INK now mean "dark text",
+   "dark text" (was light-on-dark, now dark-on-light), and "page background"
+   (was dark ink, now light cream) respectively. ─────────────────────── */
+const FOREST_DEEP = MP.ink
+const FOREST_MID = MP.greenDeep
+const GOLD = MP.gold
+const GOLD_SOFT = MP.goldSoft
+const GOLD_DEEP = MP.goldDeep
+const IVORY = MP.ink
+const INK = MP.bg
 
-const HAIR = 'rgba(245, 233, 210, 0.10)'
-const HAIR_STRONG = 'rgba(245, 233, 210, 0.18)'
+const HAIR = MP.border
+const HAIR_STRONG = MP.borderStrong
 
 /* ── Content ──────────────────────────────────────────────────── */
 
@@ -333,12 +339,12 @@ export default function ForOwnersPage() {
 
   return (
     <div
-      className="min-h-screen text-[#f5e9d2] selection:bg-[#D4A24C]/40 selection:text-white antialiased"
-      style={{ background: INK }}
+      className="relative min-h-screen antialiased"
+      style={{ background: MP.bg }}
     >
       {/* Adinkra symbol collage — same fixed wallpaper texture as the
           marketplace homepage, for visual continuity between the two */}
-      <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg" aria-hidden="true" />
+      <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg-light" aria-hidden="true" />
 
       {/* Hydrate motion + glow + counters */}
       <PlatformFX />
@@ -348,80 +354,7 @@ export default function ForOwnersPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
 
-      {/* ── NAV ────────────────────────────────────────────────── */}
-      <nav
-        className="sticky top-0 z-50 backdrop-blur-2xl"
-        style={{
-          background: 'rgba(10,10,8,0.72)',
-          borderBottom: `1px solid ${HAIR}`,
-        }}
-      >
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-          <Link href="/" className="group flex items-center gap-2.5">
-            <Image
-              src="/logo-mark.svg"
-              alt="GH Hostels"
-              width={36}
-              height={36}
-              className="h-9 w-9 transition-transform duration-500 group-hover:rotate-[6deg]"
-              priority
-            />
-            <span
-              className="text-[15px] font-bold tracking-[0.16em]"
-              style={{ fontFamily: 'Plus Jakarta Sans, Inter, sans-serif', color: IVORY }}
-            >
-              GH-HOSTELS
-            </span>
-          </Link>
-
-          <div className="hidden items-center gap-9 md:flex">
-            <Link
-              href="/hostels"
-              className="text-[13px] font-medium tracking-[0.08em] uppercase text-[#a8a89e] transition-colors duration-300 hover:text-[#F5E9D2]"
-            >
-              Find a Hostel
-            </Link>
-            <a
-              href="/for-owners"
-              className="text-[13px] font-medium tracking-[0.08em] uppercase text-[#a8a89e] transition-colors duration-300 hover:text-[#F5E9D2]"
-            >
-              For Hostel Owners
-            </a>
-            {['Pricing', 'FAQ'].map((l) => (
-              <a
-                key={l}
-                href={`#${l.toLowerCase()}`}
-                className="text-[13px] font-medium tracking-[0.08em] uppercase text-[#a8a89e] transition-colors duration-300 hover:text-[#F5E9D2]"
-              >
-                {l}
-              </a>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="hidden text-[13px] font-medium text-[#a8a89e] transition-colors hover:text-[#F5E9D2] md:inline-flex"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/signup?plan=trial"
-              className="platform-cta hidden rounded-full px-4 py-2 text-[13px] font-semibold md:inline-flex"
-              style={{
-                background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 60%, ${GOLD_DEEP} 100%)`,
-                color: FOREST_DEEP,
-                boxShadow: '0 6px 20px -8px rgba(212,162,76,0.55)',
-              }}
-            >
-              List your hostel free
-            </Link>
-
-            {/* Mobile hamburger + slide-down menu */}
-            <MobileNav />
-          </div>
-        </div>
-      </nav>
+      <MarketplaceNav />
 
       {/* ── FOR HOSTEL OWNERS — management-system pitch ─────────── */}
       <section id="for-owners" className="relative overflow-hidden">
@@ -450,8 +383,8 @@ export default function ForOwnersPage() {
             className="mx-auto mb-8 inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] sm:text-[12px]"
             style={{
               border: `1px solid ${HAIR_STRONG}`,
-              background: 'rgba(15, 76, 58, 0.35)',
-              color: IVORY,
+              background: MP.surfaceSoft,
+              color: FOREST_MID,
             }}
             data-platform-reveal
           >
@@ -494,7 +427,7 @@ export default function ForOwnersPage() {
               className="platform-word mt-4 block text-[52%] italic"
               style={{
                 animationDelay: `${120 + (heroWords.length + 1) * 90}ms`,
-                color: 'rgba(245, 233, 210, 0.55)',
+                color: 'rgba(20,35,29, 0.55)',
                 fontFamily: 'Georgia, serif',
                 letterSpacing: '-0.02em',
               }}
@@ -505,7 +438,7 @@ export default function ForOwnersPage() {
 
           <p
             className="mx-auto mt-8 max-w-[600px] text-[15px] leading-relaxed sm:mt-10 sm:text-[17px]"
-            style={{ color: 'rgba(245, 233, 210, 0.65)' }}
+            style={{ color: 'rgba(20,35,29, 0.65)' }}
             data-platform-reveal
             data-platform-reveal-delay="450"
           >
@@ -535,7 +468,7 @@ export default function ForOwnersPage() {
             </Link>
             <a
               href="#features"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-medium transition-colors duration-300 hover:bg-[#F5E9D2]/10 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-medium transition-colors duration-300 hover:bg-[#14231D]/5 sm:w-auto"
               style={{ border: `1px solid ${HAIR_STRONG}`, color: IVORY }}
             >
               See how it works
@@ -544,7 +477,7 @@ export default function ForOwnersPage() {
 
           <p
             className="mt-5 text-[12px]"
-            style={{ color: 'rgba(245, 233, 210, 0.38)' }}
+            style={{ color: 'rgba(20,35,29, 0.38)' }}
             data-platform-reveal
             data-platform-reveal-delay="750"
           >
@@ -569,21 +502,21 @@ export default function ForOwnersPage() {
               className="overflow-hidden rounded-2xl shadow-2xl"
               style={{
                 border: `1px solid ${HAIR_STRONG}`,
-                boxShadow: '0 60px 120px -40px rgba(0,0,0,0.6), 0 30px 60px -20px rgba(15,76,58,0.4)',
+                boxShadow: '0 40px 80px -30px rgba(20,35,29,0.18), 0 20px 40px -15px rgba(27,110,84,0.12)',
               }}
             >
               <div
                 className="flex items-center gap-2 px-4 py-3"
-                style={{ borderBottom: `1px solid ${HAIR}`, background: 'rgba(245,233,210,0.04)' }}
+                style={{ borderBottom: `1px solid ${HAIR}`, background: 'rgba(20,35,29,0.04)' }}
               >
                 <div className="flex gap-1.5">
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(245,233,210,0.12)' }} />
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(245,233,210,0.12)' }} />
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(245,233,210,0.12)' }} />
+                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(20,35,29,0.12)' }} />
+                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(20,35,29,0.12)' }} />
+                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(20,35,29,0.12)' }} />
                 </div>
                 <div
                   className="ml-4 flex-1 rounded-md py-1 px-3 text-center text-[10px]"
-                  style={{ background: 'rgba(245,233,210,0.04)', color: 'rgba(245,233,210,0.45)' }}
+                  style={{ background: 'rgba(20,35,29,0.04)', color: 'rgba(20,35,29,0.45)' }}
                 >
                   app.abremponghostel.com/dashboard
                 </div>
@@ -643,7 +576,7 @@ export default function ForOwnersPage() {
               </p>
               <p
                 className="mt-2 text-[11px] uppercase tracking-[0.16em] sm:text-[12px]"
-                style={{ color: 'rgba(245,233,210,0.5)' }}
+                style={{ color: 'rgba(20,35,29,0.5)' }}
               >
                 {s.label}
               </p>
@@ -656,7 +589,7 @@ export default function ForOwnersPage() {
       <section className="py-14 sm:py-18" style={{ borderBottom: `1px solid ${HAIR}` }}>
         <p
           className="mb-7 text-center text-[11px] font-medium uppercase tracking-[0.24em]"
-          style={{ color: 'rgba(245,233,210,0.45)' }}
+          style={{ color: 'rgba(20,35,29,0.45)' }}
         >
           Powering hostels serving these institutions
         </p>
@@ -666,7 +599,7 @@ export default function ForOwnersPage() {
               <span
                 key={`${u}-${i}`}
                 className="mx-6 inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-[14px] font-medium sm:text-[15px]"
-                style={{ color: 'rgba(245,233,210,0.62)' }}
+                style={{ color: 'rgba(20,35,29,0.62)' }}
               >
                 <Building2 className="h-3.5 w-3.5" style={{ color: GOLD }} />
                 {u}
@@ -689,13 +622,13 @@ export default function ForOwnersPage() {
               style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
             >
               Everything your hostel needs,
-              <span className="block italic" style={{ color: 'rgba(245,233,210,0.55)' }}>
+              <span className="block italic" style={{ color: 'rgba(20,35,29,0.55)' }}>
                 elegantly unified.
               </span>
             </h2>
             <p
               className="mx-auto mt-6 max-w-[460px] text-[14px] sm:text-[16px]"
-              style={{ color: 'rgba(245,233,210,0.55)' }}
+              style={{ color: 'rgba(20,35,29,0.55)' }}
             >
               One login. No spreadsheets. No third-party patchwork. Just a system that works — built in Ghana, for Ghana.
             </p>
@@ -711,7 +644,7 @@ export default function ForOwnersPage() {
                   style={{
                     border: `1px solid ${HAIR_STRONG}`,
                     background:
-                      'linear-gradient(180deg, rgba(245,233,210,0.025) 0%, rgba(245,233,210,0.005) 100%)',
+                      'linear-gradient(180deg, rgba(20,35,29,0.025) 0%, rgba(20,35,29,0.005) 100%)',
                   }}
                   data-platform-reveal
                   data-platform-reveal-delay={String(i * 60)}
@@ -733,7 +666,7 @@ export default function ForOwnersPage() {
                   </h3>
                   <p
                     className="mt-2.5 text-[14px] leading-relaxed"
-                    style={{ color: 'rgba(245,233,210,0.58)' }}
+                    style={{ color: 'rgba(20,35,29,0.58)' }}
                   >
                     {f.desc}
                   </p>
@@ -756,7 +689,7 @@ export default function ForOwnersPage() {
               style={{ fontFamily: 'Georgia, serif', color: IVORY }}
             >
               Stop bleeding hours.
-              <span className="block italic" style={{ color: 'rgba(245,233,210,0.55)' }}>
+              <span className="block italic" style={{ color: 'rgba(20,35,29,0.55)' }}>
                 Spreadsheets weren&apos;t built for hostels.
               </span>
             </h2>
@@ -770,8 +703,8 @@ export default function ForOwnersPage() {
             <div
               className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-1 px-5 py-4 text-[12px] font-medium uppercase tracking-[0.14em]"
               style={{
-                background: 'rgba(245,233,210,0.04)',
-                color: 'rgba(245,233,210,0.55)',
+                background: 'rgba(20,35,29,0.04)',
+                color: 'rgba(20,35,29,0.55)',
                 borderBottom: `1px solid ${HAIR}`,
               }}
             >
@@ -793,12 +726,12 @@ export default function ForOwnersPage() {
                 key={row.label}
                 className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-1 px-5 py-3.5 text-[14px]"
                 style={{
-                  background: i % 2 ? 'rgba(245,233,210,0.015)' : 'transparent',
+                  background: i % 2 ? 'rgba(20,35,29,0.015)' : 'transparent',
                   color: IVORY,
                   borderBottom: i === COMPARISON.length - 1 ? 'none' : `1px solid ${HAIR}`,
                 }}
               >
-                <div style={{ color: 'rgba(245,233,210,0.78)' }}>{row.label}</div>
+                <div style={{ color: 'rgba(20,35,29,0.78)' }}>{row.label}</div>
                 <ComparisonCell value={row.spreadsheet} />
                 <ComparisonCell value={row.traditional} />
                 <ComparisonCell value={row.gh} highlight />
@@ -824,7 +757,7 @@ export default function ForOwnersPage() {
               style={{ fontFamily: 'Georgia, serif', color: IVORY }}
             >
               The team that
-              <span className="italic" style={{ color: 'rgba(245,233,210,0.55)' }}> sleeps at night.</span>
+              <span className="italic" style={{ color: 'rgba(20,35,29,0.55)' }}> sleeps at night.</span>
             </h2>
           </div>
 
@@ -836,7 +769,7 @@ export default function ForOwnersPage() {
                 style={{
                   border: `1px solid ${HAIR_STRONG}`,
                   background:
-                    'linear-gradient(180deg, rgba(245,233,210,0.03) 0%, rgba(245,233,210,0.005) 100%)',
+                    'linear-gradient(180deg, rgba(20,35,29,0.03) 0%, rgba(20,35,29,0.005) 100%)',
                 }}
                 data-platform-reveal
                 data-platform-reveal-delay={String(i * 80)}
@@ -848,7 +781,7 @@ export default function ForOwnersPage() {
                 </div>
                 <blockquote
                   className="mt-5 flex-1 text-[15px] leading-relaxed"
-                  style={{ color: 'rgba(245,233,210,0.85)' }}
+                  style={{ color: 'rgba(20,35,29,0.85)' }}
                 >
                   &ldquo;{t.quote}&rdquo;
                 </blockquote>
@@ -863,7 +796,7 @@ export default function ForOwnersPage() {
                     <p className="text-[13.5px] font-semibold" style={{ color: IVORY }}>
                       {t.name}
                     </p>
-                    <p className="text-[12px]" style={{ color: 'rgba(245,233,210,0.5)' }}>
+                    <p className="text-[12px]" style={{ color: 'rgba(20,35,29,0.5)' }}>
                       {t.role}
                     </p>
                   </div>
@@ -889,7 +822,7 @@ export default function ForOwnersPage() {
             </h2>
             <p
               className="mx-auto mt-5 max-w-[440px] text-[14px] sm:text-[16px]"
-              style={{ color: 'rgba(245,233,210,0.55)' }}
+              style={{ color: 'rgba(20,35,29,0.55)' }}
             >
               Start free. Pick a plan when you&apos;re ready. No hidden charges, no per-occupant fees.
             </p>
@@ -908,7 +841,7 @@ export default function ForOwnersPage() {
                 <p className="text-[14px] font-semibold" style={{ color: IVORY }}>
                   Not ready to commit?
                 </p>
-                <p className="text-[13px]" style={{ color: 'rgba(245,233,210,0.5)' }}>
+                <p className="text-[13px]" style={{ color: 'rgba(20,35,29,0.5)' }}>
                   Start a 30-day free trial. All Growth features, no card required.
                 </p>
               </div>
@@ -963,7 +896,7 @@ export default function ForOwnersPage() {
                 </summary>
                 <p
                   className="platform-acc-body mt-3 pr-8 text-[14.5px] leading-relaxed"
-                  style={{ color: 'rgba(245,233,210,0.62)' }}
+                  style={{ color: 'rgba(20,35,29,0.62)' }}
                 >
                   {faq.a}
                 </p>
@@ -1006,7 +939,7 @@ export default function ForOwnersPage() {
           </h2>
           <p
             className="mx-auto mt-6 max-w-[440px] text-[15px]"
-            style={{ color: 'rgba(245,233,210,0.6)' }}
+            style={{ color: 'rgba(20,35,29,0.6)' }}
             data-platform-reveal
             data-platform-reveal-delay="200"
           >
@@ -1032,7 +965,7 @@ export default function ForOwnersPage() {
             </Link>
             <a
               href="mailto:sales@gh-hostels.com"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-medium transition-colors duration-300 hover:bg-[#F5E9D2]/10 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-medium transition-colors duration-300 hover:bg-[#14231D]/5 sm:w-auto"
               style={{ border: `1px solid ${HAIR_STRONG}`, color: IVORY }}
             >
               <PhoneCall className="h-4 w-4" /> Talk to sales
@@ -1040,76 +973,8 @@ export default function ForOwnersPage() {
           </div>
         </div>
       </section>
-      {/* ── FOOTER ──────────────────────────────────────────────── */}
-      <footer className="relative" style={{ borderTop: `1px solid ${HAIR}` }}>
-        <div className="mx-auto max-w-6xl px-6 py-14">
-          <div className="grid gap-10 md:grid-cols-4">
-            <div>
-              <Link href="/" className="flex items-center gap-2.5">
-                <Image src="/logo-mark.svg" alt="GH-HOSTELS" width={32} height={32} className="h-8 w-8" />
-                <span
-                  className="text-[13px] font-bold tracking-[0.16em]"
-                  style={{ color: IVORY, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
-                >
-                  GH-HOSTELS
-                </span>
-              </Link>
-              <p className="mt-4 text-[13px] leading-relaxed" style={{ color: 'rgba(245,233,210,0.45)' }}>
-                Modern hostel management software, built in Ghana, for Ghanaian hostels and West Africa.
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: GOLD }}>
-                Product
-              </p>
-              <ul className="mt-4 space-y-2.5 text-[13px]" style={{ color: 'rgba(245,233,210,0.6)' }}>
-                <li><a href="#features" className="transition-colors hover:text-[#F5E9D2]">Features</a></li>
-                <li><a href="#pricing" className="transition-colors hover:text-[#F5E9D2]">Pricing</a></li>
-                <li><a href="#faq" className="transition-colors hover:text-[#F5E9D2]">FAQ</a></li>
-                <li><Link href="/compare/cloudbeds" className="transition-colors hover:text-[#F5E9D2]">vs Cloudbeds</Link></li>
-                <li><Link href="/compare/spreadsheet" className="transition-colors hover:text-[#F5E9D2]">vs Spreadsheet</Link></li>
-                <li><Link href="/signup?plan=trial" className="transition-colors hover:text-[#F5E9D2]">Start trial</Link></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: GOLD }}>
-                Company
-              </p>
-              <ul className="mt-4 space-y-2.5 text-[13px]" style={{ color: 'rgba(245,233,210,0.6)' }}>
-                <li><a href="mailto:hello@gh-hostels.com" className="transition-colors hover:text-[#F5E9D2]">Contact</a></li>
-                <li><a href="mailto:sales@gh-hostels.com" className="transition-colors hover:text-[#F5E9D2]">Sales</a></li>
-                <li><a href="mailto:support@gh-hostels.com" className="transition-colors hover:text-[#F5E9D2]">Support</a></li>
-                <li><Link href="/login" className="transition-colors hover:text-[#F5E9D2]">Log in</Link></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: GOLD }}>
-                Trust
-              </p>
-              <ul className="mt-4 space-y-2.5 text-[13px]" style={{ color: 'rgba(245,233,210,0.6)' }}>
-                <li className="inline-flex items-center gap-2"><Lock className="h-3.5 w-3.5" style={{ color: GOLD }} /> Encrypted at rest</li>
-                <li className="inline-flex items-center gap-2"><Shield className="h-3.5 w-3.5" style={{ color: GOLD }} /> Row-level isolation</li>
-                <li className="inline-flex items-center gap-2"><Smartphone className="h-3.5 w-3.5" style={{ color: GOLD }} /> Paystack MoMo + card</li>
-                <li className="inline-flex items-center gap-2"><FileText className="h-3.5 w-3.5" style={{ color: GOLD }} /> GRA-ready accounting</li>
-              </ul>
-            </div>
-          </div>
 
-          <div
-            className="mt-10 flex flex-col items-center justify-between gap-4 pt-6 sm:flex-row"
-            style={{ borderTop: `1px solid ${HAIR}` }}
-          >
-            <p className="text-[12px]" style={{ color: 'rgba(245,233,210,0.4)' }}>
-              © {new Date().getFullYear()} GH Hostels · Made in Accra, Ghana
-            </p>
-            <div className="flex gap-6 text-[12px]" style={{ color: 'rgba(245,233,210,0.4)' }}>
-              <Link href="/privacy" className="transition-colors hover:text-[#F5E9D2]">Privacy</Link>
-              <Link href="/terms" className="transition-colors hover:text-[#F5E9D2]">Terms</Link>
-              <a href="mailto:support@gh-hostels.com" className="transition-colors hover:text-[#F5E9D2]">Support</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <MarketplaceFooter />
     </div>
   )
 }
@@ -1128,7 +993,7 @@ function ComparisonCell({
       <div className="text-center">
         <Check
           className="mx-auto h-4 w-4"
-          style={{ color: highlight ? GOLD : 'rgba(245,233,210,0.5)' }}
+          style={{ color: highlight ? GOLD : 'rgba(20,35,29,0.5)' }}
           strokeWidth={3}
         />
       </div>
@@ -1136,20 +1001,20 @@ function ComparisonCell({
   }
   if (value === 'manual') {
     return (
-      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: 'rgba(245,233,210,0.42)' }}>
+      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: 'rgba(20,35,29,0.42)' }}>
         Manual
       </div>
     )
   }
   if (value === 'partial') {
     return (
-      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: 'rgba(245,233,210,0.42)' }}>
+      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: 'rgba(20,35,29,0.42)' }}>
         Partial
       </div>
     )
   }
   return (
-    <div className="text-center text-[18px]" style={{ color: 'rgba(245,233,210,0.22)' }}>
+    <div className="text-center text-[18px]" style={{ color: 'rgba(20,35,29,0.22)' }}>
       —
     </div>
   )

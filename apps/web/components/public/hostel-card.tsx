@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { MapPin, Heart, Building2 } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
 import type { DirectoryHostel } from '@/lib/directory'
+import { MP } from '@/lib/marketplace-theme'
 
 /**
  * Grid-style hostel card — the "discovery" card used on the homepage's
@@ -17,9 +18,10 @@ export function HostelCard({ hostel }: { hostel: DirectoryHostel }) {
   return (
     <Link
       href={`/hostels/${hostel.slug}`}
-      className="group block overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+      className="group block overflow-hidden rounded-xl bg-white shadow-none transition-shadow hover:shadow-md"
+      style={{ border: `1px solid ${MP.border}` }}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-100">
+      <div className="relative aspect-[4/3] w-full overflow-hidden" style={{ background: MP.surfaceSoft }}>
         {hostel.hero_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -29,29 +31,29 @@ export function HostelCard({ hostel }: { hostel: DirectoryHostel }) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <Building2 className="h-10 w-10 text-neutral-300" />
+            <Building2 className="h-10 w-10" style={{ color: MP.goldDeep, opacity: 0.35 }} />
           </div>
         )}
         <span className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm">
-          <Heart className="h-4 w-4 text-neutral-500" />
+          <Heart className="h-4 w-4" style={{ color: MP.textSecondary }} />
         </span>
       </div>
 
       <div className="p-3.5">
-        <h3 className="truncate text-[15px] font-bold text-neutral-900">{hostel.name}</h3>
+        <h3 className="truncate text-[15px] font-bold" style={{ color: MP.ink }}>{hostel.name}</h3>
         {location && (
-          <p className="mt-0.5 flex items-center gap-1 text-[13px] text-neutral-500">
+          <p className="mt-0.5 flex items-center gap-1 text-[13px]" style={{ color: MP.textSecondary }}>
             <MapPin className="h-3 w-3 shrink-0" />
             <span className="truncate">{location}</span>
           </p>
         )}
-        <p className="mt-1.5 text-[12px] text-neutral-500">
+        <p className="mt-1.5 text-[12px]" style={{ color: MP.textSecondary }}>
           {hostel.category_count} room type{hostel.category_count === 1 ? '' : 's'} available
         </p>
 
         <div className="mt-3 flex items-end justify-between">
-          <span className="text-[11px] text-neutral-400">Starting from</span>
-          <span className="text-[16px] font-bold text-[#003580]">{formatGHS(hostel.from_rate)}</span>
+          <span className="text-[11px]" style={{ color: MP.textSecondary, opacity: 0.8 }}>Starting from</span>
+          <span className="text-[16px] font-bold" style={{ color: MP.green }}>{formatGHS(hostel.from_rate)}</span>
         </div>
       </div>
     </Link>
