@@ -2,17 +2,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Mail, ArrowLeft, BedDouble } from 'lucide-react'
+import { MapPin, Phone, Mail, ArrowLeft, BedDouble, Heart, Share2 } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS } from '@/lib/utils'
-
-const INK = '#0A0A08'
-const IVORY = '#F5E9D2'
-const GOLD = '#D4A24C'
-const GOLD_SOFT = '#F5C26B'
-const HAIR = 'rgba(245,233,210,0.10)'
-const HAIR_STRONG = 'rgba(245,233,210,0.18)'
-const FOREST_MID = '#1B6E54'
+import { amenityIcon } from '@/lib/amenity-icons'
 
 interface CmsContent {
   hero_heading?:    string | null
@@ -68,141 +61,207 @@ export default async function HostelProfilePage({ params }: { params: Promise<{ 
     ? `https://${tenant.custom_domain}/book`
     : `https://${tenant.slug}.${rootDomain}/book`
 
+  const location = [tenant.address_city, tenant.address_region].filter(Boolean).join(', ')
+
+  // Gallery: prefer the CMS gallery, fall back to every room photo across
+  // categories (real, owner-uploaded — no stock imagery).
+  const roomPhotos = categories.flatMap((c) => c.image_urls ?? [])
+  const gallery = (cms.gallery_urls && cms.gallery_urls.length > 0 ? cms.gallery_urls : roomPhotos).slice(0, 9)
+
+  // Most popular facilities: dedupe amenities across all room categories.
+  const facilities = Array.from(new Set(categories.flatMap((c) => c.amenities ?? []))).slice(0, 10)
+  const minCapacity = categories.length > 0 ? Math.min(...categories.map((c) => c.capacity)) : null
+
   return (
-    <div className="min-h-screen text-[#f5e9d2] antialiased" style={{ background: INK }}>
-      <nav
-        className="sticky top-0 z-50 backdrop-blur-2xl"
-        style={{ background: 'rgba(10,10,8,0.72)', borderBottom: `1px solid ${HAIR}` }}
-      >
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-          <Link href="/hostels" className="flex items-center gap-1.5 text-[13px] font-medium" style={{ color: 'rgba(245,233,210,0.6)' }}>
+    <div className="min-h-screen bg-neutral-50">
+      {/* ── Nav ─────────────────────────────────────────────────── */}
+      <div className="bg-[#003580] py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/logo-mark.svg" alt="GH Hostels" width={26} height={26} className="rounded" />
+            <span className="text-[13px] font-bold tracking-wide text-white">GH-HOSTELS</span>
+          </Link>
+          <Link href="/hostels" className="flex items-center gap-1.5 text-[13px] font-medium text-white/90 hover:text-white">
             <ArrowLeft className="h-3.5 w-3.5" /> All hostels
           </Link>
-          <Image src="/logo-mark.svg" alt="GH Hostels" width={28} height={28} />
         </div>
-      </nav>
+      </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-        <div className="flex items-start gap-4">
-          {tenant.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={tenant.logo_url} alt={tenant.name} className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
-          ) : (
-            <div
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl"
-              style={{ background: `linear-gradient(135deg, ${FOREST_MID}, ${GOLD})` }}
-            >
-              <span className="text-[22px] font-bold text-white">{tenant.name.slice(0, 1).toUpperCase()}</span>
-            </div>
-          )}
+      {/* ── Breadcrumb ──────────────────────────────────────────── */}
+      <div className="mx-auto max-w-6xl px-4 py-3 text-[13px] text-neutral-500 sm:px-6">
+        <Link href="/" className="text-[#0071c2] hover:underline">Home</Link>
+        <span className="mx-1.5">›</span>
+        <Link href="/hostels" className="text-[#0071c2] hover:underline">Hostels</Link>
+        {tenant.address_region && (
+          <>
+            <span className="mx-1.5">›</span>
+            <Link href={`/hostels?region=${encodeURIComponent(tenant.address_region)}`} className="text-[#0071c2] hover:underline">
+              {tenant.address_region}
+            </Link>
+          </>
+        )}
+        <span className="mx-1.5">›</span>
+        <span>{tenant.name}</span>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+        {/* ── Header ────────────────────────────────────────────── */}
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
           <div>
-            <h1 className="text-[26px] font-normal leading-tight" style={{ fontFamily: 'Georgia, serif', color: IVORY }}>
-              {cms.hero_heading || tenant.name}
-            </h1>
-            {(tenant.address_city || tenant.address_region) && (
-              <p className="mt-1 flex items-center gap-1 text-sm" style={{ color: 'rgba(245,233,210,0.55)' }}>
-                <MapPin className="h-3.5 w-3.5" />
-                {[tenant.address_city, tenant.address_region].filter(Boolean).join(', ')}
+            <h1 className="text-[26px] font-bold text-neutral-900">{cms.hero_heading || tenant.name}</h1>
+            {location && (
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-neutral-600">
+                <MapPin className="h-4 w-4 text-[#0071c2]" />
+                {location}
               </p>
             )}
           </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 text-neutral-500 hover:bg-neutral-100" aria-label="Save">
+              <Heart className="h-4 w-4" />
+            </button>
+            <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 text-neutral-500 hover:bg-neutral-100" aria-label="Share">
+              <Share2 className="h-4 w-4" />
+            </button>
+            {categories.length > 0 && (
+              <a
+                href={bookUrl}
+                className="rounded-lg bg-[#0071c2] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#00487a]"
+              >
+                Reserve
+              </a>
+            )}
+          </div>
         </div>
 
-        {(cms.hero_subheading || tenant.tagline) && (
-          <p className="mt-6 text-[15px] leading-relaxed" style={{ color: 'rgba(245,233,210,0.7)' }}>
-            {cms.hero_subheading || tenant.tagline}
-          </p>
-        )}
-
-        {cms.about_text && (
-          <p className="mt-4 text-sm leading-relaxed" style={{ color: 'rgba(245,233,210,0.6)' }}>
-            {cms.about_text}
-          </p>
-        )}
-
-        {cms.gallery_urls && cms.gallery_urls.length > 0 && (
-          <div className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {cms.gallery_urls.slice(0, 8).map((url, i) => (
+        {/* ── Gallery ───────────────────────────────────────────── */}
+        {gallery.length > 0 ? (
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:grid-rows-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={gallery[0]} alt={tenant.name} className="col-span-2 row-span-2 aspect-[4/3] w-full rounded-l-xl object-cover sm:aspect-auto sm:h-full" />
+            {gallery.slice(1, 5).map((url, i) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={url} alt="" className="aspect-square w-full rounded-xl object-cover" />
+              <img
+                key={i}
+                src={url}
+                alt=""
+                className={`aspect-square w-full object-cover sm:aspect-auto sm:h-full ${i === 1 ? 'sm:rounded-tr-xl' : ''} ${i === 3 ? 'sm:rounded-br-xl' : ''}`}
+              />
             ))}
           </div>
+        ) : (
+          <div className="mt-5 flex aspect-[16/7] w-full items-center justify-center rounded-xl bg-neutral-100">
+            <BedDouble className="h-10 w-10 text-neutral-300" />
+          </div>
         )}
 
-        {/* Room types */}
-        <div className="mt-10">
-          <h2 className="text-lg font-semibold" style={{ color: IVORY }}>Rooms &amp; pricing</h2>
-          {categories.length === 0 ? (
-            <p className="mt-3 text-sm" style={{ color: 'rgba(245,233,210,0.5)' }}>
-              No rooms currently listed — check back soon.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {categories.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex items-center justify-between gap-4 rounded-2xl p-4"
-                  style={{ border: `1px solid ${HAIR_STRONG}`, background: 'rgba(245,233,210,0.03)' }}
-                >
-                  <div className="flex items-center gap-3">
-                    {c.image_urls && c.image_urls.length > 0 ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={c.image_urls[0]}
-                        alt={c.name}
-                        className="h-14 w-14 shrink-0 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"
-                        style={{ background: 'rgba(245,233,210,0.06)' }}
-                      >
-                        <BedDouble className="h-5 w-5" style={{ color: GOLD }} />
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: IVORY }}>{c.name}</p>
-                      {c.description && (
-                        <p className="mt-0.5 max-w-md text-xs" style={{ color: 'rgba(245,233,210,0.5)' }}>{c.description}</p>
-                      )}
-                      {c.amenities && c.amenities.length > 0 && (
-                        <p className="mt-1 text-[11px]" style={{ color: 'rgba(245,233,210,0.4)' }}>
-                          {c.amenities.slice(0, 5).join(' · ')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <span className="shrink-0 text-sm font-semibold" style={{ color: GOLD_SOFT }}>
-                    {formatGHS(c.base_rate)} / {c.rate_unit}
-                  </span>
-                </div>
-              ))}
+        <div className="mt-8 gap-8 lg:flex">
+          {/* ── Main column ─────────────────────────────────────── */}
+          <div className="min-w-0 flex-1 space-y-10">
+            {/* Tabs (in-page anchors) */}
+            <div className="flex gap-6 border-b border-neutral-200 text-[14px] font-medium text-neutral-500">
+              <a href="#overview" className="border-b-2 border-[#0071c2] pb-3 text-[#0071c2]">Overview</a>
+              <a href="#rooms" className="pb-3 hover:text-neutral-800">Rooms &amp; Prices</a>
+              {facilities.length > 0 && <a href="#facilities" className="pb-3 hover:text-neutral-800">Facilities</a>}
             </div>
-          )}
-        </div>
 
-        {/* Contact + book CTA */}
-        <div
-          className="mt-10 flex flex-col items-start justify-between gap-4 rounded-2xl p-5 sm:flex-row sm:items-center"
-          style={{ border: `1px solid ${HAIR_STRONG}`, background: 'linear-gradient(180deg, rgba(15,76,58,0.18) 0%, rgba(15,76,58,0.04) 100%)' }}
-        >
-          <div className="space-y-1 text-sm" style={{ color: 'rgba(245,233,210,0.6)' }}>
-            {tenant.contact_phone && (
-              <p className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {tenant.contact_phone}</p>
-            )}
-            {tenant.contact_email && (
-              <p className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {tenant.contact_email}</p>
+            <section id="overview" className="space-y-3">
+              {(cms.hero_subheading || tenant.tagline) && (
+                <p className="text-[15px] leading-relaxed text-neutral-800">{cms.hero_subheading || tenant.tagline}</p>
+              )}
+              {cms.about_text && (
+                <div>
+                  <h2 className="text-[17px] font-bold text-neutral-900">About this hostel</h2>
+                  <p className="mt-2 text-[14px] leading-relaxed text-neutral-600">{cms.about_text}</p>
+                </div>
+              )}
+              {(tenant.contact_phone || tenant.contact_email) && (
+                <div className="flex flex-wrap gap-4 pt-2 text-[13px] text-neutral-600">
+                  {tenant.contact_phone && <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {tenant.contact_phone}</span>}
+                  {tenant.contact_email && <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {tenant.contact_email}</span>}
+                </div>
+              )}
+            </section>
+
+            {/* Rooms & Prices */}
+            <section id="rooms">
+              <h2 className="text-[17px] font-bold text-neutral-900">Rooms &amp; Prices</h2>
+              {categories.length === 0 ? (
+                <p className="mt-3 text-sm text-neutral-500">No rooms currently listed — check back soon.</p>
+              ) : (
+                <div className="mt-4 space-y-4">
+                  {categories.map((c) => (
+                    <div key={c.id} className="flex flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-4 sm:flex-row sm:items-center">
+                      {c.image_urls && c.image_urls.length > 0 ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.image_urls[0]} alt={c.name} className="h-32 w-full shrink-0 rounded-lg object-cover sm:h-20 sm:w-28" />
+                      ) : (
+                        <div className="flex h-32 w-full shrink-0 items-center justify-center rounded-lg bg-neutral-100 sm:h-20 sm:w-28">
+                          <BedDouble className="h-6 w-6 text-neutral-300" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-semibold text-neutral-900">{c.name}</p>
+                        {c.description && <p className="mt-0.5 text-[13px] text-neutral-500">{c.description}</p>}
+                        {c.amenities && c.amenities.length > 0 && (
+                          <p className="mt-1 text-[12px] text-neutral-400">{c.amenities.slice(0, 5).join(' · ')}</p>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-[18px] font-bold text-neutral-900">{formatGHS(c.base_rate)}</p>
+                        <p className="text-[12px] text-neutral-500">per {c.rate_unit}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Facilities */}
+            {facilities.length > 0 && (
+              <section id="facilities">
+                <h2 className="text-[17px] font-bold text-neutral-900">Most popular facilities</h2>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {facilities.map((f) => {
+                    const Icon = amenityIcon(f)
+                    return (
+                      <div key={f} className="flex items-center gap-2 text-[13px] text-neutral-700">
+                        <Icon className="h-4 w-4 shrink-0 text-[#008009]" />
+                        {f}
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
             )}
           </div>
-          {categories.length > 0 && (
-            <a
-              href={bookUrl}
-              className="shrink-0 rounded-full px-6 py-3 text-sm font-semibold"
-              style={{ background: GOLD, color: INK }}
-            >
-              Book now
-            </a>
-          )}
+
+          {/* ── Sidebar ───────────────────────────────────────────── */}
+          <aside className="mt-8 w-full shrink-0 lg:mt-0 lg:w-72">
+            <div className="sticky top-4 space-y-4">
+              <div className="rounded-xl border border-neutral-200 bg-white p-5">
+                <h3 className="text-[15px] font-bold text-neutral-900">Property highlights</h3>
+                <ul className="mt-3 space-y-2.5 text-[13px] text-neutral-600">
+                  <li>{categories.length} room type{categories.length === 1 ? '' : 's'} available</li>
+                  {minCapacity != null && <li>From {minCapacity} guest{minCapacity === 1 ? '' : 's'} per room</li>}
+                  {location && <li>Located in {location}</li>}
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-neutral-200 bg-white p-5">
+                <h3 className="text-[14px] font-semibold text-neutral-900">Already have a room here?</h3>
+                <p className="mt-1.5 text-[13px] text-neutral-500">
+                  If your hostel management already sent you login details, sign in to your student portal.
+                </p>
+                <Link
+                  href="/login"
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-neutral-300 px-4 py-2 text-[13px] font-semibold text-neutral-700 hover:bg-neutral-50"
+                >
+                  Sign in
+                </Link>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </div>

@@ -9,8 +9,8 @@ import { createClient } from '@/lib/supabase/server'
 import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
 import { PlatformFX } from '@/components/public/platform-fx'
 import { MobileNav } from '@/components/public/mobile-nav'
+import { HostelCard } from '@/components/public/hostel-card'
 import { searchHostels } from '@/lib/directory'
-import { formatGHS } from '@/lib/utils'
 
 /* ──────────────────────────────────────────────────────────────────────────────
    GH HOSTELS — Premium Ghanaian SaaS landing
@@ -266,30 +266,9 @@ export default async function LandingPage() {
           </form>
 
           {featuredHostels.length > 0 && (
-            <div className="mx-auto mt-14 grid max-w-4xl gap-4 text-left sm:grid-cols-3">
-              {featuredHostels.slice(0, 3).map((h, i) => (
-                <Link
-                  key={h.slug}
-                  href={`/hostels/${h.slug}`}
-                  className="platform-glow-card rounded-2xl p-5"
-                  style={{
-                    border: `1px solid ${HAIR_STRONG}`,
-                    background: 'linear-gradient(180deg, rgba(15,76,58,0.18) 0%, rgba(15,76,58,0.04) 100%)',
-                  }}
-                  data-platform-reveal
-                  data-platform-reveal-delay={String(i * 70)}
-                >
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" style={{ color: GOLD }} />
-                    <h3 className="truncate text-[14px] font-semibold" style={{ color: IVORY }}>{h.name}</h3>
-                  </div>
-                  <p className="mt-2 text-[12.5px]" style={{ color: 'rgba(245,233,210,0.5)' }}>
-                    {[h.address_city, h.address_region].filter(Boolean).join(', ') || 'Ghana'}
-                  </p>
-                  <p className="mt-2 text-[13px] font-semibold" style={{ color: GOLD_SOFT }}>
-                    From {formatGHS(h.from_rate)}
-                  </p>
-                </Link>
+            <div className="mx-auto mt-14 grid max-w-4xl gap-4 text-left sm:grid-cols-3" data-platform-reveal>
+              {featuredHostels.slice(0, 3).map((h) => (
+                <HostelCard key={h.slug} hostel={h} />
               ))}
             </div>
           )}

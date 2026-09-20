@@ -10,6 +10,9 @@ export interface DirectoryHostel {
   address_region: string | null
   from_rate:      number
   category_count: number
+  /** First photo found across this tenant's active room categories — an
+   *  owner-uploaded room photo, not a stock image or the tenant's logo. */
+  hero_image_url: string | null
 }
 
 export interface DirectorySearchParams {
@@ -18,6 +21,7 @@ export interface DirectorySearchParams {
   q?:      string | null
   page?:   number
   limit?:  number
+  sort?:   'name' | 'price_asc' | 'price_desc'
 }
 
 /**
@@ -34,7 +38,7 @@ export interface DirectorySearchParams {
 export async function searchHostels(
   params: DirectorySearchParams = {},
 ): Promise<{ hostels: DirectoryHostel[]; total: number }> {
-  const { city, region, q, page = 1, limit = 20 } = params
+  const { city, region, q, page = 1, limit = 20, sort = 'name' } = params
   const offset = (Math.max(1, page) - 1) * limit
 
   const supabase = createAdminClient()
@@ -46,7 +50,7 @@ export async function searchHostels(
   // regional hostel directory, without needing a materialized view.
   let query = supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, primary_color, address_city, address_region, room_categories!inner(base_rate, is_active)')
+    .select('id, slug, name, tagline, logo_url, primary_color, address_city, address_region, room_categories!inner(base_rate, is_active, image_urls, sort_order)')
     .eq('listed_publicly', true)
     .in('status', ['trial', 'active', 'trial_expired'])
     .eq('room_categories.is_active', true)
@@ -61,24 +65,33 @@ export async function searchHostels(
   const byTenant = new Map<string, DirectoryHostel>()
 
   for (const row of (data ?? []) as any[]) {
-    const categories = Array.isArray(row.room_categories) ? row.room_categories : [row.room_categories]
-    const activeRates = categories.filter((c: any) => c?.is_active).map((c: any) => c.base_rate as number)
-    if (activeRates.length === 0) continue
+    const categories = (Array.isArray(row.room_categories) ? row.room_categories : [row.room_categories])
+      .filter((c: any) => c?.is_active)
+      .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    if (categories.length === 0) continue
+
+    const activeRates = categories.map((c: any) => c.base_rate as number)
+    const firstPhoto = categories.map((c: any) => (c.image_urls ?? [])[0]).find(Boolean) ?? null
 
     const existing = byTenant.get(row.id)
     const minRate = Math.min(...activeRates)
     if (existing) {
       existing.from_rate = Math.min(existing.from_rate, minRate)
       existing.category_count += activeRates.length
+      if (!existing.hero_image_url && firstPhoto) existing.hero_image_url = firstPhoto
     } else {
       byTenant.set(row.id, {
         slug: row.slug, name: row.name, tagline: row.tagline, logo_url: row.logo_url,
         primary_color: row.primary_color, address_city: row.address_city, address_region: row.address_region,
-        from_rate: minRate, category_count: activeRates.length,
+        from_rate: minRate, category_count: activeRates.length, hero_image_url: firstPhoto,
       })
     }
   }
 
-  const all = Array.from(byTenant.values())
+  let all = Array.from(byTenant.values())
+  if (sort === 'price_asc')  all = all.sort((a, b) => a.from_rate - b.from_rate)
+  if (sort === 'price_desc') all = all.sort((a, b) => b.from_rate - a.from_rate)
+  // 'name' is already the DB sort order
+
   return { hostels: all.slice(offset, offset + limit), total: all.length }
 }
