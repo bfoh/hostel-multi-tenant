@@ -7,6 +7,7 @@ export interface TenantRecord {
   domain: string | null
   plan: 'starter' | 'growth'
   isActive: boolean
+  status: 'trial' | 'active' | 'trial_expired' | 'suspended' | 'cancelled'
   branding: {
     primaryColor: string | null
     logoUrl: string | null
@@ -110,7 +111,7 @@ async function fetchTenantFromDB(host: string): Promise<TenantRecord | null> {
     ? `slug=eq.${encodeURIComponent(slug)}`
     : `custom_domain=eq.${encodeURIComponent(host)}`
 
-  const url = `${supabaseUrl}/rest/v1/tenants?${filter}&select=id,slug,name,custom_domain,plan,is_active,primary_color,logo_url,favicon_url&limit=1`
+  const url = `${supabaseUrl}/rest/v1/tenants?${filter}&select=id,slug,name,custom_domain,plan,is_active,status,primary_color,logo_url,favicon_url&limit=1`
 
   const res = await fetch(url, {
     headers: {
@@ -135,6 +136,7 @@ async function fetchTenantFromDB(host: string): Promise<TenantRecord | null> {
     domain: row.custom_domain ?? null,
     plan: row.plan,
     isActive: row.is_active,
+    status: row.status,
     branding: {
       primaryColor: row.primary_color ?? null,
       logoUrl: row.logo_url ?? null,

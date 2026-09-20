@@ -91,17 +91,21 @@ async function handle(req: NextRequest) {
       day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Accra',
     })
 
-    // ── T+0: trial expired → suspend tenant + send "expired" email ────────
+    // ── T+0: trial expired → downgrade to the minimal dashboard ────────────
+    // trial_expired is distinct from a platform-enforced 'suspended': the
+    // tenant's public listing and price-editing/bookings-viewing dashboard
+    // stay live (see middleware.ts's minimal-dashboard allow-list), rather
+    // than the full /suspended lockout.
     if (ends <= now) {
       // Mark timestamp first so a Resend retry can't double-fire the email.
       const { error: updErr } = await admin
         .from('tenants')
-        .update({ status: 'suspended', trial_expired_at: now.toISOString() })
+        .update({ status: 'trial_expired', trial_expired_at: now.toISOString() })
         .eq('id', t.id)
         .eq('status', 'trial')
 
       if (updErr) {
-        console.error(`[cron/trial-expiry] suspend ${t.id} failed:`, updErr.message)
+        console.error(`[cron/trial-expiry] downgrade ${t.id} failed:`, updErr.message)
         continue
       }
 

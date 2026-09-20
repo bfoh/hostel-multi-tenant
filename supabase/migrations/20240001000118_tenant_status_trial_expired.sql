@@ -1,0 +1,22 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Migration 118 — Add 'trial_expired' to tenant_status
+--
+-- Today, a trial tenant that never subscribes gets flipped straight to
+-- 'suspended' by the trial-expiry cron (api/cron/trial-expiry), which is the
+-- exact same status a platform admin uses to fully lock out an abusive or
+-- non-paying account. Both currently hit the identical full-lockout
+-- /suspended wall in middleware.ts.
+--
+-- The public-marketplace feature needs to tell these apart: a tenant whose
+-- trial lapsed keeps its free public listing and a minimal price-editing
+-- dashboard (see migration 119 + middleware changes), while a platform-
+-- enforced 'suspended' tenant stays fully locked out. Introducing a distinct
+-- status value keeps tenants.status as the single source of truth instead of
+-- adding a second, easily-out-of-sync flag alongside it.
+--
+-- Must be its own migration: Postgres forbids using a freshly added enum
+-- value inside the same transaction that added it, and Supabase applies each
+-- migration file as one transaction.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter type tenant_status add value 'trial_expired' after 'trial';
