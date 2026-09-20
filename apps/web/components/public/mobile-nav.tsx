@@ -11,8 +11,15 @@ const GOLD_DEEP = '#B8842E'
 const IVORY = '#F5E9D2'
 const HAIR_STRONG = 'rgba(245, 233, 210, 0.18)'
 
-const ANCHOR_LINKS = ['For Hostel Owners', 'Features', 'Pricing', 'FAQ']
-const ANCHOR_HREFS: Record<string, string> = { 'For Hostel Owners': '#for-owners' }
+// Real page links, not same-page anchors — this component is shared by both
+// the consumer homepage (app/page.tsx) and the owners page (app/for-owners),
+// and "Features"/"Pricing"/"FAQ" only exist on the latter.
+const PAGE_LINKS: Array<{ label: string; href: string }> = [
+  { label: 'For Hostel Owners', href: '/for-owners' },
+  { label: 'Features', href: '/for-owners#features' },
+  { label: 'Pricing', href: '/for-owners#pricing' },
+  { label: 'FAQ', href: '/for-owners#faq' },
+]
 
 /**
  * Mobile navigation — hamburger that opens a full-width slide-down panel with
@@ -80,16 +87,16 @@ export function MobileNav() {
           >
             Find a Hostel
           </Link>
-          {ANCHOR_LINKS.map((l) => (
-            <a
-              key={l}
-              href={ANCHOR_HREFS[l] ?? `#${l.toLowerCase()}`}
+          {PAGE_LINKS.map(({ label, href }) => (
+            <Link
+              key={label}
+              href={href}
               onClick={() => setOpen(false)}
               className="flex min-h-[48px] items-center rounded-xl px-3 text-[15px] font-medium transition-colors hover:bg-[#F5E9D2]/5"
               style={{ color: IVORY }}
             >
-              {l}
-            </a>
+              {label}
+            </Link>
           ))}
 
           <div className="mt-2 grid gap-2.5 pt-3" style={{ borderTop: `1px solid ${HAIR_STRONG}` }}>
