@@ -15,6 +15,8 @@ import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
 import { PlatformFX } from '@/components/public/platform-fx'
 import { PricingPlans } from '@/components/public/pricing-plans'
 import { MobileNav } from '@/components/public/mobile-nav'
+import { searchHostels } from '@/lib/directory'
+import { formatGHS } from '@/lib/utils'
 
 /* ──────────────────────────────────────────────────────────────────────────────
    GH HOSTELS — Premium Ghanaian SaaS landing
@@ -234,15 +236,6 @@ const UNIVERSITIES = [
   'Lancaster University Ghana',
 ]
 
-const LOCATIONS = [
-  { city: 'Accra', hostels: 142, label: 'Legon, East Legon, Madina, Adenta' },
-  { city: 'Kumasi', hostels: 96, label: 'KNUST campus, Ayeduase, Bomso, Kentinkrono' },
-  { city: 'Cape Coast', hostels: 41, label: 'UCC, Apewosika, Amamoma' },
-  { city: 'Tamale', hostels: 28, label: 'UDS, Kalpohini, Vittin' },
-  { city: 'Winneba', hostels: 22, label: 'UEW, North campus, Central campus' },
-  { city: 'Ho', hostels: 14, label: 'UHAS, HTU, central Ho' },
-]
-
 type CompareValue = boolean | 'manual' | 'partial'
 
 const COMPARISON: Array<{ label: string; spreadsheet: CompareValue; traditional: CompareValue; gh: CompareValue }> = [
@@ -352,6 +345,7 @@ export default async function LandingPage() {
   if (user && isAppDomain) redirect('/dashboard')
 
   const heroWords = ['Every', 'bed', 'booked.']
+  const { hostels: featuredHostels, total: totalListed } = await searchHostels({ limit: 6 })
 
   return (
     <div
@@ -748,7 +742,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── BUILT FOR GHANA — locations ─────────────────────────── */}
+      {/* ── FIND A HOSTEL — public marketplace search ─────────────── */}
       <section
         id="locations"
         className="relative py-20 sm:py-28"
@@ -761,58 +755,93 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center" data-platform-reveal>
             <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD }}>
-              Built for Ghana
+              Find a hostel
             </p>
             <h2
               className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[42px] md:text-[58px]"
               style={{ fontFamily: 'Georgia, serif', color: IVORY }}
             >
-              From Accra to Tamale.
+              {totalListed} hostels listed.
               <span className="block italic" style={{ color: 'rgba(245,233,210,0.55)' }}>
-                Wherever students live, we run it.
+                Search, compare, book — no middleman.
               </span>
             </h2>
           </div>
 
-          <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {LOCATIONS.map((loc, i) => (
-              <div
-                key={loc.city}
-                className="platform-glow-card rounded-2xl p-6"
-                style={{
-                  border: `1px solid ${HAIR_STRONG}`,
-                  background:
-                    'linear-gradient(180deg, rgba(15,76,58,0.18) 0%, rgba(15,76,58,0.04) 100%)',
-                }}
-                data-platform-reveal
-                data-platform-reveal-delay={String(i * 70)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <MapPin className="h-4 w-4" style={{ color: GOLD }} strokeWidth={2} />
-                    <h3
-                      className="text-[17px] font-semibold tracking-tight"
-                      style={{ color: IVORY, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
+          <form action="/hostels" method="get" className="mx-auto mt-10 flex max-w-xl gap-2" data-platform-reveal>
+            <div
+              className="flex flex-1 items-center gap-2 rounded-xl px-4 py-3"
+              style={{ border: `1px solid ${HAIR_STRONG}`, background: 'rgba(245,233,210,0.03)' }}
+            >
+              <MapPin className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
+              <input
+                name="city"
+                placeholder="Search by campus or city — Legon, KNUST, Cape Coast…"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-[rgba(245,233,210,0.35)]"
+                style={{ color: IVORY }}
+              />
+            </div>
+            <button
+              type="submit"
+              className="shrink-0 rounded-xl px-6 py-3 text-sm font-semibold"
+              style={{ background: GOLD, color: INK }}
+            >
+              Search
+            </button>
+          </form>
+
+          {featuredHostels.length > 0 && (
+            <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {featuredHostels.map((h, i) => (
+                <Link
+                  key={h.slug}
+                  href={`/hostels/${h.slug}`}
+                  className="platform-glow-card rounded-2xl p-6"
+                  style={{
+                    border: `1px solid ${HAIR_STRONG}`,
+                    background:
+                      'linear-gradient(180deg, rgba(15,76,58,0.18) 0%, rgba(15,76,58,0.04) 100%)',
+                  }}
+                  data-platform-reveal
+                  data-platform-reveal-delay={String(i * 70)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <MapPin className="h-4 w-4" style={{ color: GOLD }} strokeWidth={2} />
+                      <h3
+                        className="text-[17px] font-semibold tracking-tight"
+                        style={{ color: IVORY, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
+                      >
+                        {h.name}
+                      </h3>
+                    </div>
+                    <span
+                      className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums"
+                      style={{
+                        background: `${GOLD}18`,
+                        color: GOLD_SOFT,
+                        border: `1px solid ${GOLD}33`,
+                      }}
                     >
-                      {loc.city}
-                    </h3>
+                      From {formatGHS(h.from_rate)}
+                    </span>
                   </div>
-                  <span
-                    className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums"
-                    style={{
-                      background: `${GOLD}18`,
-                      color: GOLD_SOFT,
-                      border: `1px solid ${GOLD}33`,
-                    }}
-                  >
-                    {loc.hostels}+ hostels
-                  </span>
-                </div>
-                <p className="mt-3 text-[13.5px] leading-relaxed" style={{ color: 'rgba(245,233,210,0.55)' }}>
-                  {loc.label}
-                </p>
-              </div>
-            ))}
+                  <p className="mt-3 text-[13.5px] leading-relaxed" style={{ color: 'rgba(245,233,210,0.55)' }}>
+                    {[h.address_city, h.address_region].filter(Boolean).join(', ') || h.tagline || 'View listing for details'}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-10 text-center" data-platform-reveal>
+            <Link
+              href="/hostels"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold"
+              style={{ color: GOLD_SOFT }}
+            >
+              Browse all hostels <ChevronRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>
