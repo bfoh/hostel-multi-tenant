@@ -17,7 +17,8 @@ const config: CapacitorConfig = {
   // onward to /occupant-portal or /dashboard anyway, so this is safe for
   // both fresh and returning users.
   server: {
-    url: 'https://app.gh-hostels.com/login',
+    // TEMPORARY diagnostic query param — do not commit this line.
+    url: 'https://app.gh-hostels.com/login?viewportdebug=1',
     cleartext: false,
     androidScheme: 'https',
   },
