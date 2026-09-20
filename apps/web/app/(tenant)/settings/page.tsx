@@ -15,7 +15,7 @@ import {
   listPlatformPlans, listAllPlanVariants, findPlanByCode, BILLING_INTERVALS,
 } from '@/lib/platform-plans'
 import { listSubscriptions } from '@/lib/paystack'
-import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode, ChevronRight, AlertTriangle, CheckCircle2, Inbox } from 'lucide-react'
+import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode, ChevronRight, AlertTriangle, CheckCircle2, Inbox, Store } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Settings' }
 export const dynamic = 'force-dynamic'
@@ -399,6 +399,16 @@ export default async function SettingsPage({
                     <div>
                       <p className="font-medium text-text-primary">Rate Management</p>
                       <p className="text-xs text-text-secondary">Seasonal pricing, promotions, and date-range rate overrides</p>
+                    </div>
+                  </Link>
+                  <Link
+                    href="/settings/listing"
+                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
+                  >
+                    <Store className="h-4 w-4 text-brand shrink-0" />
+                    <div>
+                      <p className="font-medium text-text-primary">Public Listing</p>
+                      <p className="text-xs text-text-secondary">Marketplace visibility, guest checkout mode, and location</p>
                     </div>
                   </Link>
                   <Link

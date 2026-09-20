@@ -17,14 +17,14 @@ export default async function RatesPage() {
       .order('starts_on', { ascending: false }),
     supabase
       .from('room_categories')
-      .select('id, name, base_price')
+      .select('id, name, base_rate')
       .order('name'),
   ])
 
   return (
     <RateManagementClient
       initialRates={(rates ?? []) as any[]}
-      categories={((categories ?? []) as any[]).map((c) => ({ id: c.id, name: c.name, base_price: c.base_price ?? 0 }))}
+      categories={((categories ?? []) as any[]).map((c) => ({ id: c.id, name: c.name, base_rate: c.base_rate ?? 0 }))}
     />
   )
 }

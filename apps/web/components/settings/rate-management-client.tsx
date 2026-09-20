@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Loader2, CalendarRange, Tag } from 'lucide-react'
+import { formatGHS } from '@/lib/utils'
 
-interface Category { id: string; name: string; base_price: number }
+interface Category { id: string; name: string; base_rate: number }
 interface RateOverride {
   id: string
   name: string
@@ -171,7 +172,7 @@ export function RateManagementClient({
               <div key={c.id} className="rounded-lg border border-border bg-surface-raised px-3 py-2">
                 <p className="text-xs font-medium text-text-primary">{c.name}</p>
                 <p className="text-xs text-text-tertiary font-mono">
-                  GHS {c.base_price?.toFixed(2) ?? '—'}
+                  {formatGHS(c.base_rate)}
                 </p>
               </div>
             ))}
