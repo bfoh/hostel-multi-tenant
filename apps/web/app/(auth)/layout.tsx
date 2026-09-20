@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Image from 'next/image'
 import Link from 'next/link'
+import { ViewportDebug } from '@/components/debug/viewport-debug'
 
 export const metadata: Metadata = { title: 'Sign in — GH-HOSTELS' }
 
@@ -157,6 +158,8 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
       {/* Silence unused-var noise for stable HAIR token */}
       <span className="hidden" data-hair={HAIR} />
+
+      <ViewportDebug />
     </div>
   )
 }
