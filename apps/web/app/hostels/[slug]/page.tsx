@@ -145,7 +145,21 @@ export default async function HostelProfilePage({ params }: { params: Promise<{ 
                   style={{ border: `1px solid ${HAIR_STRONG}`, background: 'rgba(245,233,210,0.03)' }}
                 >
                   <div className="flex items-center gap-3">
-                    <BedDouble className="h-5 w-5 shrink-0" style={{ color: GOLD }} />
+                    {c.image_urls && c.image_urls.length > 0 ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={c.image_urls[0]}
+                        alt={c.name}
+                        className="h-14 w-14 shrink-0 rounded-xl object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"
+                        style={{ background: 'rgba(245,233,210,0.06)' }}
+                      >
+                        <BedDouble className="h-5 w-5" style={{ color: GOLD }} />
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-semibold" style={{ color: IVORY }}>{c.name}</p>
                       {c.description && (

@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { X } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
+import { RoomPhotosUpload } from '@/components/rooms/room-photos-upload'
 
 const ROOM_TYPES = ['single', 'double', 'twin', 'triple', 'quad', 'dormitory', 'suite', 'studio'] as const
 const RATE_UNITS = ['night', 'week', 'month', 'semester'] as const
@@ -35,9 +36,10 @@ interface Props {
   /** defaultValues.base_rate should be in PESEWAS (as stored in DB) */
   defaultValues?: Partial<FormValues & { base_rate: number }>
   categoryId?: string
+  imageUrls?: string[]
 }
 
-export function RoomCategoryForm({ defaultValues, categoryId }: Props) {
+export function RoomCategoryForm({ defaultValues, categoryId, imageUrls }: Props) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
   const [customAmenity, setCustomAmenity] = useState('')
@@ -102,6 +104,17 @@ export function RoomCategoryForm({ defaultValues, categoryId }: Props) {
       const data = await res.json().catch(() => ({}))
       setServerError(data.error ?? 'Something went wrong.')
       return
+    }
+
+    // New room types land back on their own edit page (not the list) so the
+    // owner can immediately add photos — creation alone has no photo UI yet.
+    if (!categoryId) {
+      const created = await res.json().catch(() => null) as { id?: string } | null
+      if (created?.id) {
+        router.push(`/rooms/categories/${created.id}/edit`)
+        router.refresh()
+        return
+      }
     }
 
     router.push('/rooms/categories')
@@ -255,6 +268,15 @@ export function RoomCategoryForm({ defaultValues, categoryId }: Props) {
               </span>
             ))}
           </div>
+
+          {/* Photos — only once the room type exists, since uploads attach to its id */}
+          {categoryId ? (
+            <RoomPhotosUpload categoryId={categoryId} initialUrls={imageUrls ?? []} />
+          ) : (
+            <p className="rounded-md border border-dashed border-border px-3 py-2.5 text-xs text-text-secondary">
+              Save this room type first, then come back here to add photos.
+            </p>
+          )}
 
           {/* Active toggle */}
           <div className="flex items-center gap-3">

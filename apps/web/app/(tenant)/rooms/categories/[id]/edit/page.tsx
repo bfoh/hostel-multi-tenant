@@ -15,7 +15,7 @@ async function getCategory(id: string) {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('room_categories')
-    .select('id, name, type, base_rate, rate_unit, capacity, description, amenities, is_active')
+    .select('id, name, type, base_rate, rate_unit, capacity, description, amenities, is_active, image_urls')
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .single()
@@ -48,6 +48,7 @@ export default async function EditRoomCategoryPage({
 
       <RoomCategoryForm
         categoryId={category.id}
+        imageUrls={category.image_urls ?? []}
         defaultValues={{
           name:        category.name,
           type:        category.type as any,
