@@ -30,8 +30,17 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
   return (
     <div
-      className="relative flex min-h-[100dvh] items-center justify-center px-4 py-12 selection:bg-[#D4A24C]/40"
-      style={{ background: INK, color: IVORY }}
+      className="relative flex min-h-[100dvh] items-center justify-center px-4 selection:bg-[#D4A24C]/40"
+      style={{
+        background: INK,
+        color: IVORY,
+        // max() so this still gives the original 3rem breathing room on a
+        // regular browser (env() resolves to 0 there) while clearing the
+        // notch/status bar and home indicator inside the native app, where
+        // viewport-fit=cover (see app/layout.tsx) makes env() non-zero.
+        paddingTop: 'max(3rem, calc(env(safe-area-inset-top) + 1rem))',
+        paddingBottom: 'max(3rem, calc(env(safe-area-inset-bottom) + 1rem))',
+      }}
     >
       {/* ── Ambient mesh background ───────────────────────────────── */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -50,7 +59,10 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       </div>
 
       {/* ── Back link ─────────────────────────────────────────────── */}
-      <div className="absolute left-6 top-6 z-20">
+      <div
+        className="absolute left-6 z-20"
+        style={{ top: 'max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))' }}
+      >
         <Link
           href={isTenantPage ? '/' : 'https://gh-hostels.com'}
           className="flex items-center gap-1.5 text-[13px] font-medium transition-colors"

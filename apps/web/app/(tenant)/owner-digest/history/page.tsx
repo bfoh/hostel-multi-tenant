@@ -29,7 +29,10 @@ export default async function OwnerDigestHistoryPage() {
   const sorted = [...rows].sort((a, b) => (a.report_date < b.report_date ? 1 : -1))
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6">
+    <main
+      className="mx-auto max-w-md px-4 pb-6"
+      style={{ paddingTop: 'max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))' }}
+    >
       <header className="mb-4 flex items-center justify-between">
         <Link href="/owner-digest" className="flex items-center gap-1 text-sm text-slate-500">
           <ChevronLeft className="h-4 w-4" /> Today

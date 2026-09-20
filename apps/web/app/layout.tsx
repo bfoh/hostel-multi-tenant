@@ -76,6 +76,12 @@ export const viewport: Viewport = {
   ],
   width: 'device-width',
   initialScale: 1,
+  // Required for iOS to expose env(safe-area-inset-*) CSS values at all —
+  // without it, content simply stays clear of the notch/status bar/home
+  // indicator automatically and no safe-area CSS anywhere in the app has
+  // any effect. The mobile app (Capacitor, edge-to-edge WKWebView) needs
+  // pages to handle their own safe-area padding explicitly instead.
+  viewportFit: 'cover',
 }
 
 /** Convert a #rrggbb hex string to HSL components string "H S% L%" */

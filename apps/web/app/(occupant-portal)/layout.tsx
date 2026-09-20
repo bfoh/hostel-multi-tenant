@@ -32,6 +32,7 @@ export default async function OccupantPortalLayout({ children }: { children: Rea
         className="sticky top-0 z-30 shadow-[0_1px_0_rgba(0,0,0,0.04),0_8px_24px_-16px_rgba(0,0,0,0.35)]"
         style={{
           background: `linear-gradient(165deg, ${tenantColor} 0%, ${tenantColor}e6 100%)`,
+          paddingTop: 'env(safe-area-inset-top)',
         }}
       >
         <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4 sm:px-6">

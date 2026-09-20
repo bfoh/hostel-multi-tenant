@@ -33,7 +33,10 @@ export default async function OwnerDigestTodayPage() {
   ])
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6">
+    <main
+      className="mx-auto max-w-md px-4 pb-6"
+      style={{ paddingTop: 'max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))' }}
+    >
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Today</h1>
         <Link href="/owner-digest/history" className="text-sm font-medium text-blue-600">
