@@ -7,8 +7,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // CAPBridgeViewController creates its webView lazily (in viewDidLoad),
+        // which may not have run yet at this point in the launch sequence --
+        // reading bridgeVC.webView here can silently be nil. Defer to the next
+        // run loop tick, after UIKit finishes loading the initial view controller.
+        DispatchQueue.main.async { [weak self] in
+            self?.applyWebViewEdgeFixes()
+        }
         return true
+    }
+
+    private func applyWebViewEdgeFixes() {
+        guard let bridgeVC = window?.rootViewController as? CAPBridgeViewController,
+              let webView = bridgeVC.webView else { return }
+        // Disable WKWebView's default edge-swipe back/forward navigation
+        // gesture. This app has no in-webview navigation history to go
+        // "back" to (server.url loads a single portal, and in-app links
+        // navigate via the app's own routing, not new page loads) -- with
+        // the gesture left on, swiping from the left edge starts a "go
+        // back" transition anyway, revealing blank white space behind the
+        // current page since there's nothing to go back to.
+        webView.allowsBackForwardNavigationGestures = false
+        // Kill horizontal rubber-band overscroll on the outer document; the
+        // page's own layout never legitimately scrolls horizontally.
+        webView.scrollView.alwaysBounceHorizontal = false
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

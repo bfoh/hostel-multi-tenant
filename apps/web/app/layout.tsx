@@ -120,7 +120,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${fontSans.variable} ${fontDisplay.variable} ${fontMono.variable}`}
+      className={`overflow-x-hidden ${fontSans.variable} ${fontDisplay.variable} ${fontMono.variable}`}
     >
       <head>
         {/* Inject tenant primary color as CSS variable override */}
@@ -150,7 +150,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
          * which already picks tenant favicon_url / logo_url / platform default.
          */}
       </head>
-      <body>
+      <body className="overflow-x-hidden">
         <TenantProvider
           tenantId={tenantId}
           tenantSlug={tenantSlug}
