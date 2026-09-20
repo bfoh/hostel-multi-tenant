@@ -505,6 +505,18 @@
       background-position: 70% 30%, 30% 70%, 40% 80%, 60% 20%;
     }
   }
+  /* ── Adinkra symbol collage — subtle repeating background texture ── */
+  .platform-adinkra-bg {
+    background-image: url('/adinkra-pattern.svg');
+    background-repeat: repeat;
+    background-size: 420px 420px;
+    opacity: 0.05;
+  }
+  @media (min-width: 1024px) {
+    .platform-adinkra-bg {
+      background-size: 560px 560px;
+    }
+  }
   .platform-mesh {
     background:
       radial-gradient(circle at var(--p1, 20% 30%), rgba(212, 162, 76, 0.18), transparent 45%),

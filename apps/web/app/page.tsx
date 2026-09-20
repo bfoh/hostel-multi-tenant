@@ -7,7 +7,7 @@ import {
   BedDouble, Shield, Check, ArrowRight,
   Building2, CreditCard, FileText, Users, Globe, Gift,
   ChevronDown, BarChart3, Bot, ChevronRight, MapPin, Star,
-  PhoneCall, Smartphone, Lock, FileSpreadsheet, Wrench, ClipboardList,
+  PhoneCall, Smartphone, Lock, FileSpreadsheet, Wrench, ClipboardList, Search,
 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
@@ -352,6 +352,10 @@ export default async function LandingPage() {
       className="min-h-screen text-[#f5e9d2] selection:bg-[#D4A24C]/40 selection:text-white antialiased"
       style={{ background: INK }}
     >
+      {/* Adinkra symbol collage — fixed so the texture reads as one
+          continuous wallpaper behind the whole page, not per-section tiles */}
+      <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg" aria-hidden="true" />
+
       {/* Hydrate motion + glow + counters */}
       <PlatformFX />
 
@@ -389,7 +393,19 @@ export default async function LandingPage() {
           </Link>
 
           <div className="hidden items-center gap-9 md:flex">
-            {['Features', 'Locations', 'Pricing', 'FAQ'].map((l) => (
+            <Link
+              href="/hostels"
+              className="text-[13px] font-medium tracking-[0.08em] uppercase text-[#a8a89e] transition-colors duration-300 hover:text-[#F5E9D2]"
+            >
+              Find a Hostel
+            </Link>
+            <a
+              href="#for-owners"
+              className="text-[13px] font-medium tracking-[0.08em] uppercase text-[#a8a89e] transition-colors duration-300 hover:text-[#F5E9D2]"
+            >
+              For Hostel Owners
+            </a>
+            {['Pricing', 'FAQ'].map((l) => (
               <a
                 key={l}
                 href={`#${l.toLowerCase()}`}
@@ -416,7 +432,7 @@ export default async function LandingPage() {
                 boxShadow: '0 6px 20px -8px rgba(212,162,76,0.55)',
               }}
             >
-              Start free trial
+              List your hostel free
             </Link>
 
             {/* Mobile hamburger + slide-down menu */}
@@ -425,8 +441,109 @@ export default async function LandingPage() {
         </div>
       </nav>
 
-      {/* ── HERO ───────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden">
+      {/* ── MARKETPLACE HERO — Booking.com-style search, the primary
+           front door for students/guests ────────────────────────── */}
+      <section className="relative overflow-hidden" style={{ borderBottom: `1px solid ${HAIR}` }}>
+        <div className="pointer-events-none absolute inset-0 platform-mesh" aria-hidden="true" />
+        <div
+          className="pointer-events-none absolute -right-24 -top-24 h-[380px] w-[380px] rounded-full platform-float-slow"
+          style={{ background: `radial-gradient(circle, ${GOLD}1c, transparent 70%)`, filter: 'blur(50px)' }}
+          aria-hidden="true"
+        />
+
+        <div className="relative mx-auto max-w-5xl px-5 pb-16 pt-16 text-center sm:px-6 sm:pb-24 sm:pt-24">
+          <div
+            className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em]"
+            style={{ border: `1px solid ${HAIR_STRONG}`, background: 'rgba(15,76,58,0.35)', color: IVORY }}
+          >
+            <span className="relative h-1.5 w-1.5 rounded-full" style={{ background: GOLD_SOFT }} />
+            {totalListed} hostels listed across Ghana
+          </div>
+
+          <h1
+            className="mx-auto max-w-3xl text-[36px] font-normal leading-[1.08] tracking-[-0.03em] sm:text-[52px] md:text-[64px]"
+            style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
+          >
+            Find your next hostel.
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed sm:text-[17px]" style={{ color: 'rgba(245,233,210,0.65)' }}>
+            Search real-time availability near your campus, book directly, no middleman.
+          </p>
+
+          <form
+            action="/hostels"
+            method="get"
+            className="mx-auto mt-9 flex max-w-2xl flex-col gap-2 rounded-2xl p-2.5 sm:flex-row sm:items-center"
+            style={{ border: `1px solid ${HAIR_STRONG}`, background: 'rgba(245,233,210,0.04)' }}
+          >
+            <div className="flex flex-1 items-center gap-2 rounded-xl px-4 py-3" style={{ background: 'rgba(245,233,210,0.05)' }}>
+              <Search className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
+              <input
+                name="q"
+                placeholder="Hostel name or campus — Legon, KNUST, UCC…"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-[rgba(245,233,210,0.35)]"
+                style={{ color: IVORY }}
+              />
+            </div>
+            <div className="flex items-center gap-2 rounded-xl px-4 py-3 sm:w-44" style={{ background: 'rgba(245,233,210,0.05)' }}>
+              <MapPin className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
+              <input
+                name="city"
+                placeholder="City"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-[rgba(245,233,210,0.35)]"
+                style={{ color: IVORY }}
+              />
+            </div>
+            <button
+              type="submit"
+              className="shrink-0 rounded-xl px-6 py-3 text-sm font-semibold"
+              style={{ background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 60%, ${GOLD_DEEP} 100%)`, color: FOREST_DEEP }}
+            >
+              Search
+            </button>
+          </form>
+
+          {featuredHostels.length > 0 && (
+            <div className="mx-auto mt-14 grid max-w-4xl gap-4 text-left sm:grid-cols-3">
+              {featuredHostels.slice(0, 3).map((h, i) => (
+                <Link
+                  key={h.slug}
+                  href={`/hostels/${h.slug}`}
+                  className="platform-glow-card rounded-2xl p-5"
+                  style={{
+                    border: `1px solid ${HAIR_STRONG}`,
+                    background: 'linear-gradient(180deg, rgba(15,76,58,0.18) 0%, rgba(15,76,58,0.04) 100%)',
+                  }}
+                  data-platform-reveal
+                  data-platform-reveal-delay={String(i * 70)}
+                >
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" style={{ color: GOLD }} />
+                    <h3 className="truncate text-[14px] font-semibold" style={{ color: IVORY }}>{h.name}</h3>
+                  </div>
+                  <p className="mt-2 text-[12.5px]" style={{ color: 'rgba(245,233,210,0.5)' }}>
+                    {[h.address_city, h.address_region].filter(Boolean).join(', ') || 'Ghana'}
+                  </p>
+                  <p className="mt-2 text-[13px] font-semibold" style={{ color: GOLD_SOFT }}>
+                    From {formatGHS(h.from_rate)}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px]" style={{ color: 'rgba(245,233,210,0.5)' }}>
+            <Link href="/hostels" className="font-medium hover:text-[#F5E9D2] transition-colors">Browse all hostels →</Link>
+            <span aria-hidden="true">·</span>
+            <a href="#for-owners" className="font-medium hover:text-[#F5E9D2] transition-colors">
+              Run a hostel? List yours free →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOR HOSTEL OWNERS — management-system pitch ─────────── */}
+      <section id="for-owners" className="relative overflow-hidden">
         {/* Animated mesh gradient backdrop */}
         <div className="pointer-events-none absolute inset-0 platform-mesh" aria-hidden="true" />
 
@@ -443,6 +560,10 @@ export default async function LandingPage() {
         />
 
         <div className="relative mx-auto max-w-6xl px-5 pb-20 pt-20 text-center sm:px-6 sm:pb-28 md:pt-36">
+          <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD }}>
+            For hostel owners
+          </p>
+
           {/* Announcement pill */}
           <div
             className="mx-auto mb-8 inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] sm:text-[12px]"
@@ -738,110 +859,6 @@ export default async function LandingPage() {
                 </div>
               )
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FIND A HOSTEL — public marketplace search ─────────────── */}
-      <section
-        id="locations"
-        className="relative py-20 sm:py-28"
-        style={{
-          borderTop: `1px solid ${HAIR}`,
-          background:
-            'radial-gradient(ellipse at 50% 0%, rgba(15,76,58,0.35) 0%, transparent 60%)',
-        }}
-      >
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD }}>
-              Find a hostel
-            </p>
-            <h2
-              className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[42px] md:text-[58px]"
-              style={{ fontFamily: 'Georgia, serif', color: IVORY }}
-            >
-              {totalListed} hostels listed.
-              <span className="block italic" style={{ color: 'rgba(245,233,210,0.55)' }}>
-                Search, compare, book — no middleman.
-              </span>
-            </h2>
-          </div>
-
-          <form action="/hostels" method="get" className="mx-auto mt-10 flex max-w-xl gap-2" data-platform-reveal>
-            <div
-              className="flex flex-1 items-center gap-2 rounded-xl px-4 py-3"
-              style={{ border: `1px solid ${HAIR_STRONG}`, background: 'rgba(245,233,210,0.03)' }}
-            >
-              <MapPin className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
-              <input
-                name="city"
-                placeholder="Search by campus or city — Legon, KNUST, Cape Coast…"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-[rgba(245,233,210,0.35)]"
-                style={{ color: IVORY }}
-              />
-            </div>
-            <button
-              type="submit"
-              className="shrink-0 rounded-xl px-6 py-3 text-sm font-semibold"
-              style={{ background: GOLD, color: INK }}
-            >
-              Search
-            </button>
-          </form>
-
-          {featuredHostels.length > 0 && (
-            <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {featuredHostels.map((h, i) => (
-                <Link
-                  key={h.slug}
-                  href={`/hostels/${h.slug}`}
-                  className="platform-glow-card rounded-2xl p-6"
-                  style={{
-                    border: `1px solid ${HAIR_STRONG}`,
-                    background:
-                      'linear-gradient(180deg, rgba(15,76,58,0.18) 0%, rgba(15,76,58,0.04) 100%)',
-                  }}
-                  data-platform-reveal
-                  data-platform-reveal-delay={String(i * 70)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <MapPin className="h-4 w-4" style={{ color: GOLD }} strokeWidth={2} />
-                      <h3
-                        className="text-[17px] font-semibold tracking-tight"
-                        style={{ color: IVORY, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
-                      >
-                        {h.name}
-                      </h3>
-                    </div>
-                    <span
-                      className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold tabular-nums"
-                      style={{
-                        background: `${GOLD}18`,
-                        color: GOLD_SOFT,
-                        border: `1px solid ${GOLD}33`,
-                      }}
-                    >
-                      From {formatGHS(h.from_rate)}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-[13.5px] leading-relaxed" style={{ color: 'rgba(245,233,210,0.55)' }}>
-                    {[h.address_city, h.address_region].filter(Boolean).join(', ') || h.tagline || 'View listing for details'}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-10 text-center" data-platform-reveal>
-            <Link
-              href="/hostels"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold"
-              style={{ color: GOLD_SOFT }}
-            >
-              Browse all hostels <ChevronRight className="h-4 w-4" />
-            </Link>
           </div>
         </div>
       </section>

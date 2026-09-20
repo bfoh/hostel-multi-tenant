@@ -11,7 +11,8 @@ const GOLD_DEEP = '#B8842E'
 const IVORY = '#F5E9D2'
 const HAIR_STRONG = 'rgba(245, 233, 210, 0.18)'
 
-const LINKS = ['Features', 'Locations', 'Pricing', 'FAQ']
+const ANCHOR_LINKS = ['For Hostel Owners', 'Features', 'Pricing', 'FAQ']
+const ANCHOR_HREFS: Record<string, string> = { 'For Hostel Owners': '#for-owners' }
 
 /**
  * Mobile navigation — hamburger that opens a full-width slide-down panel with
@@ -71,10 +72,18 @@ export function MobileNav() {
         }}
       >
         <nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4">
-          {LINKS.map((l) => (
+          <Link
+            href="/hostels"
+            onClick={() => setOpen(false)}
+            className="flex min-h-[48px] items-center rounded-xl px-3 text-[15px] font-medium transition-colors hover:bg-[#F5E9D2]/5"
+            style={{ color: IVORY }}
+          >
+            Find a Hostel
+          </Link>
+          {ANCHOR_LINKS.map((l) => (
             <a
               key={l}
-              href={`#${l.toLowerCase()}`}
+              href={ANCHOR_HREFS[l] ?? `#${l.toLowerCase()}`}
               onClick={() => setOpen(false)}
               className="flex min-h-[48px] items-center rounded-xl px-3 text-[15px] font-medium transition-colors hover:bg-[#F5E9D2]/5"
               style={{ color: IVORY }}
@@ -102,7 +111,7 @@ export function MobileNav() {
                 boxShadow: '0 6px 20px -8px rgba(212,162,76,0.55)',
               }}
             >
-              Start free trial <ArrowRight className="h-4 w-4" />
+              List your hostel free <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </nav>
