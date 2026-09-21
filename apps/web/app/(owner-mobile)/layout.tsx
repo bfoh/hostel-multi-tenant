@@ -2,17 +2,19 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { resolveMobileContextForTenant } from '@/lib/auth/mobile-context'
-import { StaffMobileBottomNav } from '@/components/staff-mobile/bottom-nav'
+import { OwnerMobileBottomNav } from '@/components/owner-mobile/bottom-nav'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Role gate for the mobile-first staff portal — every tenant_members role
- * except 'owner' (which has its own dedicated mobile home; see
- * app/(owner-mobile)) and 'occupant' (occupant-portal). Mirrors
- * OwnerMobileLayout's gating pattern.
+ * Expanded owner mobile home — bottom-nav shell for the full owner day
+ * (Today/Bookings/Finance/Listing/More), replacing /owner-digest as the
+ * mobile app's owner landing target. /owner-digest itself is left
+ * unchanged (still reachable, still gated the same way) so existing push
+ * deep links keep working; this shell's "Today" tab reuses its DigestCard
+ * content directly instead of redirecting through it.
  */
-export default async function StaffMobileLayout({ children }: { children: React.ReactNode }) {
+export default async function OwnerMobileLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -21,9 +23,9 @@ export default async function StaffMobileLayout({ children }: { children: React.
   const tenantId = h.get('x-tenant-id')
   const ctx      = await resolveMobileContextForTenant(user.id, tenantId)
 
-  if (ctx.role === 'owner')    redirect('/owner-mobile')
-  if (ctx.role === 'occupant') redirect('/occupant-portal')
-  if (!ctx.role || !ctx.tenantId) redirect('/login')
+  if (ctx.role === 'occupant')                      redirect('/occupant-portal')
+  if (ctx.role && ctx.role !== 'owner')              redirect('/staff-mobile')
+  if (!ctx.role || !ctx.tenantId)                    redirect('/login')
 
   const tenantName  = h.get('x-tenant-name') ?? 'GH Hostels'
   const tenantLogo  = h.get('x-tenant-logo')
@@ -53,7 +55,7 @@ export default async function StaffMobileLayout({ children }: { children: React.
             )}
             <div className="leading-tight">
               <p className="font-display text-[15px] font-bold text-white">{tenantName}</p>
-              <p className="text-[11px] font-medium capitalize text-white/65">{ctx.role.replace('_', ' ')}</p>
+              <p className="text-[11px] font-medium text-white/65">Owner</p>
             </div>
           </div>
           <form action="/api/auth/signout" method="POST">
@@ -73,7 +75,7 @@ export default async function StaffMobileLayout({ children }: { children: React.
       </main>
 
       {/* ── Bottom navigation ─────────────────────────────────── */}
-      <StaffMobileBottomNav color={tenantColor} userId={user.id} />
+      <OwnerMobileBottomNav color={tenantColor} userId={user.id} />
     </div>
   )
 }

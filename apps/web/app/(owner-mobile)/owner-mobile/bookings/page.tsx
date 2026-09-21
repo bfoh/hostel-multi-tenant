@@ -6,10 +6,10 @@ import { BedDouble } from 'lucide-react'
 import { getBookings } from '@/lib/data/bookings'
 import { BookingList } from '@/components/mobile-portal/booking-list'
 
-export const metadata: Metadata = { title: 'Bookings · Staff' }
+export const metadata: Metadata = { title: 'Bookings · Owner' }
 export const dynamic = 'force-dynamic'
 
-export default async function StaffMobileBookingsPage() {
+export default async function OwnerMobileBookingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')

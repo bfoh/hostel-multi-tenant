@@ -21,7 +21,8 @@ const PORTAL_BASE = 'https://app.gh-hostels.com'
  *   6. Wire app-lifecycle listener (reload/reconnect after backgrounding —
  *      see app-lifecycle.ts for why this matters for realtime messaging)
  *   7. Request push permission + register token
- *   8. Resolve role → owners go to /owner-digest; occupants stay on portal default
+ *   8. Resolve role → owners go to /owner-mobile, staff to /staff-mobile;
+ *      occupants stay on portal default
  *   9. Refresh tenant theme in the background (cache for next cold launch)
  *  10. Hide splash so the webview takes over
  */
@@ -59,7 +60,7 @@ async function routeByRole(): Promise<void> {
     if (!res.ok) return
     const body = (await res.json()) as RoleResponse
     if (body.role === 'owner') {
-      navigateWebview('/owner-digest')
+      navigateWebview('/owner-mobile')
       return
     }
     if (body.tenant_role && body.tenant_role !== 'owner' && body.tenant_role !== 'occupant') {
