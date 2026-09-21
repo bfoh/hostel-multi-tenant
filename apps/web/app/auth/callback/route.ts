@@ -145,13 +145,21 @@ async function verifyAndRoute(
     .replace(/\/+$/, '')
   const hostname  = request.headers.get('host') ?? ''
   const isLocalhost = hostname.includes('localhost')
+  // The Capacitor mobile shell is locked to this single fixed host (no
+  // subdomain resolution capability — see lib/auth/mobile-context.ts) and
+  // its WKWebView treats a redirect to a different origin as an external
+  // navigation, handing it off to the system browser instead of loading it
+  // in-app. Keep app.<domain> requests on the current origin, same as
+  // localhost — middleware already resolves tenant via JWT claims there.
+  const isFixedAppHost = hostname === `app.${appDomain}`
 
-  if (!isLocalhost && slug) {
+  if (!isLocalhost && !isFixedAppHost && slug) {
     // Production: redirect to slug.domain.com/onboarding
     return NextResponse.redirect(`https://${slug}.${appDomain}/onboarding`)
   }
 
-  // Localhost: stay on current origin, middleware will resolve tenant via DB
+  // Localhost or the fixed app host: stay on current origin, middleware
+  // will resolve tenant via DB / JWT claims
   return response
 }
 
