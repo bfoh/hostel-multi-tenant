@@ -37,7 +37,11 @@ export function MarketplaceNav() {
   return (
     <nav
       className="sticky top-0 z-50 backdrop-blur-md"
-      style={{ background: 'rgba(255,255,255,0.92)', borderBottom: `1px solid ${MP.border}` }}
+      style={{
+        background: 'rgba(255,255,255,0.92)',
+        borderBottom: `1px solid ${MP.border}`,
+        paddingTop: 'env(safe-area-inset-top)',
+      }}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
@@ -97,18 +101,22 @@ export function MarketplaceNav() {
               onClick={() => setOpen(false)}
               aria-hidden="true"
               className={[
-                'fixed inset-0 top-[57px] z-40 transition-opacity duration-300',
+                'fixed inset-0 z-40 transition-opacity duration-300',
                 open ? 'opacity-100' : 'pointer-events-none opacity-0',
               ].join(' ')}
-              style={{ background: 'rgba(20,35,29,0.25)' }}
+              style={{ top: 'calc(57px + env(safe-area-inset-top))', background: 'rgba(20,35,29,0.25)' }}
             />
 
             <div
               className={[
-                'fixed inset-x-0 top-[57px] z-50 origin-top transition-all duration-300',
+                'fixed inset-x-0 z-50 origin-top transition-all duration-300',
                 open ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0',
               ].join(' ')}
-              style={{ background: MP.surface, borderBottom: `1px solid ${MP.border}` }}
+              style={{
+                top: 'calc(57px + env(safe-area-inset-top))',
+                background: MP.surface,
+                borderBottom: `1px solid ${MP.border}`,
+              }}
             >
               <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4">
                 {NAV_LINKS.map((l) => (
