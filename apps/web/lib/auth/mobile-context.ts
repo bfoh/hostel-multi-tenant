@@ -23,35 +23,42 @@
  * reasonable default, not a real multi-tenant switcher — see
  * docs/superpowers/specs/2026-05-22-mobile-app-design.md for why a full
  * switcher UI was explicitly decided against for v1.
+ *
+ * Originally only resolved 'owner' | 'occupant' — a receptionist/manager/
+ * etc. opening the mobile app resolved to role: null, silently invisible
+ * to /api/mobile/role and /api/mobile/tenant-theme (status-bar tint/splash
+ * caching no-op'd for them). Widened to every tenant_members role so the
+ * mobile staff/owner portal phases have real role data to route on.
  */
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { TenantRole } from '@/lib/auth/tenant-role'
 
 export interface MobileUserContext {
   userId:     string
-  role:       'owner' | 'occupant' | null
+  role:       TenantRole | 'occupant' | null
   tenantId:   string | null
 }
 
 /**
  * Resolves the tenant context for a mobile-app user, preferring an active
- * owner membership over an occupant record (matches the existing routing
- * priority in apps/mobile/src/main.ts's routeByRole()).
+ * tenant_members membership (any role) over an occupant record (matches
+ * the existing routing priority in apps/mobile/src/main.ts's
+ * routeByRole()).
  */
 export async function resolveMobileContext(userId: string): Promise<MobileUserContext> {
   const admin = createAdminClient() as any
 
-  const { data: ownerRows } = await admin
+  const { data: memberRows } = await admin
     .from('tenant_members')
-    .select('tenant_id')
+    .select('tenant_id, role')
     .eq('user_id', userId)
-    .eq('role', 'owner')
     .eq('is_active', true)
     .order('created_at', { ascending: false })
     .limit(1)
 
-  const ownerTenantId = ownerRows?.[0]?.tenant_id as string | undefined
-  if (ownerTenantId) {
-    return { userId, role: 'owner', tenantId: ownerTenantId }
+  const member = memberRows?.[0] as { tenant_id: string; role: TenantRole } | undefined
+  if (member) {
+    return { userId, role: member.role, tenantId: member.tenant_id }
   }
 
   const { data: occupantRows } = await admin
@@ -76,7 +83,7 @@ export async function resolveMobileContext(userId: string): Promise<MobileUserCo
  * picking whichever one is most recent. Falls back to the unscoped
  * resolution if the scoped lookup finds nothing (matches the previous
  * owner-digest layout behaviour of "prefer the header's tenant, but don't
- * hard-fail if it doesn't match an owner row").
+ * hard-fail if it doesn't match a row").
  */
 export async function resolveMobileContextForTenant(
   userId: string,
@@ -85,17 +92,17 @@ export async function resolveMobileContextForTenant(
   if (!tenantId) return resolveMobileContext(userId)
 
   const admin = createAdminClient() as any
-  const { data: ownerRows } = await admin
+  const { data: memberRows } = await admin
     .from('tenant_members')
-    .select('tenant_id')
+    .select('role')
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
-    .eq('role', 'owner')
     .eq('is_active', true)
     .limit(1)
 
-  if (ownerRows?.[0]) {
-    return { userId, role: 'owner', tenantId }
+  const member = memberRows?.[0] as { role: TenantRole } | undefined
+  if (member) {
+    return { userId, role: member.role, tenantId }
   }
 
   return resolveMobileContext(userId)

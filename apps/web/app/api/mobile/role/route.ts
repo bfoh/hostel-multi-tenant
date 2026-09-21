@@ -7,9 +7,14 @@ import { resolveMobileContext } from '@/lib/auth/mobile-context'
  * Returns the logged-in user's mobile-app role so the Capacitor shell
  * can route after webview cookies have settled.
  *
- *   { role: 'owner' | null,       // tenant_members.role = 'owner'
+ *   { role: 'owner' | null,       // tenant_members.role = 'owner' — kept
+ *                                 // as-is for back-compat with app-store
+ *                                 // builds that only understand 'owner'
  *     is_occupant: boolean,       // has a row in occupants
- *     tenant_id: string | null }
+ *     tenant_id: string | null,
+ *     tenant_role: TenantRole | 'occupant' | null } // NEW, additive —
+ *                                 // the full role, for the next app build
+ *                                 // to route staff/manager/etc. on
  *
  * Unauthenticated callers get all-null/false (200, not 401) so the
  * shell can decide whether to nudge the webview toward /login.
@@ -18,7 +23,7 @@ export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ role: null, is_occupant: false, tenant_id: null })
+    return NextResponse.json({ role: null, is_occupant: false, tenant_id: null, tenant_role: null })
   }
 
   const ctx = await resolveMobileContext(user.id)
@@ -27,5 +32,6 @@ export async function GET() {
     role:        ctx.role === 'owner' ? 'owner' : null,
     is_occupant: ctx.role === 'occupant',
     tenant_id:   ctx.tenantId,
+    tenant_role: ctx.role,
   })
 }
