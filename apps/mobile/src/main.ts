@@ -50,6 +50,7 @@ interface RoleResponse {
   role:        'owner' | null
   is_occupant: boolean
   tenant_id:   string | null
+  tenant_role: string | null
 }
 
 async function routeByRole(): Promise<void> {
@@ -59,6 +60,13 @@ async function routeByRole(): Promise<void> {
     const body = (await res.json()) as RoleResponse
     if (body.role === 'owner') {
       navigateWebview('/owner-digest')
+      return
+    }
+    if (body.tenant_role && body.tenant_role !== 'owner' && body.tenant_role !== 'occupant') {
+      // Staff role (manager/receptionist/housekeeper/accountant/security) —
+      // route to the mobile-first staff portal rather than the desktop
+      // dashboard, which was built for a mouse + wide viewport.
+      navigateWebview('/staff-mobile')
       return
     }
     // Occupant: leave the webview alone — portal already lands them at /occupant-portal.
