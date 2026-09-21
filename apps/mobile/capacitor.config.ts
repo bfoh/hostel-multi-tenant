@@ -8,16 +8,16 @@ const config: CapacitorConfig = {
   // tenant from JWT claims when hosted at app.gh-hostels.com (see
   // APP_OVERVIEW.md and apps/web/middleware.ts).
   //
-  // Cold-launches at /login, not the bare root domain: `/` renders the
-  // public SaaS marketing homepage ("Start a 30-day free trial") aimed at
-  // prospective hostel operators, not the students/owners who already
-  // have an account and just installed this app. If a session is already
-  // persisted from a previous login, middleware.ts's own auth-path
-  // handling immediately redirects an authenticated visit to /login
-  // onward to /occupant-portal or /dashboard anyway, so this is safe for
-  // both fresh and returning users.
+  // Cold-launches at `/` — the public marketplace homepage (search hostels,
+  // browse listings, "List your hostel free") — not `/login`. A logged-out
+  // or first-time user now sees the same marketplace front door as the
+  // website. An already-authenticated user is unaffected: `/`'s own
+  // `if (user) redirect('/dashboard')` plus middleware.ts's existing
+  // role-based redirect chain (owner/staff → /dashboard, occupant →
+  // /occupant-portal) fires exactly as it did when this pointed at /login,
+  // so returning users still land on their portal, not the marketplace.
   server: {
-    url: 'https://app.gh-hostels.com/login',
+    url: 'https://app.gh-hostels.com/',
     cleartext: false,
     androidScheme: 'https',
   },
