@@ -85,6 +85,19 @@ export default function LoginPage() {
       return
     }
 
+    // TEMP DIAGNOSTIC — investigating a mobile-app cross-origin redirect
+    // bug (Capacitor hands off to Safari on any navigation to a different
+    // host than app.<domain>). Unconditional because the native app has no
+    // URL bar to attach a debug query param through. Remove once root-caused.
+    if (typeof window !== 'undefined') {
+      setServerError(
+        `DEBUG origin=${window.location.origin} next=${JSON.stringify(next)} ` +
+        `mustChangePw=${!!data.user?.user_metadata?.must_change_password} ` +
+        `userId=${data.user?.id ?? 'null'}`
+      )
+      return
+    }
+
     if (data.user?.user_metadata?.must_change_password) {
       router.push(`/auth/set-password?next=${encodeURIComponent(next)}`)
     } else {
