@@ -41,7 +41,7 @@ export async function POST(
   // Resolve tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, is_active, paystack_subaccount_code, roommate_matching_enabled')
+    .select('id, name, is_active, paystack_subaccount_code, roommate_matching_enabled, booking_payment_mode')
     .eq('slug', slug)
     .single()
 
@@ -197,6 +197,14 @@ export async function POST(
   const suffix    = Math.floor(100000 + Math.random() * 900000)
   const bookingRef = `${prefix}-${year}-${suffix}`
 
+  // Guest checkout mode is an explicit owner choice (Settings → Public
+  // Listing), not an implicit fallback on whether a payout account happens
+  // to be connected. pay_at_hostel bookings are confirmed immediately with
+  // no online payment step — payment_status stays 'unpaid' until the guest
+  // pays on arrival, which is already a valid state used elsewhere for
+  // walk-in/manual admin bookings.
+  const payAtHostel = tenant.booking_payment_mode === 'pay_at_hostel'
+
   // Create booking
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
@@ -212,7 +220,7 @@ export async function POST(
       total_amount:   category.base_rate,
       paid_amount:    0,
       payment_status: 'unpaid',
-      status:         'pending_payment',
+      status:         payAtHostel ? 'confirmed' : 'pending_payment',
       source:         'website',
       notes:          d.notes,
     })
@@ -248,27 +256,29 @@ export async function POST(
   const callbackUrl = `${appUrl}/api/public/${slug}/pay/callback?booking_id=${booking.id}&amount=${category.base_rate}`
 
   let payment: { authorization_url: string; reference: string; amount: number } | null = null
-  try {
-    const result = await initBookingPayment({
-      tenantId:         tenant.id,
-      tenantSubaccount: tenant.paystack_subaccount_code ?? null,
-      bookingId:        booking.id,
-      bookingRef:       booking.booking_ref,
-      amountPesewas:    category.base_rate,
-      email:            d.email ?? null,
-      callbackUrl,
-      source:           'public_booking',
-    })
-    if (result) {
-      payment = {
-        authorization_url: result.authorizationUrl,
-        reference:         result.reference,
-        amount:            result.amount,
+  if (!payAtHostel) {
+    try {
+      const result = await initBookingPayment({
+        tenantId:         tenant.id,
+        tenantSubaccount: tenant.paystack_subaccount_code ?? null,
+        bookingId:        booking.id,
+        bookingRef:       booking.booking_ref,
+        amountPesewas:    category.base_rate,
+        email:            d.email ?? null,
+        callbackUrl,
+        source:           'public_booking',
+      })
+      if (result) {
+        payment = {
+          authorization_url: result.authorizationUrl,
+          reference:         result.reference,
+          amount:            result.amount,
+        }
       }
+    } catch (err) {
+      console.error('[POST /api/public/[slug]/book] payment init failed', err)
+      // Soft-fail: booking still created, guest can pay later via /api/public/[slug]/pay
     }
-  } catch (err) {
-    console.error('[POST /api/public/[slug]/book] payment init failed', err)
-    // Soft-fail: booking still created, guest can pay later via /api/public/[slug]/pay
   }
 
   // Fetch tenant branding for email
@@ -323,7 +333,8 @@ export async function POST(
     check_out_date: d.check_out_date,
     amount:        category.base_rate,
     rate_unit:     category.rate_unit,
-    status:        'pending_payment',
+    status:        payAtHostel ? 'confirmed' : 'pending_payment',
+    pay_at_hostel: payAtHostel,
     payment,
   }, { status: 201 })
 }

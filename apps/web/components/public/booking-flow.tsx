@@ -903,6 +903,7 @@ interface BookingResult {
   amount: number
   rate_unit: string
   status: string
+  pay_at_hostel: boolean
   payment: {
     authorization_url: string
     reference: string
@@ -942,11 +943,15 @@ function Confirmation({
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Booking Received!</h2>
+        <h2 className="text-xl font-bold text-gray-900">
+          {result.pay_at_hostel ? 'Reservation Confirmed!' : 'Booking Received!'}
+        </h2>
         <p className="mt-1 text-sm text-gray-500">
-          {canPayOnline
-            ? 'Complete payment now to confirm your room. We accept Mobile Money, Card and Bank Transfer.'
-            : 'The hostel will contact you to arrange payment and check-in.'}
+          {result.pay_at_hostel
+            ? 'Your room is reserved — pay in person when you arrive at the hostel.'
+            : canPayOnline
+              ? 'Complete payment now to confirm your room. We accept Mobile Money, Card and Bank Transfer.'
+              : 'The hostel will contact you to arrange payment and check-in.'}
         </p>
       </div>
 
@@ -967,9 +972,9 @@ function Confirmation({
           />
           <Row
             label="Status"
-            value="Pending payment"
+            value={result.pay_at_hostel ? 'Confirmed' : 'Pending payment'}
             pill
-            pillColor="bg-amber-100 text-amber-700"
+            pillColor={result.pay_at_hostel ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}
           />
         </div>
       </div>
