@@ -105,7 +105,12 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <OnboardingWizard
+    <>
+      {/* TEMP DIAGNOSTIC — investigating mobile-app cross-origin redirect. Remove once root-caused. */}
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999999, background: '#00cc44', color: '#fff', font: '12px monospace', padding: '4px 8px' }}>
+        [diag] /onboarding rendered · host={headersList.get('host')} · x-tenant-id={headersList.get('x-tenant-id')}
+      </div>
+      <OnboardingWizard
       tenantId={tenantRecord.id}
       initial={{
         name:           tenantRecord.name,
@@ -121,6 +126,7 @@ export default async function OnboardingPage() {
         primary_color:  tenantRecord.primary_color  ?? '#1B4F72',
         logo_url:       tenantRecord.logo_url       ?? '',
       }}
-    />
+      />
+    </>
   )
 }
