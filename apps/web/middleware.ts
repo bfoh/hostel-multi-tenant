@@ -332,15 +332,28 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Subdomain redirect (production only) ──────────────────────────────────
-  // Authenticated users landing on the app/root domain are redirected to their
+  // Authenticated users landing on the root/www domain are redirected to their
   // tenant subdomain so the app always runs at slug.gh-hostels.com.
   // Never fires on localhost — subdomains don't resolve in local browsers.
+  //
+  // Deliberately excludes app.<domain>: the Capacitor mobile shell is locked
+  // to that single fixed host (no subdomain-resolution capability — see
+  // lib/auth/mobile-context.ts) and its WKWebView treats a redirect to a
+  // different origin as an external navigation, handing off to the system
+  // browser — which then has no session there (cookies are scoped to
+  // app.<domain>) and bounces to that subdomain's own /login. This was
+  // previously firing on every authenticated app.<domain> request (e.g.
+  // /dashboard) — /onboarding was already excluded below, which is what
+  // made this so confusing to track down: onboarding stayed put, but the
+  // very next page a fresh signup hits (dashboard, redirecting them back to
+  // onboarding) triggered the same bug one hop later.
   {
     const appDomain    = (process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')
     const hostBase     = hostname.split(':')[0].toLowerCase()
     const isLocalDev   = hostBase === 'localhost' || hostBase === '127.0.0.1'
     const rootDomain   = appDomain.startsWith('app.') ? appDomain.slice(4) : appDomain
-    const onRootDomain = !isLocalDev && (hostBase === rootDomain || hostBase === `app.${rootDomain}` || hostBase === `www.${rootDomain}`)
+    const isFixedAppHost = hostBase === `app.${rootDomain}`
+    const onRootDomain = !isLocalDev && !isFixedAppHost && (hostBase === rootDomain || hostBase === `www.${rootDomain}`)
     const resolvedSlug = reqHeaders.get('x-tenant-slug')
 
     // Super-admin impersonation must NOT redirect to the tenant subdomain
