@@ -51,18 +51,18 @@ export function HeroSearch() {
   }, [updateFades])
 
   return (
-    <div className="mp-reveal mx-auto rounded-2xl bg-white p-2.5 shadow-xl" style={{ animationDelay: '180ms' }}>
+    <div className="mp-reveal mx-auto rounded-[22px] bg-white p-4 shadow-2xl sm:p-6" style={{ animationDelay: '180ms' }}>
       <div className="relative">
         {showLeftFade && (
           <div
-            className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-8 rounded-l-xl"
+            className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-10 rounded-l-xl"
             style={{ background: 'linear-gradient(to right, white, rgba(255,255,255,0))' }}
             aria-hidden="true"
           />
         )}
         <div
           ref={scrollRef}
-          className="mp-no-scrollbar flex items-center gap-0 overflow-x-auto px-1 pb-1.5 pt-1 sm:gap-0.5 sm:px-1.5"
+          className="mp-no-scrollbar flex items-center gap-1 overflow-x-auto pb-3 sm:justify-center sm:gap-3"
         >
           {TABS.map((tab) => {
             const Icon = tab.icon
@@ -73,10 +73,10 @@ export function HeroSearch() {
                 type="button"
                 onClick={() => setActive(tab.key)}
                 aria-current={isActive}
-                className="relative flex shrink-0 flex-col items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-2 text-[12px] font-medium transition-colors sm:px-3 sm:text-[13px]"
+                className="relative flex shrink-0 flex-col items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-[13px] font-medium transition-colors sm:px-5 sm:text-[14px]"
                 style={{ color: isActive ? MP.greenDeep : MP.textSecondary }}
               >
-                <Icon className="h-[18px] w-[18px]" strokeWidth={isActive ? 2.25 : 1.75} style={{ color: isActive ? MP.green : MP.textSecondary }} />
+                <Icon className="h-[26px] w-[26px]" strokeWidth={isActive ? 2 : 1.6} style={{ color: isActive ? MP.green : MP.textSecondary }} />
                 <span className="flex items-center gap-1.5">
                   {tab.label}
                   {!tab.enabled && (
@@ -89,7 +89,7 @@ export function HeroSearch() {
                   )}
                 </span>
                 {isActive && (
-                  <span className="absolute -bottom-0.5 left-3 right-3 h-[2.5px] rounded-full" style={{ background: MP.green }} />
+                  <span className="absolute -bottom-1 left-4 right-4 h-[3px] rounded-full" style={{ background: MP.green }} />
                 )}
               </button>
             )
@@ -97,7 +97,7 @@ export function HeroSearch() {
         </div>
         {showRightFade && (
           <div
-            className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-8 rounded-r-xl"
+            className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-10 rounded-r-xl"
             style={{ background: 'linear-gradient(to left, white, rgba(255,255,255,0))' }}
             aria-hidden="true"
           />
@@ -107,48 +107,48 @@ export function HeroSearch() {
       <div className="h-px" style={{ background: MP.border }} />
 
       {activeTab.enabled ? (
-        <form action="/hostels" method="get" className="flex flex-col gap-2 pt-2.5 sm:flex-row sm:items-center">
-          <div className="flex flex-1 items-center gap-2 rounded-xl px-4 py-3" style={{ background: MP.surfaceSoft }}>
-            <Search className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
+        <form action="/hostels" method="get" className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center">
+          <div className="flex flex-1 items-center gap-3 rounded-2xl px-5 py-4" style={{ background: MP.surfaceSoft }}>
+            <Search className="h-5 w-5 shrink-0" style={{ color: MP.goldDeep }} />
             <input
               name="q"
               placeholder="Hostel name or campus — Legon, KNUST, UCC…"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-neutral-400"
+              className="w-full bg-transparent text-[15px] outline-none placeholder:text-neutral-400"
               style={{ color: MP.ink }}
             />
           </div>
-          <div className="flex items-center gap-2 rounded-xl px-4 py-3 sm:w-44" style={{ background: MP.surfaceSoft }}>
-            <MapPin className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
+          <div className="flex items-center gap-3 rounded-2xl px-5 py-4 sm:w-52" style={{ background: MP.surfaceSoft }}>
+            <MapPin className="h-5 w-5 shrink-0" style={{ color: MP.goldDeep }} />
             <input
               name="city"
               placeholder="City"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-neutral-400"
+              className="w-full bg-transparent text-[15px] outline-none placeholder:text-neutral-400"
               style={{ color: MP.ink }}
             />
           </div>
           <button
             type="submit"
-            className="shrink-0 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
+            className="shrink-0 rounded-2xl px-9 py-4 text-[15px] font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
             style={{ background: MP.green }}
           >
             Search
           </button>
         </form>
       ) : (
-        <div className="flex flex-col items-center gap-3 py-6 text-center sm:flex-row sm:justify-between sm:gap-4 sm:py-5 sm:text-left">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: MP.surfaceSoft }}>
-              <Sparkles className="h-[18px] w-[18px]" style={{ color: MP.goldDeep }} />
+        <div className="flex flex-col items-center gap-4 py-8 text-center sm:flex-row sm:justify-between sm:gap-4 sm:py-7 sm:text-left">
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: MP.surfaceSoft }}>
+              <Sparkles className="h-5 w-5" style={{ color: MP.goldDeep }} />
             </span>
             <div>
-              <p className="text-sm font-semibold" style={{ color: MP.ink }}>{activeTab.label} is on the way</p>
-              <p className="text-[13px]" style={{ color: MP.textSecondary }}>We're expanding beyond hostels — check back soon.</p>
+              <p className="text-base font-semibold" style={{ color: MP.ink }}>{activeTab.label} is on the way</p>
+              <p className="text-[14px]" style={{ color: MP.textSecondary }}>We're expanding beyond hostels — check back soon.</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setActive('hostels')}
-            className="shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
+            className="shrink-0 rounded-2xl px-6 py-3 text-[15px] font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
             style={{ background: MP.green }}
           >
             Browse hostels

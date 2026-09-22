@@ -127,15 +127,7 @@ export default async function LandingPage() {
           <div className="mp-hero-adinkra absolute inset-0" />
         </div>
 
-        <div className="relative mx-auto max-w-3xl px-5 pb-36 pt-16 text-center sm:px-6 sm:pb-48 sm:pt-24">
-          <div
-            className="mp-reveal mx-auto mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
-            style={{ border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.1)', color: MP.goldSoft }}
-          >
-            <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
-            Verified hostels. Direct booking. Zero agent fees.
-          </div>
-
+        <div className="relative mx-auto max-w-3xl px-5 pb-40 pt-20 text-center sm:px-6 sm:pb-60 sm:pt-28">
           <h1
             className="mp-reveal mx-auto max-w-2xl text-[36px] font-normal leading-[1.08] tracking-[-0.03em] text-white sm:text-[52px] md:text-[60px]"
             style={{ fontFamily: 'Georgia, "Times New Roman", serif', animationDelay: '60ms' }}
@@ -152,7 +144,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Floating search card — straddles the hero/page boundary */}
-      <div className="relative z-10 mx-auto -mt-24 max-w-3xl px-5 sm:-mt-28 sm:px-6">
+      <div className="relative z-10 mx-auto -mt-28 max-w-4xl px-5 sm:-mt-32 sm:px-6">
         <HeroSearch />
 
         <div
