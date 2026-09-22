@@ -189,10 +189,10 @@ export default async function LandingPage() {
         </form>
 
         <div
-          className="mp-reveal mx-auto mt-4 flex flex-wrap items-center justify-center gap-2"
+          className="mp-reveal relative z-0 mx-auto mt-7 flex flex-wrap items-center justify-center gap-2"
           style={{ animationDelay: '220ms' }}
         >
-          <span className="text-[12px]" style={{ color: MP.textSecondary, opacity: 0.75 }}>Popular:</span>
+          <span className="text-[12px] font-medium" style={{ color: MP.textSecondary }}>Popular:</span>
           {['Legon', 'KNUST', 'UCC', 'Cape Coast', 'Kumasi'].map((campus) => (
             <Link
               key={campus}
