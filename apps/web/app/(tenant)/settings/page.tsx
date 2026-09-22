@@ -238,13 +238,15 @@ export default async function SettingsPage({
         <ChevronRight className="h-5 w-5 text-text-tertiary" />
       </Link>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 rounded-xl border border-border bg-surface-sunken p-1">
+      {/* Tab bar — overflow-x-auto so 6 tabs scroll instead of forcing the
+          whole page wider than a phone viewport; min-w keeps each tap
+          target reasonable while still distributing extra space when it fits. */}
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface-sunken p-1">
         {TABS.map((t) => (
           <Link
             key={t.value}
             href={`/settings?tab=${t.value}`}
-            className={`flex-1 rounded-lg px-3 py-2 text-center text-sm font-medium transition-colors ${
+            className={`flex-1 min-w-[92px] rounded-lg px-3 py-2 text-center text-sm font-medium transition-colors ${
               tab === t.value
                 ? 'bg-surface shadow-sm text-text-primary'
                 : 'text-text-secondary hover:text-text-primary'

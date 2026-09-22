@@ -114,12 +114,12 @@ export default async function StaffProfilePage({
       </div>
 
       {/* ── Tabs ─────────────────────────────────────────────────── */}
-      <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
         {TABS.map(t => (
           <Link
             key={t.id}
             href={`/staff/${id}?tab=${t.id}`}
-            className={`flex-1 rounded-md px-3 py-1.5 text-center text-sm font-medium transition-colors ${
+            className={`flex-1 min-w-[92px] rounded-md px-3 py-1.5 text-center text-sm font-medium transition-colors ${
               tab === t.id
                 ? 'bg-brand text-brand-fg shadow-sm'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'

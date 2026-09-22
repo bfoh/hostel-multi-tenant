@@ -108,12 +108,12 @@ export function KeysClient({ initialKeys, rooms }: { initialKeys: RoomKey[]; roo
 
       {/* Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-lg border border-border bg-surface-sunken p-1">
+        <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface-sunken p-1">
           {['all', 'available', 'issued', 'lost', 'damaged'].map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors capitalize ${filter === s ? 'bg-surface shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`shrink-0 rounded-md px-3 py-1 text-xs font-medium transition-colors capitalize ${filter === s ? 'bg-surface shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}
             >
               {s}
             </button>

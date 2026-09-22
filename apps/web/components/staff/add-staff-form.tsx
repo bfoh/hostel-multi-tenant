@@ -70,13 +70,13 @@ export function AddStaffForm() {
   return (
     <form onSubmit={submit} className="space-y-6">
       {/* ── Section tabs ─────────────────────────────────────────── */}
-      <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
         {sections.map(s => (
           <button
             key={s.id}
             type="button"
             onClick={() => setSection(s.id)}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`flex-1 min-w-[110px] whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               section === s.id
                 ? 'bg-brand text-brand-fg shadow-sm'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'

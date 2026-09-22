@@ -74,11 +74,11 @@ export function MeterReadingsClient({ rooms, initialReadings }: { rooms: Room[];
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <div className="flex items-center gap-3">
-        <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
           {['all', 'electricity', 'water', 'gas'].map((u) => (
             <button key={u} onClick={() => setFilterUtility(u)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors capitalize ${
+              className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors capitalize ${
                 filterUtility === u ? 'bg-brand text-brand-fg' : 'text-text-secondary hover:text-text-primary'
               }`}>
               {u}
