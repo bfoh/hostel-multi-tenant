@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Search, MapPin, LayoutGrid, List as ListIcon, ChevronRight } from 'lucide-react'
+import { Search, MapPin, LayoutGrid, List as ListIcon, ChevronRight, SearchX } from 'lucide-react'
 import { searchHostels } from '@/lib/directory'
 import { HostelCard } from '@/components/public/hostel-card'
 import { HostelListRow } from '@/components/public/hostel-list-row'
@@ -86,13 +86,17 @@ export default async function HostelsDirectoryPage({
                 style={{ color: MP.ink }}
               />
             </div>
-            <select name="region" defaultValue={sp.region ?? ''} className="rounded-md px-3 py-2.5 text-sm sm:w-44" style={{ color: MP.ink }}>
+            <select
+              name="region" defaultValue={sp.region ?? ''}
+              className="cursor-pointer rounded-md border bg-white px-3 py-2.5 text-sm sm:w-44"
+              style={{ color: MP.ink, borderColor: MP.border }}
+            >
               <option value="">All regions</option>
               {GHANA_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
             <button
               type="submit"
-              className="rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-colors"
+              className="cursor-pointer rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
               style={{ background: MP.green }}
             >
               Search
@@ -189,14 +193,14 @@ export default async function HostelsDirectoryPage({
               <div className="flex overflow-hidden rounded-md" style={{ border: `1px solid ${MP.border}` }}>
                 <Link
                   href={`/hostels?${buildQuery(sp, { view: 'list' })}`}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px]"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] transition-colors duration-150"
                   style={view === 'list' ? { background: MP.green, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
                 >
                   <ListIcon className="h-3.5 w-3.5" /> List
                 </Link>
                 <Link
                   href={`/hostels?${buildQuery(sp, { view: 'grid' })}`}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px]"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] transition-colors duration-150"
                   style={view === 'grid' ? { background: MP.green, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" /> Grid
@@ -207,16 +211,27 @@ export default async function HostelsDirectoryPage({
 
           {hostels.length === 0 ? (
             <div className="mt-8 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-white py-20 text-center" style={{ borderColor: MP.borderStrong }}>
+              <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: MP.surfaceSoft }}>
+                <SearchX className="h-5 w-5" style={{ color: MP.goldDeep }} />
+              </span>
               <p className="font-medium" style={{ color: MP.ink }}>No hostels found</p>
-              <p className="text-sm" style={{ color: MP.textSecondary }}>Try a different search or check back soon — new hostels list every week.</p>
+              <p className="max-w-xs text-sm" style={{ color: MP.textSecondary }}>Try a different search or check back soon — new hostels list every week.</p>
             </div>
           ) : view === 'grid' ? (
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {hostels.map((h) => <HostelCard key={h.slug} hostel={h} />)}
+              {hostels.map((h, i) => (
+                <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+                  <HostelCard hostel={h} />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="mt-6 space-y-4">
-              {hostels.map((h) => <HostelListRow key={h.slug} hostel={h} />)}
+              {hostels.map((h, i) => (
+                <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+                  <HostelListRow hostel={h} />
+                </div>
+              ))}
             </div>
           )}
 
@@ -226,7 +241,7 @@ export default async function HostelsDirectoryPage({
                 <Link
                   key={p}
                   href={`/hostels?${buildQuery(sp, { page: String(p) })}`}
-                  className="rounded-md px-3 py-1.5 text-sm"
+                  className="rounded-md px-3 py-1.5 text-sm transition-colors duration-150"
                   style={p === page
                     ? { background: MP.green, color: '#fff' }
                     : { border: `1px solid ${MP.border}`, color: MP.textSecondary }}

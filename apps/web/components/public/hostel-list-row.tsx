@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { MapPin, Heart, Building2, ArrowRight } from 'lucide-react'
+import { MapPin, Building2, ArrowRight } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
 import type { DirectoryHostel } from '@/lib/directory'
 import { MP } from '@/lib/marketplace-theme'
@@ -15,7 +15,7 @@ export function HostelListRow({ hostel }: { hostel: DirectoryHostel }) {
   return (
     <Link
       href={`/hostels/${hostel.slug}`}
-      className="group flex flex-col overflow-hidden rounded-xl bg-white transition-shadow hover:shadow-md sm:flex-row"
+      className="group flex flex-col overflow-hidden rounded-xl bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg sm:flex-row"
       style={{ border: `1px solid ${MP.border}` }}
     >
       <div className="relative h-48 w-full shrink-0 overflow-hidden sm:h-auto sm:w-56" style={{ background: MP.surfaceSoft }}>
@@ -31,9 +31,6 @@ export function HostelListRow({ hostel }: { hostel: DirectoryHostel }) {
             <Building2 className="h-10 w-10" style={{ color: MP.goldDeep, opacity: 0.35 }} />
           </div>
         )}
-        <span className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm">
-          <Heart className="h-4 w-4" style={{ color: MP.textSecondary }} />
-        </span>
       </div>
 
       <div className="flex flex-1 flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center sm:gap-6">

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { MapPin, Heart, Building2 } from 'lucide-react'
+import { MapPin, Building2 } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
 import type { DirectoryHostel } from '@/lib/directory'
 import { MP } from '@/lib/marketplace-theme'
@@ -18,7 +18,7 @@ export function HostelCard({ hostel }: { hostel: DirectoryHostel }) {
   return (
     <Link
       href={`/hostels/${hostel.slug}`}
-      className="group block overflow-hidden rounded-xl bg-white shadow-none transition-shadow hover:shadow-md"
+      className="group block overflow-hidden rounded-xl bg-white shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
       style={{ border: `1px solid ${MP.border}` }}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden" style={{ background: MP.surfaceSoft }}>
@@ -34,9 +34,6 @@ export function HostelCard({ hostel }: { hostel: DirectoryHostel }) {
             <Building2 className="h-10 w-10" style={{ color: MP.goldDeep, opacity: 0.35 }} />
           </div>
         )}
-        <span className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm">
-          <Heart className="h-4 w-4" style={{ color: MP.textSecondary }} />
-        </span>
       </div>
 
       <div className="p-3.5">

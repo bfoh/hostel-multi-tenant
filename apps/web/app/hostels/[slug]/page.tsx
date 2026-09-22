@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Mail, BedDouble, Heart, Share2 } from 'lucide-react'
+import { MapPin, Phone, Mail, BedDouble } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS } from '@/lib/utils'
 import { amenityIcon } from '@/lib/amenity-icons'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
+import { ShareButton } from '@/components/public/share-button'
 import { MP } from '@/lib/marketplace-theme'
 
 interface CmsContent {
@@ -110,16 +111,11 @@ export default async function HostelProfilePage({ params }: { params: Promise<{ 
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-neutral-50" style={{ border: `1px solid ${MP.border}`, color: MP.textSecondary }} aria-label="Save">
-              <Heart className="h-4 w-4" />
-            </button>
-            <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-neutral-50" style={{ border: `1px solid ${MP.border}`, color: MP.textSecondary }} aria-label="Share">
-              <Share2 className="h-4 w-4" />
-            </button>
+            <ShareButton title={tenant.name} />
             {categories.length > 0 && (
               <a
                 href={bookUrl}
-                className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white"
+                className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
                 style={{ background: MP.green }}
               >
                 Reserve
@@ -130,17 +126,24 @@ export default async function HostelProfilePage({ params }: { params: Promise<{ 
 
         {/* ── Gallery ───────────────────────────────────────────── */}
         {gallery.length > 0 ? (
-          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:grid-rows-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={gallery[0]} alt={tenant.name} className="col-span-2 row-span-2 aspect-[4/3] w-full rounded-l-xl object-cover sm:aspect-auto sm:h-full" />
-            {gallery.slice(1, 5).map((url, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
+          <div className="mp-reveal mt-5 grid grid-cols-2 gap-2 overflow-hidden rounded-xl sm:grid-cols-4 sm:grid-rows-2">
+            <div className="col-span-2 row-span-2 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                key={i}
-                src={url}
-                alt=""
-                className={`aspect-square w-full object-cover sm:aspect-auto sm:h-full ${i === 1 ? 'sm:rounded-tr-xl' : ''} ${i === 3 ? 'sm:rounded-br-xl' : ''}`}
+                src={gallery[0]}
+                alt={tenant.name}
+                className="aspect-[4/3] w-full rounded-l-xl object-cover transition-transform duration-500 hover:scale-105 sm:aspect-auto sm:h-full"
               />
+            </div>
+            {gallery.slice(1, 5).map((url, i) => (
+              <div key={i} className="overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`${tenant.name} photo ${i + 2}`}
+                  className={`aspect-square w-full object-cover transition-transform duration-500 hover:scale-105 sm:aspect-auto sm:h-full ${i === 1 ? 'sm:rounded-tr-xl' : ''} ${i === 3 ? 'sm:rounded-br-xl' : ''}`}
+                />
+              </div>
             ))}
           </div>
         ) : (
@@ -154,9 +157,9 @@ export default async function HostelProfilePage({ params }: { params: Promise<{ 
           <div className="min-w-0 flex-1 space-y-10">
             {/* Tabs (in-page anchors) */}
             <div className="flex gap-6 text-[14px] font-medium" style={{ borderBottom: `1px solid ${MP.border}`, color: MP.textSecondary }}>
-              <a href="#overview" className="pb-3" style={{ borderBottom: `2px solid ${MP.green}`, color: MP.green }}>Overview</a>
-              <a href="#rooms" className="pb-3 hover:opacity-80">Rooms &amp; Prices</a>
-              {facilities.length > 0 && <a href="#facilities" className="pb-3 hover:opacity-80">Facilities</a>}
+              <a href="#overview" className="pb-3 transition-opacity" style={{ borderBottom: `2px solid ${MP.green}`, color: MP.green }}>Overview</a>
+              <a href="#rooms" className="pb-3 transition-opacity hover:opacity-70">Rooms &amp; Prices</a>
+              {facilities.length > 0 && <a href="#facilities" className="pb-3 transition-opacity hover:opacity-70">Facilities</a>}
             </div>
 
             <section id="overview" className="space-y-3">
@@ -184,8 +187,12 @@ export default async function HostelProfilePage({ params }: { params: Promise<{ 
                 <p className="mt-3 text-sm" style={{ color: MP.textSecondary }}>No rooms currently listed — check back soon.</p>
               ) : (
                 <div className="mt-4 space-y-4">
-                  {categories.map((c) => (
-                    <div key={c.id} className="flex flex-col gap-4 rounded-xl bg-white p-4 sm:flex-row sm:items-center" style={{ border: `1px solid ${MP.border}` }}>
+                  {categories.map((c, i) => (
+                    <div
+                      key={c.id}
+                      className="mp-reveal flex flex-col gap-4 rounded-xl bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center"
+                      style={{ border: `1px solid ${MP.border}`, animationDelay: `${Math.min(i, 6) * 50}ms` }}
+                    >
                       {c.image_urls && c.image_urls.length > 0 ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={c.image_urls[0]} alt={c.name} className="h-32 w-full shrink-0 rounded-lg object-cover sm:h-20 sm:w-28" />
@@ -216,10 +223,14 @@ export default async function HostelProfilePage({ params }: { params: Promise<{ 
               <section id="facilities">
                 <h2 className="text-[17px] font-bold" style={{ color: MP.ink }}>Most popular facilities</h2>
                 <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {facilities.map((f) => {
+                  {facilities.map((f, i) => {
                     const Icon = amenityIcon(f)
                     return (
-                      <div key={f} className="flex items-center gap-2 text-[13px]" style={{ color: MP.ink }}>
+                      <div
+                        key={f}
+                        className="mp-reveal flex items-center gap-2 text-[13px]"
+                        style={{ color: MP.ink, animationDelay: `${Math.min(i, 9) * 30}ms` }}
+                      >
                         <Icon className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
                         {f}
                       </div>
@@ -249,7 +260,7 @@ export default async function HostelProfilePage({ params }: { params: Promise<{ 
                 </p>
                 <Link
                   href="/login"
-                  className="mt-3 inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-neutral-50"
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors hover:bg-neutral-50"
                   style={{ border: `1px solid ${MP.border}`, color: MP.ink }}
                 >
                   Sign in

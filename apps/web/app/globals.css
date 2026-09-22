@@ -301,6 +301,16 @@
     }
   }
 
+  /* Marketplace entrance reveal — pair with an inline animation-delay for
+     stagger (e.g. style={{ animationDelay: `${i * 60}ms` }}). Starts
+     invisible so content never flashes unstyled before JS/CSS loads;
+     prefers-reduced-motion is already handled globally above (collapses
+     animation-duration to ~0), so no separate no-motion variant is needed. */
+  .mp-reveal {
+    opacity: 0;
+    animation: fadeInUp 500ms var(--ease-standard) forwards;
+  }
+
   /* Sidebar transition */
   .sidebar-transition {
     transition: width 200ms var(--ease-standard);
@@ -526,6 +536,23 @@
   @media (min-width: 1024px) {
     .platform-adinkra-bg-light {
       background-size: 560px 560px;
+    }
+  }
+  /* Bolder Adinkra layer for the homepage's immersive hero band — the
+     shared .platform-adinkra-bg is tuned very subtle (0.05) for use as
+     whole-page ambient texture elsewhere (for-owners); this hero is a
+     deliberate focal graphic (Expedia-style full-bleed hero, adapted to
+     our own pattern language instead of stock photography we don't have),
+     so it needs to actually read as a texture, not a whisper of one. */
+  .mp-hero-adinkra {
+    background-image: url('/adinkra-pattern.svg');
+    background-repeat: repeat;
+    background-size: 380px 380px;
+    opacity: 0.16;
+  }
+  @media (min-width: 1024px) {
+    .mp-hero-adinkra {
+      background-size: 480px 480px;
     }
   }
   .platform-mesh {
