@@ -37,7 +37,7 @@ export default function MaintenancePage() {
           </a>
 
           <a
-            href="https://gh-hostels.com"
+            href="/"
             className="inline-flex w-full items-center justify-center rounded-xl border border-border bg-surface px-5 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
           >
             Go to GH Hostels

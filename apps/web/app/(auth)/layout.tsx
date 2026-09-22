@@ -64,7 +64,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         style={{ top: 'max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))' }}
       >
         <Link
-          href={isTenantPage ? '/' : 'https://gh-hostels.com'}
+          href="/"
           className="flex items-center gap-1.5 text-[13px] font-medium transition-colors"
           style={{ color: 'rgba(245,233,210,0.55)' }}
         >
@@ -112,7 +112,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
               </span>
             </div>
           ) : (
-            <Link href="https://gh-hostels.com" className="mb-4 flex items-center gap-2.5 group">
+            <Link href="/" className="mb-4 flex items-center gap-2.5 group">
               <Image
                 src="/logo-mark.svg"
                 alt="GH-HOSTELS"

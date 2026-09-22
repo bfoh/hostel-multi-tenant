@@ -73,7 +73,7 @@ export default async function ConfirmPage({
         )}
 
         <a
-          href="https://gh-hostels.com/login"
+          href="/login"
           className="mt-6 inline-block text-[13px] font-semibold transition-colors hover:opacity-80"
           style={{ color: GOLD }}
         >
