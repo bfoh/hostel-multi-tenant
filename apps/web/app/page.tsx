@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Search, ShieldCheck, Zap, HandCoins } from 'lucide-react'
+import { ShieldCheck, Zap, HandCoins } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
@@ -10,6 +10,7 @@ import { HostelCard } from '@/components/public/hostel-card'
 import { searchHostels } from '@/lib/directory'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
+import { HeroSearch } from '@/components/marketplace/hero-search'
 import { MP } from '@/lib/marketplace-theme'
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ export default async function LandingPage() {
           <div className="mp-hero-adinkra absolute inset-0" />
         </div>
 
-        <div className="relative mx-auto max-w-3xl px-5 pb-32 pt-16 text-center sm:px-6 sm:pb-40 sm:pt-24">
+        <div className="relative mx-auto max-w-3xl px-5 pb-36 pt-16 text-center sm:px-6 sm:pb-48 sm:pt-24">
           <div
             className="mp-reveal mx-auto mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
             style={{ border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.1)', color: MP.goldSoft }}
@@ -151,39 +152,8 @@ export default async function LandingPage() {
       </section>
 
       {/* Floating search card — straddles the hero/page boundary */}
-      <div className="relative z-10 mx-auto -mt-20 max-w-2xl px-5 sm:-mt-24 sm:px-6">
-        <form
-          action="/hostels"
-          method="get"
-          className="mp-reveal mx-auto flex flex-col gap-2 rounded-2xl bg-white p-2.5 shadow-xl sm:flex-row sm:items-center"
-          style={{ animationDelay: '180ms' }}
-        >
-          <div className="flex flex-1 items-center gap-2 rounded-xl px-4 py-3" style={{ background: MP.surfaceSoft }}>
-            <Search className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
-            <input
-              name="q"
-              placeholder="Hostel name or campus — Legon, KNUST, UCC…"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-neutral-400"
-              style={{ color: MP.ink }}
-            />
-          </div>
-          <div className="flex items-center gap-2 rounded-xl px-4 py-3 sm:w-44" style={{ background: MP.surfaceSoft }}>
-            <MapPin className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
-            <input
-              name="city"
-              placeholder="City"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-neutral-400"
-              style={{ color: MP.ink }}
-            />
-          </div>
-          <button
-            type="submit"
-            className="shrink-0 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
-            style={{ background: MP.green }}
-          >
-            Search
-          </button>
-        </form>
+      <div className="relative z-10 mx-auto -mt-24 max-w-2xl px-5 sm:-mt-28 sm:px-6">
+        <HeroSearch />
 
         <div
           className="mp-reveal relative z-0 mx-auto mt-7 flex flex-wrap items-center justify-center gap-2"

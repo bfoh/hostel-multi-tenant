@@ -311,6 +311,17 @@
     animation: fadeInUp 500ms var(--ease-standard) forwards;
   }
 
+  /* Hides the scrollbar on the hero's horizontally-scrolling vertical-tab
+     strip (Hostels/Hotels/Apartments/…) on narrow viewports, without
+     disabling scroll itself. */
+  .mp-no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .mp-no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Sidebar transition */
   .sidebar-transition {
     transition: width 200ms var(--ease-standard);
