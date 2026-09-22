@@ -30,7 +30,10 @@ export function AppHeader({ user: _, onMenuClick }: AppHeaderProps) {
   }
 
   return (
-    <header className="flex h-14 items-center justify-between gap-1 border-b border-border bg-surface px-3 sm:px-4">
+    <header
+      className="flex h-14 shrink-0 items-center justify-between gap-1 border-b border-border bg-surface px-3 sm:px-4"
+      style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(3.5rem + env(safe-area-inset-top))' }}
+    >
       {/* Mobile: hamburger + hostel name */}
       <div className="flex min-w-0 items-center gap-2 md:hidden">
         <button

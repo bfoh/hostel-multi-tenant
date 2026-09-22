@@ -68,7 +68,7 @@ export default async function RoomCategoriesPage() {
           {categories.map((c) => (
             <div
               key={c.id}
-              className="flex items-start justify-between rounded-xl border border-border bg-surface p-4"
+              className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-start sm:justify-between"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export default async function RoomCategoriesPage() {
                   </div>
                 )}
               </div>
-              <div className="ml-4 flex shrink-0 items-center">
+              <div className="flex shrink-0 items-start gap-2 sm:ml-4">
                 <Link
                   href={`/rooms/categories/${c.id}/edit`}
                   className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-surface-raised transition-colors"
