@@ -100,7 +100,7 @@ export default async function LandingPage() {
 
   if (user && isAppDomain) redirect('/dashboard')
 
-  const { hostels: featuredHostels, total: totalListed } = await searchHostels({ limit: 6, sort: 'newest' })
+  const { hostels: featuredHostels } = await searchHostels({ limit: 6, sort: 'newest' })
 
   return (
     <div className="relative min-h-screen antialiased" style={{ background: MP.bg }}>
@@ -128,14 +128,11 @@ export default async function LandingPage() {
 
         <div className="relative mx-auto max-w-3xl px-5 pb-32 pt-16 text-center sm:px-6 sm:pb-40 sm:pt-24">
           <div
-            className="mp-reveal mx-auto mb-6 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em]"
+            className="mp-reveal mx-auto mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
             style={{ border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.1)', color: MP.goldSoft }}
           >
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-70" style={{ background: MP.goldSoft }} />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: MP.goldSoft }} />
-            </span>
-            {totalListed} hostels listed across Ghana
+            <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Verified hostels. Direct booking. Zero agent fees.
           </div>
 
           <h1
