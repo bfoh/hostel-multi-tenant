@@ -13,6 +13,7 @@ export interface DirectoryHostel {
   /** First photo found across this tenant's active room categories — an
    *  owner-uploaded room photo, not a stock image or the tenant's logo. */
   hero_image_url: string | null
+  created_at:     string
 }
 
 export interface DirectorySearchParams {
@@ -21,7 +22,7 @@ export interface DirectorySearchParams {
   q?:      string | null
   page?:   number
   limit?:  number
-  sort?:   'name' | 'price_asc' | 'price_desc'
+  sort?:   'name' | 'price_asc' | 'price_desc' | 'newest'
 }
 
 /**
@@ -50,7 +51,7 @@ export async function searchHostels(
   // regional hostel directory, without needing a materialized view.
   let query = supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, primary_color, address_city, address_region, room_categories!inner(base_rate, is_active, image_urls, sort_order)')
+    .select('id, slug, name, tagline, logo_url, primary_color, address_city, address_region, created_at, room_categories!inner(base_rate, is_active, image_urls, sort_order)')
     .eq('listed_publicly', true)
     .in('status', ['trial', 'active', 'trial_expired'])
     .eq('room_categories.is_active', true)
@@ -84,6 +85,7 @@ export async function searchHostels(
         slug: row.slug, name: row.name, tagline: row.tagline, logo_url: row.logo_url,
         primary_color: row.primary_color, address_city: row.address_city, address_region: row.address_region,
         from_rate: minRate, category_count: activeRates.length, hero_image_url: firstPhoto,
+        created_at: row.created_at,
       })
     }
   }
@@ -91,6 +93,7 @@ export async function searchHostels(
   let all = Array.from(byTenant.values())
   if (sort === 'price_asc')  all = all.sort((a, b) => a.from_rate - b.from_rate)
   if (sort === 'price_desc') all = all.sort((a, b) => b.from_rate - a.from_rate)
+  if (sort === 'newest')     all = all.sort((a, b) => b.created_at.localeCompare(a.created_at))
   // 'name' is already the DB sort order
 
   return { hostels: all.slice(offset, offset + limit), total: all.length }

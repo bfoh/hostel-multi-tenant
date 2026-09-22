@@ -100,7 +100,7 @@ export default async function LandingPage() {
 
   if (user && isAppDomain) redirect('/dashboard')
 
-  const { hostels: featuredHostels, total: totalListed } = await searchHostels({ limit: 6 })
+  const { hostels: featuredHostels, total: totalListed } = await searchHostels({ limit: 6, sort: 'newest' })
 
   return (
     <div className="relative min-h-screen antialiased" style={{ background: MP.bg }}>

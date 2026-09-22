@@ -153,8 +153,10 @@ export default async function HostelsDirectoryPage({
               </div>
             </form>
 
-            <div className="mt-6 pt-4" style={{ borderTop: `1px solid ${MP.border}` }}>
-              <p className="text-[13px] font-semibold" style={{ color: MP.ink }}>Region</p>
+            <details className="mt-6 pt-4" style={{ borderTop: `1px solid ${MP.border}` }} open={!!sp.region}>
+              <summary className="cursor-pointer text-[13px] font-semibold" style={{ color: MP.ink }}>
+                Region{sp.region ? ` · ${sp.region}` : ''}
+              </summary>
               <ul className="mt-2 space-y-1.5">
                 {GHANA_REGIONS.map((r) => (
                   <li key={r}>
@@ -168,7 +170,7 @@ export default async function HostelsDirectoryPage({
                   </li>
                 ))}
               </ul>
-            </div>
+            </details>
           </div>
         </aside>
 
