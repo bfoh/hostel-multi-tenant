@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { resolveTenant } from '@/lib/tenant/resolve'
+import { classifyHost } from '@/lib/tenant/host-classification'
 
 const BYPASS_PATHS = [
   '/widget',
@@ -348,12 +349,8 @@ export async function middleware(request: NextRequest) {
   // very next page a fresh signup hits (dashboard, redirecting them back to
   // onboarding) triggered the same bug one hop later.
   {
-    const appDomain    = (process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')
-    const hostBase     = hostname.split(':')[0].toLowerCase()
-    const isLocalDev   = hostBase === 'localhost' || hostBase === '127.0.0.1'
-    const rootDomain   = appDomain.startsWith('app.') ? appDomain.slice(4) : appDomain
-    const isFixedAppHost = hostBase === `app.${rootDomain}`
-    const onRootDomain = !isLocalDev && !isFixedAppHost && (hostBase === rootDomain || hostBase === `www.${rootDomain}`)
+    const { rootDomain, isRedirectableRootDomain: onRootDomain } = classifyHost(hostname, process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN)
+    const appDomain     = rootDomain
     const resolvedSlug = reqHeaders.get('x-tenant-slug')
 
     // Super-admin impersonation must NOT redirect to the tenant subdomain

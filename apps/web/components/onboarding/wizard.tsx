@@ -341,6 +341,16 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
   }
 
   const isLocalhost = appDomain === 'localhost' || appDomain === '127.0.0.1'
+  // The Capacitor mobile shell is locked to this single fixed host (no
+  // subdomain-resolution capability — see lib/auth/mobile-context.ts) and
+  // its WKWebView treats a redirect to a different origin as an external
+  // navigation, handing off to the system browser — which has no session
+  // on the tenant subdomain (cookies are scoped to app.<domain>) and
+  // bounces to that subdomain's own /login. The "Go to dashboard" button
+  // (the actual in-app navigation) must stay on this host; the informational
+  // "your working URLs" display below is a deliberate external-open link and
+  // keeps showing the real subdomain regardless.
+  const isFixedAppHost = typeof window !== 'undefined' && window.location.hostname === `app.${appDomain}`
 
   const isPaidPlan = finalPlan === 'starter' || finalPlan === 'growth'
 
@@ -354,6 +364,15 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
   function getBookingUrl() {
     if (isLocalhost) return '/book'
     return `https://${finalSlug}.${appDomain}/book`
+  }
+
+  // Navigation target for the primary CTA — same as getDashboardUrl() but
+  // also stays relative on the fixed app host (see isFixedAppHost above).
+  function getDashboardNavTarget() {
+    const billingQs = finalInterval ? `&billing=${finalInterval}` : ''
+    const path = isPaidPlan ? `/settings/billing?autosubscribe=${finalPlan}${billingQs}` : '/dashboard'
+    if (isLocalhost || isFixedAppHost) return path
+    return `https://${finalSlug}.${appDomain}${path}`
   }
 
   return (
@@ -780,8 +799,8 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
 
               <button
                 onClick={() => {
-                  const url = getDashboardUrl()
-                  if (isLocalhost) router.push(url)
+                  const url = getDashboardNavTarget()
+                  if (isLocalhost || isFixedAppHost) router.push(url)
                   else window.location.href = url
                 }}
                 className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"

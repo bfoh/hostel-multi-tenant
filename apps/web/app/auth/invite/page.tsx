@@ -77,10 +77,13 @@ export default function InvitePage() {
         const appDomain    = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
         const currentHost  = window.location.hostname
 
-        // Only redirect cross-domain if we're on the platform root
+        // Only redirect cross-domain if we're on the platform root. Excludes
+        // app.<domain>: the Capacitor mobile shell is locked to that single
+        // fixed host (see lib/auth/mobile-context.ts) and its WKWebView hands
+        // cross-origin navigations off to the system browser, which has no
+        // session on the tenant subdomain and bounces to its own /login.
         const onPlatformRoot =
           currentHost === appDomain ||
-          currentHost === `app.${appDomain}` ||
           currentHost === 'gh-hostels.com'
 
         let tenantBase = ''
