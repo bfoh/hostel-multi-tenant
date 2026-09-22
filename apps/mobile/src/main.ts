@@ -10,6 +10,8 @@ import { log } from './log'
 
 const PORTAL_BASE = 'https://app.gh-hostels.com'
 
+const BOOTED_KEY = 'gh_native_booted'
+
 /**
  * Cold-start bootstrap. Order matters:
  *   1. Splash already showing (Capacitor)
@@ -25,8 +27,24 @@ const PORTAL_BASE = 'https://app.gh-hostels.com'
  *      occupants stay on portal default
  *   9. Refresh tenant theme in the background (cache for next cold launch)
  *  10. Hide splash so the webview takes over
+ *
+ * main.js is injected as a WKUserScript (see MainViewController.swift) so
+ * it re-runs on EVERY in-app page navigation, not just the true cold
+ * launch — Capacitor's own bridge JS works the same way. Without a guard,
+ * routeByRole()'s own navigation would re-trigger this whole sequence
+ * (re-prompting biometrics, re-requesting push permission, and if the
+ * fetched role required a navigate, looping). sessionStorage persists
+ * across same-origin in-app navigations but resets on a real cold
+ * launch (new WKWebView instance), so it's the right scope for "once per
+ * app session."
  */
 async function main(): Promise<void> {
+  if (sessionStorage.getItem(BOOTED_KEY) === '1') {
+    log.info('boot: already ran this session, skipping')
+    return
+  }
+  sessionStorage.setItem(BOOTED_KEY, '1')
+
   log.info('boot: start')
 
   await applyCachedTheme()
@@ -57,8 +75,12 @@ interface RoleResponse {
 async function routeByRole(): Promise<void> {
   try {
     const res = await fetch(`${PORTAL_BASE}/api/mobile/role`, { credentials: 'include' })
-    if (!res.ok) return
+    if (!res.ok) {
+      log.warn('routeByRole: /api/mobile/role returned non-OK', { status: res.status })
+      return
+    }
     const body = (await res.json()) as RoleResponse
+    log.info('routeByRole: resolved', { role: body.role, tenant_role: body.tenant_role, tenant_id: body.tenant_id })
     if (body.role === 'owner') {
       navigateWebview('/owner-mobile')
       return

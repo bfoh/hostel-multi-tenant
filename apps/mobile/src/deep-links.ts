@@ -14,6 +14,14 @@ export function navigateWebview(path: string): void {
     log.warn('deep-link: refusing non-absolute path', { path })
     return
   }
+  // Safety net: main.js re-runs on every in-app navigation (it's injected
+  // as a WKUserScript — see MainViewController.swift), so anything that
+  // calls navigateWebview() on boot must not re-navigate to the page
+  // that's already loaded, or it loops.
+  if (window.location.pathname === path) {
+    log.info('deep-link: already on target path, skipping', { path })
+    return
+  }
   const target = `${PORTAL_BASE}${path}`
   log.info('deep-link: navigating webview', { target })
   window.location.assign(target)
