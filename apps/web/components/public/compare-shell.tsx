@@ -71,7 +71,7 @@ export function CompareShell(props: CompareShellProps) {
       {/* NAV */}
       <nav
         className="sticky top-0 z-50 backdrop-blur-2xl"
-        style={{ background: 'rgba(10,10,8,0.72)', borderBottom: `1px solid ${HAIR}` }}
+        style={{ background: 'rgba(10,10,8,0.72)', borderBottom: `1px solid ${HAIR}`, paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <Link href="/" className="group flex items-center gap-2.5">

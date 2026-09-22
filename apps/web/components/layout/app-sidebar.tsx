@@ -149,7 +149,10 @@ export function AppSidebar({
       )}
     >
       {/* ── Logo / hostel name ──────────────────────────────────── */}
-      <div className="flex h-16 items-center justify-between px-4 border-b border-[rgba(214,235,253,0.10)]">
+      <div
+        className="flex h-16 shrink-0 items-center justify-between px-4 border-b border-[rgba(214,235,253,0.10)]"
+        style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(4rem + env(safe-area-inset-top))' }}
+      >
         {!collapsed && (
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(255,255,255,0.08)] ring-1 ring-[rgba(214,235,253,0.19)] overflow-hidden">

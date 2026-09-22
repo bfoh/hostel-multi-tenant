@@ -26,7 +26,7 @@ export function LegalLayout({
       {/* Nav */}
       <nav
         className="sticky top-0 z-50 backdrop-blur-2xl"
-        style={{ background: 'rgba(10,10,8,0.72)', borderBottom: `1px solid ${HAIR}` }}
+        style={{ background: 'rgba(10,10,8,0.72)', borderBottom: `1px solid ${HAIR}`, paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
