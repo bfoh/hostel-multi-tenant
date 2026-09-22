@@ -152,7 +152,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Floating search card — straddles the hero/page boundary */}
-      <div className="relative z-10 mx-auto -mt-24 max-w-2xl px-5 sm:-mt-28 sm:px-6">
+      <div className="relative z-10 mx-auto -mt-24 max-w-3xl px-5 sm:-mt-28 sm:px-6">
         <HeroSearch />
 
         <div
