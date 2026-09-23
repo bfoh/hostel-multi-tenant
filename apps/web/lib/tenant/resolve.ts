@@ -116,6 +116,13 @@ function normaliseHostname(hostname: string): string {
 /**
  * Direct Supabase REST call — no SDK to keep Edge bundle tiny.
  * Looks up by subdomain (under either vertical root) OR custom domain.
+ *
+ * TEMPORARY: also matches the pre-rebrand flat shape {slug}.<domain>
+ * (no hostels./hotels. infix) as a fallback, because the DNS/domain
+ * cutover to the new subdomain-per-vertical structure hasn't happened
+ * yet — every existing tenant is still reachable at their old flat
+ * subdomain today. Remove this fallback once the real cutover is done
+ * and no traffic depends on the flat shape anymore.
  */
 async function fetchTenantFromDB(host: string): Promise<TenantRecord | null> {
   let slug: string | undefined
@@ -129,6 +136,13 @@ async function fetchTenantFromDB(host: string): Promise<TenantRecord | null> {
       expectedBusinessType = type
       break
     }
+  }
+
+  if (!slug) {
+    const legacyMatch = host.match(new RegExp(`^([^.]+)\\.${escapeRegExp(ROOT_DOMAIN)}$`))
+    if (legacyMatch) slug = legacyMatch[1]
+    // expectedBusinessType stays undefined — the flat shape doesn't encode
+    // a vertical, so the consistency check below is skipped for it.
   }
 
   const filter = slug

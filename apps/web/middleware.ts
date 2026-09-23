@@ -361,7 +361,7 @@ export async function middleware(request: NextRequest) {
   // very next page a fresh signup hits (dashboard, redirecting them back to
   // onboarding) triggered the same bug one hop later.
   {
-    const { rootDomain, businessType: currentVertical, isRedirectableRootDomain: onRootDomain } =
+    const { rootDomain, businessType: currentVertical, isApexDomain, isRedirectableRootDomain: onVerticalRoot } =
       classifyHost(hostname, process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN)
     const resolvedSlug = reqHeaders.get('x-tenant-slug')
     const resolvedBusinessType = reqHeaders.get('x-tenant-business-type')
@@ -372,14 +372,21 @@ export async function middleware(request: NextRequest) {
     // /login. Admin browses the impersonated tenant on the platform URL.
     const isImpersonating = reqHeaders.get('x-admin-impersonating') === 'true'
 
-    // Only redirect when the vertical root the user is currently on matches
-    // their own tenant's actual vertical — e.g. a hostel owner browsing
-    // hotels.<domain> as a visitor should see that marketplace, not get
-    // bounced back to their own hostel subdomain.
-    const verticalMatches = onRootDomain && currentVertical === resolvedBusinessType
+    // The DNS/domain cutover to hostels.<domain>/hotels.<domain> hasn't
+    // happened yet — the platform is still reachable only at its single
+    // legacy root domain, with every tenant on a flat {slug}.<domain>
+    // subdomain. Until NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED is flipped on
+    // (post-cutover), redirect from the bare apex exactly as before
+    // (destination is the flat host); once enabled, only redirect from a
+    // bare vertical root that matches the tenant's own vertical, to their
+    // {slug}.<vertical>.<domain> host.
+    const verticalDomainsLive = process.env.NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED === 'true'
+    const shouldRedirect = verticalDomainsLive
+      ? onVerticalRoot && currentVertical === resolvedBusinessType
+      : isApexDomain
 
     if (
-      user && resolvedSlug && verticalMatches &&
+      user && resolvedSlug && shouldRedirect &&
       !isAuthPath && !isPortalPath &&
       !pathname.startsWith('/onboarding') &&
       !pathname.startsWith('/admin') &&
@@ -388,7 +395,9 @@ export async function middleware(request: NextRequest) {
     ) {
       // Prefer the tenant's custom domain over the slug-based subdomain
       const resolvedDomain = reqHeaders.get('x-tenant-domain')
-      const host = tenantHost(resolvedSlug, resolvedBusinessType as BusinessType, rootDomain)
+      const host = verticalDomainsLive && resolvedBusinessType
+        ? tenantHost(resolvedSlug, resolvedBusinessType as BusinessType, rootDomain)
+        : `${resolvedSlug}.${rootDomain}`
       const dest = resolvedDomain
         ? `https://${resolvedDomain}${pathname}${request.nextUrl.search}`
         : `https://${host}${pathname}${request.nextUrl.search}`
