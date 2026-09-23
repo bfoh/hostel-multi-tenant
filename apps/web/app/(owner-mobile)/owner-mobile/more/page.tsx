@@ -10,15 +10,17 @@ import {
 export const metadata: Metadata = { title: 'More · Owner' }
 export const dynamic = 'force-dynamic'
 
-const LINKS = [
-  { href: '/my-account', label: 'My profile',      sub: 'Account details & password',        icon: User },
-  { href: '/messages',   label: 'Messages',         sub: 'Guests, staff & announcements',     icon: MessageCircle },
-  { href: '/occupants',  label: 'Occupants',        sub: 'Current residents & applications',  icon: Users },
-  { href: '/maintenance',label: 'Maintenance',      sub: 'All requests across the hostel',    icon: Wrench },
-  { href: '/housekeeping',label: 'Housekeeping',    sub: 'Room turnover & task board',         icon: Sparkles },
-  { href: '/settings',   label: 'Settings',         sub: 'Hostel, staff & integrations',      icon: Settings },
-  { href: '/dashboard',  label: 'Full dashboard',   sub: 'Everything, desktop-style',          icon: LayoutDashboard },
-]
+function getLinks(nounSingular: string, nounCapitalized: string) {
+  return [
+    { href: '/my-account', label: 'My profile',      sub: 'Account details & password',        icon: User },
+    { href: '/messages',   label: 'Messages',         sub: 'Guests, staff & announcements',     icon: MessageCircle },
+    { href: '/occupants',  label: 'Occupants',        sub: 'Current residents & applications',  icon: Users },
+    { href: '/maintenance',label: 'Maintenance',      sub: `All requests across the ${nounSingular}`, icon: Wrench },
+    { href: '/housekeeping',label: 'Housekeeping',    sub: 'Room turnover & task board',         icon: Sparkles },
+    { href: '/settings',   label: 'Settings',         sub: `${nounCapitalized}, staff & integrations`, icon: Settings },
+    { href: '/dashboard',  label: 'Full dashboard',   sub: 'Everything, desktop-style',          icon: LayoutDashboard },
+  ]
+}
 
 export default async function OwnerMobileMorePage() {
   const supabase = await createClient()
@@ -26,8 +28,10 @@ export default async function OwnerMobileMorePage() {
   if (!user) redirect('/login')
 
   const h          = await headers()
-  const tenantName = h.get('x-tenant-name') ?? 'My Hostel'
+  const tenantName = h.get('x-tenant-name') ?? 'My Property'
   const color      = h.get('x-tenant-color') ?? '#2F7D57'
+  const isHotel    = h.get('x-tenant-business-type') === 'hotel'
+  const LINKS      = getLinks(isHotel ? 'hotel' : 'hostel', isHotel ? 'Hotel' : 'Hostel')
 
   return (
     <div className="space-y-5">

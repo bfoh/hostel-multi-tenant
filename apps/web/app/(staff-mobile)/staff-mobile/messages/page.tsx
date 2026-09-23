@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic'
 export default async function StaffMobileMessagesPage() {
   const h        = await headers()
   const tenantId = h.get('x-tenant-id')
+  const nounSingular = h.get('x-tenant-business-type') === 'hotel' ? 'hotel' : 'hostel'
   if (!tenantId) redirect('/login')
 
   const auth = await createClient()
@@ -29,7 +30,7 @@ export default async function StaffMobileMessagesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-slate-800">Messages</h1>
-          <p className="mt-0.5 text-xs text-slate-500">Guests, colleagues, and hostel announcements.</p>
+          <p className="mt-0.5 text-xs text-slate-500">Guests, colleagues, and {nounSingular} announcements.</p>
         </div>
         <NewMessageButton basePath="/messages" />
       </div>

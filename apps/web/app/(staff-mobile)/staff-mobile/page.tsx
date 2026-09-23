@@ -23,6 +23,7 @@ export default async function StaffMobileHomePage() {
   const tenantId   = h.get('x-tenant-id')
   const tenantRole = h.get('x-tenant-role') ?? ''
   const color      = h.get('x-tenant-color') ?? '#2F7D57'
+  const nounSingular = h.get('x-tenant-business-type') === 'hotel' ? 'hotel' : 'hostel'
   if (!tenantId) redirect('/login')
 
   const admin = createAdminClient() as any
@@ -131,7 +132,7 @@ export default async function StaffMobileHomePage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-800">Open maintenance</p>
-            <p className="text-xs text-slate-500">{openMaintCount ?? 0} open requests across the hostel</p>
+            <p className="text-xs text-slate-500">{openMaintCount ?? 0} open requests across the {nounSingular}</p>
           </div>
           <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
         </Link>

@@ -12,6 +12,7 @@ export default async function OwnerMobileListingPage() {
   const h        = await headers()
   const tenantId = h.get('x-tenant-id')
   const color    = h.get('x-tenant-color') ?? '#2F7D57'
+  const nounSingular = h.get('x-tenant-business-type') === 'hotel' ? 'hotel' : 'hostel'
 
   const admin = createAdminClient()
   const { data: tenant } = await admin
@@ -32,7 +33,7 @@ export default async function OwnerMobileListingPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-slate-800">Public Listing</h1>
-          <p className="mt-0.5 text-xs text-slate-500">How your hostel appears on the marketplace</p>
+          <p className="mt-0.5 text-xs text-slate-500">How your {nounSingular} appears on the marketplace</p>
         </div>
         <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}18` }}>
           <Store className="h-4.5 w-4.5" style={{ color }} />

@@ -27,7 +27,7 @@ export default async function OwnerMobileLayout({ children }: { children: React.
   if (ctx.role && ctx.role !== 'owner')              redirect('/staff-mobile')
   if (!ctx.role || !ctx.tenantId)                    redirect('/login')
 
-  const tenantName  = h.get('x-tenant-name') ?? 'GH Hostels'
+  const tenantName  = h.get('x-tenant-name') ?? 'Aya'
   const tenantLogo  = h.get('x-tenant-logo')
   const tenantColor = h.get('x-tenant-color') ?? '#2F7D57'
 

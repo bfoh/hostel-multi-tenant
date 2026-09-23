@@ -34,8 +34,9 @@ export default async function StaffMobileMorePage() {
   const h          = await headers()
   const tenantId   = h.get('x-tenant-id')
   const tenantRole = h.get('x-tenant-role') ?? ''
-  const tenantName = h.get('x-tenant-name') ?? 'My Hostel'
+  const tenantName = h.get('x-tenant-name') ?? 'My Property'
   const color       = h.get('x-tenant-color') ?? '#2F7D57'
+  const nounSingular = h.get('x-tenant-business-type') === 'hotel' ? 'Hotel' : 'Hostel'
   if (!tenantId) redirect('/login')
 
   const admin = createAdminClient() as any
@@ -91,7 +92,7 @@ export default async function StaffMobileMorePage() {
               <p className="text-sm font-medium text-slate-800">{user.email}</p>
             </div>
             <div className="flex items-center justify-between px-5 py-3.5">
-              <p className="text-xs text-slate-400">Hostel</p>
+              <p className="text-xs text-slate-400">{nounSingular}</p>
               <p className="text-sm font-medium text-slate-800">{tenantName}</p>
             </div>
           </div>
