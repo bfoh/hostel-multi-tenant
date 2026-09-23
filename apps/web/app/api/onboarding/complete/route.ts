@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { invalidateTenantCache } from '@/lib/tenant/resolve'
+import { tenantHost, type BusinessType } from '@/lib/tenant/host-classification'
 import { onboardingLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
   // Check slug uniqueness (if changed from current)
   const { data: existing } = await supabase
     .from('tenants')
-    .select('slug, custom_domain')
+    .select('slug, custom_domain, business_type')
     .eq('id', tenantId)
     .single()
 
@@ -164,8 +165,9 @@ export async function POST(request: NextRequest) {
   if (roomErr) return NextResponse.json({ error: roomErr.message }, { status: 500 })
 
   // Bust Redis cache so branding picked during onboarding applies immediately
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
-  await invalidateTenantCache(`${d.slug}.${appDomain}`)
+  const rootDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'aya.com'
+  const businessType = (existing?.business_type ?? 'hostel') as BusinessType
+  await invalidateTenantCache(tenantHost(d.slug, businessType, rootDomain))
   if (d.custom_domain) await invalidateTenantCache(d.custom_domain)
 
   return NextResponse.json({ ok: true, slug: d.slug, selected_plan: selectedPlan, selected_interval: selectedInterval })

@@ -31,6 +31,11 @@ export function verticalRootDomain(rootDomain: string, type: BusinessType): stri
   return `${type}s.${rootDomain}`
 }
 
+/** A tenant's canonical product host: {slug}.hostels.<domain> or {slug}.hotels.<domain>. */
+export function tenantHost(slug: string, type: BusinessType, rootDomain: string): string {
+  return `${slug}.${verticalRootDomain(rootDomain, type)}`
+}
+
 export interface HostClassification {
   hostBase: string
   rootDomain: string

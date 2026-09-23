@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { resolveTenant, resolveTenantBySlug } from '@/lib/tenant/resolve'
-import { classifyHost, verticalRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
+import { classifyHost, tenantHost, type BusinessType } from '@/lib/tenant/host-classification'
 
 const BYPASS_PATHS = [
   '/widget',
@@ -379,10 +379,10 @@ export async function middleware(request: NextRequest) {
     ) {
       // Prefer the tenant's custom domain over the slug-based subdomain
       const resolvedDomain = reqHeaders.get('x-tenant-domain')
-      const vertical = verticalRootDomain(rootDomain, resolvedBusinessType as BusinessType)
+      const host = tenantHost(resolvedSlug, resolvedBusinessType as BusinessType, rootDomain)
       const dest = resolvedDomain
         ? `https://${resolvedDomain}${pathname}${request.nextUrl.search}`
-        : `https://${resolvedSlug}.${vertical}${pathname}${request.nextUrl.search}`
+        : `https://${host}${pathname}${request.nextUrl.search}`
       return NextResponse.redirect(dest)
     }
   }
