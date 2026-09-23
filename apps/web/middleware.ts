@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { resolveTenant } from '@/lib/tenant/resolve'
-import { classifyHost } from '@/lib/tenant/host-classification'
+import { resolveTenant, resolveTenantBySlug } from '@/lib/tenant/resolve'
+import { classifyHost, verticalRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
 
 const BYPASS_PATHS = [
   '/widget',
@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
   // Super-admin pages should never render on a tenant subdomain or custom
   // hostel domain. Redirect off-platform hits to the platform root domain.
   if (pathname.startsWith('/admin')) {
-    const appDomain  = (process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')
+    const appDomain  = (process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'aya.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')
     const hostBase   = hostname.split(':')[0].toLowerCase()
     const isLocalDev = hostBase === 'localhost' || hostBase === '127.0.0.1'
     const onPlatform = isLocalDev || hostBase === appDomain || hostBase === `app.${appDomain}`
@@ -71,7 +71,8 @@ export async function middleware(request: NextRequest) {
   for (const h of [
     'x-tenant-id', 'x-tenant-slug', 'x-tenant-name', 'x-tenant-color',
     'x-tenant-logo', 'x-tenant-favicon', 'x-tenant-domain', 'x-tenant-role',
-    'x-tenant-status', 'x-portal-role', 'x-occupant-id', 'x-admin-impersonating',
+    'x-tenant-status', 'x-tenant-business-type', 'x-portal-role', 'x-occupant-id',
+    'x-admin-impersonating',
   ]) {
     reqHeaders.delete(h)
   }
@@ -286,8 +287,7 @@ export async function middleware(request: NextRequest) {
     const adminRows = verify.ok ? await verify.json() : []
 
     if (Array.isArray(adminRows) && adminRows.length > 0) {
-      const appDomainForLookup = (process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')
-      const impTenant = await resolveTenant(`${impersonateTenantSlug}.${appDomainForLookup}`)
+      const impTenant = await resolveTenantBySlug(impersonateTenantSlug)
       if (impTenant) {
         injectHeaders(reqHeaders, impTenant)
       } else {
@@ -333,8 +333,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Subdomain redirect (production only) ──────────────────────────────────
-  // Authenticated users landing on the root/www domain are redirected to their
-  // tenant subdomain so the app always runs at slug.gh-hostels.com.
+  // Authenticated users landing on their vertical's bare root (hostels.<domain>
+  // or hotels.<domain>) are redirected to their tenant subdomain so the app
+  // always runs at slug.hostels.<domain> or slug.hotels.<domain>. Only fires
+  // when the root they're on matches their own tenant's actual vertical — a
+  // hostel owner browsing hotels.<domain> as a visitor stays there.
   // Never fires on localhost — subdomains don't resolve in local browsers.
   //
   // Deliberately excludes app.<domain>: the Capacitor mobile shell is locked
@@ -349,9 +352,10 @@ export async function middleware(request: NextRequest) {
   // very next page a fresh signup hits (dashboard, redirecting them back to
   // onboarding) triggered the same bug one hop later.
   {
-    const { rootDomain, isRedirectableRootDomain: onRootDomain } = classifyHost(hostname, process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN)
-    const appDomain     = rootDomain
+    const { rootDomain, businessType: currentVertical, isRedirectableRootDomain: onRootDomain } =
+      classifyHost(hostname, process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN)
     const resolvedSlug = reqHeaders.get('x-tenant-slug')
+    const resolvedBusinessType = reqHeaders.get('x-tenant-business-type')
 
     // Super-admin impersonation must NOT redirect to the tenant subdomain
     // — Supabase auth and impersonation cookies are host-scoped to the
@@ -359,8 +363,14 @@ export async function middleware(request: NextRequest) {
     // /login. Admin browses the impersonated tenant on the platform URL.
     const isImpersonating = reqHeaders.get('x-admin-impersonating') === 'true'
 
+    // Only redirect when the vertical root the user is currently on matches
+    // their own tenant's actual vertical — e.g. a hostel owner browsing
+    // hotels.<domain> as a visitor should see that marketplace, not get
+    // bounced back to their own hostel subdomain.
+    const verticalMatches = onRootDomain && currentVertical === resolvedBusinessType
+
     if (
-      user && resolvedSlug && onRootDomain &&
+      user && resolvedSlug && verticalMatches &&
       !isAuthPath && !isPortalPath &&
       !pathname.startsWith('/onboarding') &&
       !pathname.startsWith('/admin') &&
@@ -369,9 +379,10 @@ export async function middleware(request: NextRequest) {
     ) {
       // Prefer the tenant's custom domain over the slug-based subdomain
       const resolvedDomain = reqHeaders.get('x-tenant-domain')
+      const vertical = verticalRootDomain(rootDomain, resolvedBusinessType as BusinessType)
       const dest = resolvedDomain
         ? `https://${resolvedDomain}${pathname}${request.nextUrl.search}`
-        : `https://${resolvedSlug}.${appDomain}${pathname}${request.nextUrl.search}`
+        : `https://${resolvedSlug}.${vertical}${pathname}${request.nextUrl.search}`
       return NextResponse.redirect(dest)
     }
   }
@@ -414,6 +425,7 @@ function injectHeaders(h: Headers, tenant: Awaited<ReturnType<typeof resolveTena
   h.set('x-tenant-slug',   tenant.slug)
   h.set('x-tenant-name',   tenant.name)
   h.set('x-tenant-status', tenant.status)
+  h.set('x-tenant-business-type', tenant.businessType)
   if (tenant.branding.primaryColor) h.set('x-tenant-color',   tenant.branding.primaryColor)
   else h.delete('x-tenant-color')
   if (tenant.branding.logoUrl)      h.set('x-tenant-logo',    tenant.branding.logoUrl)
@@ -433,17 +445,11 @@ function decodeJwtPayload(token: string): Record<string, string> | null {
 }
 
 function isAppDomain(hostname: string): boolean {
-  const appDomain = (process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')
-  const h = hostname.split(':')[0].toLowerCase()
-  // Derive the root domain so this works whether APP_DOMAIN is 'gh-hostels.com'
-  // or 'app.gh-hostels.com' — both should allow the bare root domain through.
-  const rootDomain = appDomain.startsWith('app.') ? appDomain.slice(4) : appDomain
-  return (
-    h === 'localhost' ||
-    h === rootDomain ||
-    h === `app.${rootDomain}` ||
-    h === `www.${rootDomain}`
-  )
+  // True for any platform-level host with no tenant of its own: the apex
+  // marketing site, either bare vertical root (hostels.<domain>/
+  // hotels.<domain>), the fixed mobile host, or local dev.
+  const c = classifyHost(hostname, process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN)
+  return c.isLocalDev || c.isFixedAppHost || c.isApexDomain || c.isRedirectableRootDomain
 }
 
 interface TenantWithRole {
@@ -455,7 +461,7 @@ async function fetchTenantForUser(userId: string): Promise<TenantWithRole | null
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-  const url = `${supabaseUrl}/rest/v1/tenant_members?user_id=eq.${userId}&is_active=eq.true&select=role,tenants(id,slug,name,plan,is_active,status,primary_color,logo_url,custom_domain)&limit=1`
+  const url = `${supabaseUrl}/rest/v1/tenant_members?user_id=eq.${userId}&is_active=eq.true&select=role,tenants(id,slug,name,plan,is_active,status,business_type,primary_color,logo_url,custom_domain)&limit=1`
 
   try {
     const res = await fetch(url, {
@@ -475,7 +481,7 @@ async function fetchTenantForUser(userId: string): Promise<TenantWithRole | null
       role: rows[0].role ?? 'staff',
       tenant: {
         id: t.id, slug: t.slug, name: t.name, domain: t.custom_domain ?? null, plan: t.plan,
-        isActive: t.is_active, status: t.status,
+        isActive: t.is_active, status: t.status, businessType: t.business_type,
         branding: { primaryColor: t.primary_color ?? null, logoUrl: t.logo_url ?? null, faviconUrl: null },
       },
     }
@@ -510,7 +516,7 @@ async function checkIsOccupant(userId: string): Promise<boolean> {
 async function fetchTenantForOccupant(userId: string): Promise<import('@/lib/tenant/resolve').TenantRecord | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  const url = `${supabaseUrl}/rest/v1/occupants?user_id=eq.${userId}&select=tenant_id,tenants(id,slug,name,plan,is_active,status,primary_color,logo_url,favicon_url,custom_domain)&limit=1`
+  const url = `${supabaseUrl}/rest/v1/occupants?user_id=eq.${userId}&select=tenant_id,tenants(id,slug,name,plan,is_active,status,business_type,primary_color,logo_url,favicon_url,custom_domain)&limit=1`
   try {
     const res = await fetch(url, {
       headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
@@ -523,7 +529,7 @@ async function fetchTenantForOccupant(userId: string): Promise<import('@/lib/ten
     if (!t) return null
     return {
       id: t.id, slug: t.slug, name: t.name, domain: t.custom_domain ?? null, plan: t.plan,
-      isActive: t.is_active, status: t.status,
+      isActive: t.is_active, status: t.status, businessType: t.business_type,
       branding: { primaryColor: t.primary_color ?? null, logoUrl: t.logo_url ?? null, faviconUrl: t.favicon_url ?? null },
     }
   } catch { return null }

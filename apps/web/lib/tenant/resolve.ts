@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis'
+import { VERTICALS, verticalRootDomain, type BusinessType } from './host-classification'
 
 export interface TenantRecord {
   id: string
@@ -8,6 +9,7 @@ export interface TenantRecord {
   plan: 'starter' | 'growth'
   isActive: boolean
   status: 'trial' | 'active' | 'trial_expired' | 'suspended' | 'cancelled'
+  businessType: BusinessType
   branding: {
     primaryColor: string | null
     logoUrl: string | null
@@ -30,7 +32,10 @@ function getRedis(): Redis | null {
   return redis
 }
 
-const APP_DOMAIN = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
+const APP_DOMAIN = (process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'aya.com')
+  .replace(/^https?:\/\//, '')
+  .replace(/\/+$/, '')
+const ROOT_DOMAIN = APP_DOMAIN.startsWith('app.') ? APP_DOMAIN.slice(4) : APP_DOMAIN
 const CACHE_TTL = 300 // 5 minutes
 
 /**
@@ -42,16 +47,21 @@ const CACHE_TTL = 300 // 5 minutes
  * 3. Write result back to cache
  *
  * Hostname formats handled:
- *   - {slug}.ghh.com    → platform subdomain
- *   - app.ghh.com       → platform admin (returns null)
- *   - www.clienthostel.com    → custom domain (strip www)
- *   - clienthostel.com        → custom domain
+ *   - {slug}.hostels.<domain>  → hostel tenant, platform subdomain
+ *   - {slug}.hotels.<domain>   → hotel tenant, platform subdomain
+ *   - <domain> / www.         → apex marketing site — no tenant
+ *   - hostels.<domain>        → hostel marketplace root — no tenant
+ *   - hotels.<domain>         → hotel marketplace root — no tenant
+ *   - app.<domain>            → mobile app fixed host — no tenant (resolved via JWT/DB elsewhere)
+ *   - anything else           → treated as a tenant's custom_domain
  */
 export async function resolveTenant(hostname: string): Promise<TenantRecord | null> {
   const host = normaliseHostname(hostname)
 
-  // Platform admin / marketing — no tenant
-  if (host === APP_DOMAIN || host === `app.${APP_DOMAIN}` || host === 'localhost') {
+  // Platform-level hosts with no tenant of their own: apex, either bare
+  // vertical root, the fixed mobile host, or local dev.
+  const isVerticalRoot = VERTICALS.some((t) => host === verticalRootDomain(ROOT_DOMAIN, t))
+  if (host === ROOT_DOMAIN || host === `app.${ROOT_DOMAIN}` || host === 'localhost' || isVerticalRoot) {
     return null
   }
 
@@ -85,6 +95,15 @@ export async function resolveTenant(hostname: string): Promise<TenantRecord | nu
 }
 
 /**
+ * Direct slug lookup, bypassing hostname parsing entirely — used by
+ * impersonation (middleware.ts), which already knows the exact slug and
+ * has no real incoming hostname to reconstruct one from.
+ */
+export async function resolveTenantBySlug(slug: string): Promise<TenantRecord | null> {
+  return fetchTenantByFilter(`slug=eq.${encodeURIComponent(slug)}`)
+}
+
+/**
  * Normalise hostname: lowercase, strip port, strip leading www.
  */
 function normaliseHostname(hostname: string): string {
@@ -96,22 +115,45 @@ function normaliseHostname(hostname: string): string {
 
 /**
  * Direct Supabase REST call — no SDK to keep Edge bundle tiny.
- * Looks up by subdomain OR custom domain.
+ * Looks up by subdomain (under either vertical root) OR custom domain.
  */
 async function fetchTenantFromDB(host: string): Promise<TenantRecord | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  // Use service role key to bypass RLS — tenant resolution is server-side only
-  const supabaseAnonKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  let slug: string | undefined
+  let expectedBusinessType: BusinessType | undefined
 
-  // Determine whether this is a platform subdomain or a custom domain
-  const subdomainMatch = host.match(new RegExp(`^([^.]+)\\.${escapeRegExp(APP_DOMAIN)}$`))
-  const slug = subdomainMatch?.[1]
+  for (const type of VERTICALS) {
+    const vRoot = verticalRootDomain(ROOT_DOMAIN, type)
+    const match = host.match(new RegExp(`^([^.]+)\\.${escapeRegExp(vRoot)}$`))
+    if (match) {
+      slug = match[1]
+      expectedBusinessType = type
+      break
+    }
+  }
 
   const filter = slug
     ? `slug=eq.${encodeURIComponent(slug)}`
     : `custom_domain=eq.${encodeURIComponent(host)}`
 
-  const url = `${supabaseUrl}/rest/v1/tenants?${filter}&select=id,slug,name,custom_domain,plan,is_active,status,primary_color,logo_url,favicon_url&limit=1`
+  const tenant = await fetchTenantByFilter(filter)
+
+  // Defensive consistency check: a subdomain under hostels.<domain> must
+  // actually belong to a hostel tenant, and likewise for hotels.<domain>.
+  // Guards against a stale/mistyped link resolving the wrong vertical's
+  // tenant just because the slug happens to collide.
+  if (tenant && expectedBusinessType && tenant.businessType !== expectedBusinessType) {
+    return null
+  }
+
+  return tenant
+}
+
+async function fetchTenantByFilter(filter: string): Promise<TenantRecord | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  // Use service role key to bypass RLS — tenant resolution is server-side only
+  const supabaseAnonKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+  const url = `${supabaseUrl}/rest/v1/tenants?${filter}&select=id,slug,name,custom_domain,plan,is_active,status,business_type,primary_color,logo_url,favicon_url&limit=1`
 
   const res = await fetch(url, {
     headers: {
@@ -137,6 +179,7 @@ async function fetchTenantFromDB(host: string): Promise<TenantRecord | null> {
     plan: row.plan,
     isActive: row.is_active,
     status: row.status,
+    businessType: row.business_type,
     branding: {
       primaryColor: row.primary_color ?? null,
       logoUrl: row.logo_url ?? null,
