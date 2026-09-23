@@ -15,18 +15,18 @@ export function MarketplaceFooter() {
         <div className="grid gap-10 md:grid-cols-4">
           <div>
             <Link href="/" className="flex items-center gap-2.5">
-              <Image src="/logo-mark.svg" alt="GH-HOSTELS" width={32} height={32} className="h-8 w-8" />
+              <Image src="/logo-mark.svg" alt="Aya" width={32} height={32} className="h-8 w-8" />
               <span className="text-[13px] font-bold tracking-[0.16em]" style={{ color: MP.ink }}>
-                GH-HOSTELS
+                AYA
               </span>
             </Link>
             <p className="mt-4 text-[13px] leading-relaxed" style={{ color: MP.textSecondary }}>
-              Find and book student hostels across Ghana — real-time availability, no middleman.
+              Find and book hostels and hotels across Ghana — real-time availability, no middleman.
             </p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: MP.goldDeep }}>
-              Find a Hostel
+              Find a Stay
             </p>
             <ul className="mt-4 space-y-2.5 text-[13px]" style={{ color: MP.textSecondary }}>
               <li><Link href="/browse" className="hover:underline">Browse all hostels</Link></li>
@@ -37,13 +37,13 @@ export function MarketplaceFooter() {
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: MP.goldDeep }}>
-              For Hostel Owners
+              For Property Owners
             </p>
             <ul className="mt-4 space-y-2.5 text-[13px]" style={{ color: MP.textSecondary }}>
               <li><Link href="/for-owners" className="hover:underline">Management system</Link></li>
               <li><Link href="/for-owners#pricing" className="hover:underline">Pricing</Link></li>
               <li><Link href="/for-owners#faq" className="hover:underline">FAQ</Link></li>
-              <li><Link href="/signup?plan=trial&source=directory" className="hover:underline">List your hostel free</Link></li>
+              <li><Link href="/list-your-property" className="hover:underline">List your property</Link></li>
             </ul>
           </div>
           <div>
@@ -66,7 +66,7 @@ export function MarketplaceFooter() {
           style={{ borderTop: `1px solid ${MP.border}` }}
         >
           <p className="text-[12px]" style={{ color: MP.textSecondary }}>
-            © {new Date().getFullYear()} GH Hostels · Made in Accra, Ghana
+            © {new Date().getFullYear()} Aya · Made in Accra, Ghana
           </p>
           <div className="flex gap-6 text-[12px]" style={{ color: MP.textSecondary }}>
             <Link href="/privacy" className="hover:underline">Privacy</Link>

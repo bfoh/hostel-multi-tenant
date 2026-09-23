@@ -45,9 +45,9 @@ async function getListing(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const result = await getListing(slug)
-  if (!result) return { title: 'Hostel Not Found' }
+  if (!result) return { title: 'Property Not Found' }
   return {
-    title: `${result.tenant.name} — GH Hostels`,
+    title: `${result.tenant.name} — Aya`,
     description: result.tenant.tagline ?? `Book a room at ${result.tenant.name} in ${result.tenant.address_city ?? 'Ghana'}.`,
   }
 }
@@ -59,6 +59,8 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
 
   const { tenant, categories } = result
   const cms = (tenant.website_content ?? {}) as CmsContent
+  const isHotel = tenant.business_type === 'hotel'
+  const nounSingular = isHotel ? 'hotel' : 'hostel'
   const rootDomain = bareRootDomain(process.env.NEXT_PUBLIC_APP_DOMAIN)
   const bookUrl = tenant.custom_domain
     ? `https://${tenant.custom_domain}/book`
@@ -85,7 +87,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
       <div className="mx-auto max-w-6xl px-4 py-3 text-[13px] sm:px-6" style={{ color: MP.textSecondary }}>
         <Link href="/" className="hover:underline" style={{ color: MP.green }}>Home</Link>
         <span className="mx-1.5">›</span>
-        <Link href="/browse" className="hover:underline" style={{ color: MP.green }}>Hostels</Link>
+        <Link href="/browse" className="hover:underline" style={{ color: MP.green }}>{isHotel ? 'Hotels' : 'Hostels'}</Link>
         {tenant.address_region && (
           <>
             <span className="mx-1.5">›</span>
@@ -168,7 +170,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
               )}
               {cms.about_text && (
                 <div>
-                  <h2 className="text-[17px] font-bold" style={{ color: MP.ink }}>About this hostel</h2>
+                  <h2 className="text-[17px] font-bold" style={{ color: MP.ink }}>About this {nounSingular}</h2>
                   <p className="mt-2 text-[14px] leading-relaxed" style={{ color: MP.textSecondary }}>{cms.about_text}</p>
                 </div>
               )}
@@ -256,7 +258,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
               <div className="rounded-xl bg-white p-5" style={{ border: `1px solid ${MP.border}` }}>
                 <h3 className="text-[14px] font-semibold" style={{ color: MP.ink }}>Already have a room here?</h3>
                 <p className="mt-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
-                  If your hostel management already sent you login details, sign in to your student portal.
+                  If {tenant.name} already sent you login details, sign in to your {isHotel ? 'guest' : 'student'} portal.
                 </p>
                 <Link
                   href="/login"

@@ -14,17 +14,19 @@ import { HeroSearch } from '@/components/marketplace/hero-search'
 import { MP } from '@/lib/marketplace-theme'
 
 /* ──────────────────────────────────────────────────────────────────────────────
-   GH HOSTELS — Marketplace homepage
+   AYA — Marketplace homepage (hostels + hotels)
    Light mode · Forest green · Warm gold · Adinkra-inspired background
+   Domain still gh-hostels.com pending the DNS/domain cutover to aya.com —
+   see NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED in lib/tenant/host-classification.ts.
    ────────────────────────────────────────────────────────────────────────── */
 
 const SITE_URL = 'https://gh-hostels.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'GH Hostels — Find & Book Student Hostels in Ghana',
+  title: 'Aya — Find & Book Hostels and Hotels in Ghana',
   description:
-    'Search real-time availability and book student hostels near your campus in Ghana — Legon, KNUST, UCC, and beyond. No middleman. Run a hostel? List yours free.',
+    'Search real-time availability and book hostels and hotels across Ghana — Legon, KNUST, UCC, and beyond. No middleman. Run a property? List yours free.',
   keywords: [
     'student hostel booking Ghana',
     'hostel near me Ghana',
@@ -32,8 +34,9 @@ export const metadata: Metadata = {
     'KNUST hostels',
     'UCC hostels',
     'book student accommodation Ghana',
+    'hotel booking Ghana',
     'hostel management software Ghana',
-    'Ghana hostel SaaS',
+    'Ghana hospitality SaaS',
   ],
   alternates: {
     canonical: SITE_URL,
@@ -42,16 +45,16 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_GH',
     url: SITE_URL,
-    siteName: 'GH Hostels',
-    title: 'GH Hostels — Find & Book Student Hostels in Ghana',
+    siteName: 'Aya',
+    title: 'Aya — Find & Book Hostels and Hotels in Ghana',
     description:
-      'Search real-time availability and book student hostels near your campus in Ghana. No middleman.',
+      'Search real-time availability and book hostels and hotels across Ghana. No middleman.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'GH Hostels — Find & Book Student Hostels in Ghana',
+    title: 'Aya — Find & Book Hostels and Hotels in Ghana',
     description:
-      'Search real-time availability and book student hostels near your campus in Ghana.',
+      'Search real-time availability and book hostels and hotels across Ghana.',
   },
   robots: {
     index: true,
@@ -70,10 +73,10 @@ export const metadata: Metadata = {
 const orgLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'GH Hostels',
+  name: 'Aya',
   url: SITE_URL,
   logo: `${SITE_URL}/icons/icon.svg`,
-  description: 'Search and book student hostels across Ghana, and hostel management software for owners.',
+  description: 'Search and book hostels and hotels across Ghana, and management software for property owners.',
   foundingLocation: { '@type': 'Place', name: 'Accra, Ghana' },
   areaServed: { '@type': 'Country', name: 'Ghana' },
   sameAs: [
@@ -132,13 +135,13 @@ export default async function LandingPage() {
             className="mp-reveal mx-auto max-w-2xl text-[36px] font-normal leading-[1.08] tracking-[-0.03em] text-white sm:text-[52px] md:text-[60px]"
             style={{ fontFamily: 'Georgia, "Times New Roman", serif', animationDelay: '60ms' }}
           >
-            Find your next hostel.
+            Find your next stay.
           </h1>
           <p
             className="mp-reveal mx-auto mt-5 max-w-xl text-[15px] leading-relaxed sm:text-[17px]"
             style={{ color: 'rgba(255,255,255,0.8)', animationDelay: '120ms' }}
           >
-            Search real-time availability near your campus, book directly, no middleman.
+            Search real-time availability across hostels and hotels in Ghana — book directly, no middleman.
           </p>
         </div>
       </section>
@@ -189,8 +192,8 @@ export default async function LandingPage() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center text-[13px]" style={{ color: MP.textSecondary }}>
           <Link href="/browse" className="font-medium hover:underline">Browse all hostels →</Link>
           <span aria-hidden="true">·</span>
-          <Link href="/signup?plan=trial&source=directory" className="font-medium hover:underline">
-            Run a hostel? List yours free →
+          <Link href="/list-your-property" className="font-medium hover:underline">
+            Run a property? List yours free →
           </Link>
         </div>
       </div>

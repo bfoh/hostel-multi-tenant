@@ -16,7 +16,7 @@ const GHANA_REGIONS = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Find a Hostel — GH Hostels',
+  title: 'Find a Hostel — Aya',
   description: 'Search and book student hostels near your campus in Ghana — real-time availability, no middleman.',
 }
 
@@ -32,18 +32,20 @@ function buildQuery(sp: Record<string, string | undefined>, overrides: Record<st
 export default async function BrowseDirectoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ city?: string; region?: string; q?: string; page?: string; sort?: string; view?: string; min?: string; max?: string }>
+  searchParams: Promise<{ type?: string; city?: string; region?: string; q?: string; page?: string; sort?: string; view?: string; min?: string; max?: string }>
 }) {
   const sp = await searchParams
   const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1)
   const sort = (['name', 'price_asc', 'price_desc'].includes(sp.sort ?? '') ? sp.sort : 'name') as 'name' | 'price_asc' | 'price_desc'
   const view = sp.view === 'grid' ? 'grid' : 'list'
 
-  // Hardcoded to the hostel vertical for now — this page serves
-  // hostels.<domain>'s directory. The hotel vertical gets its own
-  // marketplace pages once its marketing content/pricing is ready.
+  // Vertical comes from the hero search's tab (?type=hostel|hotel), or
+  // defaults to hostel — the only vertical with real listings today.
+  const businessType = sp.type === 'hotel' ? 'hotel' : 'hostel'
+  const nounSingular = businessType === 'hotel' ? 'hotel' : 'hostel'
+
   const { listings: allResults } = await searchListings({
-    businessType: 'hostel', city: sp.city, region: sp.region, q: sp.q, sort, limit: 1000,
+    businessType, city: sp.city, region: sp.region, q: sp.q, sort, limit: 1000,
   })
 
   const min = sp.min ? Number(sp.min) : null
@@ -69,12 +71,13 @@ export default async function BrowseDirectoryPage({
       <div className="py-6" style={{ background: MP.surfaceSoft, borderBottom: `1px solid ${MP.border}` }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <form action="/browse" method="get" className="flex flex-col gap-2 rounded-xl bg-white p-2 shadow-sm sm:flex-row" style={{ border: `1px solid ${MP.border}` }}>
+            {sp.type && <input type="hidden" name="type" value={sp.type} />}
             <div className="flex flex-1 items-center gap-2 border-b border-neutral-100 px-3 py-2.5 sm:border-b-0 sm:border-r">
               <Search className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
               <input
                 name="q"
                 defaultValue={sp.q ?? ''}
-                placeholder="Hostel name or campus"
+                placeholder={businessType === 'hotel' ? 'Hotel name or area' : 'Hostel name or campus'}
                 className="w-full text-sm outline-none placeholder:text-neutral-400"
                 style={{ color: MP.ink }}
               />
@@ -114,12 +117,14 @@ export default async function BrowseDirectoryPage({
         <span className="mx-1.5">›</span>
         {sp.region ? (
           <>
-            <Link href="/browse" className="hover:underline" style={{ color: MP.green }}>Hostels</Link>
+            <Link href="/browse" className="hover:underline" style={{ color: MP.green }}>
+              {businessType === 'hotel' ? 'Hotels' : 'Hostels'}
+            </Link>
             <span className="mx-1.5">›</span>
             <span>{sp.region}</span>
           </>
         ) : (
-          <span>Hostels</span>
+          <span>{businessType === 'hotel' ? 'Hotels' : 'Hostels'}</span>
         )}
       </div>
 
@@ -130,6 +135,7 @@ export default async function BrowseDirectoryPage({
             <h2 className="text-[15px] font-bold" style={{ color: MP.ink }}>Filter by</h2>
 
             <form action="/browse" method="get" className="mt-4 space-y-5">
+              {sp.type && <input type="hidden" name="type" value={sp.type} />}
               {sp.q && <input type="hidden" name="q" value={sp.q} />}
               {sp.city && <input type="hidden" name="city" value={sp.city} />}
               {sp.region && <input type="hidden" name="region" value={sp.region} />}
@@ -185,7 +191,7 @@ export default async function BrowseDirectoryPage({
         <div className="min-w-0 flex-1">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-[20px] font-bold" style={{ color: MP.ink }}>
-              {filtered.length} hostel{filtered.length === 1 ? '' : 's'} found
+              {filtered.length} {nounSingular}{filtered.length === 1 ? '' : 's'} found
               {sp.region ? ` in ${sp.region}` : sp.city ? ` in ${sp.city}` : ''}
             </h1>
             <div className="flex items-center gap-3">
@@ -217,8 +223,8 @@ export default async function BrowseDirectoryPage({
               <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: MP.surfaceSoft }}>
                 <SearchX className="h-5 w-5" style={{ color: MP.goldDeep }} />
               </span>
-              <p className="font-medium" style={{ color: MP.ink }}>No hostels found</p>
-              <p className="max-w-xs text-sm" style={{ color: MP.textSecondary }}>Try a different search or check back soon — new hostels list every week.</p>
+              <p className="font-medium" style={{ color: MP.ink }}>No {nounSingular}s found</p>
+              <p className="max-w-xs text-sm" style={{ color: MP.textSecondary }}>Try a different search or check back soon — new {nounSingular}s list every week.</p>
             </div>
           ) : view === 'grid' ? (
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -256,8 +262,8 @@ export default async function BrowseDirectoryPage({
           )}
 
           <div className="mt-10 flex items-center justify-center gap-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
-            Run a hostel?
-            <Link href="/signup?plan=trial&source=directory" className="font-semibold hover:underline" style={{ color: MP.green }}>
+            Run a {nounSingular}?
+            <Link href="/list-your-property" className="font-semibold hover:underline" style={{ color: MP.green }}>
               List yours free <ChevronRight className="inline h-3 w-3" />
             </Link>
           </div>

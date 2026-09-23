@@ -8,8 +8,8 @@ import { Menu, X, ArrowRight } from 'lucide-react'
 import { MP } from '@/lib/marketplace-theme'
 
 const NAV_LINKS: Array<{ label: string; href: string }> = [
-  { label: 'Find a Hostel', href: '/browse' },
-  { label: 'For Hostel Owners', href: '/for-owners' },
+  { label: 'Find a Stay', href: '/browse' },
+  { label: 'List Your Property', href: '/list-your-property' },
   { label: 'Pricing', href: '/for-owners#pricing' },
   { label: 'FAQ', href: '/for-owners#faq' },
 ]
@@ -53,9 +53,9 @@ export function MarketplaceNav() {
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/logo-mark.svg" alt="GH Hostels" width={32} height={32} className="h-8 w-8" />
+          <Image src="/logo-mark.svg" alt="Aya" width={32} height={32} className="h-8 w-8" />
           <span className="text-[14px] font-bold tracking-[0.14em]" style={{ color: MP.ink }}>
-            GH-HOSTELS
+            AYA
           </span>
         </Link>
 
@@ -81,7 +81,7 @@ export function MarketplaceNav() {
             Log in
           </Link>
           <Link
-            href="/signup?plan=trial&source=directory"
+            href="/list-your-property"
             className="hidden rounded-full px-4 py-2 text-[13px] font-semibold lg:inline-flex"
             style={{
               background: `linear-gradient(135deg, ${MP.goldSoft} 0%, ${MP.gold} 60%, ${MP.goldDeep} 100%)`,
@@ -89,7 +89,7 @@ export function MarketplaceNav() {
               boxShadow: '0 6px 16px -8px rgba(212,162,76,0.55)',
             }}
           >
-            List your hostel free
+            List your property
           </Link>
 
           {/* Mobile hamburger */}
@@ -154,7 +154,7 @@ export function MarketplaceNav() {
                         Log in
                       </Link>
                       <Link
-                        href="/signup?plan=trial&source=directory"
+                        href="/list-your-property"
                         onClick={() => setOpen(false)}
                         className="flex min-h-[48px] items-center justify-center gap-2 rounded-full text-[14px] font-semibold"
                         style={{
@@ -162,7 +162,7 @@ export function MarketplaceNav() {
                           color: MP.ink,
                         }}
                       >
-                        List your hostel free <ArrowRight className="h-4 w-4" />
+                        List your property <ArrowRight className="h-4 w-4" />
                       </Link>
                     </div>
                   </div>
