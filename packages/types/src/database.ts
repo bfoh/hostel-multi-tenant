@@ -124,6 +124,7 @@ export type Database = {
           roommate_matching_enabled: boolean
           listed_publicly: boolean
           booking_payment_mode: 'online' | 'pay_at_hostel'
+          business_type: 'hostel' | 'hotel'
           created_at: string
           updated_at: string
         }
@@ -183,6 +184,7 @@ export type Database = {
           roommate_matching_enabled?: boolean
           listed_publicly?: boolean
           booking_payment_mode?: 'online' | 'pay_at_hostel'
+          business_type?: 'hostel' | 'hotel'
         }
         Update: {
           slug?: string
@@ -239,6 +241,7 @@ export type Database = {
           roommate_matching_enabled?: boolean
           listed_publicly?: boolean
           booking_payment_mode?: 'online' | 'pay_at_hostel'
+          business_type?: 'hostel' | 'hotel'
         }
         Relationships: []
       }

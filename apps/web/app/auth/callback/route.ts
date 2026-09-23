@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { provisionTenant } from '@/lib/onboarding/provision-tenant'
 
 /**
  * Supabase Auth callback handler.
@@ -76,61 +77,16 @@ async function verifyAndRoute(
 
   // ── Provision tenant for new users ─────────────────────────────────────────
 
-  // Idempotent: check if user already has a tenant
-  const { data: existing } = await admin
-    .from('tenant_members')
-    .select('tenant_id, tenants(id, slug)')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .limit(1)
-    .maybeSingle()
-
   let slug: string
-
-  if (existing?.tenant_id) {
-    const t = Array.isArray(existing.tenants) ? existing.tenants[0] : existing.tenants
-    slug = (t as any)?.slug ?? ''
-  } else {
-    // Brand new user — create tenant
-    const rawName: string = (user.user_metadata?.hostel_name as string) || ''
-    const hostelName = rawName.trim() || 'My Hostel'
-
-    const baseSlug = hostelName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 40) || 'hostel'
-
-    // Ensure uniqueness
-    slug = baseSlug
-    let attempt = 0
-    while (true) {
-      const { data: taken } = await admin.from('tenants').select('id').eq('slug', slug).maybeSingle()
-      if (!taken) break
-      attempt++
-      slug = `${baseSlug}-${attempt}`
-    }
-
-    const { data: tenant, error: tenantErr } = await admin
-      .from('tenants')
-      .insert({ name: hostelName, slug, status: 'trial', onboarding_completed: false, enquiry_webhook_secret: crypto.randomUUID() })
-      .select('id, slug')
-      .single()
-
-    if (tenantErr || !tenant) {
-      // Fall back to onboarding on current domain and let wizard handle it
-      return response
-    }
-
-    await admin.from('tenant_members').insert({
-      tenant_id: tenant.id,
-      user_id:   user.id,
-      role:      'owner',
-      is_active: true,
-      joined_at: new Date().toISOString(),
+  try {
+    const result = await provisionTenant({
+      userId: user.id,
+      rawName: user.user_metadata?.hostel_name as string | undefined,
     })
-
-    slug = tenant.slug
+    slug = result.slug
+  } catch {
+    // Fall back to onboarding on current domain and let wizard handle it
+    return response
   }
 
   // The access token was minted during verification, BEFORE the owner
