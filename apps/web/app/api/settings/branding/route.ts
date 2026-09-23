@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { invalidateTenantCache } from '@/lib/tenant/resolve'
-import { tenantHost, type BusinessType } from '@/lib/tenant/host-classification'
+import { tenantHost, bareRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
 
 const BANK_FIELDS = [
   'bank_name',
@@ -103,7 +103,7 @@ export async function PATCH(request: NextRequest) {
 
   // Bust Redis cache so branding changes take effect immediately
   if (tenant?.slug) {
-    const rootDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'aya.com'
+    const rootDomain = bareRootDomain(process.env.NEXT_PUBLIC_APP_DOMAIN)
     await invalidateTenantCache(tenantHost(tenant.slug, tenant.business_type as BusinessType, rootDomain))
   }
   if (tenant?.custom_domain) {

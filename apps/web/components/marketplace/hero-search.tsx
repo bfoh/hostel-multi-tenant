@@ -112,7 +112,7 @@ export function HeroSearch() {
       <div className="h-px" style={{ background: MP.border }} />
 
       {activeTab.enabled ? (
-        <form action="/hostels" method="get" className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center">
+        <form action="/browse" method="get" className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center">
           <div className="flex flex-1 items-center gap-3 rounded-2xl px-5 py-4" style={{ background: MP.surfaceSoft }}>
             <Search className="h-5 w-5 shrink-0" style={{ color: MP.goldDeep }} />
             <input

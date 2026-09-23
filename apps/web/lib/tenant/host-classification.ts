@@ -26,6 +26,19 @@ export type BusinessType = 'hostel' | 'hotel'
 
 export const VERTICALS: BusinessType[] = ['hostel', 'hotel']
 
+/**
+ * Derives the bare root domain from a raw APP_DOMAIN-shaped env value —
+ * strips a protocol/trailing-slash and, defensively, an `app.` prefix in
+ * case the env var was misconfigured with it (the fixed mobile host, not
+ * the root, is meant to carry that prefix). Every place that builds a
+ * vertical-root or tenant hostname from the env var should go through
+ * this rather than re-deriving it inline.
+ */
+export function bareRootDomain(appDomainEnv: string | undefined): string {
+  const appDomain = (appDomainEnv ?? 'aya.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')
+  return appDomain.startsWith('app.') ? appDomain.slice(4) : appDomain
+}
+
 /** hostel -> "hostels.<domain>", hotel -> "hotels.<domain>" */
 export function verticalRootDomain(rootDomain: string, type: BusinessType): string {
   return `${type}s.${rootDomain}`
@@ -56,10 +69,9 @@ export interface HostClassification {
 }
 
 export function classifyHost(hostname: string, appDomainEnv: string | undefined): HostClassification {
-  const appDomain = (appDomainEnv ?? 'aya.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')
   const hostBase  = hostname.split(':')[0].toLowerCase()
   const isLocalDev = hostBase === 'localhost' || hostBase === '127.0.0.1'
-  const rootDomain = appDomain.startsWith('app.') ? appDomain.slice(4) : appDomain
+  const rootDomain = bareRootDomain(appDomainEnv)
   const isFixedAppHost = hostBase === `app.${rootDomain}`
 
   let businessType: BusinessType | null = null

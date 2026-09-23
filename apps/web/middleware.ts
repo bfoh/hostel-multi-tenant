@@ -17,7 +17,7 @@ const BYPASS_PATHS = [
   '/robots.txt',
   '/sitemap.xml',
 ]
-const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/privacy', '/terms', '/hostels', '/for-owners', '/api/public', '/api/widget']
+const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/privacy', '/terms', '/browse', '/listing', '/for-owners', '/api/public', '/api/widget']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']
 const PORTAL_PATHS  = ['/staff-portal', '/occupant-portal']
 
@@ -71,10 +71,19 @@ export async function middleware(request: NextRequest) {
   for (const h of [
     'x-tenant-id', 'x-tenant-slug', 'x-tenant-name', 'x-tenant-color',
     'x-tenant-logo', 'x-tenant-favicon', 'x-tenant-domain', 'x-tenant-role',
-    'x-tenant-status', 'x-tenant-business-type', 'x-portal-role', 'x-occupant-id',
-    'x-admin-impersonating',
+    'x-tenant-status', 'x-tenant-business-type', 'x-business-type', 'x-portal-role',
+    'x-occupant-id', 'x-admin-impersonating',
   ]) {
     reqHeaders.delete(h)
+  }
+
+  // Which vertical's marketplace/marketing site this request is for —
+  // meaningful independent of any specific tenant (an anonymous visitor
+  // browsing hotels.<domain> has no tenant at all, but the marketplace
+  // pages still need to know which vertical's copy/data to render).
+  {
+    const hostClass = classifyHost(hostname, process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_APP_DOMAIN)
+    if (hostClass.businessType) reqHeaders.set('x-business-type', hostClass.businessType)
   }
 
   // ── No-auth paths ─────────────────────────────────────────────────────────

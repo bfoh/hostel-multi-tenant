@@ -8,15 +8,15 @@ import { Menu, X, ArrowRight } from 'lucide-react'
 import { MP } from '@/lib/marketplace-theme'
 
 const NAV_LINKS: Array<{ label: string; href: string }> = [
-  { label: 'Find a Hostel', href: '/hostels' },
+  { label: 'Find a Hostel', href: '/browse' },
   { label: 'For Hostel Owners', href: '/for-owners' },
   { label: 'Pricing', href: '/for-owners#pricing' },
   { label: 'FAQ', href: '/for-owners#faq' },
 ]
 
 /**
- * Shared top nav for all four marketplace surfaces (homepage, /hostels,
- * /hostels/[slug], /for-owners) — one implementation instead of three
+ * Shared top nav for all four marketplace surfaces (homepage, /browse,
+ * /listing/[slug], /for-owners) — one implementation instead of three
  * slightly-different copies, with the mobile hamburger menu folded in
  * (previously a separate MobileNav component).
  */

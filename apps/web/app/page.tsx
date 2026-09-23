@@ -6,8 +6,8 @@ import { ShieldCheck, Zap, HandCoins } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
-import { HostelCard } from '@/components/public/hostel-card'
-import { searchHostels } from '@/lib/directory'
+import { ListingCard } from '@/components/public/listing-card'
+import { searchListings } from '@/lib/directory'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { HeroSearch } from '@/components/marketplace/hero-search'
@@ -101,7 +101,7 @@ export default async function LandingPage() {
 
   if (user && isAppDomain) redirect('/dashboard')
 
-  const { hostels: featuredHostels } = await searchHostels({ limit: 6, sort: 'newest' })
+  const { listings: featuredHostels } = await searchListings({ businessType: 'hostel', limit: 6, sort: 'newest' })
 
   return (
     <div className="relative min-h-screen antialiased" style={{ background: MP.bg }}>
@@ -155,7 +155,7 @@ export default async function LandingPage() {
           {['Legon', 'KNUST', 'UCC', 'Cape Coast', 'Kumasi'].map((campus) => (
             <Link
               key={campus}
-              href={`/hostels?q=${encodeURIComponent(campus)}`}
+              href={`/browse?q=${encodeURIComponent(campus)}`}
               className="rounded-full px-3 py-1 text-[12px] font-medium transition-colors hover:bg-[#2F7D57] hover:text-white"
               style={{ border: `1px solid ${MP.border}`, background: MP.surface, color: MP.greenDeep }}
             >
@@ -170,7 +170,7 @@ export default async function LandingPage() {
           <div className="mx-auto grid max-w-4xl gap-4 text-left sm:grid-cols-3">
             {featuredHostels.slice(0, 3).map((h, i) => (
               <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${280 + i * 70}ms` }}>
-                <HostelCard hostel={h} />
+                <ListingCard listing={h} />
               </div>
             ))}
           </div>
@@ -187,7 +187,7 @@ export default async function LandingPage() {
         )}
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center text-[13px]" style={{ color: MP.textSecondary }}>
-          <Link href="/hostels" className="font-medium hover:underline">Browse all hostels →</Link>
+          <Link href="/browse" className="font-medium hover:underline">Browse all hostels →</Link>
           <span aria-hidden="true">·</span>
           <Link href="/signup?plan=trial&source=directory" className="font-medium hover:underline">
             Run a hostel? List yours free →

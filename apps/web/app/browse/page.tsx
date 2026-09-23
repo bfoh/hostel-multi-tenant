@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Search, MapPin, LayoutGrid, List as ListIcon, ChevronRight, SearchX } from 'lucide-react'
-import { searchHostels } from '@/lib/directory'
-import { HostelCard } from '@/components/public/hostel-card'
-import { HostelListRow } from '@/components/public/hostel-list-row'
-import { HostelSortSelect } from '@/components/public/hostel-sort-select'
+import { searchListings } from '@/lib/directory'
+import { ListingCard } from '@/components/public/listing-card'
+import { ListingListRow } from '@/components/public/listing-list-row'
+import { ListingSortSelect } from '@/components/public/listing-sort-select'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { MP } from '@/lib/marketplace-theme'
@@ -29,7 +29,7 @@ function buildQuery(sp: Record<string, string | undefined>, overrides: Record<st
   return qs.toString()
 }
 
-export default async function HostelsDirectoryPage({
+export default async function BrowseDirectoryPage({
   searchParams,
 }: {
   searchParams: Promise<{ city?: string; region?: string; q?: string; page?: string; sort?: string; view?: string; min?: string; max?: string }>
@@ -39,8 +39,11 @@ export default async function HostelsDirectoryPage({
   const sort = (['name', 'price_asc', 'price_desc'].includes(sp.sort ?? '') ? sp.sort : 'name') as 'name' | 'price_asc' | 'price_desc'
   const view = sp.view === 'grid' ? 'grid' : 'list'
 
-  const { hostels: allResults } = await searchHostels({
-    city: sp.city, region: sp.region, q: sp.q, sort, limit: 1000,
+  // Hardcoded to the hostel vertical for now — this page serves
+  // hostels.<domain>'s directory. The hotel vertical gets its own
+  // marketplace pages once its marketing content/pricing is ready.
+  const { listings: allResults } = await searchListings({
+    businessType: 'hostel', city: sp.city, region: sp.region, q: sp.q, sort, limit: 1000,
   })
 
   const min = sp.min ? Number(sp.min) : null
@@ -65,7 +68,7 @@ export default async function HostelsDirectoryPage({
       {/* ── Search bar ─────────────────────────────────────────── */}
       <div className="py-6" style={{ background: MP.surfaceSoft, borderBottom: `1px solid ${MP.border}` }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <form action="/hostels" method="get" className="flex flex-col gap-2 rounded-xl bg-white p-2 shadow-sm sm:flex-row" style={{ border: `1px solid ${MP.border}` }}>
+          <form action="/browse" method="get" className="flex flex-col gap-2 rounded-xl bg-white p-2 shadow-sm sm:flex-row" style={{ border: `1px solid ${MP.border}` }}>
             <div className="flex flex-1 items-center gap-2 border-b border-neutral-100 px-3 py-2.5 sm:border-b-0 sm:border-r">
               <Search className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
               <input
@@ -111,7 +114,7 @@ export default async function HostelsDirectoryPage({
         <span className="mx-1.5">›</span>
         {sp.region ? (
           <>
-            <Link href="/hostels" className="hover:underline" style={{ color: MP.green }}>Hostels</Link>
+            <Link href="/browse" className="hover:underline" style={{ color: MP.green }}>Hostels</Link>
             <span className="mx-1.5">›</span>
             <span>{sp.region}</span>
           </>
@@ -126,7 +129,7 @@ export default async function HostelsDirectoryPage({
           <div className="rounded-xl bg-white p-4" style={{ border: `1px solid ${MP.border}` }}>
             <h2 className="text-[15px] font-bold" style={{ color: MP.ink }}>Filter by</h2>
 
-            <form action="/hostels" method="get" className="mt-4 space-y-5">
+            <form action="/browse" method="get" className="mt-4 space-y-5">
               {sp.q && <input type="hidden" name="q" value={sp.q} />}
               {sp.city && <input type="hidden" name="city" value={sp.city} />}
               {sp.region && <input type="hidden" name="region" value={sp.region} />}
@@ -165,7 +168,7 @@ export default async function HostelsDirectoryPage({
                 {GHANA_REGIONS.map((r) => (
                   <li key={r}>
                     <Link
-                      href={`/hostels?${buildQuery(sp, { region: sp.region === r ? undefined : r, page: undefined })}`}
+                      href={`/browse?${buildQuery(sp, { region: sp.region === r ? undefined : r, page: undefined })}`}
                       className="text-[13px] transition-colors hover:underline"
                       style={{ color: sp.region === r ? MP.green : MP.textSecondary, fontWeight: sp.region === r ? 600 : 400 }}
                     >
@@ -188,18 +191,18 @@ export default async function HostelsDirectoryPage({
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
                 <span>Sort:</span>
-                <HostelSortSelect current={sort} />
+                <ListingSortSelect current={sort} />
               </div>
               <div className="flex overflow-hidden rounded-md" style={{ border: `1px solid ${MP.border}` }}>
                 <Link
-                  href={`/hostels?${buildQuery(sp, { view: 'list' })}`}
+                  href={`/browse?${buildQuery(sp, { view: 'list' })}`}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] transition-colors duration-150"
                   style={view === 'list' ? { background: MP.green, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
                 >
                   <ListIcon className="h-3.5 w-3.5" /> List
                 </Link>
                 <Link
-                  href={`/hostels?${buildQuery(sp, { view: 'grid' })}`}
+                  href={`/browse?${buildQuery(sp, { view: 'grid' })}`}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] transition-colors duration-150"
                   style={view === 'grid' ? { background: MP.green, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
                 >
@@ -221,7 +224,7 @@ export default async function HostelsDirectoryPage({
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {hostels.map((h, i) => (
                 <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
-                  <HostelCard hostel={h} />
+                  <ListingCard listing={h} />
                 </div>
               ))}
             </div>
@@ -229,7 +232,7 @@ export default async function HostelsDirectoryPage({
             <div className="mt-6 space-y-4">
               {hostels.map((h, i) => (
                 <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
-                  <HostelListRow hostel={h} />
+                  <ListingListRow listing={h} />
                 </div>
               ))}
             </div>
@@ -240,7 +243,7 @@ export default async function HostelsDirectoryPage({
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <Link
                   key={p}
-                  href={`/hostels?${buildQuery(sp, { page: String(p) })}`}
+                  href={`/browse?${buildQuery(sp, { page: String(p) })}`}
                   className="rounded-md px-3 py-1.5 text-sm transition-colors duration-150"
                   style={p === page
                     ? { background: MP.green, color: '#fff' }

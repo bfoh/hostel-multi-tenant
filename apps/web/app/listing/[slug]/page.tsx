@@ -5,6 +5,7 @@ import { MapPin, Phone, Mail, BedDouble } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS } from '@/lib/utils'
 import { amenityIcon } from '@/lib/amenity-icons'
+import { tenantHost, bareRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { ShareButton } from '@/components/public/share-button'
@@ -18,12 +19,12 @@ interface CmsContent {
   gallery_urls?:    string[]
 }
 
-async function getHostel(slug: string) {
+async function getListing(slug: string) {
   const supabase = createAdminClient()
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_city, address_region, custom_domain, website_content, listed_publicly, status')
+    .select('id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_city, address_region, custom_domain, website_content, listed_publicly, status, business_type')
     .eq('slug', slug)
     .single()
 
@@ -43,7 +44,7 @@ async function getHostel(slug: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const result = await getHostel(slug)
+  const result = await getListing(slug)
   if (!result) return { title: 'Hostel Not Found' }
   return {
     title: `${result.tenant.name} — GH Hostels`,
@@ -51,18 +52,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function HostelProfilePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ListingProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const result = await getHostel(slug)
+  const result = await getListing(slug)
   if (!result) notFound()
 
   const { tenant, categories } = result
   const cms = (tenant.website_content ?? {}) as CmsContent
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'
-  const rootDomain = appDomain.startsWith('app.') ? appDomain.slice(4) : appDomain
+  const rootDomain = bareRootDomain(process.env.NEXT_PUBLIC_APP_DOMAIN)
   const bookUrl = tenant.custom_domain
     ? `https://${tenant.custom_domain}/book`
-    : `https://${tenant.slug}.${rootDomain}/book`
+    : `https://${tenantHost(tenant.slug, tenant.business_type as BusinessType, rootDomain)}/book`
 
   const location = [tenant.address_city, tenant.address_region].filter(Boolean).join(', ')
 
@@ -85,11 +85,11 @@ export default async function HostelProfilePage({ params }: { params: Promise<{ 
       <div className="mx-auto max-w-6xl px-4 py-3 text-[13px] sm:px-6" style={{ color: MP.textSecondary }}>
         <Link href="/" className="hover:underline" style={{ color: MP.green }}>Home</Link>
         <span className="mx-1.5">›</span>
-        <Link href="/hostels" className="hover:underline" style={{ color: MP.green }}>Hostels</Link>
+        <Link href="/browse" className="hover:underline" style={{ color: MP.green }}>Hostels</Link>
         {tenant.address_region && (
           <>
             <span className="mx-1.5">›</span>
-            <Link href={`/hostels?region=${encodeURIComponent(tenant.address_region)}`} className="hover:underline" style={{ color: MP.green }}>
+            <Link href={`/browse?region=${encodeURIComponent(tenant.address_region)}`} className="hover:underline" style={{ color: MP.green }}>
               {tenant.address_region}
             </Link>
           </>

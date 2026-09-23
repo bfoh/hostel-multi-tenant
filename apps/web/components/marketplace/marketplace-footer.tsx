@@ -4,8 +4,8 @@ import { Lock } from 'lucide-react'
 import { MP } from '@/lib/marketplace-theme'
 
 /**
- * Shared footer for all four marketplace surfaces (homepage, /hostels,
- * /hostels/[slug], /for-owners) — previously duplicated between the
+ * Shared footer for all four marketplace surfaces (homepage, /browse,
+ * /listing/[slug], /for-owners) — previously duplicated between the
  * homepage and /for-owners, and absent entirely from the other two.
  */
 export function MarketplaceFooter() {
@@ -29,10 +29,10 @@ export function MarketplaceFooter() {
               Find a Hostel
             </p>
             <ul className="mt-4 space-y-2.5 text-[13px]" style={{ color: MP.textSecondary }}>
-              <li><Link href="/hostels" className="hover:underline">Browse all hostels</Link></li>
-              <li><Link href="/hostels?region=Greater%20Accra" className="hover:underline">Hostels in Accra</Link></li>
-              <li><Link href="/hostels?region=Ashanti" className="hover:underline">Hostels in Kumasi</Link></li>
-              <li><Link href="/hostels?region=Central" className="hover:underline">Hostels in Cape Coast</Link></li>
+              <li><Link href="/browse" className="hover:underline">Browse all hostels</Link></li>
+              <li><Link href="/browse?region=Greater%20Accra" className="hover:underline">Hostels in Accra</Link></li>
+              <li><Link href="/browse?region=Ashanti" className="hover:underline">Hostels in Kumasi</Link></li>
+              <li><Link href="/browse?region=Central" className="hover:underline">Hostels in Cape Coast</Link></li>
             </ul>
           </div>
           <div>

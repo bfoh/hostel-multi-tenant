@@ -2,14 +2,14 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export function HostelSortSelect({ current }: { current: string }) {
+export function ListingSortSelect({ current }: { current: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   function onChange(value: string) {
     const params = new URLSearchParams(searchParams.toString())
     params.set('sort', value)
-    router.push(`/hostels?${params.toString()}`)
+    router.push(`/browse?${params.toString()}`)
   }
 
   return (

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { invalidateTenantCache } from '@/lib/tenant/resolve'
-import { tenantHost, type BusinessType } from '@/lib/tenant/host-classification'
+import { tenantHost, bareRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
 
 export async function POST(req: NextRequest) {
   const tenantId = await getServerTenantId()
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   // Bust Redis cache so new logo appears immediately
   if (tenant?.slug) {
-    const rootDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'aya.com'
+    const rootDomain = bareRootDomain(process.env.NEXT_PUBLIC_APP_DOMAIN)
     await invalidateTenantCache(tenantHost(tenant.slug, tenant.business_type as BusinessType, rootDomain))
   }
   if (tenant?.custom_domain) {
