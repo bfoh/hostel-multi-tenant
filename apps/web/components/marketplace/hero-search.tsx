@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { BedDouble, Building2, Home, Compass, Landmark, Search, MapPin, Sparkles } from 'lucide-react'
 
 import { MP } from '@/lib/marketplace-theme'
@@ -30,15 +30,20 @@ export function HeroSearch() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showLeftFade, setShowLeftFade] = useState(false)
   const [showRightFade, setShowRightFade] = useState(false)
+  // Centering an overflowing scroll container makes its start unreachable in
+  // some browsers (scrollLeft would need to go negative) — only center the
+  // tabs once we've measured that they actually fit without scrolling.
+  const [hasOverflow, setHasOverflow] = useState(true)
 
   const updateFades = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
     setShowLeftFade(el.scrollLeft > 4)
     setShowRightFade(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+    setHasOverflow(el.scrollWidth > el.clientWidth + 4)
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     updateFades()
     const el = scrollRef.current
     if (!el) return
@@ -62,7 +67,7 @@ export function HeroSearch() {
         )}
         <div
           ref={scrollRef}
-          className="mp-no-scrollbar flex items-center gap-1 overflow-x-auto pb-3 sm:justify-center sm:gap-3"
+          className={`mp-no-scrollbar flex items-center gap-1 overflow-x-auto pb-3 sm:gap-3 ${hasOverflow ? '' : 'sm:justify-center'}`}
         >
           {TABS.map((tab) => {
             const Icon = tab.icon

@@ -51,7 +51,7 @@ export function MarketplaceNav() {
           </span>
         </Link>
 
-        <div className="hidden items-center gap-8 md:flex">
+        <div className="hidden items-center gap-8 lg:flex">
           {NAV_LINKS.map((l) => (
             <Link
               key={l.label}
@@ -67,14 +67,14 @@ export function MarketplaceNav() {
         <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="hidden text-[13px] font-medium md:inline-flex"
+            className="hidden text-[13px] font-medium lg:inline-flex"
             style={{ color: MP.textSecondary }}
           >
             Log in
           </Link>
           <Link
             href="/signup?plan=trial&source=directory"
-            className="hidden rounded-full px-4 py-2 text-[13px] font-semibold md:inline-flex"
+            className="hidden rounded-full px-4 py-2 text-[13px] font-semibold lg:inline-flex"
             style={{
               background: `linear-gradient(135deg, ${MP.goldSoft} 0%, ${MP.gold} 60%, ${MP.goldDeep} 100%)`,
               color: MP.ink,
@@ -85,7 +85,7 @@ export function MarketplaceNav() {
           </Link>
 
           {/* Mobile hamburger */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <button
               type="button"
               aria-label={open ? 'Close menu' : 'Open menu'}
