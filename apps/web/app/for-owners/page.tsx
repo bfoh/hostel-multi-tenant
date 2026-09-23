@@ -374,7 +374,7 @@ export default function ForOwnersPage() {
         />
 
         <div className="relative mx-auto max-w-6xl px-5 pb-20 pt-20 text-center sm:px-6 sm:pb-28 md:pt-36">
-          <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD }}>
+          <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
             For hostel owners
           </p>
 
@@ -614,7 +614,7 @@ export default function ForOwnersPage() {
       <section id="features" className="py-20 sm:py-32">
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
               Features
             </p>
             <h2
@@ -681,7 +681,7 @@ export default function ForOwnersPage() {
       <section className="py-20 sm:py-28" style={{ borderTop: `1px solid ${HAIR}` }}>
         <div className="mx-auto max-w-5xl px-6">
           <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
               Why switch
             </p>
             <h2
@@ -715,7 +715,7 @@ export default function ForOwnersPage() {
               <div className="text-center inline-flex items-center justify-center gap-1.5">
                 <Building2 className="h-3.5 w-3.5" /> Legacy
               </div>
-              <div className="text-center inline-flex items-center justify-center gap-1.5" style={{ color: GOLD }}>
+              <div className="text-center inline-flex items-center justify-center gap-1.5" style={{ color: GOLD_DEEP }}>
                 <Image src="/logo-mark.svg" alt="" width={14} height={14} className="h-3.5 w-3.5" />
                 GH Hostels
               </div>
@@ -749,7 +749,7 @@ export default function ForOwnersPage() {
       >
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
               Loved by hostel owners
             </p>
             <h2
@@ -811,7 +811,7 @@ export default function ForOwnersPage() {
       <section id="pricing" className="py-20 sm:py-28" style={{ borderTop: `1px solid ${HAIR}` }}>
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
               Pricing
             </p>
             <h2
@@ -864,7 +864,7 @@ export default function ForOwnersPage() {
       <section id="faq" className="py-20 sm:py-28" style={{ borderTop: `1px solid ${HAIR}` }}>
         <div className="mx-auto max-w-3xl px-6">
           <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD }}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
               FAQ
             </p>
             <h2
