@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Menu, X, ArrowRight } from 'lucide-react'
@@ -21,6 +22,13 @@ const NAV_LINKS: Array<{ label: string; href: string }> = [
  */
 export function MarketplaceNav() {
   const [open, setOpen] = useState(false)
+  // The mobile menu overlay/panel are portaled to document.body (see below) —
+  // they can only mount client-side, after document exists.
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -97,62 +105,71 @@ export function MarketplaceNav() {
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
 
-            <div
-              onClick={() => setOpen(false)}
-              aria-hidden="true"
-              className={[
-                'fixed inset-0 z-40 transition-opacity duration-300',
-                open ? 'opacity-100' : 'pointer-events-none opacity-0',
-              ].join(' ')}
-              style={{ top: 'calc(57px + env(safe-area-inset-top))', background: 'rgba(20,35,29,0.25)' }}
-            />
+            {/* Portaled to document.body — the nav's own backdrop-blur-md makes
+                it a containing block for position:fixed descendants, which
+                otherwise collapses this overlay's height to the nav bar's own
+                height instead of the full viewport below it. */}
+            {mounted && createPortal(
+              <>
+                <div
+                  onClick={() => setOpen(false)}
+                  aria-hidden="true"
+                  className={[
+                    'fixed inset-0 z-40 transition-opacity duration-300',
+                    open ? 'opacity-100' : 'pointer-events-none opacity-0',
+                  ].join(' ')}
+                  style={{ top: 'calc(57px + env(safe-area-inset-top))', background: 'rgba(20,35,29,0.25)' }}
+                />
 
-            <div
-              className={[
-                'fixed inset-x-0 z-50 origin-top transition-all duration-300',
-                open ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0',
-              ].join(' ')}
-              style={{
-                top: 'calc(57px + env(safe-area-inset-top))',
-                background: MP.surface,
-                borderBottom: `1px solid ${MP.border}`,
-              }}
-            >
-              <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4">
-                {NAV_LINKS.map((l) => (
-                  <Link
-                    key={l.label}
-                    href={l.href}
-                    onClick={() => setOpen(false)}
-                    className="flex min-h-[48px] items-center rounded-xl px-3 text-[15px] font-medium"
-                    style={{ color: MP.ink }}
-                  >
-                    {l.label}
-                  </Link>
-                ))}
-                <div className="mt-2 grid gap-2.5 pt-3" style={{ borderTop: `1px solid ${MP.border}` }}>
-                  <Link
-                    href="/login"
-                    onClick={() => setOpen(false)}
-                    className="flex min-h-[48px] items-center justify-center rounded-full text-[14px] font-medium"
-                    style={{ border: `1px solid ${MP.border}`, color: MP.ink }}
-                  >
-                    Log in
-                  </Link>
-                  <Link
-                    href="/signup?plan=trial&source=directory"
-                    onClick={() => setOpen(false)}
-                    className="flex min-h-[48px] items-center justify-center gap-2 rounded-full text-[14px] font-semibold"
-                    style={{
-                      background: `linear-gradient(135deg, ${MP.goldSoft} 0%, ${MP.gold} 60%, ${MP.goldDeep} 100%)`,
-                      color: MP.ink,
-                    }}
-                  >
-                    List your hostel free <ArrowRight className="h-4 w-4" />
-                  </Link>
+                <div
+                  className={[
+                    'fixed inset-x-0 z-50 origin-top transition-all duration-300',
+                    open ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0',
+                  ].join(' ')}
+                  style={{
+                    top: 'calc(57px + env(safe-area-inset-top))',
+                    background: MP.surface,
+                    borderBottom: `1px solid ${MP.border}`,
+                  }}
+                >
+                  <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4">
+                    {NAV_LINKS.map((l) => (
+                      <Link
+                        key={l.label}
+                        href={l.href}
+                        onClick={() => setOpen(false)}
+                        className="flex min-h-[48px] items-center rounded-xl px-3 text-[15px] font-medium"
+                        style={{ color: MP.ink }}
+                      >
+                        {l.label}
+                      </Link>
+                    ))}
+                    <div className="mt-2 grid gap-2.5 pt-3" style={{ borderTop: `1px solid ${MP.border}` }}>
+                      <Link
+                        href="/login"
+                        onClick={() => setOpen(false)}
+                        className="flex min-h-[48px] items-center justify-center rounded-full text-[14px] font-medium"
+                        style={{ border: `1px solid ${MP.border}`, color: MP.ink }}
+                      >
+                        Log in
+                      </Link>
+                      <Link
+                        href="/signup?plan=trial&source=directory"
+                        onClick={() => setOpen(false)}
+                        className="flex min-h-[48px] items-center justify-center gap-2 rounded-full text-[14px] font-semibold"
+                        style={{
+                          background: `linear-gradient(135deg, ${MP.goldSoft} 0%, ${MP.gold} 60%, ${MP.goldDeep} 100%)`,
+                          color: MP.ink,
+                        }}
+                      >
+                        List your hostel free <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>,
+              document.body
+            )}
           </div>
         </div>
       </div>
