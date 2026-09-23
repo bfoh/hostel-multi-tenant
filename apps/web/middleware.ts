@@ -17,7 +17,7 @@ const BYPASS_PATHS = [
   '/robots.txt',
   '/sitemap.xml',
 ]
-const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/privacy', '/terms', '/browse', '/listing', '/for-owners', '/list-your-property', '/api/public', '/api/widget']
+const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/privacy', '/terms', '/browse', '/listing', '/for-owners', '/list-your-property', '/api/public', '/api/widget', '/api/mobile/role', '/api/mobile/tenant-theme']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']
 const PORTAL_PATHS  = ['/staff-portal', '/occupant-portal']
 
