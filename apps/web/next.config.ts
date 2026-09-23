@@ -54,7 +54,16 @@ const nextConfig: NextConfig = {
 
   // Redirect root to platform landing or tenant dashboard based on context
   async redirects() {
-    return []
+    return [
+      // /hostels -> /browse and /hostels/[slug] -> /listing/[slug]: the
+      // marketplace directory/listing routes were renamed once each
+      // vertical got its own subdomain (see the hotel-vertical plan).
+      // These paths were live in production before the rename, so they
+      // need a permanent redirect rather than 404ing existing bookmarks/
+      // search-indexed links.
+      { source: '/hostels', destination: '/browse', permanent: true },
+      { source: '/hostels/:slug', destination: '/listing/:slug', permanent: true },
+    ]
   },
 }
 
