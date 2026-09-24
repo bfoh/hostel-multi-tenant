@@ -41,13 +41,13 @@ interface FormData {
 type StepKey = 'identity' | 'branding' | 'rooms' | 'done'
 
 const STEPS: { key: StepKey; label: string; icon: React.ElementType }[] = [
-  { key: 'identity', label: 'Your hostel',  icon: Building2    },
+  { key: 'identity', label: 'Your property', icon: Building2    },
   { key: 'branding', label: 'Branding',     icon: Palette      },
   { key: 'rooms',    label: 'Room setup',   icon: BedDouble    },
   { key: 'done',     label: 'All set!',     icon: CheckCircle2 },
 ]
 
-const ROOM_TYPES = [
+const ROOM_TYPES_HOSTEL = [
   { value: 'single',    label: 'Single'    },
   { value: 'double',    label: 'Double'    },
   { value: 'triple',    label: 'Triple'    },
@@ -58,7 +58,25 @@ const ROOM_TYPES = [
   { value: 'shared',    label: 'Shared'    },
 ]
 
-const RATE_UNITS = [
+const ROOM_TYPES_HOTEL = [
+  { value: 'single',    label: 'Single'    },
+  { value: 'double',    label: 'Double'    },
+  { value: 'suite',     label: 'Suite'     },
+  { value: 'studio',    label: 'Studio'    },
+  { value: 'triple',    label: 'Triple'    },
+  { value: 'quad',      label: 'Quad'      },
+  { value: 'shared',    label: 'Shared'    },
+  { value: 'dormitory', label: 'Dormitory' },
+]
+
+const RATE_UNITS_HOSTEL = [
+  { value: 'night',    label: 'Per night'    },
+  { value: 'week',     label: 'Per week'     },
+  { value: 'month',    label: 'Per month'    },
+  { value: 'semester', label: 'Per semester' },
+]
+
+const RATE_UNITS_HOTEL = [
   { value: 'night',    label: 'Per night'    },
   { value: 'week',     label: 'Per week'     },
   { value: 'month',    label: 'Per month'    },
@@ -138,12 +156,20 @@ interface InitialIdentity {
 }
 
 interface OnboardingWizardProps {
-  tenantId: string
-  initial:  InitialIdentity
+  tenantId:     string
+  businessType: 'hostel' | 'hotel'
+  initial:      InitialIdentity
 }
 
-export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
+export function OnboardingWizard({ tenantId, businessType, initial }: OnboardingWizardProps) {
   const router = useRouter()
+  const isHotel = businessType === 'hotel'
+  const nounSingular    = isHotel ? 'hotel'  : 'hostel'
+  const nounCapitalized = isHotel ? 'Hotel'  : 'Hostel'
+  const ROOM_TYPES = isHotel ? ROOM_TYPES_HOTEL : ROOM_TYPES_HOSTEL
+  const RATE_UNITS = isHotel ? RATE_UNITS_HOTEL : RATE_UNITS_HOSTEL
+  const namePlaceholder = isHotel ? 'Grand Plaza Hotel' : 'Acacia Hostel'
+  const slugPlaceholder = isHotel ? 'grand-plaza-hotel' : 'acacia-hostel'
   const appDomain = (process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com')
     .replace(/^https?:\/\//, '')
     .replace(/\/+$/, '')
@@ -182,7 +208,7 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
     category_name:  'Standard Room',
     category_type:  'single',
     base_rate_ghs:  '',
-    rate_unit:      'semester',
+    rate_unit:      isHotel ? 'night' : 'semester',
     capacity:       '1',
     room_number:    '101',
     block:          '',
@@ -405,16 +431,16 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
           {/* ── Step 1: Identity ─────────────────────────────────────── */}
           {currentStep.key === 'identity' && (
             <>
-              <StepHeader icon={Building2} title="Tell us about your hostel" sub="This information appears on invoices, receipts, and your public booking page." />
+              <StepHeader icon={Building2} title={`Tell us about your ${nounSingular}`} sub="This information appears on invoices, receipts, and your public booking page." />
 
               <div className="space-y-4">
-                {/* Hostel name */}
-                <Field label="Hostel name *">
+                {/* Property name */}
+                <Field label={`${nounCapitalized} name *`}>
                   <input
                     className={inputCls}
                     value={form.name}
                     onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="Acacia Hostel"
+                    placeholder={namePlaceholder}
                     maxLength={120}
                   />
                 </Field>
@@ -429,7 +455,7 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
                       className="flex-1 px-3 py-2.5 text-sm bg-surface text-text-primary font-mono focus:outline-none"
                       value={form.slug}
                       onChange={(e) => handleSlugChange(e.target.value)}
-                      placeholder="acacia-hostel"
+                      placeholder={slugPlaceholder}
                       maxLength={40}
                     />
                     <div className="px-3">
@@ -455,7 +481,7 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
                     <input type="tel" className={inputCls} value={form.contact_phone} onChange={(e) => set('contact_phone', e.target.value)} placeholder="0244 000 000" maxLength={30} />
                   </Field>
                   <Field label="Contact email (optional)">
-                    <input type="email" className={inputCls} value={form.contact_email} onChange={(e) => set('contact_email', e.target.value)} placeholder="info@hostel.com" maxLength={120} />
+                    <input type="email" className={inputCls} value={form.contact_email} onChange={(e) => set('contact_email', e.target.value)} placeholder={`info@${isHotel ? 'hotel' : 'hostel'}.com`} maxLength={120} />
                   </Field>
                 </div>
 
@@ -520,7 +546,7 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
           {/* ── Step 2: Branding ─────────────────────────────────────── */}
           {currentStep.key === 'branding' && (
             <>
-              <StepHeader icon={Palette} title="Brand your hostel" sub="Your logo and colours appear on your booking page, invoices, and login screen." />
+              <StepHeader icon={Palette} title={`Brand your ${nounSingular}`} sub="Your logo and colours appear on your booking page, invoices, and login screen." />
 
               <div className="space-y-5">
                 {/* Logo upload */}
@@ -600,7 +626,7 @@ export function OnboardingWizard({ tenantId, initial }: OnboardingWizardProps) {
                       </div>
                     )}
                     <div>
-                      <p className="text-sm font-semibold text-text-primary">{form.name || 'Your Hostel'}</p>
+                      <p className="text-sm font-semibold text-text-primary">{form.name || `Your ${nounCapitalized}`}</p>
                       <p className="text-xs text-text-secondary">{form.tagline || 'Your booking page'}</p>
                     </div>
                   </div>

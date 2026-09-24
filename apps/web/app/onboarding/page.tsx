@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { provisionTenant } from '@/lib/onboarding/provision-tenant'
 import { OnboardingWizard } from '@/components/onboarding/wizard'
 
-export const metadata = { title: 'Set up your hostel — GH Hostels' }
+export const metadata = { title: 'Set up your account' }
 
 export default async function OnboardingPage() {
   const headersList = await headers()
@@ -17,7 +17,7 @@ export default async function OnboardingPage() {
 
   const admin = createAdminClient()
 
-  const TENANT_COLS = `id, name, slug, onboarding_completed,
+  const TENANT_COLS = `id, name, slug, onboarding_completed, business_type,
     custom_domain, tagline, contact_phone, contact_email,
     address_city, address_region, currency, timezone,
     primary_color, logo_url`
@@ -27,6 +27,7 @@ export default async function OnboardingPage() {
     name: string
     slug: string
     onboarding_completed: boolean
+    business_type: 'hostel' | 'hotel'
     custom_domain:  string | null
     tagline:        string | null
     contact_phone:  string | null
@@ -55,7 +56,7 @@ export default async function OnboardingPage() {
   const tenantRecord = data as unknown as TenantRow | null
 
   if (!tenantRecord) {
-    return <p className="p-8 text-danger">Could not create your hostel account. Please contact support.</p>
+    return <p className="p-8 text-danger">Could not create your account. Please contact support.</p>
   }
 
   // Already completed → go to dashboard
@@ -64,6 +65,7 @@ export default async function OnboardingPage() {
   return (
     <OnboardingWizard
       tenantId={tenantRecord.id}
+      businessType={tenantRecord.business_type ?? 'hostel'}
       initial={{
         name:           tenantRecord.name,
         slug:           tenantRecord.slug,
