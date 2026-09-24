@@ -23,6 +23,8 @@ const VALID_PLANS = ['starter', 'growth', 'trial'] as const
 type SelectedPlan = typeof VALID_PLANS[number]
 const VALID_INTERVALS = ['monthly', 'quarterly', 'biannual', 'annual'] as const
 type SelectedInterval = typeof VALID_INTERVALS[number]
+const VALID_BUSINESS_TYPES = ['hostel', 'hotel'] as const
+type BusinessType = typeof VALID_BUSINESS_TYPES[number]
 const PLAN_LABEL: Record<SelectedPlan, string> = {
   starter: 'Starter — GH₵ 800 / month',
   growth:  'Growth — GH₵ 1,000 / month',
@@ -66,6 +68,13 @@ export default function SignupPage() {
     const i = search.get('billing') as SelectedInterval | null
     return i && (VALID_INTERVALS as readonly string[]).includes(i) ? i : null
   }, [search])
+  const businessType = useMemo<BusinessType>(() => {
+    const t = search.get('type') as BusinessType | null
+    return t && (VALID_BUSINESS_TYPES as readonly string[]).includes(t) ? t : 'hostel'
+  }, [search])
+  const isHotel = businessType === 'hotel'
+  const nounSingular    = isHotel ? 'hotel'  : 'hostel'
+  const nounCapitalized = isHotel ? 'Hotel'  : 'Hostel'
 
   const [serverError, setServerError] = useState<string | null>(null)
   const [success, setSuccess]         = useState(false)
@@ -111,6 +120,7 @@ export default function SignupPage() {
         hostelName:   values.hostelName,
         selectedPlan: selectedPlan ?? null,
         selectedInterval: selectedInterval ?? null,
+        businessType,
       }),
     })
 
@@ -144,7 +154,7 @@ export default function SignupPage() {
             Check your email
           </h2>
           <p className="text-[13px] leading-relaxed max-w-[300px] mx-auto" style={{ color: IVORY_MUTED }}>
-            We&apos;ve sent a confirmation link. Click it to activate your account and start setting up your hostel.
+            We&apos;ve sent a confirmation link. Click it to activate your account and start setting up your {nounSingular}.
           </p>
         </div>
         <Link
@@ -171,7 +181,7 @@ export default function SignupPage() {
           {selectedPlan === 'trial' || !selectedPlan ? 'Start your free trial' : 'Create your account'}
         </h1>
         <p className="text-[14px]" style={{ color: IVORY_MUTED }}>
-          Set up your hostel in minutes. {selectedPlan === 'trial' || !selectedPlan ? 'No credit card required.' : 'You\u2019ll subscribe after email confirmation.'}
+          Set up your {nounSingular} in minutes. {selectedPlan === 'trial' || !selectedPlan ? 'No credit card required.' : 'You\u2019ll subscribe after email confirmation.'}
         </p>
         {selectedPlan && (
           <div
@@ -188,7 +198,7 @@ export default function SignupPage() {
         {/* Hostel name */}
         <div className="space-y-1.5">
           <label htmlFor="hostelName" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
-            Hostel name
+            {nounCapitalized} name
           </label>
           <input
             id="hostelName"
@@ -198,7 +208,7 @@ export default function SignupPage() {
             {...register('hostelName')}
             className={inputClass}
             style={inputBorder}
-            placeholder="Acacia Hostel"
+            placeholder={isHotel ? 'Grand Plaza Hotel' : 'Acacia Hostel'}
           />
           {errors.hostelName && (
             <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.hostelName.message}</p>
@@ -238,7 +248,7 @@ export default function SignupPage() {
             {...register('email')}
             className={inputClass}
             style={inputBorder}
-            placeholder="kwame@acaciahostel.com"
+            placeholder={isHotel ? 'kwame@grandplazahotel.com' : 'kwame@acaciahostel.com'}
           />
           {errors.email && (
             <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.email.message}</p>

@@ -79,9 +79,11 @@ async function verifyAndRoute(
 
   let slug: string
   try {
+    const rawBusinessType = user.user_metadata?.business_type
     const result = await provisionTenant({
       userId: user.id,
       rawName: user.user_metadata?.hostel_name as string | undefined,
+      businessType: rawBusinessType === 'hotel' ? 'hotel' : 'hostel',
     })
     slug = result.slug
   } catch {

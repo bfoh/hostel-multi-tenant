@@ -8,18 +8,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  const { email, password, hostelName, selectedPlan, selectedInterval } = body as {
+  const { email, password, hostelName, selectedPlan, selectedInterval, businessType } = body as {
     email:            string
     password:         string
     hostelName:       string
     selectedPlan:     string | null
     selectedInterval: string | null
+    businessType:     string | null
   }
 
   const validInterval =
     selectedInterval && ['monthly', 'quarterly', 'biannual', 'annual'].includes(selectedInterval)
       ? selectedInterval
       : null
+  const validBusinessType = businessType === 'hotel' ? 'hotel' : 'hostel'
 
   const admin   = createAdminClient()
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin
@@ -35,6 +37,7 @@ export async function POST(request: NextRequest) {
     options: {
       data: {
         hostel_name: hostelName,
+        business_type: validBusinessType,
         ...(selectedPlan ? { selected_plan: selectedPlan } : {}),
         ...(validInterval ? { selected_interval: validInterval } : {}),
       },
