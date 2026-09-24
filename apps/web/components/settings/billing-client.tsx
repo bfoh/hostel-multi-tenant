@@ -180,7 +180,11 @@ export function BillingClient({ plans, pricing, intervals, subscription, current
   }
 
   const isLive = subscription && ['trialing', 'active', 'past_due'].includes(subscription.status)
-  const isTrial = tenantStatus === 'trial'
+  // Keep showing the trial banner through trial_expired too — that's
+  // exactly when the "please subscribe" reminder matters most. Without
+  // this, the banner silently disappears the moment the daily cron flips
+  // tenants.status from 'trial' to 'trial_expired'.
+  const isTrial = tenantStatus === 'trial' || tenantStatus === 'trial_expired'
 
   // Trial info
   const trialDaysLeft = trialEndsAt

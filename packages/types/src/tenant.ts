@@ -2,7 +2,7 @@
 
 export type SubscriptionPlan = 'starter' | 'growth' | 'pro' | 'enterprise'
 
-export type TenantStatus = 'active' | 'suspended' | 'trial' | 'cancelled'
+export type TenantStatus = 'active' | 'suspended' | 'trial' | 'trial_expired' | 'cancelled'
 
 export interface Tenant {
   id: string

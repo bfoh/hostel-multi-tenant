@@ -24,10 +24,11 @@ async function getTenants(search: string, status: string) {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  active:    'bg-green-900/50 text-green-400',
-  trial:     'bg-yellow-900/50 text-yellow-400',
-  suspended: 'bg-red-900/50 text-red-400',
-  cancelled: 'bg-gray-700 text-gray-400',
+  active:        'bg-green-900/50 text-green-400',
+  trial:         'bg-yellow-900/50 text-yellow-400',
+  trial_expired: 'bg-orange-900/50 text-orange-400',
+  suspended:     'bg-red-900/50 text-red-400',
+  cancelled:     'bg-gray-700 text-gray-400',
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -44,11 +45,12 @@ export default async function AdminTenantsPage({
   const tenants = await getTenants(q, status)
 
   const STATUS_FILTERS = [
-    { value: 'all',       label: 'All' },
-    { value: 'trial',     label: 'Trial' },
-    { value: 'active',    label: 'Active' },
-    { value: 'suspended', label: 'Suspended' },
-    { value: 'cancelled', label: 'Cancelled' },
+    { value: 'all',           label: 'All' },
+    { value: 'trial',         label: 'Trial' },
+    { value: 'trial_expired', label: 'Trial expired' },
+    { value: 'active',        label: 'Active' },
+    { value: 'suspended',     label: 'Suspended' },
+    { value: 'cancelled',     label: 'Cancelled' },
   ]
 
   return (
@@ -92,7 +94,7 @@ export default async function AdminTenantsPage({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-white/30 uppercase border-b border-white/10">
-              <th className="text-left px-4 py-3 font-medium">Hostel</th>
+              <th className="text-left px-4 py-3 font-medium">Property</th>
               <th className="text-left px-4 py-3 font-medium">Plan</th>
               <th className="text-left px-4 py-3 font-medium">Status</th>
               <th className="text-left px-4 py-3 font-medium">Billing email</th>

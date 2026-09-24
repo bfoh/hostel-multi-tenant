@@ -41,10 +41,11 @@ async function getTenant(id: string) {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  active:    'bg-green-900/50 text-green-400',
-  trial:     'bg-yellow-900/50 text-yellow-400',
-  suspended: 'bg-red-900/50 text-red-400',
-  cancelled: 'bg-gray-700 text-gray-400',
+  active:        'bg-green-900/50 text-green-400',
+  trial:         'bg-yellow-900/50 text-yellow-400',
+  trial_expired: 'bg-orange-900/50 text-orange-400',
+  suspended:     'bg-red-900/50 text-red-400',
+  cancelled:     'bg-gray-700 text-gray-400',
 }
 
 export default async function TenantAdminPage({

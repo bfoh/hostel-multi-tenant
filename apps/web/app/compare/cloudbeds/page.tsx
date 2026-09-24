@@ -6,14 +6,15 @@ const SITE_URL = 'https://gh-hostels.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Cloudbeds Alternative for Ghana — GH Hostels vs Cloudbeds',
+  title: 'Cloudbeds Alternative for Ghana — Aya vs Cloudbeds',
   description:
-    'Looking for a Cloudbeds alternative for your Ghanaian hostel? GH Hostels is built in Ghana with native Paystack MoMo, GRA-compliant accounting, SSNIT/PAYE payroll, and pricing in cedis. Side-by-side comparison.',
+    'Looking for a Cloudbeds alternative for your Ghanaian hostel or hotel? Aya is built in Ghana with native Paystack MoMo, GRA-compliant accounting, SSNIT/PAYE payroll, and pricing in cedis. Side-by-side comparison.',
   keywords: [
     'cloudbeds alternative ghana',
     'cloudbeds alternative africa',
     'hostel management software ghana',
-    'cloudbeds vs gh hostels',
+    'hotel management software ghana',
+    'cloudbeds vs aya',
     'hostel software ghana cloudbeds',
     'paystack hostel software',
     'gra accounting hostel',
@@ -23,16 +24,16 @@ export const metadata: Metadata = {
     type: 'article',
     locale: 'en_GH',
     url: `${SITE_URL}/compare/cloudbeds`,
-    siteName: 'GH Hostels',
-    title: 'GH Hostels vs Cloudbeds — built for Ghana',
+    siteName: 'Aya',
+    title: 'Aya vs Cloudbeds — built for Ghana',
     description:
       'Native Paystack MoMo, GRA-compliant accounting, SSNIT payroll, cedis pricing. See the feature-by-feature comparison.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'GH Hostels vs Cloudbeds — built for Ghana',
+    title: 'Aya vs Cloudbeds — built for Ghana',
     description:
-      'Native MoMo, GRA accounting, cedis pricing — the Cloudbeds alternative for Ghanaian hostels.',
+      'Native MoMo, GRA accounting, cedis pricing — the Cloudbeds alternative for Ghanaian hostels and hotels.',
   },
   robots: { index: true, follow: true },
 }
@@ -137,23 +138,23 @@ const REASONS = [
     body: 'Email, WhatsApp, and phone support from a team that lives in Ghana. We pick up. We speak Twi when it helps.',
   },
   {
-    title: 'Built for student hostels first',
-    body: 'Cloudbeds optimises for hotels and short-stay hostels. We optimise for the academic-year rental model: long stays, deposit drafts, ID verification, ROAR/RAL waiting lists.',
+    title: 'Built for how Ghana actually books',
+    body: 'Cloudbeds optimises for a generic global model. We optimise for how stays actually run here — MoMo rent, GRA tax codes, SSNIT payroll — whether you run a campus hostel or a city hotel.',
   },
 ]
 
 const FAQS = [
   {
-    q: 'Is GH Hostels really an alternative to Cloudbeds?',
-    a: 'Yes — for hostels operating in Ghana and West Africa. Cloudbeds is a strong global tool, but it was designed for short-stay hotels and hostels in markets with card-dominant rails. If your hostel collects MoMo rent, files GRA taxes, and runs payroll for staff under SSNIT, GH Hostels gives you those workflows native and in your currency.',
+    q: 'Is Aya really an alternative to Cloudbeds?',
+    a: 'Yes — for hostels and hotels operating in Ghana and West Africa. Cloudbeds is a strong global tool, but it was designed for markets with card-dominant rails. If your property collects MoMo rent, files GRA taxes, and runs payroll for staff under SSNIT, Aya gives you those workflows native and in your currency.',
   },
   {
-    q: 'Can I migrate from Cloudbeds to GH Hostels?',
-    a: 'Yes. Export your rooms, occupants, bookings, and payment history from Cloudbeds. We import them for you during onboarding on the Growth plan — typically completed in one afternoon for a 100-room hostel.',
+    q: 'Can I migrate from Cloudbeds to Aya?',
+    a: 'Yes. Export your rooms, occupants, bookings, and payment history from Cloudbeds. We import them for you during onboarding on the Growth plan — typically completed in one afternoon for a 100-room property.',
   },
   {
     q: 'How does pricing compare?',
-    a: 'Cloudbeds bills in USD with per-room pricing that scales aggressively past 50 rooms. GH Hostels is fixed GHS pricing: GH₵ 800/month up to 50 rooms (Starter) and GH₵ 1,000/month unlimited (Growth). No per-occupant fees.',
+    a: 'Cloudbeds bills in USD with per-room pricing that scales aggressively past 50 rooms. Aya is fixed GHS pricing: GH₵ 800/month up to 50 rooms (Starter) and GH₵ 1,000/month unlimited (Growth). No per-occupant fees.',
   },
   {
     q: 'Does Cloudbeds support Paystack?',
@@ -161,7 +162,7 @@ const FAQS = [
   },
   {
     q: 'Will I lose features by switching?',
-    a: 'Most Ghana-based hostels use a small slice of Cloudbeds (rate plans, channel manager, basic reporting). GH Hostels covers all of that. If you rely on multi-currency channel-manager listings for international tourists, we recommend keeping Cloudbeds for that property. For student hostels, we cover the full operating system.',
+    a: 'Most Ghana-based properties use a small slice of Cloudbeds (rate plans, channel manager, basic reporting). Aya covers all of that except one thing: if you rely on multi-currency channel-manager listings across global OTAs (Booking.com, Expedia, Airbnb) for international tourists, we recommend keeping Cloudbeds for that specific need. For everything else, we cover the full operating system.',
   },
   {
     q: 'Is my data safe during migration?',
@@ -196,29 +197,29 @@ export default function CloudbedsComparePage() {
           </span>
         </>
       }
-      pageSub="Cloudbeds is a powerful global PMS. But it was designed for hotels in markets where Stripe and Visa do the heavy lifting. In Ghana, rent moves on MoMo, taxes go to GRA, and staff payroll runs through SSNIT. GH Hostels was built around those realities."
+      pageSub="Cloudbeds is a powerful global PMS. But it was designed for markets where Stripe and Visa do the heavy lifting. In Ghana, rent moves on MoMo, taxes go to GRA, and staff payroll runs through SSNIT. Aya was built around those realities — for hostels and hotels alike."
       intro={
         <>
           <p>
-            If you operate a student hostel anywhere from Legon to Cape Coast, you&apos;ve probably
+            If you run a hostel or hotel anywhere from Legon to Cape Coast, you&apos;ve probably
             looked at <strong>Cloudbeds</strong>, <strong>Hostfully</strong>, or{' '}
             <strong>Mews</strong> at some point. They&apos;re excellent products — for the markets
             they were designed for. The problem starts when you try to bend a Western property
             management system around{' '}
             <strong>
-              MTN Mobile Money, GRA tax codes, SSNIT payroll deductions, and academic-year tenancy
+              MTN Mobile Money, GRA tax codes, and SSNIT payroll deductions
             </strong>
             .
           </p>
           <p>
-            We built <strong>GH Hostels</strong> because we kept seeing the same patterns at every
-            Ghanaian hostel we worked with:
+            We built <strong>Aya</strong> because we kept seeing the same patterns at every
+            Ghanaian property we worked with:
           </p>
           <ul>
             <li>MoMo screenshots living in WhatsApp groups, hand-matched to receipts each week.</li>
             <li>
-              A second spreadsheet for the bursar that nobody ever trusted to be the single source
-              of truth.
+              A second spreadsheet for the bursar or front-desk manager that nobody ever trusted to
+              be the single source of truth.
             </li>
             <li>
               A &ldquo;payroll day&rdquo; that consumed a full Friday because SSNIT calculations
@@ -227,10 +228,11 @@ export default function CloudbedsComparePage() {
             <li>Front desks bottlenecked behind paper receipt books.</li>
           </ul>
           <p>
-            None of that is the hostel owner&apos;s fault. It&apos;s a product gap. This page is a
-            no-spin look at where <strong>GH Hostels</strong> diverges from Cloudbeds — and where
-            Cloudbeds is still the better choice (a multi-property hotel group with international
-            OTA listings, for instance, should stay with Cloudbeds).
+            None of that is the owner&apos;s fault. It&apos;s a product gap. This page is a
+            no-spin look at where <strong>Aya</strong> diverges from Cloudbeds — and where
+            Cloudbeds is still the better choice (a property relying on global OTA channel-manager
+            listings — Booking.com, Expedia, Airbnb — for international tourists should stay with
+            Cloudbeds for that specific need).
           </p>
         </>
       }
@@ -239,7 +241,7 @@ export default function CloudbedsComparePage() {
       faqs={FAQS}
       bottomLine={
         <>
-          Try GH Hostels.
+          Try Aya.
           <span className="block italic platform-shimmer-text">
             Keep Cloudbeds if you still need it.
           </span>

@@ -12,6 +12,7 @@ async function getPlatformStats() {
     { count: totalTenants },
     { count: activeTenants },
     { count: trialTenants },
+    { count: trialExpiredTenants },
     { count: suspendedTenants },
     { count: totalRooms },
     { count: totalBookings },
@@ -20,6 +21,7 @@ async function getPlatformStats() {
     admin.from('tenants').select('*', { count: 'exact', head: true }),
     admin.from('tenants').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     admin.from('tenants').select('*', { count: 'exact', head: true }).eq('status', 'trial'),
+    admin.from('tenants').select('*', { count: 'exact', head: true }).eq('status', 'trial_expired'),
     admin.from('tenants').select('*', { count: 'exact', head: true }).eq('status', 'suspended'),
     admin.from('rooms').select('*', { count: 'exact', head: true }),
     admin.from('bookings').select('*', { count: 'exact', head: true }),
@@ -32,6 +34,7 @@ async function getPlatformStats() {
     totalTenants: totalTenants ?? 0,
     activeTenants: activeTenants ?? 0,
     trialTenants: trialTenants ?? 0,
+    trialExpiredTenants: trialExpiredTenants ?? 0,
     suspendedTenants: suspendedTenants ?? 0,
     totalRooms: totalRooms ?? 0,
     totalBookings: totalBookings ?? 0,
@@ -50,10 +53,11 @@ async function getRecentTenants() {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  active:    'bg-green-900/50 text-green-400',
-  trial:     'bg-yellow-900/50 text-yellow-400',
-  suspended: 'bg-red-900/50 text-red-400',
-  cancelled: 'bg-gray-700 text-gray-400',
+  active:        'bg-green-900/50 text-green-400',
+  trial:         'bg-yellow-900/50 text-yellow-400',
+  trial_expired: 'bg-orange-900/50 text-orange-400',
+  suspended:     'bg-red-900/50 text-red-400',
+  cancelled:     'bg-gray-700 text-gray-400',
 }
 
 export default async function AdminOverviewPage() {
@@ -71,8 +75,9 @@ export default async function AdminOverviewPage() {
         {[
           { label: 'Total Tenants',    value: stats.totalTenants,    sub: `${stats.activeTenants} active` },
           { label: 'Trial Accounts',   value: stats.trialTenants,    sub: 'converting soon' },
+          { label: 'Trial Expired',    value: stats.trialExpiredTenants, sub: 'lapsed, still listed', danger: stats.trialExpiredTenants > 0 },
           { label: 'Suspended',        value: stats.suspendedTenants, sub: 'need attention', danger: stats.suspendedTenants > 0 },
-          { label: 'Total Rooms',      value: stats.totalRooms,       sub: 'across all hostels' },
+          { label: 'Total Rooms',      value: stats.totalRooms,       sub: 'across all properties' },
           { label: 'Total Bookings',   value: stats.totalBookings,    sub: 'all time' },
           {
             label: 'Platform Revenue',
@@ -112,7 +117,7 @@ export default async function AdminOverviewPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-white/30 uppercase">
-              <th className="text-left px-4 py-2 font-medium">Hostel</th>
+              <th className="text-left px-4 py-2 font-medium">Property</th>
               <th className="text-left px-4 py-2 font-medium">Slug</th>
               <th className="text-left px-4 py-2 font-medium">Plan</th>
               <th className="text-left px-4 py-2 font-medium">Status</th>
