@@ -48,6 +48,11 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled:     'bg-gray-700 text-gray-400',
 }
 
+const BUSINESS_TYPE_COLOR: Record<string, string> = {
+  hostel: 'bg-blue-900/50 text-blue-400',
+  hotel:  'bg-purple-900/50 text-purple-400',
+}
+
 export default async function TenantAdminPage({
   params,
 }: {
@@ -68,6 +73,9 @@ export default async function TenantAdminPage({
           <p className="mt-1 text-sm text-white/40 font-mono">{tenant.slug}</p>
         </div>
         <div className="flex items-center gap-3">
+          <span className={`rounded-full px-3 py-1 text-sm font-medium capitalize ${BUSINESS_TYPE_COLOR[tenant.business_type] ?? 'text-white/50'}`}>
+            {tenant.business_type}
+          </span>
           <span className={`rounded-full px-3 py-1 text-sm font-medium ${STATUS_COLOR[tenant.status] ?? 'text-white/50'}`}>
             {tenant.status}
           </span>

@@ -4,16 +4,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const metadata: Metadata = { title: 'Tenants — Super Admin' }
 
-async function getTenants(search: string, status: string) {
+async function getTenants(search: string, status: string, type: string) {
   const admin = createAdminClient()
 
   let query = admin
     .from('tenants')
-    .select('id, name, slug, status, plan, created_at, trial_ends_at, billing_email')
+    .select('id, name, slug, status, plan, business_type, created_at, trial_ends_at, billing_email')
     .order('created_at', { ascending: false })
 
   if (status && status !== 'all') {
     query = query.eq('status', status as any)
+  }
+  if (type && type !== 'all') {
+    query = query.eq('business_type', type as any)
   }
   if (search) {
     query = query.ilike('name', `%${search}%`)
@@ -36,13 +39,18 @@ const PLAN_LABEL: Record<string, string> = {
   growth: 'Growth',
 }
 
+const BUSINESS_TYPE_COLOR: Record<string, string> = {
+  hostel: 'bg-blue-900/50 text-blue-400',
+  hotel:  'bg-purple-900/50 text-purple-400',
+}
+
 export default async function AdminTenantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>
+  searchParams: Promise<{ q?: string; status?: string; type?: string }>
 }) {
-  const { q = '', status = 'all' } = await searchParams
-  const tenants = await getTenants(q, status)
+  const { q = '', status = 'all', type = 'all' } = await searchParams
+  const tenants = await getTenants(q, status, type)
 
   const STATUS_FILTERS = [
     { value: 'all',           label: 'All' },
@@ -51,6 +59,12 @@ export default async function AdminTenantsPage({
     { value: 'active',        label: 'Active' },
     { value: 'suspended',     label: 'Suspended' },
     { value: 'cancelled',     label: 'Cancelled' },
+  ]
+
+  const TYPE_FILTERS = [
+    { value: 'all',    label: 'All verticals' },
+    { value: 'hostel', label: 'Hostels' },
+    { value: 'hotel',  label: 'Hotels' },
   ]
 
   return (
@@ -70,15 +84,32 @@ export default async function AdminTenantsPage({
             className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
           />
           {status !== 'all' && <input type="hidden" name="status" value={status} />}
+          {type !== 'all' && <input type="hidden" name="type" value={type} />}
         </form>
 
         <div className="flex gap-2 flex-wrap">
           {STATUS_FILTERS.map((f) => (
             <Link
               key={f.value}
-              href={`/admin/tenants?status=${f.value}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+              href={`/admin/tenants?status=${f.value}${type !== 'all' ? `&type=${type}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                 status === f.value || (f.value === 'all' && !status)
+                  ? 'bg-white text-black'
+                  : 'bg-white/10 text-white/60 hover:bg-white/20'
+              }`}
+            >
+              {f.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex gap-2 flex-wrap border-l border-white/10 pl-3">
+          {TYPE_FILTERS.map((f) => (
+            <Link
+              key={f.value}
+              href={`/admin/tenants?type=${f.value}${status !== 'all' ? `&status=${status}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                type === f.value || (f.value === 'all' && !type)
                   ? 'bg-white text-black'
                   : 'bg-white/10 text-white/60 hover:bg-white/20'
               }`}
@@ -95,6 +126,7 @@ export default async function AdminTenantsPage({
           <thead>
             <tr className="text-xs text-white/30 uppercase border-b border-white/10">
               <th className="text-left px-4 py-3 font-medium">Property</th>
+              <th className="text-left px-4 py-3 font-medium">Vertical</th>
               <th className="text-left px-4 py-3 font-medium">Plan</th>
               <th className="text-left px-4 py-3 font-medium">Status</th>
               <th className="text-left px-4 py-3 font-medium">Billing email</th>
@@ -105,7 +137,7 @@ export default async function AdminTenantsPage({
           <tbody className="divide-y divide-white/5">
             {tenants.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-white/30">
+                <td colSpan={7} className="px-4 py-10 text-center text-white/30">
                   No tenants found
                 </td>
               </tr>
@@ -115,6 +147,11 @@ export default async function AdminTenantsPage({
                   <td className="px-4 py-3">
                     <p className="font-medium text-white">{t.name}</p>
                     <p className="text-xs text-white/40 font-mono">{t.slug}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${BUSINESS_TYPE_COLOR[t.business_type] ?? 'text-white/50'}`}>
+                      {t.business_type}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-white/60 capitalize">{PLAN_LABEL[t.plan] ?? t.plan}</td>
                   <td className="px-4 py-3">
