@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { OccupantForm } from '@/components/occupants/occupant-form'
+import { getServerBusinessType } from '@/lib/auth/tenant'
 
 export const metadata: Metadata = { title: 'Add Occupant' }
 
@@ -11,6 +12,7 @@ export default async function NewOccupantPage({
   searchParams: Promise<{ returnTo?: string }>
 }) {
   const { returnTo } = await searchParams
+  const isHotel = (await getServerBusinessType()) === 'hotel'
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -29,7 +31,7 @@ export default async function NewOccupantPage({
           </p>
         )}
       </div>
-      <OccupantForm returnTo={returnTo} />
+      <OccupantForm returnTo={returnTo} isHotel={isHotel} />
     </div>
   )
 }

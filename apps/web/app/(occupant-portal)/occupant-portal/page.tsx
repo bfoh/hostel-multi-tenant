@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
+import { getServerBusinessType } from '@/lib/auth/tenant'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -43,7 +44,7 @@ export default async function OccupantPortalHome() {
   const { occupantId, tenantId, tenantColor: color, firstName, lastName } = session
   const admin = createAdminClient()
 
-  const [{ data: occupant }, { data: bookingsRaw }, { data: noticesRaw }] = await Promise.all([
+  const [{ data: occupant }, { data: bookingsRaw }, { data: noticesRaw }, isHotel] = await Promise.all([
     admin
       .from('occupants')
       .select('student_id, institution, programme')
@@ -71,6 +72,8 @@ export default async function OccupantPortalHome() {
       .order('is_pinned', { ascending: false })
       .order('published_at', { ascending: false })
       .limit(3),
+
+    getServerBusinessType().then((t) => t === 'hotel'),
   ])
 
   const bookings = bookingsRaw ?? []
@@ -114,9 +117,9 @@ export default async function OccupantPortalHome() {
               {firstName} {lastName}
             </h1>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-white/65">
-              {occupant?.student_id && <span className="font-mono">{occupant.student_id}</span>}
-              {occupant?.student_id && occupant?.institution && <span className="text-white/35">·</span>}
-              {occupant?.institution && <span>{occupant.institution}</span>}
+              {!isHotel && occupant?.student_id && <span className="font-mono">{occupant.student_id}</span>}
+              {!isHotel && occupant?.student_id && occupant?.institution && <span className="text-white/35">·</span>}
+              {!isHotel && occupant?.institution && <span>{occupant.institution}</span>}
             </p>
           </div>
         </div>

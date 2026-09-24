@@ -18,3 +18,16 @@ export async function getServerTenantId(): Promise<string | null> {
   const cookieStore = await cookies()
   return cookieStore.get('__tenant_id')?.value ?? null
 }
+
+export type BusinessType = 'hostel' | 'hotel'
+
+/**
+ * Returns the current tenant's vertical from the x-tenant-business-type
+ * header middleware injects (see middleware.ts's strip-then-reset pattern —
+ * this can't be spoofed by the caller). Defaults to 'hostel', matching the
+ * DB column's own default for tenants that predate the hotel vertical.
+ */
+export async function getServerBusinessType(): Promise<BusinessType> {
+  const headersList = await headers()
+  return headersList.get('x-tenant-business-type') === 'hotel' ? 'hotel' : 'hostel'
+}

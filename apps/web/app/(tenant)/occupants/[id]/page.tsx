@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DocumentsCard } from '@/components/occupants/documents-card'
 import { SendCredentialsButton } from '@/components/occupants/send-credentials-button'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
+import { getServerBusinessType } from '@/lib/auth/tenant'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -26,7 +27,10 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default async function OccupantDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const occupant = await getOccupantById(id)
+  const [occupant, isHotel] = await Promise.all([
+    getOccupantById(id),
+    getServerBusinessType().then((t) => t === 'hotel'),
+  ])
 
   if (!occupant) notFound()
 
@@ -177,7 +181,7 @@ export default async function OccupantDetailPage({ params }: { params: Promise<{
             </CardContent>
           </Card>
 
-          {(occupant.institution || occupant.student_id) && (
+          {!isHotel && (occupant.institution || occupant.student_id) && (
             <Card>
               <CardHeader><CardTitle>Academic Info</CardTitle></CardHeader>
               <CardContent className="space-y-3 pt-0">

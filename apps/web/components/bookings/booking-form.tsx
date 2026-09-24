@@ -47,9 +47,10 @@ interface Props {
   occupants: Occupant[]
   preselectedRoomId?: string
   preselectedOccupantId?: string
+  isHotel?: boolean
 }
 
-export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOccupantId }: Props) {
+export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOccupantId, isHotel }: Props) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -79,14 +80,16 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
     ? Array.isArray(selectedRoom.category) ? selectedRoom.category[0] : selectedRoom.category
     : null
 
-  // Auto-set checkout = 1 semester forward when check_in changes
+  // Auto-set checkout when check_in changes — a hotel stay defaults to one
+  // night, a hostel booking defaults to one semester (~4 months).
   useEffect(() => {
     if (checkIn && !checkOut) {
       const d = new Date(checkIn)
-      d.setMonth(d.getMonth() + 4)  // approximate semester length
+      if (isHotel) d.setDate(d.getDate() + 1)
+      else d.setMonth(d.getMonth() + 4)
       setValue('check_out_date', d.toISOString().slice(0, 10))
     }
-  }, [checkIn, checkOut, setValue])
+  }, [checkIn, checkOut, setValue, isHotel])
 
   const totalAmount = roomCategory?.base_rate ?? 0
   const discountPesewas = Math.round(Number(discountAmount) * 100)
@@ -136,7 +139,7 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
                 {occupants.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.first_name} {o.last_name} — {o.phone}
-                    {o.student_id ? ` (${o.student_id})` : ''}
+                    {!isHotel && o.student_id ? ` (${o.student_id})` : ''}
                   </option>
                 ))}
               </select>
@@ -219,16 +222,18 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-primary">Semester</label>
-              <input
-                type="text"
-                placeholder="e.g. SEM1_2025"
-                {...register('semester')}
-                className="input-base"
-              />
-            </div>
+          <div className={isHotel ? '' : 'grid grid-cols-2 gap-4'}>
+            {!isHotel && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-text-primary">Semester</label>
+                <input
+                  type="text"
+                  placeholder="e.g. SEM1_2025"
+                  {...register('semester')}
+                  className="input-base"
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-text-primary">Booking source</label>
               <select {...register('source')} className="input-base">

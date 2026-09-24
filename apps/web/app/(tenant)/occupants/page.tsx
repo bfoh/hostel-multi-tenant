@@ -4,6 +4,7 @@ import { Plus, Users, Search, Upload } from 'lucide-react'
 
 import { getOccupants } from '@/lib/data/occupants'
 import { OccupantsTable, type OccupantRow } from '@/components/occupants/occupants-table'
+import { getServerBusinessType } from '@/lib/auth/tenant'
 
 export const metadata: Metadata = { title: 'Occupants' }
 
@@ -13,7 +14,10 @@ export default async function OccupantsPage({
   searchParams: Promise<{ q?: string }>
 }) {
   const { q } = await searchParams
-  const occupants = await getOccupants(q)
+  const [occupants, isHotel] = await Promise.all([
+    getOccupants(q),
+    getServerBusinessType().then((t) => t === 'hotel'),
+  ])
 
   return (
     <div className="space-y-6">
@@ -56,7 +60,7 @@ export default async function OccupantsPage({
           name="q"
           type="search"
           defaultValue={q}
-          placeholder="Search by name, phone, student ID…"
+          placeholder={isHotel ? 'Search by name, phone…' : 'Search by name, phone, student ID…'}
           className="w-full rounded-md border border-border bg-surface py-2 pl-9 pr-4 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:ring-2 focus:ring-brand/25 focus:border-brand transition-colors sm:max-w-sm"
         />
       </form>
@@ -87,6 +91,7 @@ export default async function OccupantsPage({
         </div>
       ) : (
         <OccupantsTable
+          isHotel={isHotel}
           occupants={occupants.map((o): OccupantRow => {
             // Pick the most relevant booking with a room:
             // checked_in > confirmed > pending_payment, prefer one that

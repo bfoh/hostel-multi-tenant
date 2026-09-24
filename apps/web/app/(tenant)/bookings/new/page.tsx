@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { BookingForm } from '@/components/bookings/booking-form'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getServerTenantId } from '@/lib/auth/tenant'
+import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 
 export const metadata: Metadata = { title: 'New Booking' }
 export const dynamic = 'force-dynamic'
@@ -62,7 +62,10 @@ export default async function NewBookingPage({
 }) {
   const { room: preselectedRoom, occupant, occupant_id } = await searchParams
   const preselectedOccupant = occupant_id ?? occupant
-  const { rooms, occupants } = await getFormData()
+  const [{ rooms, occupants }, isHotel] = await Promise.all([
+    getFormData(),
+    getServerBusinessType().then((t) => t === 'hotel'),
+  ])
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -79,6 +82,7 @@ export default async function NewBookingPage({
         occupants={occupants}
         preselectedRoomId={preselectedRoom}
         preselectedOccupantId={preselectedOccupant}
+        isHotel={isHotel}
       />
     </div>
   )

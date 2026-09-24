@@ -50,9 +50,11 @@ interface Props {
   occupantId?: string
   /** If set, redirect here (with ?occupant_id=<id>) after saving instead of the occupant detail page */
   returnTo?: string
+  /** Hides the "Student" occupant type + academic fields — hotel guests aren't students. */
+  isHotel?: boolean
 }
 
-export function OccupantForm({ defaultValues, occupantId, returnTo }: Props) {
+export function OccupantForm({ defaultValues, occupantId, returnTo, isHotel }: Props) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -63,7 +65,7 @@ export function OccupantForm({ defaultValues, occupantId, returnTo }: Props) {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { type: 'student', ...defaultValues },
+    defaultValues: { type: isHotel ? 'guest' : 'student', ...defaultValues },
   })
 
   const occupantType = watch('type')
@@ -208,14 +210,14 @@ export function OccupantForm({ defaultValues, occupantId, returnTo }: Props) {
         <CardContent className="space-y-4 pt-0">
           <Field label="Type" required>
             <select {...register('type')} className="input-base">
-              <option value="student">Student</option>
+              {!isHotel && <option value="student">Student</option>}
               <option value="professional">Working Professional</option>
               <option value="guest">Guest</option>
               <option value="staff">Staff</option>
             </select>
           </Field>
 
-          {occupantType === 'student' && (
+          {!isHotel && occupantType === 'student' && (
             <>
               <Field label="Institution" error={errors.institution?.message}>
                 <input {...register('institution')} placeholder="KNUST, UG, UCC…" className="input-base" />

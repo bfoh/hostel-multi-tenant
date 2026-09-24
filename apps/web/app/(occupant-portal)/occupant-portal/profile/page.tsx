@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { BedDouble, Shield, Settings } from 'lucide-react'
 import { ProfileForm } from '@/components/occupant-portal/profile-form'
 import { SettingsActions } from '@/components/occupant-portal/settings-actions'
+import { getServerBusinessType } from '@/lib/auth/tenant'
 
 export const metadata: Metadata = { title: 'Profile · My Portal' }
 
@@ -34,7 +35,7 @@ export default async function ProfilePage() {
   const { userId, occupantId, tenantId, tenantColor: color } = session
   const admin = createAdminClient()
 
-  const [{ data: occupant }, { data: tenant }, { data: bookingsRaw }] = await Promise.all([
+  const [{ data: occupant }, { data: tenant }, { data: bookingsRaw }, isHotel] = await Promise.all([
     admin
       .from('occupants')
       .select('id, first_name, last_name, phone, email, student_id, institution, programme, created_at')
@@ -52,6 +53,7 @@ export default async function ProfilePage() {
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(5),
+    getServerBusinessType().then((t) => t === 'hotel'),
   ])
 
   if (!occupant) redirect('/occupant-portal')
@@ -72,7 +74,7 @@ export default async function ProfilePage() {
         <div className="text-center">
           <h1 className="text-[20px] font-bold tracking-tight text-slate-900">{occupant.first_name} {occupant.last_name}</h1>
           <p className="text-[13px] text-slate-500">{occupant.email}</p>
-          {occupant.student_id && (
+          {!isHotel && occupant.student_id && (
             <p className="mt-0.5 font-mono text-[12px] text-slate-400">{occupant.student_id}</p>
           )}
         </div>
@@ -89,6 +91,7 @@ export default async function ProfilePage() {
           student_id:  occupant.student_id ?? null,
         }}
         color={color}
+        isHotel={isHotel}
       />
 
       {/* ── Booking history ──────────────────────────────────────── */}

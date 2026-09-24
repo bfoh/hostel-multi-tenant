@@ -26,7 +26,7 @@ const STATUS_STYLES: Record<string, string> = {
   suspended: 'bg-danger-subtle text-danger border-danger/20',
 }
 
-export function OccupantsTable({ occupants }: { occupants: OccupantRow[] }) {
+export function OccupantsTable({ occupants, isHotel }: { occupants: OccupantRow[]; isHotel?: boolean }) {
   const bulk = useBulkSelect(occupants.map((o) => o.id))
 
   return (
@@ -62,9 +62,11 @@ export function OccupantsTable({ occupants }: { occupants: OccupantRow[] }) {
                   <p className="truncate text-sm font-semibold text-text-primary">
                     {o.first_name} {o.last_name}
                   </p>
-                  <p className="truncate text-xs text-text-tertiary">
-                    {o.student_id ?? o.institution ?? 'No ID'}
-                  </p>
+                  {!isHotel && (
+                    <p className="truncate text-xs text-text-tertiary">
+                      {o.student_id ?? o.institution ?? 'No ID'}
+                    </p>
+                  )}
                 </div>
               </Link>
               <span
@@ -116,7 +118,9 @@ export function OccupantsTable({ occupants }: { occupants: OccupantRow[] }) {
               )}
               <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Name</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Phone</th>
-              <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary sm:table-cell">Institution</th>
+              {!isHotel && (
+                <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary sm:table-cell">Institution</th>
+              )}
               <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary lg:table-cell">Status</th>
               <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary xl:table-cell">Room</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary"></th>
@@ -149,16 +153,18 @@ export function OccupantsTable({ occupants }: { occupants: OccupantRow[] }) {
                       <p className="truncate text-sm font-medium text-text-primary hover:text-brand transition-colors">
                         {o.first_name} {o.last_name}
                       </p>
-                      {o.student_id && (
+                      {!isHotel && o.student_id && (
                         <p className="ref-number text-[11px] text-text-tertiary">{o.student_id}</p>
                       )}
                     </div>
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-sm text-text-secondary">{o.phone}</td>
-                <td className="hidden px-4 py-3 sm:table-cell">
-                  <p className="truncate text-sm text-text-secondary">{o.institution ?? '—'}</p>
-                </td>
+                {!isHotel && (
+                  <td className="hidden px-4 py-3 sm:table-cell">
+                    <p className="truncate text-sm text-text-secondary">{o.institution ?? '—'}</p>
+                  </td>
+                )}
                 <td className="hidden px-4 py-3 lg:table-cell">
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize ${

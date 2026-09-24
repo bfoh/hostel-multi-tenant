@@ -5,12 +5,16 @@ import { ChevronLeft } from 'lucide-react'
 
 import { getOccupantById } from '@/lib/data/occupants'
 import { OccupantForm } from '@/components/occupants/occupant-form'
+import { getServerBusinessType } from '@/lib/auth/tenant'
 
 export const metadata: Metadata = { title: 'Edit Occupant' }
 
 export default async function EditOccupantPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const o = await getOccupantById(id)
+  const [o, isHotel] = await Promise.all([
+    getOccupantById(id),
+    getServerBusinessType().then((t) => t === 'hotel'),
+  ])
   if (!o) notFound()
 
   const ec = o.emergency_contact as Record<string, string> | null
@@ -26,6 +30,7 @@ export default async function EditOccupantPage({ params }: { params: Promise<{ i
       </div>
       <OccupantForm
         occupantId={id}
+        isHotel={isHotel}
         defaultValues={{
           first_name:         o.first_name,
           last_name:          o.last_name,

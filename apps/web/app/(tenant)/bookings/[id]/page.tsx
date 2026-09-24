@@ -14,7 +14,7 @@ import { LeasePdfButton } from '@/components/bookings/lease-pdf-button'
 import { RoomTransferButton } from '@/components/bookings/room-transfer-button'
 import { DepositCard } from '@/components/bookings/deposit-card'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
-import { getServerTenantId } from '@/lib/auth/tenant'
+import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -43,7 +43,10 @@ const PAYMENT_METHODS: Record<string, string> = {
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const booking = await getBookingById(id)
+  const [booking, isHotel] = await Promise.all([
+    getBookingById(id),
+    getServerBusinessType().then((t) => t === 'hotel'),
+  ])
 
   if (!booking) notFound()
 
@@ -170,7 +173,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             <CardContent className="space-y-2 pt-0">
               <Row label="Check-in">{formatDate(booking.check_in_date)}</Row>
               <Row label="Check-out">{booking.check_out_date ? formatDate(booking.check_out_date) : '—'}</Row>
-              {booking.semester && <Row label="Semester" className="capitalize">{booking.semester}</Row>}
+              {!isHotel && booking.semester && <Row label="Semester" className="capitalize">{booking.semester}</Row>}
               {booking.actual_check_in && <Row label="Actual check-in">{formatDate(booking.actual_check_in)}</Row>}
               {booking.actual_check_out && <Row label="Actual check-out">{formatDate(booking.actual_check_out)}</Row>}
               <Row label="Source"><span className="capitalize">{booking.source.replace('_', ' ')}</span></Row>

@@ -12,7 +12,7 @@ interface ProfileData {
   student_id:  string | null
 }
 
-export function ProfileForm({ initial, color }: { initial: ProfileData; color: string }) {
+export function ProfileForm({ initial, color, isHotel }: { initial: ProfileData; color: string; isHotel?: boolean }) {
   const [editing, setEditing] = useState(false)
   const [data,    setData]    = useState(initial)
   const [draft,   setDraft]   = useState(initial)
@@ -66,9 +66,11 @@ export function ProfileForm({ initial, color }: { initial: ProfileData; color: s
     { key: 'first_name',  label: 'First name',  required: true },
     { key: 'last_name',   label: 'Last name',   required: true },
     { key: 'phone',       label: 'Phone',       type: 'tel', required: true },
-    { key: 'institution', label: 'Institution / School' },
-    { key: 'programme',   label: 'Programme / Course' },
-    { key: 'student_id',  label: 'Student ID' },
+    ...(isHotel ? [] : [
+      { key: 'institution' as const, label: 'Institution / School' },
+      { key: 'programme'   as const, label: 'Programme / Course' },
+      { key: 'student_id'  as const, label: 'Student ID' },
+    ]),
   ]
 
   return (
