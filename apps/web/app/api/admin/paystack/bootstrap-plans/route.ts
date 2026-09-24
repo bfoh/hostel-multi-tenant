@@ -59,12 +59,33 @@ export async function POST(req: Request) {
     name: string; interval: string; env: string; planCode: string; amount: number; created: boolean
   }> = []
 
+  // Best-effort persistence into platform_plans — durable so codes survive a
+  // redeploy without a manual env-var paste. Never blocks the response: the
+  // env-var read path (lib/platform-plans.ts) is untouched by this, so a
+  // failed write here doesn't affect billing, just means this run's codes
+  // still need the manual paste this endpoint has always required.
+  async function persistPlanCode(plan: (typeof plans)[number], planCode: string, amount: number) {
+    const { error } = await supabase.from('platform_plans').upsert(
+      {
+        business_type:     'hostel',
+        tier:              plan.name,
+        billing_interval:  plan.interval,
+        plan_code:         planCode,
+        amount_pesewas:    amount,
+        paystack_interval: plan.paystackInterval,
+      },
+      { onConflict: 'business_type,tier,billing_interval' },
+    )
+    if (error) console.error('[bootstrap-plans] platform_plans upsert failed:', error.message)
+  }
+
   for (const plan of plans) {
     if (plan.planCode && !force) {
       results.push({
         name: plan.name, interval: plan.interval, env: plan.planCodeEnv,
         planCode: plan.planCode, amount: plan.amountPesewas, created: false,
       })
+      await persistPlanCode(plan, plan.planCode, plan.amountPesewas)
       continue
     }
     try {
@@ -80,6 +101,7 @@ export async function POST(req: Request) {
         name: plan.name, interval: plan.interval, env: plan.planCodeEnv,
         planCode: created.plan_code, amount: created.amount, created: true,
       })
+      await persistPlanCode(plan, created.plan_code, created.amount)
     } catch (err: any) {
       return NextResponse.json(
         { error: `Failed to create plan ${plan.name}/${plan.interval}: ${err.message}`, partial: results },

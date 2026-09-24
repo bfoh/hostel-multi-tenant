@@ -2516,6 +2516,38 @@ export type Database = {
         ]
       }
 
+      platform_plans: {
+        Row: {
+          id: string
+          business_type: 'hostel' | 'hotel'
+          tier: string
+          billing_interval: string
+          plan_code: string
+          amount_pesewas: number
+          paystack_interval: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          business_type?: 'hostel' | 'hotel'
+          tier: string
+          billing_interval: string
+          plan_code: string
+          amount_pesewas: number
+          paystack_interval: string
+        }
+        Update: {
+          business_type?: 'hostel' | 'hotel'
+          tier?: string
+          billing_interval?: string
+          plan_code?: string
+          amount_pesewas?: number
+          paystack_interval?: string
+        }
+        Relationships: []
+      }
+
       paystack_events: {
         Row: {
           id: string
