@@ -2,13 +2,14 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft, Globe } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getServerTenantId } from '@/lib/auth/tenant'
+import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import { DomainForm } from '@/components/settings/domain-form'
 
 export const metadata: Metadata = { title: 'Custom Domain' }
 
 export default async function DomainSettingsPage() {
   const tenantId = await getServerTenantId()
+  const isHotel = (await getServerBusinessType()) === 'hotel'
 
   const supabase = createAdminClient()
   const { data: tenant } = await supabase
@@ -42,6 +43,7 @@ export default async function DomainSettingsPage() {
       <DomainForm
         slug={tenant?.slug ?? ''}
         initialDomain={tenant?.custom_domain ?? null}
+        isHotel={isHotel}
       />
     </div>
   )

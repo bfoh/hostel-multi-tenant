@@ -28,7 +28,7 @@ export default async function InvoicesPage({
 }) {
   const { status = 'all' } = await searchParams
   const headersList = await headers()
-  const tenantName = headersList.get('x-tenant-name') ?? 'Your Hostel'
+  const tenantName = headersList.get('x-tenant-name') ?? 'Your Property'
 
   const invoices = await getInvoices({ payment_status: status })
 

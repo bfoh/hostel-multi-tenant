@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const headersList  = await headers()
-  const tenantName   = headersList.get('x-tenant-name') ?? 'Your Hostel'
+  const tenantName   = headersList.get('x-tenant-name') ?? 'Your Property'
   const tenantId     = headersList.get('x-tenant-id')
   const tenantStatus = headersList.get('x-tenant-status')
 

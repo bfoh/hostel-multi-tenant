@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { ChevronLeft, ExternalLink } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WebsiteCmsForm } from '@/components/settings/website-cms-form'
+import { getServerBusinessType } from '@/lib/auth/tenant'
 
 export const metadata: Metadata = { title: 'Website Content' }
 
@@ -11,6 +12,7 @@ export default async function WebsiteCmsPage() {
   const headersList = await headers()
   const tenantId    = headersList.get('x-tenant-id')
   const tenantSlug  = headersList.get('x-tenant-slug') ?? ''
+  const isHotel     = (await getServerBusinessType()) === 'hotel'
 
   if (!tenantId) return null
 
@@ -69,7 +71,7 @@ export default async function WebsiteCmsPage() {
         Changes are saved immediately and will appear on your public page within 5 minutes (ISR cache).
       </div>
 
-      <WebsiteCmsForm initial={content} />
+      <WebsiteCmsForm initial={content} isHotel={isHotel} />
     </div>
   )
 }

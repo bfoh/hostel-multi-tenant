@@ -19,7 +19,7 @@ export async function GET(
   const tenantId    = headersList.get('x-tenant-id')
 
   // Defaults
-  let hostelName    = 'Your Hostel'
+  let hostelName    = 'Your Property'
   let hostelTagline: string | null = null
   let hostelAddress: string | null = null
   let hostelPhone:   string | null = null

@@ -96,7 +96,7 @@ export function PushToggle() {
         </p>
         {!supported && !loading && (
           <p className="mt-1 text-[11px] text-text-tertiary">
-            Not supported in this browser, or push isn&apos;t configured for this hostel.
+            Not supported in this browser, or push isn&apos;t configured for this property.
           </p>
         )}
         {error && <p className="mt-2 text-xs text-danger">{error}</p>}

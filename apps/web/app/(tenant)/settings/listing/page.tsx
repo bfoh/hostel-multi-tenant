@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { ChevronLeft, Store } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getServerTenantId } from '@/lib/auth/tenant'
+import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import { ListingSettingsForm } from '@/components/settings/listing-settings-form'
 
 export const metadata: Metadata = { title: 'Public Listing' }
@@ -11,6 +11,8 @@ export const metadata: Metadata = { title: 'Public Listing' }
 export default async function ListingSettingsPage() {
   const tenantId = await getServerTenantId()
   const callerRole = (await headers()).get('x-tenant-role')
+  const isHotel = (await getServerBusinessType()) === 'hotel'
+  const nounSingular = isHotel ? 'hotel' : 'hostel'
 
   if (callerRole !== 'owner') {
     return (
@@ -19,7 +21,7 @@ export default async function ListingSettingsPage() {
           <ChevronLeft className="h-4 w-4" /> Settings
         </Link>
         <div className="rounded-xl border border-border bg-surface p-6 text-sm text-text-secondary">
-          Only the hostel owner can manage the public marketplace listing.
+          Only the {nounSingular} owner can manage the public marketplace listing.
         </div>
       </div>
     )
@@ -56,7 +58,7 @@ export default async function ListingSettingsPage() {
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Public Listing</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Control how your hostel appears on the GH Hostels marketplace, and how guests pay.
+            Control how your {nounSingular} appears on the GH Hostels marketplace, and how guests pay.
           </p>
         </div>
       </div>
@@ -69,6 +71,7 @@ export default async function ListingSettingsPage() {
         initialRegion={tenant?.address_region ?? null}
         hasPayoutAccount={!!tenant?.paystack_subaccount_code}
         categories={categories ?? []}
+        isHotel={isHotel}
       />
     </div>
   )

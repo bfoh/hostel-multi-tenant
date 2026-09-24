@@ -26,7 +26,7 @@ export async function GET(
     .eq('id', session.tenantId)
     .single()
 
-  const hostelName     = (tenant as any)?.name ?? 'Your Hostel'
+  const hostelName     = (tenant as any)?.name ?? 'Your Property'
   const hostelTagline  = (tenant as any)?.tagline ?? null
   const hostelPhone    = (tenant as any)?.contact_phone ?? null
   const hostelEmail    = (tenant as any)?.contact_email ?? null

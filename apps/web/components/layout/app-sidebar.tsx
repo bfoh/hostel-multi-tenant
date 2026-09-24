@@ -166,7 +166,7 @@ export function AppSidebar({
               )}
             </div>
             <span className="truncate text-sm font-semibold text-[#f0f0f0] tracking-[-0.01em]">
-              {tenantName ?? 'GH Hostels'}
+              {tenantName ?? 'My Property'}
             </span>
           </div>
         )}

@@ -48,7 +48,7 @@ export default async function AiSettingsPage() {
         </div>
       )}
 
-      <AiConfigForm initial={aiConfig as any} hostelName={(data as any)?.name ?? 'your hostel'} />
+      <AiConfigForm initial={aiConfig as any} hostelName={(data as any)?.name ?? 'your property'} />
 
       {/* Link to live preview */}
       <div className="rounded-xl border border-border bg-surface-raised px-5 py-4 text-sm">

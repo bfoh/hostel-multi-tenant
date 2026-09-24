@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   const h = await headers()
   const tenantId   = h.get('x-tenant-id')
-  const tenantName = h.get('x-tenant-name') ?? 'Your Hostel'
+  const tenantName = h.get('x-tenant-name') ?? 'Your Property'
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   let body: RemindBody

@@ -16,6 +16,7 @@ interface CmsContent {
 
 interface Props {
   initial: CmsContent
+  isHotel?: boolean
 }
 
 const COMMON_AMENITIES = [
@@ -36,7 +37,8 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 const inputCls = 'w-full rounded-lg border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder-text-tertiary focus:border-brand focus:outline-none'
 
-export function WebsiteCmsForm({ initial }: Props) {
+export function WebsiteCmsForm({ initial, isHotel }: Props) {
+  const nounSingular = isHotel ? 'hotel' : 'hostel'
   const [heroHeading,    setHeroHeading]    = useState(initial.hero_heading    ?? '')
   const [heroSubheading, setHeroSubheading] = useState(initial.hero_subheading ?? '')
   const [aboutText,      setAboutText]      = useState(initial.about_text      ?? '')
@@ -110,7 +112,7 @@ export function WebsiteCmsForm({ initial }: Props) {
             className={inputCls}
             value={heroHeading}
             onChange={(e) => setHeroHeading(e.target.value)}
-            placeholder="Ghana's most comfortable student hostel"
+            placeholder={isHotel ? "Ghana's most comfortable hotel stay" : "Ghana's most comfortable student hostel"}
             maxLength={120}
           />
         </Field>
@@ -132,13 +134,15 @@ export function WebsiteCmsForm({ initial }: Props) {
       {/* ── About ────────────────────────────────────────────────────── */}
       <section className="space-y-4 rounded-xl border border-border bg-surface p-5">
         <h3 className="text-sm font-semibold text-text-primary">About Section</h3>
-        <Field label="About text" hint="Paragraph(s) describing your hostel — shown on the booking page">
+        <Field label="About text" hint={`Paragraph(s) describing your ${nounSingular} — shown on the booking page`}>
           <textarea
             rows={5}
             className={inputCls}
             value={aboutText}
             onChange={(e) => setAboutText(e.target.value)}
-            placeholder="Tell prospective students about your hostel — location, facilities, history…"
+            placeholder={isHotel
+              ? 'Tell prospective guests about your hotel — location, facilities, history…'
+              : 'Tell prospective students about your hostel — location, facilities, history…'}
             maxLength={2000}
           />
         </Field>
@@ -150,7 +154,7 @@ export function WebsiteCmsForm({ initial }: Props) {
       {/* ── Amenities ────────────────────────────────────────────────── */}
       <section className="space-y-4 rounded-xl border border-border bg-surface p-5">
         <h3 className="text-sm font-semibold text-text-primary">Amenities</h3>
-        <p className="text-xs text-text-secondary">Tick the amenities your hostel offers. These appear as badges on the booking page.</p>
+        <p className="text-xs text-text-secondary">Tick the amenities your {nounSingular} offers. These appear as badges on the booking page.</p>
 
         {/* Preset chips */}
         <div className="flex flex-wrap gap-2">

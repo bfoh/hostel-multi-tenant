@@ -5,12 +5,14 @@ import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WidgetSettingsForm } from '@/components/settings/widget-settings-form'
 import { ApiKeyPanel } from '@/components/settings/api-key-panel'
+import { getServerBusinessType } from '@/lib/auth/tenant'
 
 export const metadata: Metadata = { title: 'Widget Settings' }
 
 export default async function WidgetSettingsPage() {
   const headersList = await headers()
   const tenantId    = headersList.get('x-tenant-id')
+  const nounSingular = (await getServerBusinessType()) === 'hotel' ? 'hotel' : 'hostel'
 
   const supabase = createAdminClient()
   const { data: tenantRaw } = await supabase
@@ -61,7 +63,7 @@ export default async function WidgetSettingsPage() {
       <div>
         <h1 className="text-xl font-semibold text-text-primary">Booking Widget</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Embed a self-service booking form on your hostel website.
+          Embed a self-service booking form on your {nounSingular} website.
         </p>
       </div>
 
@@ -100,7 +102,7 @@ export default async function WidgetSettingsPage() {
         <div>
           <h2 className="text-sm font-semibold text-text-primary">Public API Key</h2>
           <p className="mt-1 text-xs text-text-secondary">
-            Used to authenticate programmatic access to your hostel's public API.
+            Used to authenticate programmatic access to your {nounSingular}&apos;s public API.
           </p>
         </div>
         <ApiKeyPanel initialKey={apiKey} />

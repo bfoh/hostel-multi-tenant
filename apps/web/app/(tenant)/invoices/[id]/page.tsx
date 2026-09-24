@@ -53,7 +53,7 @@ export default async function InvoicePage({
 
   const headersList  = await headers()
   const tenantId     = headersList.get('x-tenant-id') ?? ''
-  const tenantName   = headersList.get('x-tenant-name') ?? 'Your Hostel'
+  const tenantName   = headersList.get('x-tenant-name') ?? 'Your Property'
 
   // Fetch GRA fields from tenant
   const supabase = createAdminClient()

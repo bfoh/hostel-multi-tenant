@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
 const schema = z.object({
-  name:           z.string().min(2, 'Hostel name is required'),
+  name:           z.string().min(2, 'Name is required'),
   tagline:        z.string().max(200).optional(),
   contact_phone:  z.string().max(30).optional(),
   contact_email:  z.string().email('Invalid email').optional().or(z.literal('')),
@@ -33,6 +33,7 @@ interface Props {
     address_region: string | null
     website_url: string | null
   }
+  isHotel?: boolean
 }
 
 const GHANA_REGIONS = [
@@ -42,10 +43,12 @@ const GHANA_REGIONS = [
   'North East', 'Western North',
 ]
 
-export function ProfileForm({ tenant }: Props) {
+export function ProfileForm({ tenant, isHotel }: Props) {
   const router = useRouter()
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  const nounCapitalized = isHotel ? 'Hotel' : 'Hostel'
+  const domainExample = isHotel ? 'yourhotel.com' : 'yourhostel.com'
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -96,11 +99,11 @@ export function ProfileForm({ tenant }: Props) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-      {/* Hostel name + tagline */}
+      {/* Property name + tagline */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-text-primary">
-            Hostel name <span className="text-danger">*</span>
+            {nounCapitalized} name <span className="text-danger">*</span>
           </label>
           <input type="text" {...register('name')} className="input-base" />
           {errors.name && <p className="text-xs text-danger">{errors.name.message}</p>}
@@ -108,7 +111,7 @@ export function ProfileForm({ tenant }: Props) {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-text-primary">Tagline</label>
           <input type="text" {...register('tagline')} placeholder="Your home away from home" className="input-base" />
-          <p className="text-xs text-text-disabled">Appears on invoices below your hostel name.</p>
+          <p className="text-xs text-text-disabled">Appears on invoices below your {nounCapitalized.toLowerCase()} name.</p>
         </div>
       </div>
 
@@ -130,7 +133,7 @@ export function ProfileForm({ tenant }: Props) {
             <input
               type="text"
               {...register('custom_domain')}
-              placeholder="bookings.yourhostel.com"
+              placeholder={`bookings.${domainExample}`}
               className="input-base font-mono text-sm"
             />
           </div>
@@ -150,7 +153,7 @@ export function ProfileForm({ tenant }: Props) {
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-text-primary">Email address</label>
-          <input type="email" {...register('contact_email')} placeholder="info@yourhostel.com" className="input-base" />
+          <input type="email" {...register('contact_email')} placeholder={`info@${domainExample}`} className="input-base" />
           {errors.contact_email && <p className="text-xs text-danger">{errors.contact_email.message}</p>}
         </div>
       </div>
@@ -177,7 +180,7 @@ export function ProfileForm({ tenant }: Props) {
 
       <div className="space-y-1.5">
         <label className="text-sm font-medium text-text-primary">Website</label>
-        <input type="url" {...register('website_url')} placeholder="https://yourhostel.com" className="input-base" />
+        <input type="url" {...register('website_url')} placeholder={`https://${domainExample}`} className="input-base" />
         {errors.website_url && <p className="text-xs text-danger">{errors.website_url.message}</p>}
       </div>
 

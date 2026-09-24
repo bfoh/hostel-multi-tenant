@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   const host   = req.headers.get('host') ?? ''
   const tenant = host ? await resolveTenant(host) : null
-  const hostelName   = tenant?.name ?? 'Your Hostel'
+  const hostelName   = tenant?.name ?? 'Your Property'
   const primaryColor = tenant?.branding?.primaryColor ?? '#7A3B2E'
   const logoUrl      = tenant?.branding?.logoUrl ?? null
 

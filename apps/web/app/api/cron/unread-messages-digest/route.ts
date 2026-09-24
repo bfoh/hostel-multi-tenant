@@ -152,9 +152,9 @@ async function handle(req: NextRequest) {
 
       await sendEmail({
         to:         email,
-        senderName: tenant?.name ?? 'Hostel',
+        senderName: tenant?.name ?? 'Property',
         subject,
-        html:       baseTemplate(tenant?.name ?? 'Hostel', brand, content, tenant?.logo_url ?? null),
+        html:       baseTemplate(tenant?.name ?? 'Property', brand, content, tenant?.logo_url ?? null),
       })
       sent++
     } catch (err) {

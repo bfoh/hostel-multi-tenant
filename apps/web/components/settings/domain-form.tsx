@@ -6,11 +6,14 @@ import { Loader2, CheckCircle2, XCircle, AlertTriangle, RefreshCw, Trash2 } from
 interface Props {
   slug:          string
   initialDomain: string | null
+  isHotel?:      boolean
 }
 
 type VerifyState = { verified: boolean | null; misconfigured?: boolean; verification?: Array<{ type: string; domain: string; value: string; reason: string }>; reason?: string; warning?: string }
 
-export function DomainForm({ slug, initialDomain }: Props) {
+export function DomainForm({ slug, initialDomain, isHotel }: Props) {
+  const domainExample = isHotel ? 'yourhotel.com' : 'yourhostel.com'
+  const nounSingular = isHotel ? 'hotel' : 'hostel'
   const [domain,      setDomain]      = useState(initialDomain ?? '')
   const [saving,      setSaving]      = useState(false)
   const [removing,    setRemoving]    = useState(false)
@@ -102,7 +105,7 @@ export function DomainForm({ slug, initialDomain }: Props) {
         <div>
           <p className="text-sm font-semibold text-text-primary">Custom domain</p>
           <p className="mt-0.5 text-xs text-text-secondary">
-            Point your own domain (e.g. <span className="font-mono">admin.acaciahostel.com</span>) to fully white-label your hostel app — no &quot;gh-hostels&quot; in the URL.
+            Point your own domain (e.g. <span className="font-mono">admin.{domainExample}</span>) to fully white-label your {nounSingular} app — no &quot;gh-hostels&quot; in the URL.
           </p>
         </div>
 
@@ -111,7 +114,7 @@ export function DomainForm({ slug, initialDomain }: Props) {
             className="flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm font-mono text-text-primary placeholder-text-tertiary focus:border-brand focus:outline-none transition-colors"
             value={domain}
             onChange={e => setDomain(e.target.value)}
-            placeholder="book.yourhostel.com"
+            placeholder={`book.${domainExample}`}
           />
           <button
             onClick={save}

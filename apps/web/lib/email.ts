@@ -36,9 +36,9 @@ export async function sendEmail(params: SendParams): Promise<{ ok: boolean; erro
     process.env.RESEND_FROM_EMAIL ??
     'no-reply@updates.gh-hostels.com'
 
-  // Display name is the tenant/hostel — recipients see the hostel, not the
-  // platform. The sending domain stays the verified gh-hostels domain.
-  const senderName = params.senderName ?? 'Hostel Notifications'
+  // Display name is the tenant's property — recipients see the property, not
+  // the platform. The sending domain stays the verified platform domain.
+  const senderName = params.senderName ?? 'Property Notifications'
 
   const recipients = (Array.isArray(params.to) ? params.to : [params.to]).map((email) => ({ email }))
 

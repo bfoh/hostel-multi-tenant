@@ -26,13 +26,15 @@ interface Props {
   initialRegion:        string | null
   hasPayoutAccount:     boolean
   categories:           Category[]
+  isHotel?:             boolean
 }
 
 const inputCls = 'w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text-primary placeholder-text-tertiary focus:border-brand focus:outline-none transition-colors'
 
 export function ListingSettingsForm({
-  slug, initialListed, initialPaymentMode, initialCity, initialRegion, hasPayoutAccount, categories,
+  slug, initialListed, initialPaymentMode, initialCity, initialRegion, hasPayoutAccount, categories, isHotel,
 }: Props) {
+  const nounSingular = isHotel ? 'hotel' : 'hostel'
   const [listed,      setListed]      = useState(initialListed)
   const [paymentMode, setPaymentMode] = useState(initialPaymentMode)
   const [city,        setCity]        = useState(initialCity ?? '')
@@ -64,7 +66,7 @@ export function ListingSettingsForm({
     }
   }
 
-  const marketplaceUrl = `https://${process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'}/hostels/${slug}`
+  const marketplaceUrl = `https://${process.env.NEXT_PUBLIC_APP_DOMAIN ?? 'gh-hostels.com'}/listing/${slug}`
 
   return (
     <div className="space-y-6">
@@ -77,7 +79,7 @@ export function ListingSettingsForm({
           <div>
             <p className="text-sm font-semibold text-text-primary">List on the GH Hostels marketplace</p>
             <p className="mt-0.5 text-xs text-text-secondary">
-              Prospective students can find and book your rooms directly, free — even after your trial ends.
+              Prospective guests can find and book your rooms directly, free — even after your trial ends.
             </p>
           </div>
           <button
@@ -135,7 +137,7 @@ export function ListingSettingsForm({
               onChange={() => setPaymentMode('pay_at_hostel')}
             />
             <span>
-              <span className="font-medium text-text-primary">Reserve now, pay at the hostel</span>
+              <span className="font-medium text-text-primary">Reserve now, pay at the {nounSingular}</span>
               <span className="block text-xs text-text-secondary">
                 Booking is confirmed immediately with no online payment; guest pays on arrival.
               </span>

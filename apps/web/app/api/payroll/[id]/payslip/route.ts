@@ -36,7 +36,7 @@ export async function GET(
     if (error || !run) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     // Fetch hostel branding
-    let hostelName    = 'Your Hostel'
+    let hostelName    = 'Your Property'
     let hostelAddress: string | null = null
     let hostelPhone:   string | null = null
     let logoUrl:       string | null = null

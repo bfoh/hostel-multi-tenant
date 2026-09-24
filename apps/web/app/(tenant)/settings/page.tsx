@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getServerTenantId } from '@/lib/auth/tenant'
+import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import { ProfileForm } from '@/components/settings/profile-form'
 import { BrandingForm } from '@/components/settings/branding-form'
 import { DigestSettingsForm } from '@/components/settings/digest-settings-form'
@@ -176,6 +176,9 @@ export default async function SettingsPage({
 }) {
   const { tab = 'profile' } = await searchParams
   const tenant = await getTenant()
+  const isHotel = (await getServerBusinessType()) === 'hotel'
+  const nounSingular = isHotel ? 'hotel' : 'hostel'
+  const nounCapitalized = isHotel ? 'Hotel' : 'Hostel'
 
   // Fetch billing data only when the billing tab is active
   const tenantId = await getServerTenantId()
@@ -199,7 +202,7 @@ export default async function SettingsPage({
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Settings</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
-            Manage your hostel profile, branding, and account preferences.
+            Manage your {nounSingular} profile, branding, and account preferences.
           </p>
         </div>
       </div>
@@ -266,12 +269,12 @@ export default async function SettingsPage({
             {tab === 'profile' && (
               <section className="space-y-4">
                 <div>
-                  <h2 className="text-base font-semibold text-text-primary">Hostel Profile</h2>
+                  <h2 className="text-base font-semibold text-text-primary">{nounCapitalized} Profile</h2>
                   <p className="mt-0.5 text-sm text-text-secondary">
                     This information appears on invoices, receipts, and your public booking page.
                   </p>
                 </div>
-                <ProfileForm tenant={tenant} />
+                <ProfileForm tenant={tenant} isHotel={isHotel} />
               </section>
             )}
 
@@ -284,7 +287,7 @@ export default async function SettingsPage({
                   </p>
                 </div>
 
-                <BrandingForm tenant={tenant} />
+                <BrandingForm tenant={tenant} isHotel={isHotel} />
 
                 {(tenant as any).paystack_subaccount_code && !(tenant as any).bank_name && (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800">
@@ -313,7 +316,7 @@ export default async function SettingsPage({
                 <div>
                   <h2 className="text-base font-semibold text-text-primary">Notifications & Channels</h2>
                   <p className="mt-0.5 text-sm text-text-secondary">
-                    Control which communication and payment channels are active for your hostel.
+                    Control which communication and payment channels are active for your {nounSingular}.
                   </p>
                 </div>
                 <NotificationsForm tenant={tenant} />
@@ -430,7 +433,7 @@ export default async function SettingsPage({
                     <Webhook className="h-4 w-4 text-brand shrink-0" />
                     <div>
                       <p className="font-medium text-text-primary">Outbound Webhooks</p>
-                      <p className="text-xs text-text-secondary">Send real-time HTTP events from this hostel to external systems</p>
+                      <p className="text-xs text-text-secondary">Send real-time HTTP events from this {nounSingular} to external systems</p>
                     </div>
                   </Link>
                   <Link
@@ -470,7 +473,7 @@ export default async function SettingsPage({
                   <h3 className="text-sm font-semibold text-text-primary">Plan & Account</h3>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="rounded-lg border border-border bg-surface-sunken p-3">
-                      <p className="text-xs text-text-tertiary">Hostel slug</p>
+                      <p className="text-xs text-text-tertiary">{nounCapitalized} slug</p>
                       <p className="mt-0.5 font-mono font-medium text-text-primary">{tenant.slug}</p>
                     </div>
                     <div className="rounded-lg border border-border bg-surface-sunken p-3">

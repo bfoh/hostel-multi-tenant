@@ -29,9 +29,10 @@ interface Props {
     timezone:      string
     roommate_matching_enabled: boolean
   }
+  isHotel?: boolean
 }
 
-export function BrandingForm({ tenant }: Props) {
+export function BrandingForm({ tenant, isHotel }: Props) {
   const router = useRouter()
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -110,7 +111,7 @@ export function BrandingForm({ tenant }: Props) {
 
       {/* Logo */}
       <div className="space-y-2">
-        <p className="text-sm font-medium text-text-primary">Hostel logo</p>
+        <p className="text-sm font-medium text-text-primary">{isHotel ? 'Hotel' : 'Hostel'} logo</p>
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-sunken">
             {logoUploading ? (
@@ -274,38 +275,40 @@ export function BrandingForm({ tenant }: Props) {
         </div>
       </div>
 
-      {/* Roommate Matching Toggle */}
-      <div className="border-t border-border pt-4">
-        <label className="flex cursor-pointer items-start gap-4 rounded-xl border border-border bg-surface-sunken p-4 hover:bg-surface-raised transition-colors">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-text-primary">Roommate Compatibility Matching</p>
-            <p className="mt-1 text-xs text-text-secondary">
-              Enable compatibility-based roommate assignments. When enabled, occupants booking shared rooms (capacity &gt; 1) will fill out a lifestyle survey. The system will auto-assign rooms to maximize roommate harmony, and staff will gain access to the Roommate Matching Dashboard.
-            </p>
-          </div>
-          <Controller
-            control={control}
-            name="roommate_matching_enabled"
-            render={({ field }) => (
-              <button
-                type="button"
-                role="switch"
-                aria-checked={field.value}
-                onClick={() => field.onChange(!field.value)}
-                className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 focus:outline-none ${
-                  field.value ? 'bg-brand' : 'bg-border'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
-                    field.value ? 'translate-x-4' : 'translate-x-0'
+      {/* Roommate Matching Toggle — a dorm/shared-room concept, not relevant to hotels */}
+      {!isHotel && (
+        <div className="border-t border-border pt-4">
+          <label className="flex cursor-pointer items-start gap-4 rounded-xl border border-border bg-surface-sunken p-4 hover:bg-surface-raised transition-colors">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-text-primary">Roommate Compatibility Matching</p>
+              <p className="mt-1 text-xs text-text-secondary">
+                Enable compatibility-based roommate assignments. When enabled, occupants booking shared rooms (capacity &gt; 1) will fill out a lifestyle survey. The system will auto-assign rooms to maximize roommate harmony, and staff will gain access to the Roommate Matching Dashboard.
+              </p>
+            </div>
+            <Controller
+              control={control}
+              name="roommate_matching_enabled"
+              render={({ field }) => (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={field.value}
+                  onClick={() => field.onChange(!field.value)}
+                  className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 focus:outline-none ${
+                    field.value ? 'bg-brand' : 'bg-border'
                   }`}
-                />
-              </button>
-            )}
-          />
-        </label>
-      </div>
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                      field.value ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              )}
+            />
+          </label>
+        </div>
+      )}
 
       {serverError && <div className="rounded-md bg-danger-subtle px-3 py-2 text-sm text-danger">{serverError}</div>}
       {success    && <div className="rounded-md bg-success-subtle px-3 py-2 text-sm text-success">Branding saved successfully.</div>}
