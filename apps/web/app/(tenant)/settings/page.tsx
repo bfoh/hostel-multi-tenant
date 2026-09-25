@@ -57,9 +57,9 @@ async function getTenant() {
   return data as any
 }
 
-async function getBillingData(tenantId: string) {
-  const plans = listPlatformPlans().map((p) => ({
-    name:               p.name as 'starter' | 'growth',
+async function getBillingData(tenantId: string, businessType: 'hostel' | 'hotel') {
+  const plans = listPlatformPlans('monthly', businessType).map((p) => ({
+    name:               p.name,
     displayName:        p.displayName,
     description:        p.description,
     baseMonthlyPesewas: p.baseMonthlyPesewas,
@@ -76,7 +76,7 @@ async function getBillingData(tenantId: string) {
   const pricing: Record<string, Record<string, {
     amountPesewas: number; monthlyPesewas: number; discountPercent: number; available: boolean
   }>> = {}
-  for (const v of listAllPlanVariants()) {
+  for (const v of listAllPlanVariants(businessType)) {
     pricing[v.name] ??= {}
     pricing[v.name][v.interval] = {
       amountPesewas:   v.amountPesewas,
@@ -182,7 +182,7 @@ export default async function SettingsPage({
 
   // Fetch billing data only when the billing tab is active
   const tenantId = await getServerTenantId()
-  const billingData = tab === 'billing' && tenantId ? await getBillingData(tenantId) : null
+  const billingData = tab === 'billing' && tenantId ? await getBillingData(tenantId, isHotel ? 'hotel' : 'hostel') : null
 
   // Bank deposit details are owner-only. Read the role from the
   // x-tenant-role request header injected by middleware (the standard pattern

@@ -16,7 +16,8 @@
  *   yearly    15%
  */
 
-export type PlatformPlanName = 'starter' | 'growth'
+export type BusinessType = 'hostel' | 'hotel'
+export type PlatformPlanName = 'starter' | 'growth' | 'hotel_starter' | 'hotel_growth'
 export type BillingInterval = 'monthly' | 'quarterly' | 'biannual' | 'annual'
 
 export interface IntervalDef {
@@ -41,15 +42,23 @@ export function getInterval(id: BillingInterval): IntervalDef {
 
 interface PlanDef {
   name:               PlatformPlanName
+  businessType:       BusinessType
   displayName:        string
   description:        string
   baseMonthlyPesewas: number
   features:           string[]
 }
 
+/**
+ * Hotel prices (baseMonthlyPesewas) are placeholders — approved 2026-09-25
+ * pending real Ghana hotel-market pricing data. Update in place here (and
+ * re-run the admin bootstrap-plans endpoint) once real numbers land; nothing
+ * else needs to change since every consumer reads through this table.
+ */
 const PLAN_DEFS: PlanDef[] = [
   {
     name:               'starter',
+    businessType:       'hostel',
     displayName:        'Starter',
     description:        'Up to 50 rooms. Core booking, invoicing, payments.',
     baseMonthlyPesewas: 80_000, // GHS 800 / month
@@ -62,9 +71,37 @@ const PLAN_DEFS: PlanDef[] = [
   },
   {
     name:               'growth',
+    businessType:       'hostel',
     displayName:        'Growth',
     description:        'Unlimited rooms. Adds HR, payroll, and multi-property.',
     baseMonthlyPesewas: 100_000, // GHS 1,000 / month
+    features: [
+      'Unlimited rooms',
+      'Staff payroll (GRA tax engine)',
+      'Full double-entry accounting',
+      'Portfolio view',
+      'Priority support',
+    ],
+  },
+  {
+    name:               'hotel_starter',
+    businessType:       'hotel',
+    displayName:        'Hotel Starter',
+    description:        'Up to 20 rooms. Reservations, invoicing, payments.',
+    baseMonthlyPesewas: 120_000, // GHS 1,200 / month — PLACEHOLDER
+    features: [
+      'Up to 20 rooms',
+      'Online bookings + Paystack MoMo/card',
+      'Invoices & receipts',
+      'Guest self-service portal',
+    ],
+  },
+  {
+    name:               'hotel_growth',
+    businessType:       'hotel',
+    displayName:        'Hotel Growth',
+    description:        'Unlimited rooms. Adds HR, payroll, and multi-property.',
+    baseMonthlyPesewas: 160_000, // GHS 1,600 / month — PLACEHOLDER
     features: [
       'Unlimited rooms',
       'Staff payroll (GRA tax engine)',
@@ -78,6 +115,7 @@ const PLAN_DEFS: PlanDef[] = [
 /** A fully-resolved plan for one (tier × interval). */
 export interface PlatformPlan {
   name:               PlatformPlanName
+  businessType:       BusinessType
   displayName:        string
   description:        string
   features:           string[]
@@ -116,6 +154,7 @@ function buildPlan(def: PlanDef, iv: IntervalDef): PlatformPlan {
   const monthlyPesewas = Math.round(def.baseMonthlyPesewas * (1 - iv.discount))
   return {
     name:               def.name,
+    businessType:       def.businessType,
     displayName:        def.displayName,
     description:        def.description,
     features:           def.features,
@@ -132,15 +171,29 @@ function buildPlan(def: PlanDef, iv: IntervalDef): PlatformPlan {
   }
 }
 
-/** One resolved plan per tier, at the given interval (default monthly). */
-export function listPlatformPlans(interval: BillingInterval = 'monthly'): PlatformPlan[] {
+/**
+ * One resolved plan per tier, at the given interval (default monthly),
+ * scoped to one vertical. Defaults to 'hostel' — every caller today predates
+ * the hotel vertical's plan catalog, so this preserves exactly today's
+ * behavior (2 plans) until a caller explicitly passes 'hotel'.
+ */
+export function listPlatformPlans(
+  interval: BillingInterval = 'monthly',
+  businessType: BusinessType = 'hostel',
+): PlatformPlan[] {
   const iv = getInterval(interval)
-  return PLAN_DEFS.map((def) => buildPlan(def, iv))
+  return PLAN_DEFS.filter((def) => def.businessType === businessType).map((def) => buildPlan(def, iv))
 }
 
-/** Every (tier × interval) variant — used by the bootstrap endpoint. */
-export function listAllPlanVariants(): PlatformPlan[] {
-  return PLAN_DEFS.flatMap((def) => BILLING_INTERVALS.map((iv) => buildPlan(def, iv)))
+/**
+ * Every (tier × interval) variant — used by the bootstrap endpoint, which
+ * needs to create every plan on Paystack regardless of vertical. Pass a
+ * businessType to scope to one vertical instead.
+ */
+export function listAllPlanVariants(businessType?: BusinessType): PlatformPlan[] {
+  return PLAN_DEFS
+    .filter((def) => !businessType || def.businessType === businessType)
+    .flatMap((def) => BILLING_INTERVALS.map((iv) => buildPlan(def, iv)))
 }
 
 export function getPlatformPlan(

@@ -179,7 +179,7 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
   const [savingIdentity, setSavingIdentity] = useState(false)
   const [error,          setError]          = useState('')
   const [finalSlug,      setFinalSlug]      = useState(initial.slug)
-  const [finalPlan,      setFinalPlan]      = useState<'starter' | 'growth' | 'trial' | null>(null)
+  const [finalPlan,      setFinalPlan]      = useState<'starter' | 'growth' | 'hotel_starter' | 'hotel_growth' | 'trial' | null>(null)
   const [finalInterval,  setFinalInterval]  = useState<string | null>(null)
 
   // Slug check state
@@ -378,7 +378,7 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
   // keeps showing the real subdomain regardless.
   const isFixedAppHost = typeof window !== 'undefined' && window.location.hostname === `app.${appDomain}`
 
-  const isPaidPlan = finalPlan === 'starter' || finalPlan === 'growth'
+  const isPaidPlan = finalPlan === 'starter' || finalPlan === 'growth' || finalPlan === 'hotel_starter' || finalPlan === 'hotel_growth'
 
   function getDashboardUrl() {
     const billingQs = finalInterval ? `&billing=${finalInterval}` : ''

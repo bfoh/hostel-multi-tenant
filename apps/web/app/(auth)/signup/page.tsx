@@ -19,16 +19,22 @@ const GOLD_SOFT = '#F5C26B'
 const GOLD_DEEP = '#B8842E'
 const FOREST_DEEP = '#0A3729'
 
-const VALID_PLANS = ['starter', 'growth', 'trial'] as const
+const VALID_PLANS = ['starter', 'growth', 'hotel_starter', 'hotel_growth', 'trial'] as const
 type SelectedPlan = typeof VALID_PLANS[number]
 const VALID_INTERVALS = ['monthly', 'quarterly', 'biannual', 'annual'] as const
 type SelectedInterval = typeof VALID_INTERVALS[number]
 const VALID_BUSINESS_TYPES = ['hostel', 'hotel'] as const
 type BusinessType = typeof VALID_BUSINESS_TYPES[number]
+// Prices here are duplicated from lib/platform-plans.ts (pre-existing drift,
+// not introduced by the hotel additions — see that file's own note on the
+// three-copies-of-pricing-numbers issue). Hotel prices are placeholders,
+// approved 2026-09-25 pending real market data.
 const PLAN_LABEL: Record<SelectedPlan, string> = {
-  starter: 'Starter — GH₵ 800 / month',
-  growth:  'Growth — GH₵ 1,000 / month',
-  trial:   '30-day free trial',
+  starter:       'Starter — GH₵ 800 / month',
+  growth:        'Growth — GH₵ 1,000 / month',
+  hotel_starter: 'Hotel Starter — GH₵ 1,200 / month',
+  hotel_growth:  'Hotel Growth — GH₵ 1,600 / month',
+  trial:         '30-day free trial',
 }
 
 const schema = z

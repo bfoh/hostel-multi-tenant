@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getServerTenantId } from '@/lib/auth/tenant'
+import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import {
   listPlatformPlans, listAllPlanVariants, findPlanByCode,
   BILLING_INTERVALS, type BillingInterval,
@@ -15,10 +15,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function BillingPage() {
   const tenantId = await getServerTenantId()
+  const businessType = (await getServerBusinessType())
 
   // Tier-level metadata (interval-agnostic)
-  const plans = listPlatformPlans().map((p) => ({
-    name:               p.name as 'starter' | 'growth',
+  const plans = listPlatformPlans('monthly', businessType).map((p) => ({
+    name:               p.name,
     displayName:        p.displayName,
     description:        p.description,
     baseMonthlyPesewas: p.baseMonthlyPesewas,
@@ -37,7 +38,7 @@ export default async function BillingPage() {
   const pricing: Record<string, Record<string, {
     amountPesewas: number; monthlyPesewas: number; discountPercent: number; available: boolean
   }>> = {}
-  for (const v of listAllPlanVariants()) {
+  for (const v of listAllPlanVariants(businessType)) {
     pricing[v.name] ??= {}
     pricing[v.name][v.interval] = {
       amountPesewas:   v.amountPesewas,
@@ -48,7 +49,7 @@ export default async function BillingPage() {
   }
 
   // Fetch tenant plan info
-  let tenantPlan = 'starter'
+  let tenantPlan = businessType === 'hotel' ? 'hotel_starter' : 'starter'
   let tenantStatus = 'trial'
   let trialEndsAt: string | null = null
 
@@ -118,7 +119,7 @@ export default async function BillingPage() {
                   paystack_plan_code:         sub.plan.plan_code,
                   paystack_subscription_code: sub.subscription_code,
                   paystack_email_token:       sub.email_token,
-                  plan_name:                  plan?.name ?? sub.plan.name ?? 'starter',
+                  plan_name:                  plan?.name ?? sub.plan.name ?? tenantPlan,
                   billing_interval:           plan?.interval ?? 'monthly',
                   amount:                     sub.amount ?? sub.plan.amount ?? 0,
                   currency:                   sub.plan.currency ?? 'GHS',

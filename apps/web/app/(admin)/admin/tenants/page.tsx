@@ -37,6 +37,8 @@ const STATUS_COLOR: Record<string, string> = {
 const PLAN_LABEL: Record<string, string> = {
   starter: 'Starter',
   growth: 'Growth',
+  hotel_starter: 'Hotel Starter',
+  hotel_growth: 'Hotel Growth',
 }
 
 const BUSINESS_TYPE_COLOR: Record<string, string> = {

@@ -10,7 +10,7 @@ import {
 type IntervalId = 'monthly' | 'quarterly' | 'biannual' | 'annual'
 
 interface Plan {
-  name: 'starter' | 'growth'
+  name: 'starter' | 'growth' | 'hotel_starter' | 'hotel_growth'
   displayName: string
   description: string
   baseMonthlyPesewas: number
@@ -65,7 +65,7 @@ const STATUS_STYLE: Record<string, string> = {
   incomplete: 'bg-warning/10 text-warning border-warning/30',
 }
 
-const PLAN_ORDER: Record<string, number> = { starter: 0, growth: 1 }
+const PLAN_ORDER: Record<string, number> = { starter: 0, growth: 1, hotel_starter: 0, hotel_growth: 1 }
 
 export function BillingClient({ plans, pricing, intervals, subscription, currentPlan, tenantStatus, trialEndsAt }: Props) {
   const router = useRouter()

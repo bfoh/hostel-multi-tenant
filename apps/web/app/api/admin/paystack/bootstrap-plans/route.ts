@@ -7,9 +7,10 @@ import { listAllPlanVariants } from '@/lib/platform-plans'
 /**
  * POST /api/admin/paystack/bootstrap-plans
  *
- * One-time bootstrap: creates the GH Hostels subscription plans on the
- * platform Paystack merchant. Returns the generated plan codes — paste them
- * into env vars PAYSTACK_PLAN_STARTER / _GROWTH.
+ * One-time bootstrap: creates every subscription plan (both the hostel and
+ * hotel vertical catalogs — see lib/platform-plans.ts) on the platform
+ * Paystack merchant. Returns the generated plan codes — paste them into env
+ * vars PAYSTACK_PLAN_<TIER>_<INTERVAL> (e.g. PAYSTACK_PLAN_HOTEL_STARTER_MONTHLY).
  *
  * Guarded by platform super-admin membership.
  *
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
   async function persistPlanCode(plan: (typeof plans)[number], planCode: string, amount: number) {
     const { error } = await supabase.from('platform_plans').upsert(
       {
-        business_type:     'hostel',
+        business_type:     plan.businessType,
         tier:              plan.name,
         billing_interval:  plan.interval,
         plan_code:         planCode,

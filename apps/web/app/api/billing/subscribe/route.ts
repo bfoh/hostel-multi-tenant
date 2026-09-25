@@ -2,13 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
-import { getServerTenantId } from '@/lib/auth/tenant'
+import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import { initializeTransaction, createCustomer } from '@/lib/paystack'
 import { getPlatformPlan, type PlatformPlanName, type BillingInterval } from '@/lib/platform-plans'
 import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
-  plan:     z.enum(['starter', 'growth']),
+  plan:     z.enum(['starter', 'growth', 'hotel_starter', 'hotel_growth']),
   interval: z.enum(['monthly', 'quarterly', 'biannual', 'annual']).default('monthly'),
 })
 
@@ -48,6 +48,15 @@ export async function POST(req: NextRequest) {
     parsed.data.interval as BillingInterval,
   )
   if (!plan) return NextResponse.json({ error: 'Unknown plan' }, { status: 422 })
+
+  // A tenant may only subscribe to a plan matching its own vertical — without
+  // this, a hostel tenant could craft a request selecting a hotel plan (or
+  // vice versa) now that both catalogs share this one endpoint.
+  const tenantBusinessType = await getServerBusinessType()
+  if (plan.businessType !== tenantBusinessType) {
+    return NextResponse.json({ error: 'This plan is not available for your account type.' }, { status: 422 })
+  }
+
   if (!plan.planCode) {
     return NextResponse.json(
       { error: `Plan ${plan.name} (${plan.intervalLabel}) is not linked to a Paystack plan code. Run the admin bootstrap first.` },
