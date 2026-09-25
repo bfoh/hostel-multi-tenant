@@ -302,7 +302,13 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
     try {
       const supabase = createClient()
       const ext  = file.name.split('.').pop()
-      const path = `${tenantId}-${Date.now()}.${ext}`
+      // Must match the {tenant_id}/logo.{ext} convention the tenant-logos
+      // bucket's RLS policies check via storage.foldername(name)[1] (see
+      // migration 113 and app/api/settings/logo/route.ts) — a flat
+      // "{tenantId}-{timestamp}.{ext}" filename has no folder segment at
+      // all, so the policy's tenant-membership check always fails and the
+      // insert is rejected with "new row violates row-level security policy".
+      const path = `${tenantId}/logo.${ext}`
       const { data, error } = await supabase.storage
         .from('tenant-logos')
         .upload(path, file, { upsert: true, contentType: file.type })
@@ -310,7 +316,9 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
       if (error) throw error
 
       const { data: { publicUrl } } = supabase.storage.from('tenant-logos').getPublicUrl(data.path)
-      set('logo_url', publicUrl)
+      // Cache-bust: the path is now fixed per tenant (no timestamp in the
+      // filename), so a re-upload would otherwise reuse an already-cached URL.
+      set('logo_url', `${publicUrl}?t=${Date.now()}`)
       setLogoFileName(file.name)
     } catch (e: any) {
       setLogoError(e?.message ?? 'Upload failed. You can add your logo later in Settings → Branding.')
