@@ -149,23 +149,6 @@ export default async function LandingPage() {
       {/* Floating search card — straddles the hero/page boundary */}
       <div className="relative z-10 mx-auto -mt-28 max-w-4xl px-5 sm:-mt-32 sm:px-6">
         <HeroSearch />
-
-        <div
-          className="mp-reveal relative z-0 mx-auto mt-7 flex flex-wrap items-center justify-center gap-2"
-          style={{ animationDelay: '220ms' }}
-        >
-          <span className="text-[12px] font-medium" style={{ color: MP.textSecondary }}>Popular:</span>
-          {['Legon', 'KNUST', 'UCC', 'Cape Coast', 'Kumasi'].map((campus) => (
-            <Link
-              key={campus}
-              href={`/browse?q=${encodeURIComponent(campus)}`}
-              className="rounded-full px-3 py-1 text-[12px] font-medium transition-colors hover:bg-[#2F7D57] hover:text-white"
-              style={{ border: `1px solid ${MP.border}`, background: MP.surface, color: MP.greenDeep }}
-            >
-              {campus}
-            </Link>
-          ))}
-        </div>
       </div>
 
       <div className="mx-auto max-w-5xl px-5 pb-4 pt-10 sm:px-6">

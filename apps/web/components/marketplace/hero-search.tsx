@@ -1,6 +1,7 @@
 'use client'
 
 import { useLayoutEffect, useRef, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { BedDouble, Building2, Home, Compass, Landmark, Search, MapPin, Sparkles } from 'lucide-react'
 
 import { MP } from '@/lib/marketplace-theme'
@@ -39,6 +40,18 @@ const SEARCH_PLACEHOLDER: Partial<Record<TabKey, string>> = {
   apartments: 'Apartment or short-let name',
 }
 
+/**
+ * Quick-search chips below the search card. Hostels keeps the original
+ * campus names; hotels and apartments get Ghana destination names instead
+ * (matching the destinations marquee on the hotel /for-owners page) since
+ * "Legon"/"KNUST" as a hotel search suggestion would make no sense.
+ */
+const QUICK_LINKS: Partial<Record<TabKey, string[]>> = {
+  hostels: ['Legon', 'KNUST', 'UCC', 'Cape Coast', 'Kumasi'],
+  hotels: ['Accra', 'Kumasi', 'Cape Coast', 'Elmina', 'Aburi'],
+  apartments: ['Accra', 'Kumasi', 'Cape Coast', 'Elmina', 'Aburi'],
+}
+
 export function HeroSearch() {
   const [active, setActive] = useState<TabKey>('hostels')
   const activeTab = TABS.find((tab) => tab.key === active)!
@@ -71,7 +84,11 @@ export function HeroSearch() {
     }
   }, [updateFades])
 
+  const quickLinks = QUICK_LINKS[active]
+  const quickLinksType = SEARCH_BUSINESS_TYPE[active]
+
   return (
+    <>
     <div className="mp-reveal mx-auto rounded-[22px] bg-white p-4 shadow-2xl sm:p-6" style={{ animationDelay: '180ms' }}>
       <div className="relative">
         {showLeftFade && (
@@ -178,5 +195,25 @@ export function HeroSearch() {
         </div>
       )}
     </div>
+
+    {quickLinks && (
+      <div
+        className="mp-reveal relative z-0 mx-auto mt-7 flex flex-wrap items-center justify-center gap-2"
+        style={{ animationDelay: '220ms' }}
+      >
+        <span className="text-[12px] font-medium" style={{ color: MP.textSecondary }}>Popular:</span>
+        {quickLinks.map((place) => (
+          <Link
+            key={place}
+            href={`/browse?q=${encodeURIComponent(place)}${quickLinksType === 'hotel' ? '&type=hotel' : ''}`}
+            className="rounded-full px-3 py-1 text-[12px] font-medium transition-colors hover:bg-[#2F7D57] hover:text-white"
+            style={{ border: `1px solid ${MP.border}`, background: MP.surface, color: MP.greenDeep }}
+          >
+            {place}
+          </Link>
+        ))}
+      </div>
+    )}
+    </>
   )
 }

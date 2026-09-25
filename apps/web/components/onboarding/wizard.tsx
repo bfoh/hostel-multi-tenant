@@ -7,7 +7,6 @@ import {
   Loader2, ChevronRight, ChevronLeft, ArrowRight,
   Globe, Upload, X,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { ColorPickerField } from './color-picker'
 
 /* ── Types ─────────────────────────────────────────────────────────── */
@@ -300,25 +299,23 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
     setLogoFileName('')
     setLogoError('')
     try {
-      const supabase = createClient()
-      const ext  = file.name.split('.').pop()
-      // Must match the {tenant_id}/logo.{ext} convention the tenant-logos
-      // bucket's RLS policies check via storage.foldername(name)[1] (see
-      // migration 113 and app/api/settings/logo/route.ts) — a flat
-      // "{tenantId}-{timestamp}.{ext}" filename has no folder segment at
-      // all, so the policy's tenant-membership check always fails and the
-      // insert is rejected with "new row violates row-level security policy".
-      const path = `${tenantId}/logo.${ext}`
-      const { data, error } = await supabase.storage
-        .from('tenant-logos')
-        .upload(path, file, { upsert: true, contentType: file.type })
+      // Uploaded server-side (see app/api/onboarding/logo/route.ts's header
+      // comment) rather than directly from the browser — this used to call
+      // supabase.storage.from('tenant-logos').upload(...) straight from
+      // client-side JS, the only place in this codebase that did a Storage
+      // write that way, and it consistently failed the tenant-logos bucket's
+      // RLS check even with a correct {tenant_id}/logo.{ext} path. Every
+      // other upload in the app (e.g. Settings → Branding) already goes
+      // through a server route, which is what this now matches.
+      const body = new FormData()
+      body.append('logo', file)
+      body.append('tenantId', tenantId)
 
-      if (error) throw error
+      const res = await fetch('/api/onboarding/logo', { method: 'POST', body })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Upload failed')
 
-      const { data: { publicUrl } } = supabase.storage.from('tenant-logos').getPublicUrl(data.path)
-      // Cache-bust: the path is now fixed per tenant (no timestamp in the
-      // filename), so a re-upload would otherwise reuse an already-cached URL.
-      set('logo_url', `${publicUrl}?t=${Date.now()}`)
+      set('logo_url', json.logo_url)
       setLogoFileName(file.name)
     } catch (e: any) {
       setLogoError(e?.message ?? 'Upload failed. You can add your logo later in Settings → Branding.')
