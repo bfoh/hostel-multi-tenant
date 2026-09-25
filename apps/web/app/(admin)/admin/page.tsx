@@ -100,8 +100,9 @@ export default async function AdminOverviewPage() {
       <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-2">
         <h2 className="text-sm font-semibold text-white">Paystack plans</h2>
         <p className="text-xs text-white/50">
-          One-time: create the 8 platform subscription plans — Starter and Growth, each billed
-          monthly, quarterly, 6-monthly, or yearly. Idempotent — skips plans whose env code is already set.
+          One-time: create the platform subscription plans — Starter and Growth for hostels,
+          Hotel Starter and Hotel Growth for hotels — each billed monthly, quarterly, 6-monthly,
+          or yearly (16 plans total). Idempotent — skips plans whose env code is already set.
         </p>
         <BootstrapPlansButton />
       </div>
