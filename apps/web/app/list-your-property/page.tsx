@@ -20,16 +20,19 @@ export const metadata: Metadata = {
  * property), so both route to the hotel vertical.
  *
  * Before the DNS/domain cutover (NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED),
- * the hostel path falls back to today's /for-owners on the current host —
- * hostels.<domain> doesn't resolve yet. The hotel/apartment vertical has
- * no marketing content of its own yet, so those cards stay disabled
- * ("Soon") rather than linking anywhere, matching the same pattern
- * already used for the homepage's HeroSearch tabs.
+ * both the hostel and hotel paths fall back to today's /for-owners on the
+ * current host (?type=hotel for the hotel one) — hostels.<domain> and
+ * hotels.<domain> don't resolve yet. Hotels went live 2026-09-25 (pricing,
+ * signup, onboarding, dashboard, and Paystack subscriptions all verified
+ * end-to-end first). Apartments still route nowhere ("Soon") — they're
+ * meant to share the hotel vertical too, but that hasn't been decided on
+ * yet, separately from today's hotel launch.
  */
 export default function ListYourPropertyPage() {
   const verticalDomainsLive = process.env.NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED === 'true'
   const rootDomain = bareRootDomain(process.env.NEXT_PUBLIC_APP_DOMAIN)
   const hostelHref = verticalDomainsLive ? `https://${verticalRootDomain(rootDomain, 'hostel')}` : '/for-owners'
+  const hotelHref  = verticalDomainsLive ? `https://${verticalRootDomain(rootDomain, 'hotel')}`  : '/for-owners?type=hotel'
 
   const OPTIONS = [
     {
@@ -45,8 +48,8 @@ export default function ListYourPropertyPage() {
       label: 'Hotels',
       description: 'Full-service hotels, guesthouses, and lodges.',
       icon: Building2,
-      href: null,
-      enabled: false,
+      href: hotelHref,
+      enabled: true,
     },
     {
       key: 'apartments',
