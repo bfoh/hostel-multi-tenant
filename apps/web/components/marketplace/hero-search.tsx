@@ -6,22 +6,38 @@ import { BedDouble, Building2, Home, Compass, Landmark, Search, MapPin, Sparkles
 import { MP } from '@/lib/marketplace-theme'
 
 /**
- * Expedia/Booking-style vertical-tabbed hero search. Only "Hostels" is a
- * live vertical today — the rest are staged for the roadmap (hotels,
- * apartments, things to do, places to visit) so the search card doesn't
- * need reshaping again when those launch; switching to a disabled tab
- * shows a "coming soon" panel instead of navigating anywhere.
+ * Expedia/Booking-style vertical-tabbed hero search. Hostels, hotels, and
+ * apartments are live verticals — the search card was staged for all five
+ * tabs from the start so it wouldn't need reshaping as each launched.
+ * Hotels and apartments share the exact same business_type='hotel' listing
+ * pool (no separate "apartment" vertical exists), so both search /browse
+ * with type=hotel. "Things to Do" / "Places to Visit" remain on the
+ * roadmap — unrelated to accommodation, switching to either shows a
+ * "coming soon" panel instead of navigating anywhere.
  */
 
 type TabKey = 'hostels' | 'hotels' | 'apartments' | 'things-to-do' | 'places'
 
 const TABS: Array<{ key: TabKey; label: string; icon: typeof BedDouble; enabled: boolean }> = [
   { key: 'hostels', label: 'Hostels', icon: BedDouble, enabled: true },
-  { key: 'hotels', label: 'Hotels', icon: Building2, enabled: false },
-  { key: 'apartments', label: 'Apartments', icon: Home, enabled: false },
+  { key: 'hotels', label: 'Hotels', icon: Building2, enabled: true },
+  { key: 'apartments', label: 'Apartments', icon: Home, enabled: true },
   { key: 'things-to-do', label: 'Things to Do', icon: Compass, enabled: false },
   { key: 'places', label: 'Places to Visit', icon: Landmark, enabled: false },
 ]
+
+/** Both hotels and apartments query the same business_type='hotel' pool. */
+const SEARCH_BUSINESS_TYPE: Partial<Record<TabKey, 'hostel' | 'hotel'>> = {
+  hostels: 'hostel',
+  hotels: 'hotel',
+  apartments: 'hotel',
+}
+
+const SEARCH_PLACEHOLDER: Partial<Record<TabKey, string>> = {
+  hostels: 'Hostel name or campus — Legon, KNUST, UCC…',
+  hotels: 'Hotel or guesthouse name',
+  apartments: 'Apartment or short-let name',
+}
 
 export function HeroSearch() {
   const [active, setActive] = useState<TabKey>('hostels')
@@ -113,12 +129,12 @@ export function HeroSearch() {
 
       {activeTab.enabled ? (
         <form action="/browse" method="get" className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center">
-          <input type="hidden" name="type" value={active === 'hotels' ? 'hotel' : 'hostel'} />
+          <input type="hidden" name="type" value={SEARCH_BUSINESS_TYPE[active] ?? 'hostel'} />
           <div className="flex flex-1 items-center gap-3 rounded-2xl px-5 py-4" style={{ background: MP.surfaceSoft }}>
             <Search className="h-5 w-5 shrink-0" style={{ color: MP.goldDeep }} />
             <input
               name="q"
-              placeholder="Hostel name or campus — Legon, KNUST, UCC…"
+              placeholder={SEARCH_PLACEHOLDER[active] ?? 'Search by name'}
               className="w-full bg-transparent text-[15px] outline-none placeholder:text-neutral-400"
               style={{ color: MP.ink }}
             />

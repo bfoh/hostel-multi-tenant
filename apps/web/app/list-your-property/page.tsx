@@ -20,13 +20,11 @@ export const metadata: Metadata = {
  * property), so both route to the hotel vertical.
  *
  * Before the DNS/domain cutover (NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED),
- * both the hostel and hotel paths fall back to today's /for-owners on the
- * current host (?type=hotel for the hotel one) — hostels.<domain> and
- * hotels.<domain> don't resolve yet. Hotels went live 2026-09-25 (pricing,
- * signup, onboarding, dashboard, and Paystack subscriptions all verified
- * end-to-end first). Apartments still route nowhere ("Soon") — they're
- * meant to share the hotel vertical too, but that hasn't been decided on
- * yet, separately from today's hotel launch.
+ * the hostel path falls back to today's /for-owners on the current host,
+ * and both hotels and apartments fall back to /for-owners?type=hotel (the
+ * same page — apartments have no distinct marketing content of their own
+ * since they share the hotel vertical end to end). Hostels + hotels went
+ * live 2026-09-25, apartments 2026-09-26.
  */
 export default function ListYourPropertyPage() {
   const verticalDomainsLive = process.env.NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED === 'true'
@@ -56,8 +54,12 @@ export default function ListYourPropertyPage() {
       label: 'Apartments',
       description: 'Serviced apartments and short-let units.',
       icon: Home,
-      href: null,
-      enabled: false,
+      // Apartments share the hotel vertical (same business_type='hotel'
+      // tenant record and management dashboard) rather than being a
+      // distinct third vertical — so this points at the exact same page
+      // as Hotels, not a separate apartment-specific one.
+      href: hotelHref,
+      enabled: true,
     },
   ] as const
 
