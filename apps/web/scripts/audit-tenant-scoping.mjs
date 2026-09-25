@@ -78,6 +78,10 @@ const CROSS_TENANT_TABLES = new Set([
   'subscription_plans',
   'paystack_subscription_plans',
   'tenant_subscriptions',
+  // Platform-level Paystack plan-code catalog (migration 123) — keyed by
+  // (business_type, tier, billing_interval), not by tenant. RLS locks it to
+  // service role only (same pattern as platform_admins above).
+  'platform_plans',
 ])
 
 const SAFE_BY_DESIGN_PREFIXES = [
