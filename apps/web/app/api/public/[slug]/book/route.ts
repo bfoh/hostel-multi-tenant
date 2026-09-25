@@ -5,6 +5,7 @@ import { sendBookingConfirmation } from '@/lib/sms'
 import { sendEmail, bookingConfirmationHtml } from '@/lib/email'
 import { initBookingPayment } from '@/lib/booking-payment'
 import { calculateRoomHarmonyScore } from '@/lib/matching'
+import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
   category_id: z.string().uuid(),
@@ -35,6 +36,12 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  // This route creates a booking AND fans out to Paystack + SMS + email per
+  // hit, matching the cost profile of the other Paystack-initiating routes
+  // (paymentLimiter) rather than a plain public read (publicLimiter).
+  const limited = await enforceRateLimit(paymentLimiter, req, 'public-book')
+  if (limited) return limited
+
   const { slug } = await params
   const supabase = createAdminClient()
 

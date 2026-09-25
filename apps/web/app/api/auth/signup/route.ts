@@ -1,8 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail } from '@/lib/email'
+import { authLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const limited = await enforceRateLimit(authLimiter, request, 'signup')
+  if (limited) return limited
+
   const body = await request.json().catch(() => null)
   if (!body?.email || !body?.password || !body?.hostelName) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })

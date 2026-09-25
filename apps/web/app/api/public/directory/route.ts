@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { searchListings } from '@/lib/directory'
 import type { BusinessType } from '@/lib/tenant/host-classification'
+import { publicLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 /**
  * Public, unauthenticated, cross-tenant listing search — powers the /browse
@@ -19,6 +20,9 @@ export const runtime = 'edge'
 export const revalidate = 60
 
 export async function GET(req: NextRequest) {
+  const limited = await enforceRateLimit(publicLimiter, req, 'public-directory')
+  if (limited) return limited
+
   const { searchParams } = req.nextUrl
   const businessType = (searchParams.get('type') ?? req.headers.get('x-business-type') ?? 'hostel') as BusinessType
 
