@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { widgetCorsHeaders, corsPreflightResponse, checkOrigin } from '@/lib/widget-cors'
 import { sendBookingConfirmation } from '@/lib/sms'
 import { initBookingPayment } from '@/lib/booking-payment'
+import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 export const runtime = 'edge'
 
@@ -29,6 +30,9 @@ export async function OPTIONS(req: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const limited = await enforceRateLimit(paymentLimiter, req, 'widget-book')
+  if (limited) return limited
+
   const { slug } = await params
   const origin   = req.headers.get('origin')
   const supabase = createAdminClient()

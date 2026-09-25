@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { widgetCorsHeaders, corsPreflightResponse, checkOrigin } from '@/lib/widget-cors'
+import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 const schema = z.object({
   hostel_slug:    z.string().min(1),
@@ -14,30 +16,44 @@ const schema = z.object({
   student_id:    z.string().max(50).nullable().optional(),
 })
 
-function cors(origin: string | null) {
-  return {
-    'Access-Control-Allow-Origin':  origin ?? '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  }
-}
-
+// NOTE: this no-slug route predates /api/widget/[slug]/book (which has a real
+// Paystack integration, a 15-minute hold-expiry release, and correctly reuses
+// lib/widget-cors.ts) and is not called by the shipped widget client
+// (packages/widget/src/api.ts only calls the [slug] route). It previously had
+// its own weaker CORS logic that reflected any Origin (or '*') regardless of
+// the tenant's widget_domains whitelist. Its booking still hardcodes
+// paystack_ref: null (no real payment completion) and never releases the
+// room it reserves — that's a separate product question (should this route
+// still exist at all?) left for a deliberate decision, not fixed here.
+//
+// A preflight OPTIONS request carries no body — the tenant (and therefore
+// its domain whitelist) isn't knowable yet, since this route takes the slug
+// in the JSON body rather than the URL like [slug]/book does. Allow the
+// preflight generically; the real, domain-scoped gate is the origin check in
+// POST below, which browsers still enforce against the OPTIONS response.
 export async function OPTIONS(req: NextRequest) {
-  return new NextResponse(null, { status: 204, headers: cors(req.headers.get('origin')) })
+  return corsPreflightResponse(widgetCorsHeaders(req.headers.get('origin'), []))
 }
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(paymentLimiter, req, 'widget-book-legacy')
+  if (limited) return limited
+
   const origin   = req.headers.get('origin')
   const supabase = createAdminClient()
+  // Tenant (and its domain whitelist) isn't known until the body is parsed —
+  // use the same "open" CORS shape (empty domains) for validation errors
+  // that occur before that point, matching this route's prior behavior.
+  const preTenantCors = widgetCorsHeaders(origin, [])
 
   let body: unknown
   try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400, headers: cors(origin) })
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400, headers: preTenantCors })
   }
 
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422, headers: cors(origin) })
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422, headers: preTenantCors })
   }
 
   const d = parsed.data
@@ -50,16 +66,16 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (!tenant) {
-    return NextResponse.json({ error: 'Hostel not found' }, { status: 404, headers: cors(origin) })
+    return NextResponse.json({ error: 'Hostel not found' }, { status: 404, headers: preTenantCors })
   }
 
-  // CORS domain check
+  // CORS domain check — same shared, domain-scoped logic as [slug]/book
+  // (previously this route reflected any Origin, or '*', ignoring the
+  // tenant's widget_domains whitelist entirely).
   const domains: string[] = tenant.widget_domains ?? []
-  if (origin && domains.length > 0) {
-    const allowed = domains.some((dom) => origin === dom || origin.endsWith('.' + dom))
-    if (!allowed) {
-      return NextResponse.json({ error: 'Origin not allowed' }, { status: 403, headers: cors(null) })
-    }
+  const cors = widgetCorsHeaders(origin, domains)
+  if (!checkOrigin(origin, domains)) {
+    return NextResponse.json({ error: 'Origin not allowed' }, { status: 403, headers: cors })
   }
 
   // Find an available room in requested category
@@ -73,7 +89,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (!room) {
-    return NextResponse.json({ error: 'No rooms available in that category' }, { status: 409, headers: cors(origin) })
+    return NextResponse.json({ error: 'No rooms available in that category' }, { status: 409, headers: cors })
   }
 
   // Get room rate
@@ -84,7 +100,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (!category) {
-    return NextResponse.json({ error: 'Category not found' }, { status: 404, headers: cors(origin) })
+    return NextResponse.json({ error: 'Category not found' }, { status: 404, headers: cors })
   }
 
   // Find or create occupant
@@ -114,7 +130,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (occError || !newOcc) {
-      return NextResponse.json({ error: 'Failed to create occupant record' }, { status: 500, headers: cors(origin) })
+      return NextResponse.json({ error: 'Failed to create occupant record' }, { status: 500, headers: cors })
     }
     occupantId = newOcc.id
   }
@@ -149,7 +165,7 @@ export async function POST(req: NextRequest) {
 
   if (bookingError || !booking) {
     console.error('[POST /api/widget/book]', bookingError)
-    return NextResponse.json({ error: 'Failed to create booking' }, { status: 500, headers: cors(origin) })
+    return NextResponse.json({ error: 'Failed to create booking' }, { status: 500, headers: cors })
   }
 
   // Reserve the room
@@ -165,6 +181,6 @@ export async function POST(req: NextRequest) {
       amount:       booking.final_amount,
       paystack_ref: null,   // Paystack integration point
     },
-    { status: 201, headers: cors(origin) },
+    { status: 201, headers: cors },
   )
 }
