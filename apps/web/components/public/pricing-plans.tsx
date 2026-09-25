@@ -14,6 +14,15 @@ const HAIR_STRONG = MP.borderStrong
 
 export type Plan = {
   name: string
+  /**
+   * URL-safe plan identifier for /signup?plan=<slug> — must match a
+   * PlatformPlanName in lib/platform-plans.ts. Kept separate from `name`
+   * (the display heading) since name.toLowerCase() only happened to work
+   * for hostel's single-word "Starter"/"Growth"; it breaks for multi-word
+   * names like "Hotel Starter" (produces "hotel starter", not the actual
+   * "hotel_starter" slug the backend expects).
+   */
+  slug: string
   price: string
   interval: string
   desc: string
@@ -38,7 +47,7 @@ const PERIODS: Period[] = [
 
 const fmt = (n: number) => n.toLocaleString('en-US')
 
-export function PricingPlans({ plans }: { plans: Plan[] }) {
+export function PricingPlans({ plans, isHotel }: { plans: Plan[]; isHotel?: boolean }) {
   const [periodId, setPeriodId] = useState('monthly')
   const period = PERIODS.find((p) => p.id === periodId) ?? PERIODS[0]
 
@@ -159,7 +168,7 @@ export function PricingPlans({ plans }: { plans: Plan[] }) {
                 ))}
               </ul>
               <Link
-                href={`/signup?plan=${plan.name.toLowerCase()}&billing=${period.id}`}
+                href={`/signup?plan=${plan.slug}&billing=${period.id}${isHotel ? '&type=hotel' : ''}`}
                 className="platform-cta mt-8 block rounded-full py-3.5 text-center text-[14px] font-semibold transition-all"
                 style={
                   plan.highlight

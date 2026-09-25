@@ -1,15 +1,16 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
   BedDouble, Shield, Check, ArrowRight,
   Building2, CreditCard, Users, Globe, Gift,
   ChevronDown, BarChart3, Bot, ChevronRight, Star,
-  PhoneCall, FileSpreadsheet, Wrench, ClipboardList,
+  PhoneCall, FileSpreadsheet, Wrench, ClipboardList, MapPin,
 } from 'lucide-react'
 
 import { PlatformFX } from '@/components/public/platform-fx'
-import { PricingPlans } from '@/components/public/pricing-plans'
+import { PricingPlans, type Plan } from '@/components/public/pricing-plans'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { MP } from '@/lib/marketplace-theme'
@@ -94,7 +95,9 @@ const HAIR_STRONG = MP.borderStrong
 
 /* ── Content ──────────────────────────────────────────────────── */
 
-const FEATURES = [
+type Feature = { icon: typeof BedDouble; title: string; desc: string; accent: string }
+
+const HOSTEL_FEATURES: Feature[] = [
   {
     icon: BedDouble,
     title: 'Room & booking engine',
@@ -151,9 +154,74 @@ const FEATURES = [
   },
 ]
 
-const PLANS = [
+const HOTEL_FEATURES: Feature[] = [
+  {
+    icon: BedDouble,
+    title: 'Reservations & front desk',
+    desc: 'Calendar view, walk-in check-in, split payments, room holds. From boutique guesthouses to full-service hotels.',
+    accent: GOLD,
+  },
+  {
+    icon: CreditCard,
+    title: 'MoMo & card payments',
+    desc: 'Native Paystack integration. Accept MTN, Vodafone, AirtelTigo MoMo, cards, bank transfers — auto-reconciled to the ledger.',
+    accent: GOLD_SOFT,
+  },
+  {
+    icon: BarChart3,
+    title: 'GRA-compliant accounting',
+    desc: 'Double-entry ledger, chart of accounts, trial balance, P&L, VAT/NHIL/GETFund support. Audit-ready from day one.',
+    accent: FOREST_MID,
+  },
+  {
+    icon: Users,
+    title: 'Staff payroll & shifts',
+    desc: 'QR clock-in, shift scheduling, SSNIT / PAYE / Tier-2 deductions, automated payslip generation. SSNIT-ready exports.',
+    accent: GOLD,
+  },
+  {
+    icon: Globe,
+    title: 'Your brand, your domain',
+    desc: 'Custom domain (app.yourhotel.com), your logo, your colours. Guest and staff portals that feel like your own product.',
+    accent: GOLD_SOFT,
+  },
+  {
+    icon: Bot,
+    title: 'AI assistant in Twi & English',
+    desc: '"How many rooms are free this weekend?" — Ask in plain English or Twi and get instant answers from your data.',
+    accent: FOREST_MID,
+  },
+  {
+    icon: Wrench,
+    title: 'Maintenance & housekeeping',
+    desc: 'Work orders, preventive schedules, meter readings, photo evidence, housekeeping task board — track every issue to close.',
+    accent: GOLD,
+  },
+  {
+    icon: ClipboardList,
+    title: 'Guest self-service portal',
+    desc: 'Guests see their balance, view receipts, and submit requests from their phone. Less queue at the front desk.',
+    accent: GOLD_SOFT,
+  },
+  {
+    icon: Shield,
+    title: 'Row-level security',
+    desc: 'Every tenant fully isolated at the database level. Encryption at rest & in transit. Hosted on Supabase + Vercel.',
+    accent: FOREST_MID,
+  },
+]
+
+/**
+ * Numbers here (price, features list) are duplicated from
+ * lib/platform-plans.ts's PLAN_DEFS — pre-existing drift for the hostel
+ * plans (not introduced here), extended the same way for hotel's. Hotel
+ * prices are placeholders, approved 2026-09-25 pending real market data —
+ * keep in sync with lib/platform-plans.ts if either changes.
+ */
+const HOSTEL_PLANS: Plan[] = [
   {
     name: 'Starter',
+    slug: 'starter',
     price: '800',
     interval: '/month',
     desc: 'For hostels up to 50 rooms',
@@ -169,6 +237,7 @@ const PLANS = [
   },
   {
     name: 'Growth',
+    slug: 'growth',
     price: '1,000',
     interval: '/month',
     desc: 'Unlimited rooms, payroll, multi-property',
@@ -184,7 +253,44 @@ const PLANS = [
   },
 ]
 
-const FAQS = [
+const HOTEL_PLANS: Plan[] = [
+  {
+    name: 'Hotel Starter',
+    slug: 'hotel_starter',
+    price: '1,200',
+    interval: '/month',
+    desc: 'For hotels up to 20 rooms',
+    features: [
+      'Up to 20 rooms',
+      'Online bookings + Paystack MoMo/card',
+      'Invoices & digital receipts',
+      'Guest self-service portal',
+      'Email support',
+    ],
+    cta: 'Subscribe',
+    highlight: false,
+  },
+  {
+    name: 'Hotel Growth',
+    slug: 'hotel_growth',
+    price: '1,600',
+    interval: '/month',
+    desc: 'Unlimited rooms, payroll, multi-property',
+    features: [
+      'Unlimited rooms',
+      'Staff payroll (SSNIT/PAYE)',
+      'Full double-entry accounting',
+      'Multi-property portfolio view',
+      'WhatsApp + priority support',
+    ],
+    cta: 'Subscribe',
+    highlight: true,
+  },
+]
+
+type Faq = { q: string; a: string }
+
+const HOSTEL_FAQS: Faq[] = [
   {
     q: 'How long is the free trial?',
     a: '30 days with full Growth plan features. No credit card required. Your data is preserved when you upgrade — nothing migrates or is lost.',
@@ -223,6 +329,45 @@ const FAQS = [
   },
 ]
 
+const HOTEL_FAQS: Faq[] = [
+  {
+    q: 'How long is the free trial?',
+    a: '30 days with full Growth plan features. No credit card required. Your data is preserved when you upgrade — nothing migrates or is lost.',
+  },
+  {
+    q: 'Can I use my own domain like app.myhotel.com?',
+    a: 'Yes. Add a custom domain in Settings and we issue SSL automatically. Guests and staff log in via your subdomain, so the experience feels like your own product.',
+  },
+  {
+    q: 'Do you support Mobile Money?',
+    a: 'Yes — we integrate natively with Paystack to accept MTN MoMo, Vodafone Cash, AirtelTigo Money, Visa, Mastercard, and bank transfers. Payments are auto-reconciled to the accounting ledger and booking balance.',
+  },
+  {
+    q: 'Is the accounting GRA-compliant?',
+    a: 'Yes. Double-entry accounting with chart of accounts, VAT/NHIL/GETFund/COVID-19 levy support, and export-ready trial balance, P&L, and balance sheet — designed against the GRA filing checklist.',
+  },
+  {
+    q: 'How is my data secured?',
+    a: 'All data is encrypted at rest and in transit. Each hotel is fully isolated using Postgres row-level security. Hosted on Supabase + Vercel with daily backups and audit logging.',
+  },
+  {
+    q: 'Can I manage multiple hotels?',
+    a: 'The Growth plan includes a portfolio view that lets you manage multiple properties from a single dashboard — consolidated occupancy, revenue, and financials across every site.',
+  },
+  {
+    q: 'Is this built for hotels, or adapted from a hostel product?',
+    a: "It's the same platform hundreds of Ghanaian hostels already run on, with hotel-appropriate defaults — nightly billing, guest terminology, no academic fields cluttering your guest records.",
+  },
+  {
+    q: 'What happens when my trial ends?',
+    a: "Your account stays accessible and your data is preserved. You just pick a plan to continue. We will never delete your data without your explicit consent.",
+  },
+  {
+    q: 'Do you offer onboarding help?',
+    a: 'Yes. Growth customers get a guided onboarding call and priority support. We help you import existing room and guest data.',
+  },
+]
+
 const UNIVERSITIES = [
   'University of Ghana, Legon',
   'KNUST · Kumasi',
@@ -238,9 +383,24 @@ const UNIVERSITIES = [
   'Lancaster University Ghana',
 ]
 
+const DESTINATIONS = [
+  'Accra',
+  'Kumasi',
+  'Cape Coast',
+  'Elmina',
+  'Aburi',
+  'Akosombo',
+  'Ho · Volta Region',
+  'Tamale',
+  'Takoradi',
+  'Koforidua',
+  'Bolgatanga',
+  'Kokrobite',
+]
+
 type CompareValue = boolean | 'manual' | 'partial'
 
-const COMPARISON: Array<{ label: string; spreadsheet: CompareValue; traditional: CompareValue; gh: CompareValue }> = [
+const HOSTEL_COMPARISON: Array<{ label: string; spreadsheet: CompareValue; traditional: CompareValue; gh: CompareValue }> = [
   { label: 'Real-time occupancy view',  spreadsheet: false, traditional: false, gh: true },
   { label: 'MoMo & card payments',      spreadsheet: false, traditional: false, gh: true },
   { label: 'Auto-generated invoices',   spreadsheet: false, traditional: 'manual', gh: true },
@@ -252,7 +412,23 @@ const COMPARISON: Array<{ label: string; spreadsheet: CompareValue; traditional:
   { label: 'Works on phone',            spreadsheet: false, traditional: false, gh: true },
 ]
 
-const TESTIMONIALS = [
+const HOTEL_COMPARISON: Array<{ label: string; spreadsheet: CompareValue; traditional: CompareValue; gh: CompareValue }> = [
+  { label: 'Real-time room availability', spreadsheet: false, traditional: false, gh: true },
+  { label: 'MoMo & card payments',        spreadsheet: false, traditional: false, gh: true },
+  { label: 'Auto-generated invoices',     spreadsheet: false, traditional: 'manual', gh: true },
+  { label: 'GRA-compliant accounting',    spreadsheet: false, traditional: 'partial', gh: true },
+  { label: 'Guest self-service',          spreadsheet: false, traditional: false, gh: true },
+  { label: 'Payroll w/ SSNIT/PAYE',       spreadsheet: 'manual', traditional: 'manual', gh: true },
+  { label: 'Multi-property portfolio',    spreadsheet: false, traditional: false, gh: true },
+  { label: 'Daily off-site backups',      spreadsheet: false, traditional: false, gh: true },
+  { label: 'Works on phone',              spreadsheet: false, traditional: false, gh: true },
+]
+
+/**
+ * Hostel-only — omitted entirely for hotels rather than inventing quotes for
+ * a vertical with zero live tenants (see the page's top-of-file note).
+ */
+const HOSTEL_TESTIMONIALS = [
   {
     quote: 'Switched from Excel and the front desk queue disappeared overnight. Residents check their balance on their phones now.',
     name: 'Akua Boateng',
@@ -307,7 +483,7 @@ const softwareLd = {
   url: SITE_URL,
   description:
     'All-in-one hostel management: bookings, MoMo payments, GRA accounting, payroll, occupant portal.',
-  offers: PLANS.map((p) => ({
+  offers: HOSTEL_PLANS.map((p) => ({
     '@type': 'Offer',
     name: `${p.name} plan`,
     price: p.price.replace(/,/g, ''),
@@ -325,7 +501,7 @@ const softwareLd = {
 const faqLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  mainEntity: FAQS.map((f) => ({
+  mainEntity: HOSTEL_FAQS.map((f) => ({
     '@type': 'Question',
     name: f.q,
     acceptedAnswer: { '@type': 'Answer', text: f.a },
@@ -334,8 +510,27 @@ const faqLd = {
 
 /* ─────────────────────────────────────────────────────────────── */
 
-export default function ForOwnersPage() {
-  const heroWords = ['Every', 'bed', 'booked.']
+export default async function ForOwnersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>
+}) {
+  const { type } = await searchParams
+  const headerType = (await headers()).get('x-business-type')
+  const isHotel = (type ?? headerType) === 'hotel'
+
+  const nounSingular    = isHotel ? 'hotel'  : 'hostel'
+  const nounPlural      = isHotel ? 'hotels' : 'hostels'
+  const guestNoun       = isHotel ? 'guest'  : 'occupant'
+  const signupHref      = `/signup?plan=trial${isHotel ? '&type=hotel' : ''}`
+
+  const FEATURES    = isHotel ? HOTEL_FEATURES    : HOSTEL_FEATURES
+  const PLANS       = isHotel ? HOTEL_PLANS       : HOSTEL_PLANS
+  const FAQS        = isHotel ? HOTEL_FAQS        : HOSTEL_FAQS
+  const COMPARISON  = isHotel ? HOTEL_COMPARISON  : HOSTEL_COMPARISON
+  const MARQUEE     = isHotel ? DESTINATIONS      : UNIVERSITIES
+
+  const heroWords = isHotel ? ['Every', 'room', 'booked.'] : ['Every', 'bed', 'booked.']
 
   return (
     <div
@@ -375,7 +570,7 @@ export default function ForOwnersPage() {
 
         <div className="relative mx-auto max-w-6xl px-5 pb-20 pt-20 text-center sm:px-6 sm:pb-28 md:pt-36">
           <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
-            For hostel owners
+            For {nounSingular} owners
           </p>
 
           {/* Announcement pill */}
@@ -432,7 +627,7 @@ export default function ForOwnersPage() {
                 letterSpacing: '-0.02em',
               }}
             >
-              The hostel operating system for Ghana.
+              The {nounSingular} operating system for Ghana.
             </span>
           </h1>
 
@@ -443,8 +638,8 @@ export default function ForOwnersPage() {
             data-platform-reveal-delay="450"
           >
             One dashboard for bookings, Mobile Money, GRA-compliant accounting,
-            SSNIT payroll and the occupant portal. Built in Accra, trusted by
-            hostels from Legon to Tamale.
+            SSNIT payroll and the {guestNoun} portal. Built in Accra, trusted by
+            {' '}{isHotel ? 'hotels across Ghana' : 'hostels from Legon to Tamale'}.
           </p>
 
           {/* CTA buttons */}
@@ -454,7 +649,7 @@ export default function ForOwnersPage() {
             data-platform-reveal-delay="600"
           >
             <Link
-              href="/signup?plan=trial"
+              href={signupHref}
               data-platform-magnetic
               className="platform-cta group inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-semibold sm:w-auto"
               style={{
@@ -518,12 +713,12 @@ export default function ForOwnersPage() {
                   className="ml-4 flex-1 rounded-md py-1 px-3 text-center text-[10px]"
                   style={{ background: 'rgba(20,35,29,0.04)', color: 'rgba(20,35,29,0.45)' }}
                 >
-                  app.abremponghostel.com/dashboard
+                  {isHotel ? 'app.yourhotel.com/dashboard' : 'app.abremponghostel.com/dashboard'}
                 </div>
               </div>
               <Image
                 src="/dashboard-hero.jpg"
-                alt="GH Hostels dashboard preview"
+                alt={`Dashboard preview — the same platform runs both hostels and hotels`}
                 width={1024}
                 height={1024}
                 className="h-auto w-full"
@@ -548,15 +743,25 @@ export default function ForOwnersPage() {
         }}
       >
         <div
-          className="mx-auto grid max-w-6xl grid-cols-2 divide-y md:grid-cols-4 md:divide-x md:divide-y-0"
+          className={`mx-auto grid max-w-6xl divide-y ${isHotel ? 'grid-cols-2 md:divide-x md:divide-y-0' : 'grid-cols-2 md:grid-cols-4 md:divide-x md:divide-y-0'}`}
           style={{ borderColor: HAIR }}
         >
-          {[
-            { value: 500, prefix: '', suffix: '+', label: 'Hostels managed' },
-            { value: 2,   prefix: 'GH₵ ', suffix: 'M+', label: 'Processed monthly' },
-            { value: 99.9, prefix: '', suffix: '%', decimals: 1, label: 'Uptime guarantee' },
-            { value: 16, prefix: '', suffix: ' regions', label: 'Across Ghana' },
-          ].map((s, i) => (
+          {/* Hotels: no customer-count/volume stats yet — those would be
+              fabricated for a vertical with zero live tenants. Only the
+              platform-level claims (uptime, coverage) apply honestly to
+              both verticals since it's the same infrastructure. */}
+          {(isHotel
+            ? [
+                { value: 99.9, prefix: '', suffix: '%', decimals: 1, label: 'Uptime guarantee' },
+                { value: 16, prefix: '', suffix: ' regions', label: 'Across Ghana' },
+              ]
+            : [
+                { value: 500, prefix: '', suffix: '+', label: 'Hostels managed' },
+                { value: 2,   prefix: 'GH₵ ', suffix: 'M+', label: 'Processed monthly' },
+                { value: 99.9, prefix: '', suffix: '%', decimals: 1, label: 'Uptime guarantee' },
+                { value: 16, prefix: '', suffix: ' regions', label: 'Across Ghana' },
+              ]
+          ).map((s, i) => (
             <div
               key={s.label}
               className="px-4 py-7 text-center sm:px-6 sm:py-10"
@@ -585,27 +790,30 @@ export default function ForOwnersPage() {
         </div>
       </section>
 
-      {/* ── UNIVERSITY MARQUEE ──────────────────────────────────── */}
+      {/* ── MARQUEE — institutions for hostels, destinations for hotels ── */}
       <section className="py-14 sm:py-18" style={{ borderBottom: `1px solid ${HAIR}` }}>
         <p
           className="mb-7 text-center text-[11px] font-medium uppercase tracking-[0.24em]"
           style={{ color: 'rgba(20,35,29,0.45)' }}
         >
-          Powering hostels serving these institutions
+          {isHotel ? 'Built for hotels across these destinations' : 'Powering hostels serving these institutions'}
         </p>
         <div className="platform-marquee-mask overflow-hidden">
           <div className="platform-marquee">
-            {[...UNIVERSITIES, ...UNIVERSITIES].map((u, i) => (
-              <span
-                key={`${u}-${i}`}
-                className="mx-6 inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-[14px] font-medium sm:text-[15px]"
-                style={{ color: 'rgba(20,35,29,0.62)' }}
-              >
-                <Building2 className="h-3.5 w-3.5" style={{ color: GOLD }} />
-                {u}
-                <span className="ml-6 inline-block h-1 w-1 rounded-full" style={{ background: GOLD_DEEP }} />
-              </span>
-            ))}
+            {[...MARQUEE, ...MARQUEE].map((u, i) => {
+              const MarqueeIcon = isHotel ? MapPin : Building2
+              return (
+                <span
+                  key={`${u}-${i}`}
+                  className="mx-6 inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-[14px] font-medium sm:text-[15px]"
+                  style={{ color: 'rgba(20,35,29,0.62)' }}
+                >
+                  <MarqueeIcon className="h-3.5 w-3.5" style={{ color: GOLD }} />
+                  {u}
+                  <span className="ml-6 inline-block h-1 w-1 rounded-full" style={{ background: GOLD_DEEP }} />
+                </span>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -621,7 +829,7 @@ export default function ForOwnersPage() {
               className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[42px] md:text-[64px]"
               style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
             >
-              Everything your hostel needs,
+              Everything your {nounSingular} needs,
               <span className="block italic" style={{ color: 'rgba(20,35,29,0.55)' }}>
                 elegantly unified.
               </span>
@@ -690,7 +898,7 @@ export default function ForOwnersPage() {
             >
               Stop bleeding hours.
               <span className="block italic" style={{ color: 'rgba(20,35,29,0.55)' }}>
-                Spreadsheets weren&apos;t built for hostels.
+                Spreadsheets weren&apos;t built for {nounPlural}.
               </span>
             </h2>
           </div>
@@ -742,70 +950,72 @@ export default function ForOwnersPage() {
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ────────────────────────────────────────── */}
-      <section
-        className="py-20 sm:py-28"
-        style={{ borderTop: `1px solid ${HAIR}`, background: 'rgba(15,76,58,0.10)' }}
-      >
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
-              Loved by hostel owners
-            </p>
-            <h2
-              className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[42px] md:text-[58px]"
-              style={{ fontFamily: 'Georgia, serif', color: IVORY }}
-            >
-              The team that
-              <span className="italic" style={{ color: 'rgba(20,35,29,0.55)' }}> sleeps at night.</span>
-            </h2>
-          </div>
-
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {TESTIMONIALS.map((t, i) => (
-              <figure
-                key={i}
-                className="platform-glow-card flex flex-col rounded-2xl p-7"
-                style={{
-                  border: `1px solid ${HAIR_STRONG}`,
-                  background:
-                    'linear-gradient(180deg, rgba(20,35,29,0.03) 0%, rgba(20,35,29,0.005) 100%)',
-                }}
-                data-platform-reveal
-                data-platform-reveal-delay={String(i * 80)}
+      {/* ── TESTIMONIALS — hostel-only, see HOSTEL_TESTIMONIALS note ── */}
+      {!isHotel && (
+        <section
+          className="py-20 sm:py-28"
+          style={{ borderTop: `1px solid ${HAIR}`, background: 'rgba(15,76,58,0.10)' }}
+        >
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="text-center" data-platform-reveal>
+              <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
+                Loved by hostel owners
+              </p>
+              <h2
+                className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[42px] md:text-[58px]"
+                style={{ fontFamily: 'Georgia, serif', color: IVORY }}
               >
-                <div className="flex gap-0.5">
-                  {Array.from({ length: t.rating }).map((_, idx) => (
-                    <Star key={idx} className="h-4 w-4 fill-current" style={{ color: GOLD }} />
-                  ))}
-                </div>
-                <blockquote
-                  className="mt-5 flex-1 text-[15px] leading-relaxed"
-                  style={{ color: 'rgba(20,35,29,0.85)' }}
+                The team that
+                <span className="italic" style={{ color: 'rgba(20,35,29,0.55)' }}> sleeps at night.</span>
+              </h2>
+            </div>
+
+            <div className="mt-14 grid gap-5 md:grid-cols-3">
+              {HOSTEL_TESTIMONIALS.map((t, i) => (
+                <figure
+                  key={i}
+                  className="platform-glow-card flex flex-col rounded-2xl p-7"
+                  style={{
+                    border: `1px solid ${HAIR_STRONG}`,
+                    background:
+                      'linear-gradient(180deg, rgba(20,35,29,0.03) 0%, rgba(20,35,29,0.005) 100%)',
+                  }}
+                  data-platform-reveal
+                  data-platform-reveal-delay={String(i * 80)}
                 >
-                  &ldquo;{t.quote}&rdquo;
-                </blockquote>
-                <figcaption className="mt-6 flex items-center gap-3 pt-5" style={{ borderTop: `1px solid ${HAIR}` }}>
-                  <div
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-semibold"
-                    style={{ background: `${GOLD}22`, color: GOLD_SOFT, border: `1px solid ${GOLD}33` }}
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: t.rating }).map((_, idx) => (
+                      <Star key={idx} className="h-4 w-4 fill-current" style={{ color: GOLD }} />
+                    ))}
+                  </div>
+                  <blockquote
+                    className="mt-5 flex-1 text-[15px] leading-relaxed"
+                    style={{ color: 'rgba(20,35,29,0.85)' }}
                   >
-                    {t.name.split(' ').map((n) => n[0]).join('')}
-                  </div>
-                  <div>
-                    <p className="text-[13.5px] font-semibold" style={{ color: IVORY }}>
-                      {t.name}
-                    </p>
-                    <p className="text-[12px]" style={{ color: 'rgba(20,35,29,0.5)' }}>
-                      {t.role}
-                    </p>
-                  </div>
-                </figcaption>
-              </figure>
-            ))}
+                    &ldquo;{t.quote}&rdquo;
+                  </blockquote>
+                  <figcaption className="mt-6 flex items-center gap-3 pt-5" style={{ borderTop: `1px solid ${HAIR}` }}>
+                    <div
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-semibold"
+                      style={{ background: `${GOLD}22`, color: GOLD_SOFT, border: `1px solid ${GOLD}33` }}
+                    >
+                      {t.name.split(' ').map((n) => n[0]).join('')}
+                    </div>
+                    <div>
+                      <p className="text-[13.5px] font-semibold" style={{ color: IVORY }}>
+                        {t.name}
+                      </p>
+                      <p className="text-[12px]" style={{ color: 'rgba(20,35,29,0.5)' }}>
+                        {t.role}
+                      </p>
+                    </div>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── PRICING ─────────────────────────────────────────────── */}
       <section id="pricing" className="py-20 sm:py-28" style={{ borderTop: `1px solid ${HAIR}` }}>
@@ -828,7 +1038,7 @@ export default function ForOwnersPage() {
             </p>
           </div>
 
-          <PricingPlans plans={PLANS} />
+          <PricingPlans plans={PLANS} isHotel={isHotel} />
 
           <div
             className="mx-auto mt-12 flex max-w-2xl flex-col items-center justify-between gap-4 rounded-2xl p-6 sm:flex-row"
@@ -847,7 +1057,7 @@ export default function ForOwnersPage() {
               </div>
             </div>
             <Link
-              href="/signup?plan=trial"
+              href={signupHref}
               className="platform-cta w-full shrink-0 rounded-full px-5 py-2.5 text-center text-[13px] font-semibold sm:w-auto"
               style={{
                 background: `linear-gradient(135deg, ${GOLD_SOFT}, ${GOLD_DEEP})`,
@@ -934,7 +1144,7 @@ export default function ForOwnersPage() {
             data-platform-reveal
             data-platform-reveal-delay="100"
           >
-            Run your hostel
+            Run your {nounSingular}
             <span className="block italic platform-shimmer-text">like it&apos;s 2026.</span>
           </h2>
           <p
@@ -943,8 +1153,9 @@ export default function ForOwnersPage() {
             data-platform-reveal
             data-platform-reveal-delay="200"
           >
-            Join hundreds of Ghanaian hostel owners who&apos;ve already switched.
-            Set-up takes one afternoon.
+            {isHotel
+              ? "Built on the same platform hundreds of Ghanaian hostel owners already trust. Set-up takes one afternoon."
+              : "Join hundreds of Ghanaian hostel owners who've already switched. Set-up takes one afternoon."}
           </p>
           <div
             className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
@@ -952,7 +1163,7 @@ export default function ForOwnersPage() {
             data-platform-reveal-delay="300"
           >
             <Link
-              href="/signup?plan=trial"
+              href={signupHref}
               data-platform-magnetic
               className="platform-cta inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-semibold sm:w-auto"
               style={{
