@@ -9,9 +9,9 @@ import { onboardingLimiter, enforceRateLimit } from '@/lib/rate-limit'
  *
  * Server-side logo upload for the onboarding wizard's branding step.
  *
- * The wizard previously uploaded directly from the browser via
- * supabase.storage.from('tenant-logos').upload(...), the only place in this
- * codebase that does a Storage write straight from client-side JS — every
+ * The wizard previously uploaded directly from the browser straight to the
+ * tenant-logos Storage bucket, the only place in this codebase that did a
+ * Storage write straight from client-side JS — every
  * other upload (see app/api/settings/logo/route.ts) goes through a
  * server-side route like this one. That direct-from-browser call
  * consistently failed onboarding's tenant-logos RLS check ("new row
