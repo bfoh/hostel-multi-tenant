@@ -126,6 +126,12 @@ export default async function LandingPage({
 
   return (
     <div className="relative min-h-screen antialiased" style={{ background: MP.bg }}>
+      {/* TEMP DIAGNOSTIC — remove after confirming live runtime values */}
+      <div
+        dangerouslySetInnerHTML={{
+          __html: `<!-- diag rawTab=${JSON.stringify(rawTab)} tab=${tab} featuredBusinessType=${featuredBusinessType} slugs=${featuredHostels.map((h) => h.slug).join(',')} -->`,
+        }}
+      />
       <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg-light" aria-hidden="true" />
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
