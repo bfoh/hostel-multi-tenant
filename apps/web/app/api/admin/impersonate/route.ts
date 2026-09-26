@@ -1,21 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-
-async function requireSuperAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const admin = createAdminClient()
-  const { data: pa } = await admin
-    .from('platform_admins')
-    .select('id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  return pa ? user : null
-}
+import { requireSuperAdmin } from '@/lib/auth/require-super-admin'
 
 /**
  * POST /api/admin/impersonate
