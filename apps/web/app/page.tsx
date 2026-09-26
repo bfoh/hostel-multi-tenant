@@ -10,7 +10,7 @@ import { ListingCard } from '@/components/public/listing-card'
 import { searchListings } from '@/lib/directory'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
-import { HeroSearch, SEARCH_BUSINESS_TYPE, type TabKey } from '@/components/marketplace/hero-search'
+import { HeroSearch, type TabKey } from '@/components/marketplace/hero-search'
 import { MP } from '@/lib/marketplace-theme'
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -119,19 +119,18 @@ export default async function LandingPage({
   // can reflect it too — it has no other way to see that client-side state.
   const { tab: rawTab } = await searchParams
   const tab: TabKey = rawTab === 'hotels' || rawTab === 'apartments' ? rawTab : 'hostels'
-  const featuredBusinessType = SEARCH_BUSINESS_TYPE[tab] ?? 'hostel'
+  // Computed inline rather than via the imported SEARCH_BUSINESS_TYPE map —
+  // that object lookup was observed resolving to `undefined` here (a Server
+  // Component) in production despite working fine inside hero-search.tsx
+  // (a Client Component), a cross-module bundling quirk in this project's
+  // Turbopack build. Inlining removes the ambiguity entirely.
+  const featuredBusinessType: 'hostel' | 'hotel' = tab === 'hotels' || tab === 'apartments' ? 'hotel' : 'hostel'
   const tabLabel = TAB_LABEL[tab] ?? 'Hostels'
 
   const { listings: featuredHostels } = await searchListings({ businessType: featuredBusinessType, limit: 6, sort: 'newest' })
 
   return (
     <div className="relative min-h-screen antialiased" style={{ background: MP.bg }}>
-      {/* TEMP DIAGNOSTIC — remove after confirming live runtime values */}
-      <div
-        dangerouslySetInnerHTML={{
-          __html: `<!-- diag rawTab=${JSON.stringify(rawTab)} tab=${tab} featuredBusinessType=${featuredBusinessType} slugs=${featuredHostels.map((h) => h.slug).join(',')} -->`,
-        }}
-      />
       <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg-light" aria-hidden="true" />
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
