@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { Plus, CalendarCheck, LayoutGrid, Upload } from 'lucide-react'
+import { Plus, CalendarCheck, LayoutGrid, Upload, Search } from 'lucide-react'
 
 import { getBookings } from '@/lib/data/bookings'
 import { BookingsBulkList } from '@/components/bookings/bookings-bulk-list'
@@ -26,12 +26,25 @@ const STATUSES = [
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ status?: string; search?: string; from?: string; to?: string }>
 }) {
-  const { status } = await searchParams
-  const bookings = await getBookings({ status })
+  const { status, search, from, to } = await searchParams
+  const bookings = await getBookings({ status, search, from, to })
 
   const activeStatus = status ?? 'all'
+
+  // Status tab links need to preserve whatever search/date filter is active,
+  // and vice versa (the filter form carries the active status as a hidden
+  // field) — so switching one axis never silently drops the other.
+  const buildHref = (overrides: Record<string, string | undefined>) => {
+    const merged: Record<string, string | undefined> = { status, search, from, to, ...overrides }
+    const params = new URLSearchParams()
+    for (const [k, v] of Object.entries(merged)) {
+      if (v) params.set(k, v)
+    }
+    const qs = params.toString()
+    return qs ? `/bookings?${qs}` : '/bookings'
+  }
 
   // Trial expired without subscribing: bookings stay viewable but not
   // creatable/editable — see middleware.ts's minimal-dashboard allow-list,
@@ -105,6 +118,7 @@ export default async function BookingsPage({
           <p className="mt-0.5 text-sm text-text-secondary">
             {bookings.length} booking{bookings.length !== 1 ? 's' : ''}
             {activeStatus !== 'all' ? ` · ${activeStatus.replace('_', ' ')}` : ''}
+            {search ? ` · matching "${search}"` : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -153,7 +167,7 @@ export default async function BookingsPage({
         {STATUSES.map((s) => (
           <Link
             key={s.value}
-            href={s.value === 'all' ? '/bookings' : `/bookings?status=${s.value}`}
+            href={buildHref({ status: s.value === 'all' ? undefined : s.value })}
             className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               activeStatus === s.value
                 ? 'bg-brand text-brand-fg shadow-sm'
@@ -164,6 +178,50 @@ export default async function BookingsPage({
           </Link>
         ))}
       </div>
+
+      {/* ── Search + date-range filter ───────────────────────────── */}
+      <form action="/bookings" method="get" className="flex flex-wrap items-center gap-2">
+        {activeStatus !== 'all' && <input type="hidden" name="status" value={activeStatus} />}
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-disabled" />
+          <input
+            type="text"
+            name="search"
+            defaultValue={search ?? ''}
+            placeholder="Search by name, phone, ref, or room…"
+            className="w-full rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-brand focus:outline-none"
+          />
+        </div>
+        <input
+          type="date"
+          name="from"
+          defaultValue={from ?? ''}
+          aria-label="Check-in from"
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
+        />
+        <span className="text-sm text-text-secondary">to</span>
+        <input
+          type="date"
+          name="to"
+          defaultValue={to ?? ''}
+          aria-label="Check-in to"
+          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
+        />
+        <button
+          type="submit"
+          className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+        >
+          Filter
+        </button>
+        {(search || from || to) && (
+          <Link
+            href={activeStatus !== 'all' ? `/bookings?status=${activeStatus}` : '/bookings'}
+            className="text-sm text-text-secondary underline hover:text-text-primary"
+          >
+            Clear
+          </Link>
+        )}
+      </form>
 
       {/* ── Bookings list ────────────────────────────────────────── */}
       {bookings.length === 0 ? (

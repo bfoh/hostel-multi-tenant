@@ -67,7 +67,7 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { status, listed_publicly } = body
+  const { status, listed_publicly, business_type } = body
 
   if (status !== undefined) {
     const VALID_STATUSES = ['trial', 'trial_expired', 'active', 'suspended', 'cancelled']
@@ -80,7 +80,11 @@ export async function PATCH(
     return NextResponse.json({ error: 'listed_publicly must be a boolean' }, { status: 400 })
   }
 
-  if (status === undefined && listed_publicly === undefined) {
+  if (business_type !== undefined && !['hostel', 'hotel'].includes(business_type)) {
+    return NextResponse.json({ error: 'business_type must be hostel or hotel' }, { status: 400 })
+  }
+
+  if (status === undefined && listed_publicly === undefined && business_type === undefined) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
   }
 
@@ -90,6 +94,7 @@ export async function PATCH(
     .update({
       ...(status !== undefined ? { status } : {}),
       ...(listed_publicly !== undefined ? { listed_publicly } : {}),
+      ...(business_type !== undefined ? { business_type } : {}),
     })
     .eq('id', id)
 

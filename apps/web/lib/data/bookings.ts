@@ -1,7 +1,7 @@
 import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 
-export async function getBookings(filter?: { status?: string; search?: string }) {
+export async function getBookings(filter?: { status?: string; search?: string; from?: string; to?: string }) {
   const tenantId = await getServerTenantId()
   if (!tenantId) return []
 
@@ -23,10 +23,33 @@ export async function getBookings(filter?: { status?: string; search?: string })
     // filter.status comes from URL search params (string); cast is safe as DB ignores invalid values
     query = query.eq('status', filter.status as 'enquiry')
   }
+  if (filter?.from) query = query.gte('check_in_date', filter.from)
+  if (filter?.to)   query = query.lte('check_in_date', filter.to)
 
   const { data, error } = await query
   if (error) return []
-  return data ?? []
+
+  let rows = data ?? []
+
+  // Free-text search spans joined occupant/room columns, which PostgREST
+  // can't OR-filter across in one query — done here instead, over the
+  // already-limited page rather than a separate unbounded query.
+  const q = filter?.search?.trim().toLowerCase()
+  if (q) {
+    rows = rows.filter((b) => {
+      const occ  = Array.isArray(b.occupant) ? b.occupant[0] : b.occupant
+      const room = Array.isArray(b.room) ? b.room[0] : b.room
+      return (
+        b.booking_ref?.toLowerCase().includes(q) ||
+        occ?.first_name?.toLowerCase().includes(q) ||
+        occ?.last_name?.toLowerCase().includes(q) ||
+        occ?.phone?.toLowerCase().includes(q) ||
+        room?.room_number?.toLowerCase().includes(q)
+      )
+    })
+  }
+
+  return rows
 }
 
 export async function getBookingById(id: string) {

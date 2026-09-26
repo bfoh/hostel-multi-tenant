@@ -192,6 +192,7 @@ export default async function TenantAdminPage({
         tenantSlug={tenant.slug}
         currentStatus={tenant.status}
         listedPublicly={tenant.listed_publicly}
+        businessType={tenant.business_type}
       />
     </div>
   )
