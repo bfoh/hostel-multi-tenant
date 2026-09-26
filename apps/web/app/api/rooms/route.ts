@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       room_number: parsed.data.room_number,
       category_id: parsed.data.category_id,
       floor:       parsed.data.floor ?? null,
-      block:       parsed.data.block ?? null,
+      block:       parsed.data.block?.trim() || '',
       notes:       parsed.data.notes ?? null,
     })
     .select('id')

@@ -125,6 +125,7 @@ export type Database = {
           listed_publicly: boolean
           booking_payment_mode: 'online' | 'pay_at_hostel'
           business_type: 'hostel' | 'hotel'
+          hero_image_url: string | null
           created_at: string
           updated_at: string
         }
@@ -185,6 +186,7 @@ export type Database = {
           listed_publicly?: boolean
           booking_payment_mode?: 'online' | 'pay_at_hostel'
           business_type?: 'hostel' | 'hotel'
+          hero_image_url?: string | null
         }
         Update: {
           slug?: string
@@ -242,6 +244,7 @@ export type Database = {
           listed_publicly?: boolean
           booking_payment_mode?: 'online' | 'pay_at_hostel'
           business_type?: 'hostel' | 'hotel'
+          hero_image_url?: string | null
         }
         Relationships: []
       }

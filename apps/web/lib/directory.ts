@@ -12,8 +12,10 @@ export interface DirectoryListing {
   business_type:  BusinessType
   from_rate:      number
   category_count: number
-  /** First photo found across this tenant's active room categories — an
-   *  owner-uploaded room photo, not a stock image or the tenant's logo. */
+  /** The tenant's own owner-uploaded property photo (tenants.hero_image_url)
+   *  when set, else the first photo found across its active room
+   *  categories — always a real owner upload, never a stock image or the
+   *  tenant's logo. */
   hero_image_url: string | null
   created_at:     string
 }
@@ -58,7 +60,7 @@ export async function searchListings(
   // regional directory, without needing a materialized view.
   let query = supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, primary_color, address_city, address_region, business_type, created_at, room_categories!inner(base_rate, is_active, image_urls, sort_order)')
+    .select('id, slug, name, tagline, logo_url, hero_image_url, primary_color, address_city, address_region, business_type, created_at, room_categories!inner(base_rate, is_active, image_urls, sort_order)')
     .eq('listed_publicly', true)
     .eq('business_type', businessType)
     .in('status', ['trial', 'active', 'trial_expired'])
@@ -93,7 +95,8 @@ export async function searchListings(
         slug: row.slug, name: row.name, tagline: row.tagline, logo_url: row.logo_url,
         primary_color: row.primary_color, address_city: row.address_city, address_region: row.address_region,
         business_type: row.business_type,
-        from_rate: minRate, category_count: activeRates.length, hero_image_url: firstPhoto,
+        from_rate: minRate, category_count: activeRates.length,
+        hero_image_url: row.hero_image_url ?? firstPhoto,
         created_at: row.created_at,
       })
     }

@@ -44,9 +44,15 @@ export async function PUT(
     }
   }
 
+  // block is NOT NULL DEFAULT '' in the DB (migration 090) — an explicit
+  // null here (as opposed to omitting the key) bypasses the default and
+  // trips the constraint, so coerce it only when the caller actually sent it.
+  const updates: typeof parsed.data = { ...parsed.data }
+  if ('block' in updates) updates.block = updates.block?.trim() || ''
+
   const { data, error } = await supabase
     .from('rooms')
-    .update(parsed.data)
+    .update(updates)
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .select('id')

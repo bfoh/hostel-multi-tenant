@@ -26,6 +26,7 @@ const schema = z.object({
   // Step 2: Branding
   primary_color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
   logo_url:      z.string().url().optional().nullable(),
+  hero_image_url: z.string().url().optional().nullable(),
 
   // Step 3: Room category
   category_name: z.string().min(1).max(80),
@@ -38,6 +39,7 @@ const schema = z.object({
   room_number: z.string().min(1).max(20),
   block:       z.string().max(50).optional().nullable(),
   floor:       z.number().int().min(0).max(100).optional().nullable(),
+  room_image_urls: z.array(z.string().url()).max(12).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -122,6 +124,7 @@ export async function POST(request: NextRequest) {
       timezone:             d.timezone ?? 'Africa/Accra',
       primary_color:        d.primary_color ?? null,
       logo_url:             d.logo_url ?? null,
+      hero_image_url:       d.hero_image_url ?? null,
       custom_domain:        d.custom_domain ?? null,
       onboarding_completed: true,
       ...(selectedPlan ? { selected_plan: selectedPlan } : {}),
@@ -141,6 +144,7 @@ export async function POST(request: NextRequest) {
       rate_unit:  d.rate_unit,
       capacity:   d.capacity,
       amenities:  [],
+      image_urls: d.room_image_urls ?? [],
       is_active:  true,
       sort_order: 1,
     })
@@ -156,7 +160,7 @@ export async function POST(request: NextRequest) {
       tenant_id:           tenantId,
       category_id:         category.id,
       room_number:         d.room_number,
-      block:               d.block ?? null,
+      block:               d.block?.trim() || '',
       floor:               d.floor ?? null,
       status:              'available',
       housekeeping_status: 'clean',

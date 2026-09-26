@@ -8,6 +8,7 @@ import {
   Globe, Upload, X,
 } from 'lucide-react'
 import { ColorPickerField } from './color-picker'
+import { RoomPhotosField } from './room-photos-field'
 import { extractDominantColor } from '@/lib/color/extract-dominant-color'
 
 /* ── Types ─────────────────────────────────────────────────────────── */
@@ -27,6 +28,7 @@ interface FormData {
   // Step 2: Branding
   primary_color:  string
   logo_url:       string
+  hero_image_url: string
   // Step 3: Rooms
   category_name:  string
   category_type:  'single' | 'double' | 'triple' | 'quad' | 'dormitory' | 'suite' | 'studio' | 'shared'
@@ -36,6 +38,7 @@ interface FormData {
   room_number:    string
   block:          string
   floor:          string
+  room_image_urls: string[]
 }
 
 type StepKey = 'identity' | 'branding' | 'rooms' | 'done'
@@ -192,6 +195,11 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
   const [logoError,     setLogoError]     = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Property photo upload state
+  const [heroUploading, setHeroUploading] = useState(false)
+  const [heroError,     setHeroError]     = useState('')
+  const heroFileRef = useRef<HTMLInputElement>(null)
+
   const [form, setForm] = useState<FormData>({
     name:           initial.name,
     slug:           initial.slug,
@@ -205,6 +213,7 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
     timezone:       initial.timezone,
     primary_color:  initial.primary_color,
     logo_url:       initial.logo_url,
+    hero_image_url: '',
     category_name:  'Standard Room',
     category_type:  'single',
     base_rate_ghs:  '',
@@ -213,6 +222,7 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
     room_number:    '101',
     block:          '',
     floor:          '',
+    room_image_urls: [],
   })
 
   const currentStep = STEPS[stepIdx]
@@ -326,6 +336,27 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
     }
   }
 
+  async function handleHeroImageUpload(file: File) {
+    if (!file || !tenantId) return
+    setHeroUploading(true)
+    setHeroError('')
+    try {
+      const body = new FormData()
+      body.append('photo', file)
+      body.append('tenantId', tenantId)
+
+      const res = await fetch('/api/onboarding/hero-image', { method: 'POST', body })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Upload failed')
+
+      set('hero_image_url', json.hero_image_url)
+    } catch (e: any) {
+      setHeroError(e?.message ?? 'Upload failed. You can add a property photo later in Settings.')
+    } finally {
+      setHeroUploading(false)
+    }
+  }
+
   async function submit() {
     setError('')
     setSubmitting(true)
@@ -347,6 +378,7 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
           timezone:       form.timezone,
           primary_color:  form.primary_color,
           logo_url:       form.logo_url || null,
+          hero_image_url: form.hero_image_url || null,
           category_name:  form.category_name.trim(),
           category_type:  form.category_type,
           base_rate:      Math.round(parseFloat(form.base_rate_ghs || '0') * 100),
@@ -355,6 +387,7 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
           room_number:    form.room_number.trim(),
           block:          form.block.trim() || null,
           floor:          form.floor ? parseInt(form.floor) : null,
+          room_image_urls: form.room_image_urls,
         }),
       })
       const data = await res.json()
@@ -611,6 +644,51 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
                   </div>
                 </Field>
 
+                {/* Property photo */}
+                <Field label="Property photo" hint="Shown as your listing's main photo on the marketplace">
+                  <div className="flex items-center gap-3">
+                    {form.hero_image_url ? (
+                      <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={form.hero_image_url} alt="Property" className="h-20 w-32 rounded-xl object-cover border border-border" />
+                        <button
+                          onClick={() => set('hero_image_url', '')}
+                          className="absolute -top-1.5 -right-1.5 rounded-full bg-danger text-white p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex h-20 w-32 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-border text-text-disabled">
+                        <Building2 className="h-6 w-6" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <button
+                        type="button"
+                        onClick={() => heroFileRef.current?.click()}
+                        disabled={heroUploading}
+                        className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-text-secondary hover:bg-surface-raised transition-colors disabled:opacity-50"
+                      >
+                        {heroUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        {heroUploading ? 'Uploading…' : 'Upload photo'}
+                      </button>
+                      {heroError ? (
+                        <p className="mt-1 text-xs text-danger">{heroError}</p>
+                      ) : (
+                        <p className="text-xs text-text-tertiary mt-1">Or add it later in Settings</p>
+                      )}
+                    </div>
+                    <input
+                      ref={heroFileRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleHeroImageUpload(f) }}
+                    />
+                  </div>
+                </Field>
+
                 {/* Colour picker */}
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">Primary colour</label>
@@ -684,6 +762,12 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
                       </select>
                     </Field>
                   </div>
+
+                  <RoomPhotosField
+                    tenantId={tenantId}
+                    value={form.room_image_urls}
+                    onChange={(urls) => set('room_image_urls', urls)}
+                  />
                 </div>
 
                 {/* First room */}

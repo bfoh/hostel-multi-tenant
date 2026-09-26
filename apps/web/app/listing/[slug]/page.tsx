@@ -24,7 +24,7 @@ async function getListing(slug: string) {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_city, address_region, custom_domain, website_content, listed_publicly, status, business_type')
+    .select('id, slug, name, tagline, logo_url, hero_image_url, primary_color, contact_phone, contact_email, address_city, address_region, custom_domain, website_content, listed_publicly, status, business_type')
     .eq('slug', slug)
     .single()
 
@@ -68,10 +68,15 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
 
   const location = [tenant.address_city, tenant.address_region].filter(Boolean).join(', ')
 
-  // Gallery: prefer the CMS gallery, fall back to every room photo across
-  // categories (real, owner-uploaded — no stock imagery).
+  // Gallery: the owner's property photo leads when set, followed by the CMS
+  // gallery (or every room photo across categories as a fallback) — all
+  // real, owner-uploaded images, no stock imagery.
   const roomPhotos = categories.flatMap((c) => c.image_urls ?? [])
-  const gallery = (cms.gallery_urls && cms.gallery_urls.length > 0 ? cms.gallery_urls : roomPhotos).slice(0, 9)
+  const baseGallery = cms.gallery_urls && cms.gallery_urls.length > 0 ? cms.gallery_urls : roomPhotos
+  const gallery = (tenant.hero_image_url
+    ? [tenant.hero_image_url, ...baseGallery.filter((u) => u !== tenant.hero_image_url)]
+    : baseGallery
+  ).slice(0, 9)
 
   // Most popular facilities: dedupe amenities across all room categories.
   const facilities = Array.from(new Set(categories.flatMap((c) => c.amenities ?? []))).slice(0, 10)
