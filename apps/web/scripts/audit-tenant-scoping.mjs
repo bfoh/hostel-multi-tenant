@@ -138,6 +138,14 @@ function findFromCalls(src) {
   const re = /\.from\(['"]([^'"]+)['"]\)/g
   let m
   while ((m = re.exec(src)) !== null) {
+    // `.storage.from('bucket')` selects a Storage bucket, not a tenant
+    // table — out of scope for this script by design (see header comment
+    // #2), same as `.rpc()`. Previously this only "worked" by accident
+    // when the storage call happened to sit far enough from the nearest
+    // createAdminClient() text; once a caller uses the same admin client
+    // for both, the accident stops helping, so check explicitly instead.
+    const before = src.slice(Math.max(0, m.index - 40), m.index)
+    if (/\.storage\s*$/.test(before)) continue
     out.push({ index: m.index, table: m[1] })
   }
   return out
