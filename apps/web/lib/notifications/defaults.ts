@@ -25,6 +25,7 @@ export type EventType =
   | 'walkin_receipt_gym'
   | 'walkin_receipt_sports'
   | 'walkin_receipt_laundry'
+  | 'stay_extended'
 
 export type Channel = 'sms' | 'email'
 
@@ -325,5 +326,26 @@ export const DEFAULT_TEMPLATES: TemplateDefault[] = [
     body:
       '{{hostel_name}}: Laundry received · {{weight}}kg · {{amount}}. ' +
       'Pickup code {{token}}. Ready by {{ready_at}}.',
+  },
+
+  // ── Stay extended (hotel-only) ───────────────────────────────────────────
+  {
+    event_type: 'stay_extended',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, your stay at {{hostel_name}} has been extended to ' +
+      '{{check_out_date}}. Extra charge: {{amount}}. Ref: {{booking_ref}}.',
+  },
+  {
+    event_type: 'stay_extended',
+    channel:    'email',
+    subject:    'Your stay has been extended — {{hostel_name}}',
+    body:
+      'Dear {{first_name}},\n\n' +
+      'Your stay at {{hostel_name}} has been extended.\n\n' +
+      'Booking Ref: {{booking_ref}}\n' +
+      'New check-out: {{check_out_date}}\n' +
+      'Additional charge: {{amount}}\n\n' +
+      'See you soon!',
   },
 ]

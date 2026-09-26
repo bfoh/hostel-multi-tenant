@@ -239,6 +239,37 @@ export function groupBookingConfirmationHtml(opts: {
   return baseTemplate(hostelName, primaryColor, content, logoUrl)
 }
 
+/* ── Stay extension email (hotel-only) ──────────────────────────────────── */
+
+export function stayExtensionHtml(opts: {
+  hostelName:   string
+  primaryColor: string
+  logoUrl?:     string | null
+  guestName:    string
+  bookingRef:   string
+  roomName:     string
+  checkOutDate: string
+  amountGHS:    string
+}) {
+  const { hostelName, primaryColor, logoUrl, guestName, bookingRef, roomName, checkOutDate, amountGHS } = opts
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Stay Extended</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">
+      Hi ${guestName}, your stay at <strong>${hostelName}</strong> has been extended. Here are your updated details:
+    </p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+      ${row('Booking ref', bookingRef)}
+      ${row('Room', roomName)}
+      ${row('New check-out', checkOutDate)}
+      ${row('Additional charge', amountGHS)}
+    </table>
+    <p style="font-size:13px;color:#6b7280;margin:0;">We look forward to having you stay a little longer!</p>
+  `
+
+  return baseTemplate(hostelName, primaryColor, content, logoUrl)
+}
+
 /* ── Payment receipt email ──────────────────────────────────────────────── */
 
 export function paymentReceiptHtml(opts: {

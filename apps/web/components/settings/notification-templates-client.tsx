@@ -21,6 +21,7 @@ const EVENT_TYPES = [
   { value: 'checkout_reminder',    label: 'Check-out / lease expiry reminder' },
   { value: 'lease_expiry_reminder',label: 'Lease expiry (30-day)' },
   { value: 'deposit_refund',       label: 'Deposit refund notification' },
+  { value: 'stay_extended',        label: 'Stay extended (hotel)' },
 ]
 
 const VARS: Record<string, string[]> = {
@@ -32,6 +33,7 @@ const VARS: Record<string, string[]> = {
   checkout_reminder:     ['{{first_name}}', '{{check_out_date}}', '{{booking_ref}}'],
   lease_expiry_reminder: ['{{first_name}}', '{{check_out_date}}', '{{days_remaining}}', '{{booking_ref}}'],
   deposit_refund:        ['{{first_name}}', '{{refund_amount}}', '{{booking_ref}}'],
+  stay_extended:         ['{{first_name}}', '{{check_out_date}}', '{{amount}}', '{{booking_ref}}'],
 }
 
 const DEFAULT_BODIES: Record<string, Record<string, string>> = {
@@ -53,6 +55,10 @@ const DEFAULT_BODIES: Record<string, Record<string, string>> = {
   },
   deposit_refund: {
     sms:   'Hi {{first_name}}, your deposit refund of {{refund_amount}} for booking {{booking_ref}} has been processed.',
+    email: '',
+  },
+  stay_extended: {
+    sms:   'Hi {{first_name}}, your stay has been extended to {{check_out_date}}. Extra charge: {{amount}}. Ref: {{booking_ref}}.',
     email: '',
   },
 }

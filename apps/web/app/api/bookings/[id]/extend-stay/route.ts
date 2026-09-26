@@ -4,6 +4,9 @@ import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerBusinessType } from '@/lib/auth/tenant'
 import { getAvailableRooms } from '@/lib/data/bookings'
+import { sendStayExtension } from '@/lib/sms'
+import { sendEmail, stayExtensionHtml } from '@/lib/email'
+import { formatGHS, formatDate } from '@/lib/utils'
 
 /**
  * POST /api/bookings/[id]/extend-stay — hotel-only.
@@ -48,7 +51,7 @@ export async function POST(
 
   const { data: booking } = await supabase
     .from('bookings')
-    .select('id, status, room_id, check_in_date, check_out_date, rate_per_unit, rate_unit, total_amount')
+    .select('id, status, room_id, occupant_id, booking_ref, check_in_date, check_out_date, rate_per_unit, rate_unit, total_amount')
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .single()
@@ -115,6 +118,45 @@ export async function POST(
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // Guest-facing notification, non-blocking — must never break the
+  // extension itself if it fails.
+  try {
+    const [{ data: occupant }, { data: room }, { data: tenant }] = await Promise.all([
+      supabase.from('occupants').select('first_name, phone, email').eq('id', booking.occupant_id).single(),
+      supabase.from('rooms').select('room_number').eq('id', updated.room_id).single(),
+      supabase.from('tenants').select('name, primary_color, logo_url').eq('id', tenantId).single(),
+    ])
+
+    if (occupant?.phone) {
+      sendStayExtension({
+        phone:        occupant.phone,
+        firstName:    occupant.first_name,
+        bookingRef:   booking.booking_ref,
+        checkOutDate: formatDate(newCheckOut),
+        hostelName:   tenant?.name ?? 'Your Property',
+        amount:       formatGHS(extraAmount),
+        tenantId,
+      }).catch(() => {})
+    }
+
+    if (occupant?.email) {
+      sendEmail({
+        to:      occupant.email,
+        subject: `Your stay has been extended — ${tenant?.name ?? 'Your Property'}`,
+        html:    stayExtensionHtml({
+          hostelName:   tenant?.name ?? 'Your Property',
+          primaryColor: tenant?.primary_color ?? '#1d4ed8',
+          logoUrl:      tenant?.logo_url,
+          guestName:    occupant.first_name,
+          bookingRef:   booking.booking_ref,
+          roomName:     room?.room_number ? `Room ${room.room_number}` : 'Room',
+          checkOutDate: formatDate(newCheckOut),
+          amountGHS:    formatGHS(extraAmount),
+        }),
+      }).catch(() => {})
+    }
+  } catch { /* non-critical */ }
 
   return NextResponse.json({ booking: updated, extraNights, extraAmount })
 }

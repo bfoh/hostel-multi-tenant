@@ -297,6 +297,30 @@ export async function sendBookingCancelled(params: {
   await send(params.phone, msg)
 }
 
+export async function sendStayExtension(params: {
+  phone:         string
+  firstName:     string
+  bookingRef:    string
+  checkOutDate:  string
+  hostelName:    string
+  amount:        string
+  tenantId?:     string
+}) {
+  const fallback =
+    'Hi {{first_name}}, your stay at {{hostel_name}} has been extended to ' +
+    '{{check_out_date}}. Extra charge: {{amount}}. Ref: {{booking_ref}}.'
+
+  const msg = await resolveSmsBody('stay_extended', fallback, {
+    first_name:     params.firstName,
+    booking_ref:    params.bookingRef,
+    check_out_date: params.checkOutDate,
+    hostel_name:    params.hostelName,
+    amount:         params.amount,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
 export async function sendDepositRefund(params: {
   phone:         string
   firstName:     string
