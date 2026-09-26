@@ -8,6 +8,7 @@ import {
   Globe, Upload, X,
 } from 'lucide-react'
 import { ColorPickerField } from './color-picker'
+import { extractDominantColor } from '@/lib/color/extract-dominant-color'
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -306,11 +307,17 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
       body.append('logo', file)
       body.append('tenantId', tenantId)
 
-      const res = await fetch('/api/onboarding/logo', { method: 'POST', body })
+      // Auto-fill the brand color from the logo while it uploads — both
+      // just read the same in-memory File, no reason to serialize them.
+      const [res, dominantColor] = await Promise.all([
+        fetch('/api/onboarding/logo', { method: 'POST', body }),
+        extractDominantColor(file).catch(() => null),
+      ])
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Upload failed')
 
       set('logo_url', json.logo_url)
+      if (dominantColor) set('primary_color', dominantColor)
       setLogoFileName(file.name)
     } catch (e: any) {
       setLogoError(e?.message ?? 'Upload failed. You can add your logo later in Settings → Branding.')

@@ -6,6 +6,7 @@ import { useForm, Controller, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Upload, X, Loader2, Eye } from 'lucide-react'
+import { extractDominantColor } from '@/lib/color/extract-dominant-color'
 
 const schema = z.object({
   primary_color:             z.string().optional(),
@@ -43,7 +44,7 @@ export function BrandingForm({ tenant, isHotel }: Props) {
   const [logoError, setLogoError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const { control, register, handleSubmit, watch, formState: { errors, isSubmitting, isDirty } } = useForm<FormValues>({
+  const { control, register, handleSubmit, watch, setValue, formState: { errors, isSubmitting, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
     defaultValues: {
       primary_color:             tenant.primary_color ?? '#159d82',
@@ -66,13 +67,19 @@ export function BrandingForm({ tenant, isHotel }: Props) {
     const form = new FormData()
     form.append('logo', file)
 
-    const res = await fetch('/api/settings/logo', { method: 'POST', body: form })
+    // Auto-fill the brand color from the logo while it uploads — both
+    // just read the same in-memory File, no reason to serialize them.
+    const [res, dominantColor] = await Promise.all([
+      fetch('/api/settings/logo', { method: 'POST', body: form }),
+      extractDominantColor(file).catch(() => null),
+    ])
     const data = await res.json().catch(() => ({}))
 
     if (!res.ok) {
       setLogoError(data.error ?? 'Upload failed.')
     } else {
       setLogoUrl(data.logo_url)
+      if (dominantColor) setValue('primary_color', dominantColor, { shouldDirty: true })
       router.refresh()
     }
     setLogoUploading(false)
