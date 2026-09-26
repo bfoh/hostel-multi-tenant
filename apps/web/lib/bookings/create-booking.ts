@@ -54,7 +54,14 @@ export async function createBooking(
 
   const category = Array.isArray(room.category) ? room.category[0] : room.category
   const baseRate = category?.base_rate ?? 0
-  const capacity = category?.capacity ?? 1
+  const categoryCapacity = category?.capacity ?? 1
+
+  // A hotel room is sold as one unit per stay regardless of how many guests
+  // its category says it sleeps — mirrors the DB trigger in migration 130.
+  // Only hostel dorm-style rooms (capacity = number of independently-
+  // bookable beds) allow concurrent bookings against the same room.
+  const { data: tenantRow } = await supabase.from('tenants').select('business_type').eq('id', tenantId).single()
+  const capacity = tenantRow?.business_type === 'hotel' ? 1 : categoryCapacity
 
   const { count: activeCount } = await supabase
     .from('bookings')

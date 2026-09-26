@@ -3,11 +3,20 @@ import { z } from 'zod'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import { createBooking } from '@/lib/bookings/create-booking'
+import { resolveOccupant } from '@/lib/bookings/resolve-occupant'
 import { sendEmail, groupBookingConfirmationHtml } from '@/lib/email'
 import { formatGHS, formatDate } from '@/lib/utils'
 
+const guestSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  lastName:  z.string().min(1).max(100),
+  phone:     z.string().min(10).max(15),
+  email:     z.string().email().optional().nullable(),
+})
+
 const roomSchema = z.object({
-  occupant_id:     z.string().uuid(),
+  occupant_id:     z.string().uuid().optional(),
+  guest:           guestSchema.optional(),
   room_id:         z.string().uuid(),
   check_in_date:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   check_out_date:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -15,6 +24,8 @@ const roomSchema = z.object({
   discount_amount: z.number().int().min(0).default(0),
   discount_reason: z.string().max(200).optional().nullable(),
   notes:           z.string().max(500).optional().nullable(),
+}).refine((r) => !!r.occupant_id !== !!r.guest, {
+  message: 'Provide exactly one of occupant_id or guest per room',
 })
 
 const schema = z.object({
@@ -83,7 +94,11 @@ export async function POST(request: NextRequest) {
   const created: { bookingId: string; bookingRef: string; roomNumber: string | null; occupantId: string; amount: number }[] = []
 
   for (const room of d.rooms) {
-    const result = await createBooking(supabase, tenantId, { ...room, group_id: group.id })
+    // Inline guest capture (hotel booking form) resolves-or-creates the
+    // occupant per room, same as the single-booking route.
+    const occupantId = room.occupant_id ?? await resolveOccupant(supabase, tenantId, room.guest!)
+
+    const result = await createBooking(supabase, tenantId, { ...room, occupant_id: occupantId, group_id: group.id })
     if (!result.ok) {
       // Roll back everything created so far plus the group row — no
       // partial groups left behind.
@@ -95,7 +110,7 @@ export async function POST(request: NextRequest) {
       bookingId:  result.bookingId,
       bookingRef: result.bookingRef,
       roomNumber: result.roomNumber,
-      occupantId: room.occupant_id,
+      occupantId,
       amount:     0, // filled in below once we can read total_amount back
     })
   }

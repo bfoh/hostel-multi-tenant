@@ -9,8 +9,17 @@ import { z } from 'zod'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatGHS } from '@/lib/utils'
 
+// occupant_id is only truly required when picking an existing occupant
+// (always true for hostels, or a hotel using the "existing guest" toggle).
+// A hotel using the inline guest fields instead sends guest_* fields and
+// leaves occupant_id blank — enforced at submit time (see buildSchema),
+// not here, since react-hook-form's resolver needs one static shape.
 const schema = z.object({
-  occupant_id:    z.string().uuid('Select an occupant'),
+  occupant_id:      z.string().optional(),
+  guest_first_name: z.string().optional(),
+  guest_last_name:  z.string().optional(),
+  guest_phone:      z.string().optional(),
+  guest_email:      z.string().optional(),
   room_id:        z.string().uuid('Select a room'),
   check_in_date:  z.string().min(1, 'Check-in date is required'),
   check_out_date: z.string().min(1, 'Check-out date is required'),
@@ -53,12 +62,18 @@ interface Props {
 export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOccupantId, isHotel }: Props) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
+  // Hotels capture guest details inline by default (matching the "guest
+  // info taken through the booking form" flow) — the dropdown is an
+  // explicit opt-in for picking a known repeat guest. Hostels keep the
+  // dropdown-only flow unchanged.
+  const [useExistingOccupant, setUseExistingOccupant] = useState(!isHotel)
 
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
@@ -98,11 +113,27 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
   async function onSubmit(values: FormValues) {
     setServerError(null)
 
+    const usingExisting = !isHotel || useExistingOccupant
+    if (usingExisting && !values.occupant_id) {
+      setError('occupant_id', { message: 'Select an occupant' })
+      return
+    }
+    if (!usingExisting) {
+      if (!values.guest_first_name) { setError('guest_first_name', { message: 'Required' }); return }
+      if (!values.guest_last_name)  { setError('guest_last_name',  { message: 'Required' }); return }
+      if (!values.guest_phone)      { setError('guest_phone',      { message: 'Required' }); return }
+    }
+
+    const { occupant_id, guest_first_name, guest_last_name, guest_phone, guest_email, ...rest } = values
+
     const res = await fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ...values,
+        ...rest,
+        ...(usingExisting
+          ? { occupant_id }
+          : { guest: { firstName: guest_first_name, lastName: guest_last_name, phone: guest_phone, email: guest_email || undefined } }),
         discount_amount: Math.round(values.discount_amount * 100), // convert GH₵ → pesewas
       }),
     })
@@ -120,40 +151,85 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-      {/* Occupant selection */}
+      {/* Occupant / guest */}
       <Card>
-        <CardHeader><CardTitle>Occupant</CardTitle></CardHeader>
-        <CardContent className="pt-0 space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-primary">
-              Select occupant <span className="text-danger">*</span>
-            </label>
-            {occupants.length === 0 ? (
-              <div className="rounded-md border border-dashed border-border p-3 text-sm text-text-secondary">
-                No occupants found.{' '}
-                <a href="/occupants/new" className="text-brand underline">Add an occupant first.</a>
-              </div>
-            ) : (
-              <select {...register('occupant_id')} className="input-base">
-                <option value="">Select occupant…</option>
-                {occupants.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.first_name} {o.last_name} — {o.phone}
-                    {!isHotel && o.student_id ? ` (${o.student_id})` : ''}
-                  </option>
-                ))}
-              </select>
-            )}
-            {errors.occupant_id && <p className="text-xs text-danger">{errors.occupant_id.message}</p>}
-          </div>
-          <div className="flex justify-end">
-            <a
-              href={`/occupants/new?returnTo=${encodeURIComponent('/bookings/new')}`}
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>{isHotel ? 'Guest' : 'Occupant'}</CardTitle>
+          {isHotel && (
+            <button
+              type="button"
+              onClick={() => setUseExistingOccupant((p) => !p)}
               className="text-xs text-brand hover:text-brand-hover"
             >
-              + Add new occupant
-            </a>
-          </div>
+              {useExistingOccupant ? '+ New guest instead' : 'Existing guest? Search instead'}
+            </button>
+          )}
+        </CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          {isHotel && !useExistingOccupant ? (
+            <div className="space-y-3">
+              <p className="text-xs text-text-tertiary">
+                Enter the guest's details — they'll be added to your guest list automatically.
+                Booking with the same phone number again will match this guest instead of creating a duplicate.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-text-primary">First name <span className="text-danger">*</span></label>
+                  <input type="text" {...register('guest_first_name')} className="input-base" />
+                  {errors.guest_first_name && <p className="text-xs text-danger">{errors.guest_first_name.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-text-primary">Last name <span className="text-danger">*</span></label>
+                  <input type="text" {...register('guest_last_name')} className="input-base" />
+                  {errors.guest_last_name && <p className="text-xs text-danger">{errors.guest_last_name.message}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-text-primary">Phone <span className="text-danger">*</span></label>
+                  <input type="tel" {...register('guest_phone')} className="input-base" />
+                  {errors.guest_phone && <p className="text-xs text-danger">{errors.guest_phone.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-text-primary">Email</label>
+                  <input type="email" {...register('guest_email')} className="input-base" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-text-primary">
+                  Select occupant <span className="text-danger">*</span>
+                </label>
+                {occupants.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-border p-3 text-sm text-text-secondary">
+                    No occupants found.{' '}
+                    <a href="/occupants/new" className="text-brand underline">Add an occupant first.</a>
+                  </div>
+                ) : (
+                  <select {...register('occupant_id')} className="input-base">
+                    <option value="">Select occupant…</option>
+                    {occupants.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.first_name} {o.last_name} — {o.phone}
+                        {!isHotel && o.student_id ? ` (${o.student_id})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {errors.occupant_id && <p className="text-xs text-danger">{errors.occupant_id.message}</p>}
+              </div>
+              <div className="flex justify-end">
+                <a
+                  href={`/occupants/new?returnTo=${encodeURIComponent('/bookings/new')}`}
+                  className="text-xs text-brand hover:text-brand-hover"
+                >
+                  + Add new occupant
+                </a>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

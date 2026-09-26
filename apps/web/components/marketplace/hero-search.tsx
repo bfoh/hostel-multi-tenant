@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { BedDouble, Building2, Home, Compass, Landmark, Search, MapPin, Sparkles } from 'lucide-react'
 
 import { MP } from '@/lib/marketplace-theme'
@@ -17,7 +18,7 @@ import { MP } from '@/lib/marketplace-theme'
  * "coming soon" panel instead of navigating anywhere.
  */
 
-type TabKey = 'hostels' | 'hotels' | 'apartments' | 'things-to-do' | 'places'
+export type TabKey = 'hostels' | 'hotels' | 'apartments' | 'things-to-do' | 'places'
 
 const TABS: Array<{ key: TabKey; label: string; icon: typeof BedDouble; enabled: boolean }> = [
   { key: 'hostels', label: 'Hostels', icon: BedDouble, enabled: true },
@@ -28,7 +29,7 @@ const TABS: Array<{ key: TabKey; label: string; icon: typeof BedDouble; enabled:
 ]
 
 /** Both hotels and apartments query the same business_type='hotel' pool. */
-const SEARCH_BUSINESS_TYPE: Partial<Record<TabKey, 'hostel' | 'hotel'>> = {
+export const SEARCH_BUSINESS_TYPE: Partial<Record<TabKey, 'hostel' | 'hotel'>> = {
   hostels: 'hostel',
   hotels: 'hotel',
   apartments: 'hotel',
@@ -52,8 +53,17 @@ const QUICK_LINKS: Partial<Record<TabKey, string[]>> = {
   apartments: ['Accra', 'Kumasi', 'Cape Coast', 'Elmina', 'Aburi'],
 }
 
-export function HeroSearch() {
-  const [active, setActive] = useState<TabKey>('hostels')
+export function HeroSearch({ initialTab }: { initialTab?: TabKey } = {}) {
+  const router = useRouter()
+  const [active, setActive] = useState<TabKey>(initialTab ?? 'hostels')
+
+  // Enabled-tab clicks also update ?tab= on the current URL so the
+  // homepage's server-rendered Featured section (which can't see this
+  // component's client state directly) can react to the selection too.
+  function selectTab(key: TabKey, enabled: boolean) {
+    setActive(key)
+    if (enabled) router.push(`/?tab=${key}`, { scroll: false })
+  }
   const activeTab = TABS.find((tab) => tab.key === active)!
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -109,7 +119,7 @@ export function HeroSearch() {
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setActive(tab.key)}
+                onClick={() => selectTab(tab.key, tab.enabled)}
                 aria-current={isActive}
                 className="relative flex shrink-0 flex-col items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-[13px] font-medium transition-colors sm:px-5 sm:text-[14px]"
                 style={{ color: isActive ? MP.greenDeep : MP.textSecondary }}
@@ -186,7 +196,7 @@ export function HeroSearch() {
           </div>
           <button
             type="button"
-            onClick={() => setActive('hostels')}
+            onClick={() => selectTab('hostels', true)}
             className="shrink-0 rounded-2xl px-6 py-3 text-[15px] font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
             style={{ background: MP.green }}
           >

@@ -67,17 +67,30 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { status } = body
+  const { status, listed_publicly } = body
 
-  const VALID_STATUSES = ['trial', 'trial_expired', 'active', 'suspended', 'cancelled']
-  if (!status || !VALID_STATUSES.includes(status)) {
-    return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+  if (status !== undefined) {
+    const VALID_STATUSES = ['trial', 'trial_expired', 'active', 'suspended', 'cancelled']
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+    }
+  }
+
+  if (listed_publicly !== undefined && typeof listed_publicly !== 'boolean') {
+    return NextResponse.json({ error: 'listed_publicly must be a boolean' }, { status: 400 })
+  }
+
+  if (status === undefined && listed_publicly === undefined) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
   }
 
   const admin = createAdminClient()
   const { error } = await admin
     .from('tenants')
-    .update({ status })
+    .update({
+      ...(status !== undefined ? { status } : {}),
+      ...(listed_publicly !== undefined ? { listed_publicly } : {}),
+    })
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

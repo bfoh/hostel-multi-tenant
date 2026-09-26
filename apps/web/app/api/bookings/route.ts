@@ -5,9 +5,18 @@ import { getServerTenantId } from '@/lib/auth/tenant'
 import { sendBookingConfirmation } from '@/lib/sms'
 import { formatDate } from '@/lib/utils'
 import { createBooking } from '@/lib/bookings/create-booking'
+import { resolveOccupant } from '@/lib/bookings/resolve-occupant'
+
+const guestSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  lastName:  z.string().min(1).max(100),
+  phone:     z.string().min(10).max(15),
+  email:     z.string().email().optional().nullable(),
+})
 
 const schema = z.object({
-  occupant_id:     z.string().uuid(),
+  occupant_id:     z.string().uuid().optional(),
+  guest:           guestSchema.optional(),
   room_id:         z.string().uuid(),
   check_in_date:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   check_out_date:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -17,6 +26,8 @@ const schema = z.object({
   discount_amount: z.number().int().min(0).default(0),
   discount_reason: z.string().max(200).optional().nullable(),
   notes:           z.string().max(500).optional().nullable(),
+}).refine((d) => !!d.occupant_id !== !!d.guest, {
+  message: 'Provide exactly one of occupant_id or guest',
 })
 
 export async function POST(request: NextRequest) {
@@ -35,7 +46,13 @@ export async function POST(request: NextRequest) {
   const supabase = await createTenantAdminClientFromHeaders()
   const d = parsed.data
 
-  const result = await createBooking(supabase, tenantId, d)
+  // Inline guest capture (hotel booking form) resolves-or-creates the
+  // occupant here, before the existing single-room creation logic — the
+  // hostel dropdown flow keeps sending a real occupant_id and never hits
+  // this branch.
+  const occupantId = d.occupant_id ?? await resolveOccupant(supabase, tenantId, d.guest!)
+
+  const result = await createBooking(supabase, tenantId, { ...d, occupant_id: occupantId })
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status })
   }
@@ -43,7 +60,7 @@ export async function POST(request: NextRequest) {
   // Fire SMS confirmation — non-blocking
   try {
     const [occupantRes, tenantRes] = await Promise.all([
-      supabase.from('occupants').select('first_name, phone').eq('id', d.occupant_id).single(),
+      supabase.from('occupants').select('first_name, phone').eq('id', occupantId).single(),
       supabase.from('tenants').select('name').eq('id', tenantId).single(),
     ])
     if (occupantRes.data?.phone) {

@@ -15,6 +15,7 @@ async function getTenant(id: string) {
     { count: bookingCount },
     { data: revenueRows },
     { data: members },
+    { count: activeCategoryCount },
   ] = await Promise.all([
     admin.from('tenants').select('*').eq('id', id).single(),
     admin.from('rooms').select('*', { count: 'exact', head: true }).eq('tenant_id', id),
@@ -22,6 +23,10 @@ async function getTenant(id: string) {
     admin.from('bookings').select('*', { count: 'exact', head: true }).eq('tenant_id', id),
     admin.from('payments').select('amount').eq('tenant_id', id),
     admin.from('tenant_members').select('user_id, role, is_active, joined_at').eq('tenant_id', id),
+    // Marketplace visibility diagnostic — searchListings() requires at least
+    // one active room category (inner join), so a tenant with zero here
+    // never appears in the directory regardless of listed_publicly/status.
+    admin.from('room_categories').select('*', { count: 'exact', head: true }).eq('tenant_id', id).eq('is_active', true),
   ])
 
   if (!tenant) return null
@@ -35,6 +40,7 @@ async function getTenant(id: string) {
       occupants: occupantCount ?? 0,
       bookings: bookingCount ?? 0,
       revenue: totalRevenue,
+      activeCategories: activeCategoryCount ?? 0,
     },
     members: members ?? [],
   }
@@ -121,6 +127,32 @@ export default async function TenantAdminPage({
         </dl>
       </div>
 
+      {/* Marketplace visibility diagnostic — the exact conditions
+          lib/directory.ts's searchListings() checks, so a support/admin
+          question like "why isn't this tenant showing up" can be answered
+          from this page alone. */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wide">Marketplace Visibility</h2>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+          {[
+            ['Listed publicly', tenant.listed_publicly ? 'Yes' : 'No'],
+            ['Business type', tenant.business_type],
+            ['Status counts', ['trial', 'active', 'trial_expired'].includes(tenant.status) ? 'OK (visible statuses)' : `${tenant.status} (hidden)`],
+            ['Active room categories', String(stats.activeCategories)],
+          ].map(([k, v]) => (
+            <div key={k} className="flex gap-2">
+              <dt className="text-white/30 w-40 shrink-0">{k}</dt>
+              <dd className={`capitalize ${k === 'Active room categories' && stats.activeCategories === 0 ? 'text-red-400' : k === 'Listed publicly' && !tenant.listed_publicly ? 'text-red-400' : 'text-white'}`}>{v}</dd>
+            </div>
+          ))}
+        </dl>
+        {(!tenant.listed_publicly || stats.activeCategories === 0 || !['trial', 'active', 'trial_expired'].includes(tenant.status)) && (
+          <p className="text-xs text-red-400/80">
+            This tenant will not appear in the public directory until every row above is satisfied.
+          </p>
+        )}
+      </div>
+
       {/* Members */}
       <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
         <div className="px-4 py-3 border-b border-white/10">
@@ -159,6 +191,7 @@ export default async function TenantAdminPage({
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
         currentStatus={tenant.status}
+        listedPublicly={tenant.listed_publicly}
       />
     </div>
   )

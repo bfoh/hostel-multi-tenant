@@ -10,7 +10,7 @@ import { ListingCard } from '@/components/public/listing-card'
 import { searchListings } from '@/lib/directory'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
-import { HeroSearch } from '@/components/marketplace/hero-search'
+import { HeroSearch, SEARCH_BUSINESS_TYPE, type TabKey } from '@/components/marketplace/hero-search'
 import { MP } from '@/lib/marketplace-theme'
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -92,7 +92,17 @@ const orgLd = {
   },
 }
 
-export default async function LandingPage() {
+const TAB_LABEL: Partial<Record<TabKey, string>> = {
+  hostels: 'Hostels',
+  hotels: 'Hotels',
+  apartments: 'Apartments',
+}
+
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -104,7 +114,15 @@ export default async function LandingPage() {
 
   if (user && isAppDomain) redirect('/dashboard')
 
-  const { listings: featuredHostels } = await searchListings({ businessType: 'hostel', limit: 6, sort: 'newest' })
+  // The hero search's tab selection round-trips through ?tab= (see
+  // hero-search.tsx's selectTab) so this server-rendered Featured section
+  // can reflect it too — it has no other way to see that client-side state.
+  const { tab: rawTab } = await searchParams
+  const tab: TabKey = rawTab === 'hotels' || rawTab === 'apartments' ? rawTab : 'hostels'
+  const featuredBusinessType = SEARCH_BUSINESS_TYPE[tab] ?? 'hostel'
+  const tabLabel = TAB_LABEL[tab] ?? 'Hostels'
+
+  const { listings: featuredHostels } = await searchListings({ businessType: featuredBusinessType, limit: 6, sort: 'newest' })
 
   return (
     <div className="relative min-h-screen antialiased" style={{ background: MP.bg }}>
@@ -148,32 +166,40 @@ export default async function LandingPage() {
 
       {/* Floating search card — straddles the hero/page boundary */}
       <div className="relative z-10 mx-auto -mt-28 max-w-4xl px-5 sm:-mt-32 sm:px-6">
-        <HeroSearch />
+        <HeroSearch initialTab={tab} />
       </div>
 
       <div className="mx-auto max-w-5xl px-5 pb-4 pt-10 sm:px-6">
         {featuredHostels.length > 0 ? (
-          <div className="mx-auto grid max-w-4xl gap-4 text-left sm:grid-cols-3">
-            {featuredHostels.slice(0, 3).map((h, i) => (
-              <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${280 + i * 70}ms` }}>
-                <ListingCard listing={h} />
-              </div>
-            ))}
-          </div>
+          <>
+            <h2
+              className="mp-reveal mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.08em]"
+              style={{ color: MP.textSecondary, animationDelay: '240ms' }}
+            >
+              Featured {tabLabel}
+            </h2>
+            <div className="mx-auto grid max-w-4xl gap-4 text-left sm:grid-cols-3">
+              {featuredHostels.slice(0, 3).map((h, i) => (
+                <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${280 + i * 70}ms` }}>
+                  <ListingCard listing={h} />
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <div
             className="mp-reveal mx-auto max-w-md rounded-2xl p-8 text-center"
             style={{ background: MP.surfaceSoft, border: `1px solid ${MP.border}`, animationDelay: '280ms' }}
           >
-            <p className="text-sm font-medium" style={{ color: MP.ink }}>New listings are on the way</p>
+            <p className="text-sm font-medium" style={{ color: MP.ink }}>New {tabLabel.toLowerCase()} listings are on the way</p>
             <p className="mt-1 text-[13px]" style={{ color: MP.textSecondary }}>
-              Run a hostel near a campus? Be the first to list.
+              Run a {tab === 'hostels' ? 'hostel near a campus' : tabLabel.toLowerCase().slice(0, -1)}? Be the first to list.
             </p>
           </div>
         )}
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center text-[13px]" style={{ color: MP.textSecondary }}>
-          <Link href="/browse" className="font-medium hover:underline">Browse all hostels →</Link>
+          <Link href={`/browse?type=${featuredBusinessType}`} className="font-medium hover:underline">Browse all {tabLabel.toLowerCase()} →</Link>
           <span aria-hidden="true">·</span>
           <Link href="/list-your-property" className="font-medium hover:underline">
             Run a property? List yours free →

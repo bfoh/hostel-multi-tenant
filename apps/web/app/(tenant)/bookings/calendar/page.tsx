@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, CalendarRange, LayoutGrid, List as ListIcon } from 'lucide-react'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { CalendarListView } from '@/components/bookings/calendar-list-view'
 
 export const metadata: Metadata = { title: 'Occupancy Calendar' }
 
@@ -20,6 +21,17 @@ function isoDate(d: Date) {
 
 function dayLabel(d: Date) {
   return d.toLocaleDateString('en-GH', { weekday: 'short', day: 'numeric' })
+}
+
+function monthParam(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function parseMonthParam(s: string | undefined): Date {
+  const m = s ? /^(\d{4})-(\d{2})$/.exec(s) : null
+  const today = new Date()
+  if (!m) return new Date(today.getFullYear(), today.getMonth(), 1)
+  return new Date(Number(m[1]), Number(m[2]) - 1, 1)
 }
 
 /* ── Status colours ──────────────────────────────────────────────────────── */
@@ -60,6 +72,7 @@ interface BookingBar {
   check_in_date: string
   check_out_date: string
   room_id: string
+  room_number: string
   /** 0-indexed column start within the visible window */
   colStart: number
   /** span (number of day columns) */
@@ -82,7 +95,7 @@ async function getCalendarData(tenantId: string, windowStart: Date, days: number
 
     supabase
       .from('bookings')
-      .select('id, booking_ref, check_in_date, check_out_date, status, room_id, occupants(first_name, last_name)')
+      .select('id, booking_ref, check_in_date, check_out_date, status, room_id, occupants(first_name, last_name), rooms(room_number)')
       .eq('tenant_id', tenantId)
       .not('status', 'in', '("cancelled","no_show")')
       .lte('check_in_date', endStr)
@@ -101,6 +114,7 @@ async function getCalendarData(tenantId: string, windowStart: Date, days: number
   const bars: BookingBar[] = (bookingsRaw ?? []).map(b => {
     const occ = Array.isArray(b.occupants) ? b.occupants[0] : b.occupants
     const guest = occ ? `${occ.first_name} ${occ.last_name}` : 'Guest'
+    const room = Array.isArray(b.rooms) ? b.rooms[0] : b.rooms
 
     // Clamp to visible window
     const checkIn  = new Date(Math.max(new Date(b.check_in_date).getTime(),  windowStart.getTime()))
@@ -117,6 +131,7 @@ async function getCalendarData(tenantId: string, windowStart: Date, days: number
       check_in_date:  b.check_in_date,
       check_out_date: b.check_out_date,
       room_id:        b.room_id,
+      room_number:    room?.room_number ?? '—',
       colStart,
       colSpan,
     }
@@ -127,35 +142,62 @@ async function getCalendarData(tenantId: string, windowStart: Date, days: number
 
 /* ── Page ────────────────────────────────────────────────────────────────── */
 
-const DAYS = 14
+const TIMELINE_DAYS = 14
+type ViewMode = 'timeline' | 'grid' | 'list'
 
 export default async function OccupancyCalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string }>
+  searchParams: Promise<{ from?: string; view?: string; month?: string }>
 }) {
-  const { from } = await searchParams
+  const { from, view: rawView, month: rawMonth } = await searchParams
+  const view: ViewMode = rawView === 'grid' || rawView === 'list' ? rawView : 'timeline'
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-
-  // Parse ?from= or default to today
-  const windowStart = from
-    ? (() => { const d = new Date(from + 'T00:00:00'); return isNaN(d.getTime()) ? today : d })()
-    : today
-
-  const prevFrom = isoDate(addDays(windowStart, -DAYS))
-  const nextFrom = isoDate(addDays(windowStart, DAYS))
-  const dayDates = Array.from({ length: DAYS }, (_, i) => addDays(windowStart, i))
+  const todayStr = isoDate(today)
 
   const headersList = await headers()
   const tenantId    = headersList.get('x-tenant-id') ?? ''
 
-  const { rooms, bars } = await getCalendarData(tenantId, windowStart, DAYS)
+  // Each view scopes its own data-fetch window rather than "fetch every
+  // booking ever" — a genuine efficiency improvement over AMP Lodge's own
+  // calendar, which loads its entire bookings table up front regardless of
+  // what's visible.
+  let rooms: RoomRow[]
+  let bars: BookingBar[]
+  let windowStart: Date
+  let windowDays: number
+  let monthDate = parseMonthParam(rawMonth)
 
-  // Group rooms by block
+  if (view === 'timeline') {
+    windowStart = from
+      ? (() => { const d = new Date(from + 'T00:00:00'); return isNaN(d.getTime()) ? today : d })()
+      : today
+    windowDays = TIMELINE_DAYS
+  } else {
+    // Pad the month out to full weeks (Sun–Sat) so the grid view has
+    // complete rows; the list view just ignores the padding days.
+    const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)
+    const monthEnd   = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0)
+    windowStart = addDays(monthStart, -monthStart.getDay())
+    const gridEnd = addDays(monthEnd, 6 - monthEnd.getDay())
+    windowDays = Math.round((gridEnd.getTime() - windowStart.getTime()) / 86400000) + 1
+  }
+
+  ;({ rooms, bars } = await getCalendarData(tenantId, windowStart, windowDays))
+
+  const dayDates = Array.from({ length: windowDays }, (_, i) => addDays(windowStart, i))
+  const prevFrom = isoDate(addDays(windowStart, -TIMELINE_DAYS))
+  const nextFrom = isoDate(addDays(windowStart, TIMELINE_DAYS))
+  const prevMonth = monthParam(new Date(monthDate.getFullYear(), monthDate.getMonth() - 1, 1))
+  const nextMonth = monthParam(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1))
+  const thisMonth = monthParam(today)
+
+  // Group rooms by block (timeline/grid)
   const blocks = [...new Set(rooms.map(r => r.block ?? 'Main'))].sort()
 
-  // Build a lookup: roomId → bars
+  // Build a lookup: roomId → bars (timeline)
   const barsByRoom = new Map<string, BookingBar[]>()
   for (const bar of bars) {
     const list = barsByRoom.get(bar.room_id) ?? []
@@ -163,7 +205,10 @@ export default async function OccupancyCalendarPage({
     barsByRoom.set(bar.room_id, list)
   }
 
-  const todayStr = isoDate(today)
+  function viewHref(v: ViewMode) {
+    if (v === 'timeline') return `/bookings/calendar?view=timeline&from=${isoDate(today)}`
+    return `/bookings/calendar?view=${v}&month=${monthParam(monthDate)}`
+  }
 
   return (
     <div className="space-y-4">
@@ -177,24 +222,73 @@ export default async function OccupancyCalendarPage({
           <h1 className="text-xl font-bold text-text-primary">Occupancy Calendar</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/bookings/calendar?from=${prevFrom}`}
-            className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-raised transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" /> Prev
-          </Link>
-          <Link
-            href={`/bookings/calendar?from=${isoDate(today)}`}
-            className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
-          >
-            Today
-          </Link>
-          <Link
-            href={`/bookings/calendar?from=${nextFrom}`}
-            className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-raised transition-colors"
-          >
-            Next <ChevronRight className="h-4 w-4" />
-          </Link>
+          {/* View switcher */}
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-surface-sunken p-1">
+            {([
+              { key: 'timeline', label: 'Timeline', icon: CalendarRange },
+              { key: 'grid',     label: 'Grid',     icon: LayoutGrid },
+              { key: 'list',     label: 'List',      icon: ListIcon },
+            ] as const).map((v) => (
+              <Link
+                key={v.key}
+                href={viewHref(v.key)}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  view === v.key ? 'bg-surface shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <v.icon className="h-3.5 w-3.5" />
+                {v.label}
+              </Link>
+            ))}
+          </div>
+
+          {view === 'timeline' ? (
+            <>
+              <Link
+                href={`/bookings/calendar?view=timeline&from=${prevFrom}`}
+                className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-raised transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </Link>
+              <Link
+                href={`/bookings/calendar?view=timeline&from=${isoDate(today)}`}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
+              >
+                Today
+              </Link>
+              <Link
+                href={`/bookings/calendar?view=timeline&from=${nextFrom}`}
+                className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-raised transition-colors"
+              >
+                Next <ChevronRight className="h-4 w-4" />
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href={`/bookings/calendar?view=${view}&month=${prevMonth}`}
+                className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-raised transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </Link>
+              <Link
+                href={`/bookings/calendar?view=${view}&month=${thisMonth}`}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
+              >
+                Today
+              </Link>
+              <Link
+                href={`/bookings/calendar?view=${view}&month=${nextMonth}`}
+                className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-raised transition-colors"
+              >
+                Next <ChevronRight className="h-4 w-4" />
+              </Link>
+              <span className="px-2 text-sm font-medium text-text-primary">
+                {monthDate.toLocaleDateString('en-GH', { month: 'long', year: 'numeric' })}
+              </span>
+            </>
+          )}
+
           <Link
             href="/bookings/new"
             className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
@@ -219,140 +313,251 @@ export default async function OccupancyCalendarPage({
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-        {rooms.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-sm text-text-secondary">No rooms found. Add rooms to see the calendar.</p>
-          </div>
-        ) : (
-          <table className="min-w-full border-collapse text-xs">
-            <thead>
-              <tr>
-                {/* Room label column */}
-                <th className="sticky left-0 z-20 min-w-[120px] border-b border-r border-border bg-surface-raised px-3 py-2 text-left text-xs font-semibold text-text-secondary">
-                  Room
-                </th>
-                {dayDates.map(d => {
-                  const ds     = isoDate(d)
-                  const isToday = ds === todayStr
-                  const isWeekend = d.getDay() === 0 || d.getDay() === 6
-                  return (
-                    <th
-                      key={ds}
-                      className={`min-w-[80px] border-b border-r border-border px-1 py-2 text-center font-medium ${
-                        isToday
-                          ? 'bg-primary/10 text-primary'
-                          : isWeekend
-                            ? 'bg-surface-sunken text-text-tertiary'
-                            : 'bg-surface-raised text-text-secondary'
-                      }`}
-                    >
-                      {dayLabel(d)}
-                    </th>
-                  )
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {blocks.map(block => {
-                const blockRooms = rooms.filter(r => (r.block ?? 'Main') === block)
+      {view === 'timeline' && (
+        <TimelineView
+          rooms={rooms}
+          blocks={blocks}
+          barsByRoom={barsByRoom}
+          dayDates={dayDates}
+          todayStr={todayStr}
+        />
+      )}
+
+      {view === 'grid' && (
+        <GridView
+          monthDate={monthDate}
+          dayDates={dayDates}
+          bars={bars}
+          todayStr={todayStr}
+        />
+      )}
+
+      {view === 'list' && (
+        <CalendarListView
+          bookings={bars
+            .filter((b) => {
+              // List view shows bookings whose stay overlaps the actual
+              // month, not the grid's padding days.
+              const monthStart = isoDate(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1))
+              const monthEnd   = isoDate(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0))
+              return b.check_in_date <= monthEnd && b.check_out_date >= monthStart
+            })
+            .map((b) => ({
+              id: b.id,
+              bookingRef: b.booking_ref,
+              guest: b.guest,
+              status: b.status,
+              checkInDate: b.check_in_date,
+              checkOutDate: b.check_out_date,
+              roomNumber: b.room_number,
+            }))}
+          todayStr={todayStr}
+        />
+      )}
+
+      {view === 'timeline' && (
+        <p className="text-xs text-text-tertiary text-center">
+          Showing {TIMELINE_DAYS} days from {windowStart.toLocaleDateString('en-GH', { dateStyle: 'medium' })}.
+          Click any booking bar to open it. Click an empty cell to create a booking for that room and date.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/* ── Timeline view (existing Gantt-style table) ─────────────────────────── */
+
+function TimelineView({ rooms, blocks, barsByRoom, dayDates, todayStr }: {
+  rooms: RoomRow[]
+  blocks: string[]
+  barsByRoom: Map<string, BookingBar[]>
+  dayDates: Date[]
+  todayStr: string
+}) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+      {rooms.length === 0 ? (
+        <div className="p-12 text-center">
+          <p className="text-sm text-text-secondary">No rooms found. Add rooms to see the calendar.</p>
+        </div>
+      ) : (
+        <table className="min-w-full border-collapse text-xs">
+          <thead>
+            <tr>
+              <th className="sticky left-0 z-20 min-w-[120px] border-b border-r border-border bg-surface-raised px-3 py-2 text-left text-xs font-semibold text-text-secondary">
+                Room
+              </th>
+              {dayDates.map(d => {
+                const ds     = isoDate(d)
+                const isToday = ds === todayStr
+                const isWeekend = d.getDay() === 0 || d.getDay() === 6
                 return (
-                  <>
-                    {/* Block header row */}
-                    <tr key={`block-${block}`}>
-                      <td
-                        colSpan={DAYS + 1}
-                        className="border-b border-border bg-surface-sunken px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-text-tertiary"
-                      >
-                        {block}
-                      </td>
-                    </tr>
+                  <th
+                    key={ds}
+                    className={`min-w-[80px] border-b border-r border-border px-1 py-2 text-center font-medium ${
+                      isToday
+                        ? 'bg-primary/10 text-primary'
+                        : isWeekend
+                          ? 'bg-surface-sunken text-text-tertiary'
+                          : 'bg-surface-raised text-text-secondary'
+                    }`}
+                  >
+                    {dayLabel(d)}
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {blocks.map(block => {
+              const blockRooms = rooms.filter(r => (r.block ?? 'Main') === block)
+              return (
+                <>
+                  <tr key={`block-${block}`}>
+                    <td
+                      colSpan={dayDates.length + 1}
+                      className="border-b border-border bg-surface-sunken px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-text-tertiary"
+                    >
+                      {block}
+                    </td>
+                  </tr>
 
-                    {blockRooms.map(room => {
-                      const roomBars = barsByRoom.get(room.id) ?? []
-                      return (
-                        <tr key={room.id} className="group">
-                          {/* Room label */}
-                          <td className="sticky left-0 z-10 border-b border-r border-border bg-surface px-3 py-0 group-hover:bg-surface-raised transition-colors">
-                            <div className="py-2 leading-tight">
-                              <p className="font-semibold text-text-primary">{room.room_number}</p>
-                              <p className="text-[10px] text-text-tertiary truncate max-w-[100px]">{room.category}</p>
-                            </div>
-                          </td>
+                  {blockRooms.map(room => {
+                    const roomBars = barsByRoom.get(room.id) ?? []
+                    return (
+                      <tr key={room.id} className="group">
+                        <td className="sticky left-0 z-10 border-b border-r border-border bg-surface px-3 py-0 group-hover:bg-surface-raised transition-colors">
+                          <div className="py-2 leading-tight">
+                            <p className="font-semibold text-text-primary">{room.room_number}</p>
+                            <p className="text-[10px] text-text-tertiary truncate max-w-[100px]">{room.category}</p>
+                          </div>
+                        </td>
 
-                          {/* Day cells */}
-                          {dayDates.map((d, colIdx) => {
-                            const ds      = isoDate(d)
-                            const isToday = ds === todayStr
-                            const isWeekend = d.getDay() === 0 || d.getDay() === 6
+                        {dayDates.map((d, colIdx) => {
+                          const ds      = isoDate(d)
+                          const isToday = ds === todayStr
+                          const isWeekend = d.getDay() === 0 || d.getDay() === 6
 
-                            // Find a booking bar starting on this column
-                            const bar = roomBars.find(b => b.colStart === colIdx)
-                            // Is this column occupied by a bar that started earlier?
-                            const coveredByBar = roomBars.some(
-                              b => b.colStart < colIdx && b.colStart + b.colSpan > colIdx
-                            )
+                          const bar = roomBars.find(b => b.colStart === colIdx)
+                          const coveredByBar = roomBars.some(
+                            b => b.colStart < colIdx && b.colStart + b.colSpan > colIdx
+                          )
 
-                            if (coveredByBar) return null // cell consumed by a colspan bar
+                          if (coveredByBar) return null
 
-                            if (bar) {
-                              return (
-                                <td
-                                  key={ds}
-                                  colSpan={bar.colSpan}
-                                  className="border-b border-r border-border px-0.5 py-0.5"
-                                >
-                                  <Link
-                                    href={`/bookings/${bar.id}`}
-                                    className={`flex h-full min-h-[44px] flex-col justify-center rounded px-2 py-1 transition-opacity hover:opacity-80 ${STATUS_COLOR[bar.status] ?? 'bg-border text-text-secondary'}`}
-                                    title={`${bar.guest} · ${bar.booking_ref} · ${bar.check_in_date} → ${bar.check_out_date}`}
-                                  >
-                                    <p className="font-semibold truncate leading-tight">{bar.guest.split(' ')[0]}</p>
-                                    <p className="text-[10px] opacity-80 truncate">{bar.booking_ref}</p>
-                                  </Link>
-                                </td>
-                              )
-                            }
-
+                          if (bar) {
                             return (
                               <td
                                 key={ds}
-                                className={`border-b border-r border-border h-[44px] ${
-                                  isToday
-                                    ? 'bg-primary/5'
-                                    : isWeekend
-                                      ? 'bg-surface-sunken/60'
-                                      : ''
-                                }`}
+                                colSpan={bar.colSpan}
+                                className="border-b border-r border-border px-0.5 py-0.5"
                               >
                                 <Link
-                                  href={`/bookings/new?room_id=${room.id}&check_in_date=${ds}`}
-                                  className="block h-full w-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                  title="Create booking"
+                                  href={`/bookings/${bar.id}`}
+                                  className={`flex h-full min-h-[44px] flex-col justify-center rounded px-2 py-1 transition-opacity hover:opacity-80 ${STATUS_COLOR[bar.status] ?? 'bg-border text-text-secondary'}`}
+                                  title={`${bar.guest} · ${bar.booking_ref} · ${bar.check_in_date} → ${bar.check_out_date}`}
                                 >
-                                  <span className="flex h-full items-center justify-center text-text-disabled hover:text-primary">
-                                    +
-                                  </span>
+                                  <p className="font-semibold truncate leading-tight">{bar.guest.split(' ')[0]}</p>
+                                  <p className="text-[10px] opacity-80 truncate">{bar.booking_ref}</p>
                                 </Link>
                               </td>
                             )
-                          })}
-                        </tr>
-                      )
-                    })}
-                  </>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+                          }
 
-      <p className="text-xs text-text-tertiary text-center">
-        Showing {DAYS} days from {windowStart.toLocaleDateString('en-GH', { dateStyle: 'medium' })}.
-        Click any booking bar to open it. Click an empty cell to create a booking for that room and date.
-      </p>
+                          return (
+                            <td
+                              key={ds}
+                              className={`border-b border-r border-border h-[44px] ${
+                                isToday
+                                  ? 'bg-primary/5'
+                                  : isWeekend
+                                    ? 'bg-surface-sunken/60'
+                                    : ''
+                              }`}
+                            >
+                              <Link
+                                href={`/bookings/new?room_id=${room.id}&check_in_date=${ds}`}
+                                className="block h-full w-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Create booking"
+                              >
+                                <span className="flex h-full items-center justify-center text-text-disabled hover:text-primary">
+                                  +
+                                </span>
+                              </Link>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })}
+                </>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+/* ── Grid view (month calendar, AMP Lodge-style day pills) ──────────────── */
+
+const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function GridView({ monthDate, dayDates, bars, todayStr }: {
+  monthDate: Date
+  dayDates: Date[]
+  bars: BookingBar[]
+  todayStr: string
+}) {
+  const month = monthDate.getMonth()
+  const weeks: Date[][] = []
+  for (let i = 0; i < dayDates.length; i += 7) weeks.push(dayDates.slice(i, i + 7))
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-surface">
+      <div className="grid grid-cols-7 border-b border-border bg-surface-raised">
+        {WEEKDAY_LABELS.map((w) => (
+          <div key={w} className="px-2 py-2 text-center text-xs font-semibold text-text-secondary">{w}</div>
+        ))}
+      </div>
+      <div className="divide-y divide-border">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7 divide-x divide-border">
+            {week.map((d) => {
+              const ds = isoDate(d)
+              const isToday = ds === todayStr
+              const inMonth = d.getMonth() === month
+              const dayBars = bars.filter((b) => ds >= b.check_in_date && ds < b.check_out_date)
+              return (
+                <div
+                  key={ds}
+                  className={`min-h-[120px] p-1.5 ${inMonth ? '' : 'bg-surface-sunken/40'} ${isToday ? 'bg-primary/5' : ''}`}
+                >
+                  <p className={`mb-1 text-[11px] font-medium ${inMonth ? 'text-text-secondary' : 'text-text-disabled'} ${isToday ? 'text-primary font-bold' : ''}`}>
+                    {d.getDate()}
+                  </p>
+                  <div className="space-y-1">
+                    {dayBars.slice(0, 3).map((b) => (
+                      <Link
+                        key={b.id}
+                        href={`/bookings/${b.id}`}
+                        title={`${b.guest} · ${b.booking_ref} · Room ${b.room_number}`}
+                        className={`block truncate rounded px-1.5 py-0.5 text-[10px] font-medium transition-opacity hover:opacity-80 ${STATUS_COLOR[b.status] ?? 'bg-border text-text-secondary'}`}
+                      >
+                        {b.guest.split(' ')[0]} · {b.room_number}
+                      </Link>
+                    ))}
+                    {dayBars.length > 3 && (
+                      <p className="px-1.5 text-[10px] text-text-tertiary">+{dayBars.length - 3} more</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
