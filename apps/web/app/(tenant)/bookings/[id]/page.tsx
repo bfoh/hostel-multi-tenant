@@ -13,6 +13,7 @@ import { InvoicePdfButton } from '@/components/bookings/invoice-pdf-button'
 import { LeasePdfButton } from '@/components/bookings/lease-pdf-button'
 import { RoomTransferButton } from '@/components/bookings/room-transfer-button'
 import { DepositCard } from '@/components/bookings/deposit-card'
+import { BookingChargesCard } from '@/components/bookings/booking-charges-card'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 
@@ -64,6 +65,15 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     .eq('booking_id', id)
     .maybeSingle()
 
+  // Folio charges are a hotel-only feature — no query/UI for hostel tenants.
+  const { data: charges } = isHotel
+    ? await supabase
+        .from('booking_charges')
+        .select('*')
+        .eq('booking_id', id)
+        .order('created_at', { ascending: false })
+    : { data: [] as any[] }
+
   // Paystack is only live when both the platform key AND the tenant's subaccount are set
   const tenantId = await getServerTenantId()
   const { data: tenantRow } = tenantId
@@ -81,7 +91,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   const category = room?.category ? (Array.isArray(room.category) ? room.category[0] : room.category) : null
   const payments = Array.isArray(booking.booking_payments) ? booking.booking_payments : []
   const successPayments = payments.filter((p) => p.status === 'success')
-  const balance = booking.final_amount - booking.paid_amount
+  // A booking's true bill is final_amount + its folio charges (hotel-only,
+  // deliberately not folded into the final_amount generated column — see
+  // supabase/migrations/20240001000128_booking_charges.sql).
+  const chargesOwed = (charges ?? []).filter((c: any) => !c.paid).reduce((s: number, c: any) => s + c.amount, 0)
+  const balance = booking.final_amount - booking.paid_amount + chargesOwed
 
   return (
     <div className="space-y-6">
@@ -208,6 +222,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                 <Row label="Paid">
                   <span className="currency-amount text-success">{formatGHS(booking.paid_amount)}</span>
                 </Row>
+                {isHotel && chargesOwed > 0 && (
+                  <Row label="Unpaid charges">
+                    <span className="currency-amount text-warning-fg">{formatGHS(chargesOwed)}</span>
+                  </Row>
+                )}
                 {balance > 0 && (
                   <Row label="Balance due">
                     <span className="currency-amount font-semibold text-danger">{formatGHS(balance)}</span>
@@ -216,6 +235,20 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               </div>
             </CardContent>
           </Card>
+
+          {/* Additional charges — hotel-only folio (minibar, laundry, etc.) */}
+          {isHotel && (
+            <Card>
+              <CardHeader><CardTitle>Additional Charges</CardTitle></CardHeader>
+              <CardContent className="pt-0">
+                <BookingChargesCard
+                  bookingId={id}
+                  initialCharges={(charges ?? []) as any}
+                  canEdit={!['checked_out', 'cancelled'].includes(booking.status)}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Payment history */}
           <Card>

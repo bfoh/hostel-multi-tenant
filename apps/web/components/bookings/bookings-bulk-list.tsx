@@ -13,6 +13,7 @@ interface Booking {
   payment_status: string
   check_in_date: string
   final_amount: number
+  group_id?: string | null
   occupant: { first_name: string; last_name: string; phone?: string } | null
   room: { room_number: string; category?: { name: string } | null } | null
 }
@@ -201,7 +202,14 @@ export function BookingsBulkList({
                       {b.status.replace(/_/g, ' ')}
                     </span>
                   </div>
-                  <p className="ref-number mt-0.5 text-[11px] text-text-tertiary">{b.booking_ref}</p>
+                  <p className="ref-number mt-0.5 text-[11px] text-text-tertiary">
+                    {b.booking_ref}
+                    {b.group_id && (
+                      <span className="ml-1.5 inline-flex items-center rounded-full border border-brand/20 bg-brand-subtle px-1.5 py-0.5 text-[9px] font-semibold text-brand">
+                        GROUP
+                      </span>
+                    )}
+                  </p>
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
                     {b.room && <span>Room {b.room.room_number}</span>}
                     <span>{formatDate(b.check_in_date)}</span>
@@ -276,6 +284,14 @@ export function BookingsBulkList({
                     <Link href={`/bookings/${b.id}`} className="text-xs text-brand hover:text-brand-hover transition-colors">
                       {b.booking_ref}
                     </Link>
+                    {b.group_id && (
+                      <Link
+                        href={`/bookings/groups/${b.group_id}`}
+                        className="ml-1.5 inline-flex items-center rounded-full border border-brand/20 bg-brand-subtle px-1.5 py-0.5 text-[9px] font-semibold text-brand hover:bg-brand/20"
+                      >
+                        GROUP
+                      </Link>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/bookings/${b.id}`} className="block">

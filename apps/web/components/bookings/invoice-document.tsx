@@ -51,7 +51,9 @@ export function InvoiceDocument({ booking, tenant }: Props) {
   const cat  = room ? (Array.isArray(room.room_categories) ? room.room_categories[0] : room.room_categories) : null
   const payments = (Array.isArray(booking.booking_payments) ? booking.booking_payments : [])
     .filter((p: any) => p.status === 'success')
-  const balance = booking.final_amount - booking.paid_amount
+  const charges = Array.isArray(booking.booking_charges) ? booking.booking_charges : []
+  const chargesOwed = charges.filter((c: any) => !c.paid).reduce((s: number, c: any) => s + c.amount, 0)
+  const balance = booking.final_amount - booking.paid_amount + chargesOwed
 
   const METHOD: Record<string, string> = {
     momo_mtn:        'MTN Mobile Money',
@@ -172,6 +174,25 @@ export function InvoiceDocument({ booking, tenant }: Props) {
             </View>
           </View>
         </View>
+
+        {/* Additional charges — hotel-only folio (minibar, laundry, etc.) */}
+        {charges.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Additional Charges</Text>
+            <View style={styles.tableHead}>
+              <Text style={[styles.col1, { fontFamily: 'Helvetica-Bold', fontSize: 9 }]}>Description</Text>
+              <Text style={[styles.col2, { fontFamily: 'Helvetica-Bold', fontSize: 9 }]}>Amount</Text>
+            </View>
+            {charges.map((c: any) => (
+              <View key={c.id} style={styles.tableRow}>
+                <Text style={styles.col1}>
+                  {c.description} ({c.quantity} × {GHS(c.unit_price)}){!c.paid ? ' — unpaid' : ''}
+                </Text>
+                <Text style={styles.col2}>{GHS(c.amount)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Payments */}
         {payments.length > 0 && (

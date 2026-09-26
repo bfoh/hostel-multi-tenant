@@ -74,7 +74,14 @@ export default async function NewBookingPage({
           <ChevronLeft className="h-4 w-4" />
           Bookings
         </Link>
-        <h1 className="text-2xl font-bold text-text-primary">New Booking</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-text-primary">New Booking</h1>
+          {isHotel && (
+            <Link href="/bookings/new/group" className="text-sm text-brand hover:underline">
+              Booking multiple rooms? Create a group booking →
+            </Link>
+          )}
+        </div>
       </div>
 
       <BookingForm

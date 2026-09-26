@@ -567,6 +567,7 @@ export type Database = {
           getfund_amount: number | null
           hold_expires_at: string | null
           paystack_reference: string | null
+          group_id: string | null
           created_at: string
           updated_at: string
         }
@@ -602,6 +603,7 @@ export type Database = {
           getfund_amount?: number | null
           hold_expires_at?: string | null
           paystack_reference?: string | null
+          group_id?: string | null
         }
         Update: {
           status?: BookingStatus
@@ -629,11 +631,13 @@ export type Database = {
           getfund_amount?: number | null
           hold_expires_at?: string | null
           paystack_reference?: string | null
+          group_id?: string | null
         }
         Relationships: [
           { foreignKeyName: 'bookings_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
           { foreignKeyName: 'bookings_occupant_id_fkey'; columns: ['occupant_id']; isOneToOne: false; referencedRelation: 'occupants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'bookings_room_id_fkey'; columns: ['room_id']; isOneToOne: false; referencedRelation: 'rooms'; referencedColumns: ['id'] }
+          { foreignKeyName: 'bookings_room_id_fkey'; columns: ['room_id']; isOneToOne: false; referencedRelation: 'rooms'; referencedColumns: ['id'] },
+          { foreignKeyName: 'bookings_group_id_fkey'; columns: ['group_id']; isOneToOne: false; referencedRelation: 'booking_groups'; referencedColumns: ['id'] }
         ]
       }
 
@@ -678,6 +682,85 @@ export type Database = {
         Relationships: [
           { foreignKeyName: 'booking_payments_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
           { foreignKeyName: 'booking_payments_booking_id_fkey'; columns: ['booking_id']; isOneToOne: false; referencedRelation: 'bookings'; referencedColumns: ['id'] }
+        ]
+      }
+
+      booking_charges: {
+        Row: {
+          id: string
+          tenant_id: string
+          booking_id: string
+          description: string
+          category: string
+          quantity: number
+          unit_price: number
+          amount: number
+          payment_method: PaymentMethod | null
+          paid: boolean
+          notes: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          booking_id: string
+          description: string
+          category: string
+          quantity?: number
+          unit_price: number
+          payment_method?: PaymentMethod | null
+          paid?: boolean
+          notes?: string | null
+          created_by: string
+        }
+        Update: {
+          description?: string
+          category?: string
+          quantity?: number
+          unit_price?: number
+          payment_method?: PaymentMethod | null
+          paid?: boolean
+          notes?: string | null
+        }
+        Relationships: [
+          { foreignKeyName: 'booking_charges_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
+          { foreignKeyName: 'booking_charges_booking_id_fkey'; columns: ['booking_id']; isOneToOne: false; referencedRelation: 'bookings'; referencedColumns: ['id'] }
+        ]
+      }
+
+      booking_groups: {
+        Row: {
+          id: string
+          tenant_id: string
+          group_ref: string
+          billing_contact_name: string | null
+          billing_contact_email: string | null
+          billing_contact_phone: string | null
+          status: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          group_ref: string
+          billing_contact_name?: string | null
+          billing_contact_email?: string | null
+          billing_contact_phone?: string | null
+          status?: string
+          created_by?: string | null
+        }
+        Update: {
+          billing_contact_name?: string | null
+          billing_contact_email?: string | null
+          billing_contact_phone?: string | null
+          status?: string
+        }
+        Relationships: [
+          { foreignKeyName: 'booking_groups_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
         ]
       }
 

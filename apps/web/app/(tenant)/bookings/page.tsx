@@ -83,6 +83,7 @@ export default async function BookingsPage({
       payment_status: b.payment_status,
       check_in_date:  b.check_in_date,
       final_amount:   b.final_amount,
+      group_id:       b.group_id,
       occupant:       occupant ? {
         first_name: occupant.first_name,
         last_name:  occupant.last_name,

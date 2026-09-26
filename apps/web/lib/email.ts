@@ -195,6 +195,50 @@ export function bookingConfirmationHtml(opts: {
   return baseTemplate(hostelName, primaryColor, content, logoUrl)
 }
 
+/* ── Group booking confirmation email ───────────────────────────────────── */
+
+export function groupBookingConfirmationHtml(opts: {
+  hostelName:   string
+  primaryColor: string
+  logoUrl?:     string | null
+  contactName:  string
+  groupRef:     string
+  checkInDate:  string
+  checkOutDate: string
+  rooms:        Array<{ roomName: string; guestName: string; amountGHS: string }>
+  contactPhone?: string
+}) {
+  const { hostelName, primaryColor, logoUrl, contactName, groupRef, checkInDate, checkOutDate, rooms, contactPhone } = opts
+
+  const roomRows = rooms
+    .map((r) => row(r.roomName, `${r.guestName} · ${r.amountGHS}`))
+    .join('')
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Group Booking Confirmed</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">
+      Hi ${contactName}, your group booking of ${rooms.length} room${rooms.length === 1 ? '' : 's'} at
+      <strong>${hostelName}</strong> has been received. Here are the details:
+    </p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+      ${row('Group ref', groupRef)}
+      ${row('Check-in', checkInDate)}
+      ${row('Check-out', checkOutDate)}
+      ${roomRows}
+    </table>
+    <div style="background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:24px;">
+      <p style="margin:0;font-size:13px;color:#374151;">
+        <strong>Next step:</strong> Payment for each room is due at check-in${contactPhone ? ` or call <a href="tel:${contactPhone}" style="color:${primaryColor};">${contactPhone}</a> to arrange payment.` : '.'}
+      </p>
+    </div>
+    <p style="font-size:13px;color:#6b7280;margin:0;">
+      Keep your group reference <strong style="color:#111827;">${groupRef}</strong> — you'll need it at check-in.
+    </p>
+  `
+
+  return baseTemplate(hostelName, primaryColor, content, logoUrl)
+}
+
 /* ── Payment receipt email ──────────────────────────────────────────────── */
 
 export function paymentReceiptHtml(opts: {

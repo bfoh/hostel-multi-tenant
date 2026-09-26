@@ -10,7 +10,7 @@ export async function getBookings(filter?: { status?: string; search?: string })
   let query = supabase
     .from('bookings')
     .select(`
-      id, booking_ref, status, payment_status, source,
+      id, booking_ref, status, payment_status, source, group_id,
       check_in_date, check_out_date, final_amount, paid_amount, created_at,
       occupant:occupants(id, first_name, last_name, phone, student_id, institution),
       room:rooms(id, room_number, block, category:room_categories(name))

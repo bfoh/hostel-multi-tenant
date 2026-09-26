@@ -29,6 +29,9 @@ const INVOICE_QUERY = `
   ),
   booking_payments(
     id, amount, method, reference, status, paid_at
+  ),
+  booking_charges(
+    id, description, category, quantity, unit_price, amount, paid, created_at
   )
 `
 

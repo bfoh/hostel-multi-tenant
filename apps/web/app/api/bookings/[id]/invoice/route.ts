@@ -32,7 +32,8 @@ export async function GET(
       tax_amount, final_amount, paid_amount, payment_status, notes, created_at,
       occupants(first_name, last_name, other_names, phone, email, student_id, institution),
       rooms(room_number, block, floor, room_categories(name)),
-      booking_payments(amount, method, reference, paid_at, status)
+      booking_payments(amount, method, reference, paid_at, status),
+      booking_charges(id, description, quantity, unit_price, amount, paid)
     `)
     .eq('id', id)
     .eq('tenant_id', tenantId)
