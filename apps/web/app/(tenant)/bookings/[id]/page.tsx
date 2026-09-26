@@ -14,6 +14,7 @@ import { LeasePdfButton } from '@/components/bookings/lease-pdf-button'
 import { RoomTransferButton } from '@/components/bookings/room-transfer-button'
 import { DepositCard } from '@/components/bookings/deposit-card'
 import { BookingChargesCard } from '@/components/bookings/booking-charges-card'
+import { ExtendStayCard } from '@/components/bookings/extend-stay-card'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 
@@ -245,6 +246,20 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   bookingId={id}
                   initialCharges={(charges ?? []) as any}
                   canEdit={!['checked_out', 'cancelled'].includes(booking.status)}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Extend stay — hotel-only, with availability pre-check */}
+          {isHotel && ['confirmed', 'checked_in'].includes(booking.status) && (
+            <Card>
+              <CardHeader><CardTitle>Extend Stay</CardTitle></CardHeader>
+              <CardContent className="pt-0">
+                <ExtendStayCard
+                  bookingId={id}
+                  currentCheckOut={booking.check_out_date}
+                  status={booking.status}
                 />
               </CardContent>
             </Card>
