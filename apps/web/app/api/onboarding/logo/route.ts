@@ -9,22 +9,20 @@ import { onboardingLimiter, enforceRateLimit } from '@/lib/rate-limit'
  *
  * Server-side logo upload for the onboarding wizard's branding step.
  *
- * The wizard previously uploaded directly from the browser straight to the
- * tenant-logos Storage bucket, the only place in this codebase that did a
- * Storage write straight from client-side JS — every
- * other upload (see app/api/settings/logo/route.ts) goes through a
- * server-side route like this one. That direct-from-browser call
- * consistently failed onboarding's tenant-logos RLS check ("new row
- * violates row-level security policy") even after the path format was
- * fixed to match the bucket's {tenant_id}/logo.{ext} convention — the
- * wizard runs on the tenant's own subdomain immediately after a fresh
- * email-confirmation redirect, and something about that specific
- * browser-side session context wasn't reliably authenticating the direct
- * Storage call, unlike this same request made server-side (which is
- * exactly how the wizard's other steps, e.g. /api/onboarding/identity,
- * already work reliably in this same flow). Routing through the server
- * sidesteps the whole class of problem rather than continuing to chase the
- * exact browser-side auth failure mode.
+ * Moving this off a direct browser-side Storage call (see git history) did
+ * not fix the "new row violates row-level security policy" error some
+ * owners hit here — the real cause is JWT staleness, not request origin.
+ * public.tenant_id() (used by tenant_members' own SELECT policy, which the
+ * tenant-logos INSERT policy's membership subquery depends on — see
+ * migration 113) reads tenant_id from the JWT's claims, not a live lookup.
+ * Those claims are stamped by custom_access_token_hook (migration 044) at
+ * token-mint time. A user's access token minted at signup — before
+ * provisionTenant() created their tenant_members row — has no tenant_id
+ * claim at all, and the wizard can be reached on that same stale token
+ * (auth/callback's own refreshSession() call can be dropped by an
+ * intermediate redirect). Refreshing the session here, right before the
+ * RLS-gated write, guarantees an up-to-date claim regardless of how the
+ * caller got here.
  */
 export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(onboardingLimiter, req, 'onboarding-logo')
@@ -33,6 +31,11 @@ export async function POST(req: NextRequest) {
   const supabaseAuth = await createClient()
   const { data: { user } } = await supabaseAuth.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+
+  // Mint a fresh access token so RLS checks that read tenant_id/tenant_role
+  // from JWT claims (see header comment) see current tenant_members state,
+  // not whatever was true when this session's token was originally issued.
+  await supabaseAuth.auth.refreshSession()
 
   const formData = await req.formData().catch(() => null)
   const file = formData?.get('logo') as File | null
@@ -83,7 +86,31 @@ export async function POST(req: NextRequest) {
     .upload(path, bytes, { contentType: file.type, upsert: true })
 
   if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 })
+    // The refreshSession() above is our best fix for the known JWT-staleness
+    // cause (see header comment), but if this still fails, surface exactly
+    // what the RLS check saw instead of leaving a bare Postgres message —
+    // one more blind guess isn't useful after two failed fix attempts.
+    let claimTenantId: string | null = null
+    try {
+      const { data: { session } } = await supabaseAuth.auth.getSession()
+      const payloadB64 = session?.access_token.split('.')[1]
+      if (payloadB64) {
+        const json = Buffer.from(payloadB64, 'base64').toString('utf8')
+        claimTenantId = JSON.parse(json).tenant_id ?? null
+      }
+    } catch { /* best-effort diagnostic only */ }
+
+    const { data: visibleMembership } = await supabaseAuth
+      .from('tenant_members')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    return NextResponse.json({
+      error: uploadError.message,
+      debug: { tenantId, claimTenantId, visibleUnderOwnSession: !!visibleMembership },
+    }, { status: 500 })
   }
 
   const { data: { publicUrl } } = supabaseAuth.storage.from('tenant-logos').getPublicUrl(path)

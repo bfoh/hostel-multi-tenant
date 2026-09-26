@@ -313,7 +313,15 @@ export function OnboardingWizard({ tenantId, businessType, initial }: Onboarding
 
       const res = await fetch('/api/onboarding/logo', { method: 'POST', body })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Upload failed')
+      if (!res.ok) {
+        // json.debug is a temporary diagnostic (see the route's header
+        // comment) for narrowing down a recurring RLS failure — appended
+        // inline since this error has been hard to reproduce/inspect
+        // outside of the reporter's own browser.
+        const base = typeof json.error === 'string' ? json.error : 'Upload failed'
+        const suffix = json.debug ? ` [${JSON.stringify(json.debug)}]` : ''
+        throw new Error(base + suffix)
+      }
 
       set('logo_url', json.logo_url)
       setLogoFileName(file.name)
