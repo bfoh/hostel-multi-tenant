@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { getSetupChecklist } from '@/lib/data/dashboard'
+import { getServerBusinessType } from '@/lib/auth/tenant'
 
 export async function SetupChecklist() {
-  const status = await getSetupChecklist()
+  const [status, businessType] = await Promise.all([getSetupChecklist(), getServerBusinessType()])
+  const nounSingular = businessType === 'hotel' ? 'hotel' : 'hostel'
 
   const steps = [
     {
@@ -52,7 +54,7 @@ export async function SetupChecklist() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-base font-semibold text-text-primary">
-            Set up your hostel
+            Set up your {nounSingular}
           </h2>
           <p className="mt-0.5 text-sm text-text-secondary">
             Complete these steps to start managing bookings.
