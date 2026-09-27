@@ -1,17 +1,24 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { sendBookingConfirmation } from '@/lib/sms'
 import { formatDate } from '@/lib/utils'
 import { createBooking } from '@/lib/bookings/create-booking'
 import { resolveOccupant } from '@/lib/bookings/resolve-occupant'
+import { PAYMENT_METHODS } from '@/lib/payments/methods'
 
 const guestSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName:  z.string().min(1).max(100),
   phone:     z.string().min(10).max(15),
   email:     z.string().email().optional().nullable(),
+})
+
+const paymentSchema = z.object({
+  method: z.enum(PAYMENT_METHODS),
+  amount: z.number().int().min(1),
 })
 
 const schema = z.object({
@@ -26,6 +33,9 @@ const schema = z.object({
   discount_amount: z.number().int().min(0).default(0),
   discount_reason: z.string().max(200).optional().nullable(),
   notes:           z.string().max(500).optional().nullable(),
+  // Payment collected at booking time (Payment Type: Full/Part), possibly
+  // split across methods — see PaymentSplitInput. Omitted means "Later".
+  payments:        z.array(paymentSchema).optional(),
 }).refine((d) => !!d.occupant_id !== !!d.guest, {
   message: 'Provide exactly one of occupant_id or guest',
 })
@@ -52,7 +62,14 @@ export async function POST(request: NextRequest) {
   // this branch.
   const occupantId = d.occupant_id ?? await resolveOccupant(supabase, tenantId, d.guest!)
 
-  const result = await createBooking(supabase, tenantId, { ...d, occupant_id: occupantId })
+  let receivedBy: string | undefined
+  if (d.payments && d.payments.length > 0) {
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    receivedBy = user?.id
+  }
+
+  const result = await createBooking(supabase, tenantId, { ...d, occupant_id: occupantId, receivedBy })
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status })
   }

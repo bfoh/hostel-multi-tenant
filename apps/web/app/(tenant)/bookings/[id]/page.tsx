@@ -17,6 +17,7 @@ import { BookingChargesCard } from '@/components/bookings/booking-charges-card'
 import { ExtendStayCard } from '@/components/bookings/extend-stay-card'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
+import { PAYMENT_METHOD_LABEL } from '@/lib/payments/methods'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -31,16 +32,6 @@ const STATUS_BADGE: Record<string, string> = {
   checked_out:     'bg-surface-sunken text-text-secondary border-border',
   cancelled:       'bg-danger-subtle text-danger border-danger/20',
   no_show:         'bg-danger-subtle text-danger border-danger/20',
-}
-
-const PAYMENT_METHODS: Record<string, string> = {
-  momo_mtn:       'MTN MoMo',
-  momo_vodafone:  'Vodafone Cash',
-  momo_airteltigo:'AirtelTigo Money',
-  card:           'Card',
-  bank_transfer:  'Bank Transfer',
-  cash:           'Cash',
-  cheque:         'Cheque',
 }
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -260,6 +251,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   bookingId={id}
                   currentCheckOut={booking.check_out_date}
                   status={booking.status}
+                  ratePerUnit={booking.rate_per_unit}
+                  rateUnit={booking.rate_unit}
                 />
               </CardContent>
             </Card>
@@ -279,7 +272,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     <div key={p.id} className="flex items-center justify-between py-3">
                       <div>
                         <p className="text-sm font-medium text-text-primary">
-                          {PAYMENT_METHODS[p.method] ?? p.method}
+                          {PAYMENT_METHOD_LABEL[p.method as keyof typeof PAYMENT_METHOD_LABEL] ?? p.method}
                         </p>
                         {p.reference && (
                           <p className="ref-number text-[11px] text-text-tertiary">{p.reference}</p>

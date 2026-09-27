@@ -2,9 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Loader2 } from 'lucide-react'
+import { Plus, X, Loader2, CreditCard } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatGHS } from '@/lib/utils'
+import {
+  PaymentSplitInput, defaultPaymentSplitValue, derivePayments, isPaymentSplitValid,
+  type PaymentSplitValue,
+} from '@/components/bookings/payment-split-input'
 
 interface Room {
   id: string
@@ -24,11 +28,13 @@ interface RoomRow {
   key: string
   room_id: string
   occupant_id: string
+  showPayment: boolean
+  payment: PaymentSplitValue
 }
 
 let rowKeySeq = 0
 function newRow(): RoomRow {
-  return { key: `row-${++rowKeySeq}`, room_id: '', occupant_id: '' }
+  return { key: `row-${++rowKeySeq}`, room_id: '', occupant_id: '', showPayment: false, payment: defaultPaymentSplitValue() }
 }
 
 export function GroupBookingForm({ rooms, occupants, checkIn, checkOut }: {
@@ -78,6 +84,15 @@ export function GroupBookingForm({ rooms, occupants, checkIn, checkOut }: {
       setError('Each room can only appear once in a group')
       return
     }
+    for (const r of rows) {
+      if (!r.showPayment) continue
+      const room = rooms.find((x) => x.id === r.room_id)
+      const cat = room ? categoryOf(room) : null
+      if (!isPaymentSplitValid(r.payment, cat?.base_rate ?? 0)) {
+        setError('One of the room payments is invalid — check the amounts add up correctly.')
+        return
+      }
+    }
 
     setSubmitting(true)
     try {
@@ -91,6 +106,7 @@ export function GroupBookingForm({ rooms, occupants, checkIn, checkOut }: {
             check_in_date:  checkIn,
             check_out_date: checkOut,
             source:         'walk_in',
+            payments:       r.showPayment ? derivePayments(r.payment) : undefined,
           })),
           billing_contact_name:  billingName || undefined,
           billing_contact_email: billingEmail || undefined,
@@ -135,44 +151,73 @@ export function GroupBookingForm({ rooms, occupants, checkIn, checkOut }: {
             const room = rooms.find((r) => r.id === row.room_id)
             const cat = room ? categoryOf(room) : null
             return (
-              <div key={row.key} className="flex items-center gap-2">
-                <span className="w-5 shrink-0 text-xs text-text-tertiary">{i + 1}.</span>
-                <select
-                  value={row.room_id}
-                  onChange={(e) => updateRow(row.key, { room_id: e.target.value })}
-                  className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
-                >
-                  <option value="">Select room…</option>
-                  {rooms.map((r) => {
-                    const c = categoryOf(r)
-                    return (
-                      <option key={r.id} value={r.id}>
-                        Room {r.room_number}{r.block ? ` (${r.block})` : ''} — {c?.name ?? ''} {c ? `· ${formatGHS(c.base_rate)}` : ''}
-                      </option>
-                    )
-                  })}
-                </select>
-                <select
-                  value={row.occupant_id}
-                  onChange={(e) => updateRow(row.key, { occupant_id: e.target.value })}
-                  className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
-                >
-                  <option value="">Select guest…</option>
-                  {occupants.map((o) => (
-                    <option key={o.id} value={o.id}>{o.first_name} {o.last_name}{o.phone ? ` — ${o.phone}` : ''}</option>
-                  ))}
-                </select>
-                <span className="w-24 shrink-0 text-right text-sm currency-amount text-text-secondary">
-                  {cat ? formatGHS(cat.base_rate) : '—'}
-                </span>
-                <button
-                  onClick={() => removeRow(row.key)}
-                  disabled={rows.length <= 2}
-                  className="text-text-tertiary hover:text-danger disabled:opacity-30"
-                  aria-label="Remove room"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+              <div key={row.key} className="space-y-2 border-b border-border/50 pb-3 last:border-0 last:pb-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 shrink-0 text-xs text-text-tertiary">{i + 1}.</span>
+                  <select
+                    value={row.room_id}
+                    onChange={(e) => updateRow(row.key, { room_id: e.target.value })}
+                    className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+                  >
+                    <option value="">Select room…</option>
+                    {rooms.map((r) => {
+                      const c = categoryOf(r)
+                      return (
+                        <option key={r.id} value={r.id}>
+                          Room {r.room_number}{r.block ? ` (${r.block})` : ''} — {c?.name ?? ''} {c ? `· ${formatGHS(c.base_rate)}` : ''}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  <select
+                    value={row.occupant_id}
+                    onChange={(e) => updateRow(row.key, { occupant_id: e.target.value })}
+                    className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+                  >
+                    <option value="">Select guest…</option>
+                    {occupants.map((o) => (
+                      <option key={o.id} value={o.id}>{o.first_name} {o.last_name}{o.phone ? ` — ${o.phone}` : ''}</option>
+                    ))}
+                  </select>
+                  <span className="w-24 shrink-0 text-right text-sm currency-amount text-text-secondary">
+                    {cat ? formatGHS(cat.base_rate) : '—'}
+                  </span>
+                  <button
+                    onClick={() => removeRow(row.key)}
+                    disabled={rows.length <= 2}
+                    className="text-text-tertiary hover:text-danger disabled:opacity-30"
+                    aria-label="Remove room"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {cat && (
+                  <div className="pl-7">
+                    {row.showPayment ? (
+                      <div className="rounded-lg border border-border bg-surface-raised p-3">
+                        <PaymentSplitInput
+                          totalDue={cat.base_rate}
+                          value={row.payment}
+                          onChange={(payment) => updateRow(row.key, { payment })}
+                        />
+                        <button
+                          onClick={() => updateRow(row.key, { showPayment: false, payment: defaultPaymentSplitValue() })}
+                          className="mt-2 text-xs text-text-tertiary hover:text-text-primary"
+                        >
+                          Remove payment — pay later instead
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => updateRow(row.key, { showPayment: true })}
+                        className="flex items-center gap-1.5 text-xs font-medium text-brand hover:text-brand-hover"
+                      >
+                        <CreditCard className="h-3.5 w-3.5" /> Record payment for this room now
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}

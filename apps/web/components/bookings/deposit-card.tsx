@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Shield, ShieldCheck, ShieldX, Loader2, ChevronDown, ChevronUp, Link2, Copy } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
+import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from '@/lib/payments/methods'
 
 interface Deposit {
   id: string
@@ -15,11 +16,6 @@ interface Deposit {
   refund_reason?: string | null
   resolved_at?: string | null
   notes?: string | null
-}
-
-const METHOD_LABEL: Record<string, string> = {
-  cash: 'Cash', card: 'Card', bank_transfer: 'Bank Transfer', cheque: 'Cheque',
-  momo_mtn: 'MTN MoMo', momo_vodafone: 'Vodafone Cash', momo_airteltigo: 'AirtelTigo Money',
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -204,7 +200,7 @@ export function DepositCard({
 
           {/* Details */}
           <div className="rounded-lg bg-surface-raised p-3 text-xs space-y-1 text-text-secondary">
-            <p><span className="text-text-tertiary">Method: </span>{METHOD_LABEL[deposit.method] ?? deposit.method}</p>
+            <p><span className="text-text-tertiary">Method: </span>{METHOD_LABEL[deposit.method as keyof typeof METHOD_LABEL] ?? deposit.method}</p>
             {deposit.reference && <p><span className="text-text-tertiary">Ref: </span>{deposit.reference}</p>}
             <p><span className="text-text-tertiary">Collected: </span>{new Date(deposit.collected_at).toLocaleDateString()}</p>
             {deposit.resolved_at && (

@@ -6,10 +6,11 @@ import { getServerTenantId } from '@/lib/auth/tenant'
 import { sendPaymentReceipt } from '@/lib/sms'
 import { formatGHS } from '@/lib/utils'
 import { sendEmail, paymentReceiptHtml } from '@/lib/email'
+import { PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from '@/lib/payments/methods'
 
 const schema = z.object({
   amount:    z.number().int().min(1),
-  method:    z.enum(['momo_mtn', 'momo_vodafone', 'momo_airteltigo', 'card', 'bank_transfer', 'cash', 'cheque']),
+  method:    z.enum(PAYMENT_METHODS),
   reference: z.string().max(100).optional().nullable(),
   notes:     z.string().max(300).optional().nullable(),
 })
@@ -85,11 +86,6 @@ export async function POST(
 
   // Fire SMS + email receipt — non-blocking
   try {
-    const METHOD_LABEL: Record<string, string> = {
-      momo_mtn: 'MTN MoMo', momo_vodafone: 'Vodafone Cash',
-      momo_airteltigo: 'AirtelTigo Money', cash: 'Cash',
-      bank_transfer: 'Bank Transfer', card: 'Card', cheque: 'Cheque',
-    }
     const [occupantRes, bookingRes, tenantRes] = await Promise.all([
       supabase.from('occupants').select('first_name, last_name, phone, email').eq('id', booking.occupant_id).single(),
       supabase.from('bookings').select('booking_ref, final_amount, paid_amount').eq('id', id).single(),
@@ -100,7 +96,7 @@ export async function POST(
     const bkn       = bookingRes.data
     const ten       = tenantRes.data
     const balance   = Math.max(0, (bkn?.final_amount ?? 0) - ((bkn?.paid_amount ?? 0) + parsed.data.amount))
-    const methodLabel = METHOD_LABEL[parsed.data.method] ?? parsed.data.method
+    const methodLabel = PAYMENT_METHOD_LABEL[parsed.data.method] ?? parsed.data.method
 
     if (occ?.phone) {
       sendPaymentReceipt({

@@ -7,12 +7,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Loader2, Smartphone, ClipboardList, CheckCircle2, Link2, Copy, Building2 } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
+import { PAYMENT_METHODS, PAYMENT_METHOD_OPTIONS } from '@/lib/payments/methods'
 
 /* ─────────────────────────── Manual form ────────────────────────── */
 
 const manualSchema = z.object({
   amount:    z.coerce.number().min(0.01, 'Enter an amount'),
-  method:    z.enum(['momo_mtn', 'momo_vodafone', 'momo_airteltigo', 'card', 'bank_transfer', 'cash', 'cheque']),
+  method:    z.enum(PAYMENT_METHODS),
   reference: z.string().max(100).optional(),
   notes:     z.string().max(300).optional(),
 })
@@ -416,13 +417,9 @@ export function RecordPaymentForm({ bookingId, balance, paystackEnabled = false 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-text-secondary">Method</label>
               <select {...manual.register('method')} className="input-base text-sm">
-                <option value="momo_mtn">MTN MoMo</option>
-                <option value="momo_vodafone">Vodafone Cash</option>
-                <option value="momo_airteltigo">AirtelTigo Money</option>
-                <option value="cash">Cash</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="card">Card</option>
-                <option value="cheque">Cheque</option>
+                {PAYMENT_METHOD_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </select>
             </div>
           </div>

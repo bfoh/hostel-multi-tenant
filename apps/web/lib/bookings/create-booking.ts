@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { PaymentMethod } from '@/lib/payments/methods'
 
 /**
  * Shared single-room booking creation, used by both the plain single
@@ -21,10 +22,17 @@ export interface CreateBookingParams {
   discount_reason?: string | null
   notes?:          string | null
   group_id?:       string | null
+  /** Optional payment(s) collected at booking time — see PaymentSplitInput.
+   *  Amounts are in pesewas. Omitted/empty behaves exactly as before
+   *  (booking created with no payment, status 'pending_payment'). */
+  payments?:       { method: PaymentMethod; amount: number }[]
+  /** Required when `payments` is non-empty — the staff member who
+   *  collected it, stamped on each booking_payments row. */
+  receivedBy?:     string
 }
 
 export type CreateBookingResult =
-  | { ok: true; bookingId: string; bookingRef: string; roomNumber: string | null }
+  | { ok: true; bookingId: string; bookingRef: string; roomNumber: string | null; status: string }
   | { ok: false; status: number; error: string }
 
 function generateBookingRef(): string {
@@ -111,5 +119,34 @@ export async function createBooking(
   const newRoomStatus = newCount >= capacity ? 'occupied' : 'reserved'
   await supabase.from('rooms').update({ status: newRoomStatus }).eq('id', params.room_id)
 
-  return { ok: true, bookingId: data.id, bookingRef: data.booking_ref, roomNumber: room.room_number ?? null }
+  let status = 'pending_payment'
+
+  if (params.payments && params.payments.length > 0) {
+    const { error: paymentsErr } = await supabase.from('booking_payments').insert(
+      params.payments.map((p) => ({
+        tenant_id:   tenantId,
+        booking_id:  data.id,
+        amount:      p.amount,
+        method:      p.method,
+        status:      'success',
+        paid_at:     new Date().toISOString(),
+        received_by: params.receivedBy ?? null,
+      })),
+    )
+
+    // Best-effort — the booking itself already exists at this point; a
+    // payment-insert failure shouldn't roll it back, just leave it
+    // pending_payment so staff can record the payment again via the
+    // regular "Record Payment" flow.
+    if (!paymentsErr) {
+      const paidAmount = params.payments.reduce((s, p) => s + p.amount, 0)
+      const finalAmount = Math.max(0, baseRate - (params.discount_amount ?? 0))
+      if (paidAmount >= finalAmount) {
+        status = 'confirmed'
+        await supabase.from('bookings').update({ status }).eq('id', data.id)
+      }
+    }
+  }
+
+  return { ok: true, bookingId: data.id, bookingRef: data.booking_ref, roomNumber: room.room_number ?? null, status }
 }

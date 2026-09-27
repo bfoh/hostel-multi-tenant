@@ -1,9 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarPlus, Loader2 } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
+import {
+  PaymentSplitInput, defaultPaymentSplitValue, derivePayments, isPaymentSplitValid,
+  type PaymentSplitValue,
+} from '@/components/bookings/payment-split-input'
 
 interface AlternativeRoom {
   id: string
@@ -19,27 +23,51 @@ interface AlternativeRoom {
  * affect hostel tenants). Offers alternative rooms instead of a hard
  * failure when the current room is booked for the requested dates.
  */
-export function ExtendStayCard({ bookingId, currentCheckOut, status }: {
+export function ExtendStayCard({ bookingId, currentCheckOut, status, ratePerUnit, rateUnit }: {
   bookingId: string
   currentCheckOut: string
   status: string
+  ratePerUnit: number
+  rateUnit: string
 }) {
   const router = useRouter()
   const [newDate, setNewDate] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [alternatives, setAlternatives] = useState<AlternativeRoom[] | null>(null)
+  const [payment, setPayment] = useState<PaymentSplitValue>(defaultPaymentSplitValue())
+
+  // Mirrors the server's own math in /api/bookings/[id]/extend-stay exactly
+  // — a live preview only; the server never trusts this and recomputes its
+  // own authoritative extraAmount before accepting any payment.
+  const extraAmount = useMemo(() => {
+    if (!newDate || rateUnit !== 'night') return 0
+    const nights = Math.round((new Date(newDate).getTime() - new Date(currentCheckOut).getTime()) / 86400000)
+    return nights > 0 ? ratePerUnit * nights : 0
+  }, [newDate, currentCheckOut, rateUnit, ratePerUnit])
 
   if (!['confirmed', 'checked_in'].includes(status)) return null
 
   async function submit(newRoomId?: string) {
     if (!newDate) { setError('Select a new check-out date'); return }
+    if (extraAmount > 0 && !isPaymentSplitValid(payment, extraAmount)) {
+      setError(
+        payment.type === 'full'
+          ? 'The split must add up to the full extension amount.'
+          : 'Enter a valid partial amount (less than the total, more than zero).',
+      )
+      return
+    }
     setSaving(true); setError(null)
     try {
       const res = await fetch(`/api/bookings/${bookingId}/extend-stay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_check_out_date: newDate, new_room_id: newRoomId }),
+        body: JSON.stringify({
+          new_check_out_date: newDate,
+          new_room_id:        newRoomId,
+          payments:           extraAmount > 0 ? derivePayments(payment) : undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -52,6 +80,7 @@ export function ExtendStayCard({ bookingId, currentCheckOut, status }: {
       }
       setAlternatives(null)
       setNewDate('')
+      setPayment(defaultPaymentSplitValue())
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to extend stay')
@@ -86,6 +115,15 @@ export function ExtendStayCard({ bookingId, currentCheckOut, status }: {
           Extend
         </button>
       </div>
+
+      {extraAmount > 0 && (
+        <div className="rounded-lg border border-border bg-surface-raised p-3">
+          <p className="mb-2 text-xs text-text-tertiary">
+            This adds <span className="currency-amount font-semibold text-text-primary">{formatGHS(extraAmount)}</span> to the balance.
+          </p>
+          <PaymentSplitInput totalDue={extraAmount} value={payment} onChange={setPayment} />
+        </div>
+      )}
 
       {error && <p className="text-xs text-danger">{error}</p>}
 

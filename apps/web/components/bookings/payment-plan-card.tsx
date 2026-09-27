@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarClock, CheckCircle2, Clock, Loader2, Plus, AlertCircle, Minus, Link2, Copy } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
+import { PAYMENT_METHOD_OPTIONS as PAYMENT_METHODS } from '@/lib/payments/methods'
 
 interface Installment {
   id: string
@@ -31,15 +32,6 @@ const STATUS_CONFIG = {
   overdue:  { label: 'Overdue',  icon: AlertCircle,   color: 'text-danger',          bg: 'bg-danger/10' },
   waived:   { label: 'Waived',   icon: Minus,         color: 'text-text-tertiary',   bg: 'bg-surface-sunken' },
 }
-
-const PAYMENT_METHODS = [
-  { value: 'cash',            label: 'Cash' },
-  { value: 'momo_mtn',        label: 'MTN MoMo' },
-  { value: 'momo_vodafone',   label: 'Vodafone Cash' },
-  { value: 'momo_airteltigo', label: 'AirtelTigo Money' },
-  { value: 'bank_transfer',   label: 'Bank Transfer' },
-  { value: 'card',            label: 'Card' },
-]
 
 export function PaymentPlanCard({
   bookingId,

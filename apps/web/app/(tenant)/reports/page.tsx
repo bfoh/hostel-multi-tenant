@@ -8,6 +8,7 @@ import { formatGHS } from '@/lib/utils'
 import {
   getRevenueReport,
   getPaymentMethodBreakdown,
+  getOutstandingBalance,
   getOccupancyReport,
   getOverdueRent,
   getBookingSummary,
@@ -15,17 +16,33 @@ import {
 } from '@/lib/data/reports'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { notFound } from 'next/navigation'
+import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from '@/lib/payments/methods'
 
 export const metadata: Metadata = { title: 'Reports' }
 
-const METHOD_LABEL: Record<string, string> = {
-  momo_mtn:        'MTN MoMo',
-  momo_vodafone:   'Vodafone Cash',
-  momo_airteltigo: 'AirtelTigo Money',
-  cash:            'Cash',
-  bank_transfer:   'Bank Transfer',
-  card:            'Card',
-  cheque:          'Cheque',
+const PM_RANGE_OPTIONS = [
+  { value: 'this_week',  label: 'This Week' },
+  { value: 'this_month', label: 'This Month' },
+  { value: 'this_year',  label: 'This Year' },
+  { value: '12m',        label: '12 Months' },
+]
+
+function getPmDateRange(range: string): { from?: string; to?: string } {
+  const now = new Date()
+  switch (range) {
+    case 'this_week': {
+      const day = now.getDay()
+      const mon = new Date(now)
+      mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
+      return { from: mon.toISOString() }
+    }
+    case 'this_month':
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString() }
+    case 'this_year':
+      return { from: new Date(now.getFullYear(), 0, 1).toISOString() }
+    default: // '12m'
+      return {}
+  }
 }
 
 const BOOKING_STATUS_LABEL: Record<string, string> = {
@@ -86,22 +103,27 @@ const REPORT_TABS = [
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ report?: string }>
+  searchParams: Promise<{ report?: string; pmRange?: string }>
 }) {
-  const { report = 'overview' } = await searchParams
+  const { report = 'overview', pmRange = '12m' } = await searchParams
 
   const tenantId = await getServerTenantId()
   if (!tenantId) notFound()
 
+  const pmDateRange = getPmDateRange(pmRange)
+
   // Fetch all data in parallel
-  const [ytd, revenue6m, methods, occupancy, overdue, bookings] = await Promise.all([
+  const [ytd, revenue6m, methods, outstanding, occupancy, overdue, bookings] = await Promise.all([
     getYtdSummary(tenantId),
     getRevenueReport(tenantId, 6),
-    getPaymentMethodBreakdown(tenantId),
+    getPaymentMethodBreakdown(tenantId, pmDateRange.from, pmDateRange.to),
+    getOutstandingBalance(tenantId, pmDateRange.from, pmDateRange.to),
     getOccupancyReport(tenantId),
     getOverdueRent(tenantId),
     getBookingSummary(tenantId),
   ])
+
+  const topMethod = methods[0]
 
   const maxRevenue = Math.max(...revenue6m.map((m) => m.amount), 1)
   const today = new Date().toLocaleDateString('en-GH', {
@@ -236,11 +258,35 @@ export default async function ReportsPage({
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Payment methods */}
             <div className="rounded-xl border border-border bg-surface p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-text-tertiary" />
-                <h2 className="font-semibold text-text-primary">Payment Methods</h2>
-                <span className="text-xs text-text-tertiary">(last 12 months)</span>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-text-tertiary" />
+                  <h2 className="font-semibold text-text-primary">Payment Methods</h2>
+                </div>
+                <div className="flex gap-1">
+                  {PM_RANGE_OPTIONS.map((opt) => (
+                    <Link
+                      key={opt.value}
+                      href={`/reports?report=overview&pmRange=${opt.value}`}
+                      className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                        pmRange === opt.value
+                          ? 'bg-brand text-white'
+                          : 'bg-surface-sunken text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      {opt.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
+
+              {methods.length > 0 && (
+                <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-secondary">
+                  <span>Top method: <span className="font-semibold text-text-primary">{METHOD_LABEL[topMethod.method as keyof typeof METHOD_LABEL] ?? topMethod.method}</span></span>
+                  <span>Outstanding: <span className="font-mono font-semibold text-danger">{formatGHS(outstanding)}</span></span>
+                </div>
+              )}
+
               {methods.length === 0 ? (
                 <p className="text-sm text-text-tertiary">No payment data yet.</p>
               ) : (
@@ -248,7 +294,10 @@ export default async function ReportsPage({
                   {methods.map((m) => (
                     <div key={m.method}>
                       <div className="mb-1 flex justify-between text-xs">
-                        <span className="text-text-primary">{METHOD_LABEL[m.method] ?? m.method}</span>
+                        <span className="text-text-primary">
+                          {METHOD_LABEL[m.method as keyof typeof METHOD_LABEL] ?? m.method}
+                          <span className="text-text-tertiary"> · {m.count} booking{m.count === 1 ? '' : 's'}</span>
+                        </span>
                         <span className="font-mono text-text-secondary">
                           {formatGHS(m.amount)} · {m.pct}%
                         </span>
@@ -434,6 +483,7 @@ export default async function ReportsPage({
                 <thead className="bg-surface-sunken">
                   <tr>
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Method</th>
+                    <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wide text-text-tertiary">Bookings</th>
                     <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Amount</th>
                     <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Share</th>
                     <th className="px-5 py-3 hidden md:table-cell" />
@@ -442,7 +492,8 @@ export default async function ReportsPage({
                 <tbody className="divide-y divide-border">
                   {methods.map((m) => (
                     <tr key={m.method} className="hover:bg-surface-raised transition-colors">
-                      <td className="px-5 py-3 font-medium text-text-primary">{METHOD_LABEL[m.method] ?? m.method}</td>
+                      <td className="px-5 py-3 font-medium text-text-primary">{METHOD_LABEL[m.method as keyof typeof METHOD_LABEL] ?? m.method}</td>
+                      <td className="px-5 py-3 text-center text-text-secondary">{m.count}</td>
                       <td className="px-5 py-3 text-right font-mono text-text-primary">{formatGHS(m.amount)}</td>
                       <td className="px-5 py-3 text-right text-text-secondary">{m.pct}%</td>
                       <td className="px-5 py-3 hidden md:table-cell w-40">

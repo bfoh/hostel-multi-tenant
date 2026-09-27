@@ -1,17 +1,24 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import { createBooking } from '@/lib/bookings/create-booking'
 import { resolveOccupant } from '@/lib/bookings/resolve-occupant'
 import { sendEmail, groupBookingConfirmationHtml } from '@/lib/email'
 import { formatGHS, formatDate } from '@/lib/utils'
+import { PAYMENT_METHODS } from '@/lib/payments/methods'
 
 const guestSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName:  z.string().min(1).max(100),
   phone:     z.string().min(10).max(15),
   email:     z.string().email().optional().nullable(),
+})
+
+const paymentSchema = z.object({
+  method: z.enum(PAYMENT_METHODS),
+  amount: z.number().int().min(1),
 })
 
 const roomSchema = z.object({
@@ -24,6 +31,9 @@ const roomSchema = z.object({
   discount_amount: z.number().int().min(0).default(0),
   discount_reason: z.string().max(200).optional().nullable(),
   notes:           z.string().max(500).optional().nullable(),
+  // Each room's own payment, possibly split across methods — matches this
+  // route's existing "each room keeps its own independent payments" design.
+  payments:        z.array(paymentSchema).optional(),
 }).refine((r) => !!r.occupant_id !== !!r.guest, {
   message: 'Provide exactly one of occupant_id or guest per room',
 })
@@ -91,6 +101,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: groupErr?.message ?? 'Failed to create group' }, { status: 500 })
   }
 
+  let receivedBy: string | undefined
+  if (d.rooms.some((r) => r.payments && r.payments.length > 0)) {
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    receivedBy = user?.id
+  }
+
   const created: { bookingId: string; bookingRef: string; roomNumber: string | null; occupantId: string; amount: number }[] = []
 
   for (const room of d.rooms) {
@@ -98,7 +115,7 @@ export async function POST(request: NextRequest) {
     // occupant per room, same as the single-booking route.
     const occupantId = room.occupant_id ?? await resolveOccupant(supabase, tenantId, room.guest!)
 
-    const result = await createBooking(supabase, tenantId, { ...room, occupant_id: occupantId, group_id: group.id })
+    const result = await createBooking(supabase, tenantId, { ...room, occupant_id: occupantId, group_id: group.id, receivedBy })
     if (!result.ok) {
       // Roll back everything created so far plus the group row — no
       // partial groups left behind.

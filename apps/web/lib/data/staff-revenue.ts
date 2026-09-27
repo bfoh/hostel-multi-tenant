@@ -1,13 +1,15 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { PaymentMethod } from '@/lib/payments/methods'
 
 export interface StaffRevenueRow {
-  staffId:       string
-  staffName:     string
-  staffEmail:    string
-  paymentsCount: number
-  cashTotal:     number
-  digitalTotal:  number
-  total:         number
+  staffId:        string
+  staffName:      string
+  staffEmail:     string
+  paymentsCount:  number
+  roomRevenue:    number
+  chargesRevenue: number
+  total:          number
+  methodTotals:   Partial<Record<PaymentMethod, { count: number; amount: number }>>
 }
 
 /**
@@ -16,6 +18,8 @@ export interface StaffRevenueRow {
  * booking_charges by `created_by` — a booking's true revenue is the room
  * payment plus whatever folio charges (minibar, laundry, etc.) that staff
  * member recorded, matching the "revenue by whoever brought it in" model.
+ * Broken down by exact payment method (not a cash/digital binary) and by
+ * room-vs-charges, matching AMP Lodge's per-staff report.
  */
 export async function getStaffRevenue(
   tenantId: string,
@@ -45,33 +49,42 @@ export async function getStaffRevenue(
 
   if ((!payments || payments.length === 0) && (!charges || charges.length === 0)) return []
 
+  interface StaffAccumulator {
+    roomRevenue:    number
+    chargesRevenue: number
+    count:          number
+    methodTotals:   StaffRevenueRow['methodTotals']
+  }
+
   // Group by staff
-  const map = new Map<string, { cash: number; digital: number; count: number }>()
+  const map = new Map<string, StaffAccumulator>()
   const staffIds = new Set<string>()
+
+  function addMethod(entry: StaffAccumulator, method: string, amount: number) {
+    const m = method as PaymentMethod
+    const e = entry.methodTotals[m] ?? { count: 0, amount: 0 }
+    e.count++
+    e.amount += amount
+    entry.methodTotals[m] = e
+  }
 
   for (const p of payments ?? []) {
     const sid = p.received_by as string
     staffIds.add(sid)
-    const entry = map.get(sid) ?? { cash: 0, digital: 0, count: 0 }
+    const entry = map.get(sid) ?? { roomRevenue: 0, chargesRevenue: 0, count: 0, methodTotals: {} }
     entry.count++
-    if (p.method === 'cash') {
-      entry.cash += p.amount
-    } else {
-      entry.digital += p.amount
-    }
+    entry.roomRevenue += p.amount
+    addMethod(entry, p.method, p.amount)
     map.set(sid, entry)
   }
 
   for (const c of charges ?? []) {
     const sid = c.created_by as string
     staffIds.add(sid)
-    const entry = map.get(sid) ?? { cash: 0, digital: 0, count: 0 }
+    const entry = map.get(sid) ?? { roomRevenue: 0, chargesRevenue: 0, count: 0, methodTotals: {} }
     entry.count++
-    if (c.payment_method === 'cash') {
-      entry.cash += c.amount
-    } else {
-      entry.digital += c.amount
-    }
+    entry.chargesRevenue += c.amount
+    addMethod(entry, c.payment_method as string, c.amount)
     map.set(sid, entry)
   }
 
@@ -96,12 +109,13 @@ export async function getStaffRevenue(
     const staff = nameMap.get(staffId)
     rows.push({
       staffId,
-      staffName:     staff?.name ?? staffId.slice(0, 8),
-      staffEmail:    staff?.email ?? '',
-      paymentsCount: totals.count,
-      cashTotal:     totals.cash,
-      digitalTotal:  totals.digital,
-      total:         totals.cash + totals.digital,
+      staffName:      staff?.name ?? staffId.slice(0, 8),
+      staffEmail:     staff?.email ?? '',
+      paymentsCount:  totals.count,
+      roomRevenue:    totals.roomRevenue,
+      chargesRevenue: totals.chargesRevenue,
+      total:          totals.roomRevenue + totals.chargesRevenue,
+      methodTotals:   totals.methodTotals,
     })
   }
 

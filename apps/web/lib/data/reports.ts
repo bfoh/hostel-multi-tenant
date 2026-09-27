@@ -45,31 +45,63 @@ export async function getRevenueReport(tenantId: string, months = 6) {
 
 /* ── Payment method breakdown ─────────────────────────────────────── */
 
-export async function getPaymentMethodBreakdown(tenantId: string) {
+/**
+ * Defaults to the last 12 months (unchanged from before `from`/`to` were
+ * added) so the one existing caller that doesn't pass a range keeps
+ * exactly today's behavior.
+ */
+export async function getPaymentMethodBreakdown(tenantId: string, from?: string, to?: string) {
   const supabase = createAdminClient()
-  const start = monthStart(-11) // last 12 months
+  const start = from ?? monthStart(-11)
 
-  const { data } = await supabase
+  let query = supabase
     .from('booking_payments')
     .select('method, amount')
     .eq('tenant_id', tenantId)
     .eq('status', 'success')
     .gte('paid_at', start)
+  if (to) query = query.lte('paid_at', to)
 
-  const map: Record<string, number> = {}
+  const { data } = await query
+
+  const map: Record<string, { amount: number; count: number }> = {}
   for (const p of data ?? []) {
-    map[p.method] = (map[p.method] ?? 0) + p.amount
+    const entry = map[p.method] ?? { amount: 0, count: 0 }
+    entry.amount += p.amount
+    entry.count  += 1
+    map[p.method] = entry
   }
 
-  const total = Object.values(map).reduce((s, v) => s + v, 0)
+  const total = Object.values(map).reduce((s, v) => s + v.amount, 0)
 
   return Object.entries(map)
-    .sort((a, b) => b[1] - a[1])
-    .map(([method, amount]) => ({
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .map(([method, v]) => ({
       method,
-      amount,
-      pct: total > 0 ? Math.round((amount / total) * 100) : 0,
+      amount: v.amount,
+      count:  v.count,
+      pct:    total > 0 ? Math.round((v.amount / total) * 100) : 0,
     }))
+}
+
+/**
+ * sum(final_amount) − sum(paid_amount) across non-cancelled bookings whose
+ * check-in falls in the given range — "how much is still owed" for
+ * whatever period the Reports hub's Payment Methods card is showing.
+ */
+export async function getOutstandingBalance(tenantId: string, from?: string, to?: string): Promise<number> {
+  const supabase = createAdminClient()
+
+  let query = supabase
+    .from('bookings')
+    .select('final_amount, paid_amount')
+    .eq('tenant_id', tenantId)
+    .neq('status', 'cancelled')
+  if (from) query = query.gte('check_in_date', from.slice(0, 10))
+  if (to)   query = query.lte('check_in_date', to.slice(0, 10))
+
+  const { data } = await query
+  return (data ?? []).reduce((s, b) => s + Math.max(0, (b.final_amount ?? 0) - (b.paid_amount ?? 0)), 0)
 }
 
 /* ── Occupancy report ─────────────────────────────────────────────── */

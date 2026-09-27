@@ -8,6 +8,10 @@ import { z } from 'zod'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatGHS } from '@/lib/utils'
+import {
+  PaymentSplitInput, defaultPaymentSplitValue, derivePayments, isPaymentSplitValid,
+  type PaymentSplitValue,
+} from '@/components/bookings/payment-split-input'
 
 // occupant_id is only truly required when picking an existing occupant
 // (always true for hostels, or a hotel using the "existing guest" toggle).
@@ -67,6 +71,7 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
   // explicit opt-in for picking a known repeat guest. Hostels keep the
   // dropdown-only flow unchanged.
   const [useExistingOccupant, setUseExistingOccupant] = useState(!isHotel)
+  const [payment, setPayment] = useState<PaymentSplitValue>(defaultPaymentSplitValue())
 
   const {
     register,
@@ -124,6 +129,15 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
       if (!values.guest_phone)      { setError('guest_phone',      { message: 'Required' }); return }
     }
 
+    if (!isPaymentSplitValid(payment, finalAmount)) {
+      setServerError(
+        payment.type === 'full'
+          ? 'The split must add up to the full amount.'
+          : 'Enter a valid partial amount (less than the total, more than zero).',
+      )
+      return
+    }
+
     const { occupant_id, guest_first_name, guest_last_name, guest_phone, guest_email, ...rest } = values
 
     const res = await fetch('/api/bookings', {
@@ -135,6 +149,7 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
           ? { occupant_id }
           : { guest: { firstName: guest_first_name, lastName: guest_last_name, phone: guest_phone, email: guest_email || undefined } }),
         discount_amount: Math.round(values.discount_amount * 100), // convert GH₵ → pesewas
+        payments: derivePayments(payment),
       }),
     })
 
@@ -368,6 +383,14 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Payment */}
+      <Card>
+        <CardHeader><CardTitle>Payment</CardTitle></CardHeader>
+        <CardContent className="pt-0">
+          <PaymentSplitInput totalDue={finalAmount} value={payment} onChange={setPayment} />
         </CardContent>
       </Card>
 

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Loader2, X, ChevronDown, ChevronUp, Receipt } from 'lucide-react'
 import { formatGHS } from '@/lib/utils'
+import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from '@/lib/payments/methods'
 
 interface Charge {
   id: string
@@ -25,11 +26,6 @@ const CATEGORY_LABEL: Record<string, string> = {
   phone_internet: 'Phone / Internet',
   parking:        'Parking',
   other:          'Other',
-}
-
-const METHOD_LABEL: Record<string, string> = {
-  cash: 'Cash', card: 'Card', bank_transfer: 'Bank Transfer', cheque: 'Cheque',
-  momo_mtn: 'MTN MoMo', momo_vodafone: 'Vodafone Cash', momo_airteltigo: 'AirtelTigo Money',
 }
 
 /**
@@ -133,7 +129,7 @@ export function BookingChargesCard({
                 </div>
                 <p className="mt-1 text-xs text-text-tertiary">
                   {c.quantity} × {formatGHS(c.unit_price)}
-                  {c.paid && c.payment_method && <> · {METHOD_LABEL[c.payment_method] ?? c.payment_method}</>}
+                  {c.paid && c.payment_method && <> · {METHOD_LABEL[c.payment_method as keyof typeof METHOD_LABEL] ?? c.payment_method}</>}
                 </p>
                 {c.notes && <p className="mt-1 text-xs text-text-tertiary">{c.notes}</p>}
               </div>

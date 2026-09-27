@@ -1,12 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerBusinessType } from '@/lib/auth/tenant'
 import { getAvailableRooms } from '@/lib/data/bookings'
 import { sendStayExtension } from '@/lib/sms'
 import { sendEmail, stayExtensionHtml } from '@/lib/email'
 import { formatGHS, formatDate } from '@/lib/utils'
+import { PAYMENT_METHODS } from '@/lib/payments/methods'
 
 /**
  * POST /api/bookings/[id]/extend-stay — hotel-only.
@@ -25,9 +27,18 @@ import { formatGHS, formatDate } from '@/lib/utils'
  * simplest version of this feature).
  */
 
+const paymentSchema = z.object({
+  method: z.enum(PAYMENT_METHODS),
+  amount: z.number().int().min(1),
+})
+
 const schema = z.object({
   new_check_out_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   new_room_id:         z.string().uuid().optional(),
+  // Payment collected for the extension amount, possibly split across
+  // methods — see PaymentSplitInput. Omitted means "Later" (today's
+  // pre-existing behavior: just raises the balance due).
+  payments:            z.array(paymentSchema).optional(),
 })
 
 export async function POST(
@@ -98,6 +109,21 @@ export async function POST(
   const extraAmount = booking.rate_unit === 'night' ? booking.rate_per_unit * extraNights : 0
   const newTotal = booking.total_amount + extraAmount
 
+  // The client's own extraAmount preview is never trusted — validate the
+  // submitted split against the amount computed just above instead.
+  const payments = parsed.data.payments ?? []
+  const paidNow = payments.reduce((s, p) => s + p.amount, 0)
+  if (payments.length > 0 && paidNow > extraAmount) {
+    return NextResponse.json({ error: 'The payment total exceeds the extension amount.' }, { status: 422 })
+  }
+
+  let receivedBy: string | undefined
+  if (payments.length > 0) {
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    receivedBy = user?.id
+  }
+
   const { data: updated, error } = await supabase
     .from('bookings')
     .update({
@@ -117,6 +143,21 @@ export async function POST(
       return NextResponse.json({ error: 'This room was just booked for those dates by someone else.' }, { status: 409 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (payments.length > 0) {
+    await supabase.from('booking_payments').insert(
+      payments.map((p) => ({
+        tenant_id:   tenantId,
+        booking_id:  id,
+        amount:      p.amount,
+        method:      p.method,
+        status:      'success',
+        paid_at:     new Date().toISOString(),
+        received_by: receivedBy ?? null,
+        notes:       'Extension payment',
+      })),
+    )
   }
 
   // Guest-facing notification, non-blocking — must never break the
@@ -158,5 +199,5 @@ export async function POST(
     }
   } catch { /* non-critical */ }
 
-  return NextResponse.json({ booking: updated, extraNights, extraAmount })
+  return NextResponse.json({ booking: updated, extraNights, extraAmount, paidNow })
 }
