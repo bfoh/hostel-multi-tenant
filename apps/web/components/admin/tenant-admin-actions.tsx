@@ -9,9 +9,10 @@ interface Props {
   currentStatus: string
   listedPublicly: boolean
   businessType: 'hostel' | 'hotel'
+  accommodationType: 'hotel' | 'apartment'
 }
 
-export function TenantAdminActions({ tenantId, tenantSlug, currentStatus, listedPublicly, businessType }: Props) {
+export function TenantAdminActions({ tenantId, tenantSlug, currentStatus, listedPublicly, businessType, accommodationType }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +83,31 @@ export function TenantAdminActions({ tenantId, tenantSlug, currentStatus, listed
       if (!res.ok) {
         const j = await res.json()
         setError(j.error ?? 'Failed to switch business type')
+      } else {
+        router.refresh()
+      }
+    } catch {
+      setError('Network error')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  async function switchAccommodationType() {
+    const next = accommodationType === 'hotel' ? 'apartment' : 'hotel'
+    if (!confirm(`Switch this tenant's marketplace category from ${accommodationType} to ${next}?`)) return
+
+    setLoading('accommodation_type')
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/tenants/${tenantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accommodation_type: next }),
+      })
+      if (!res.ok) {
+        const j = await res.json()
+        setError(j.error ?? 'Failed to switch accommodation type')
       } else {
         router.refresh()
       }
@@ -196,6 +222,18 @@ export function TenantAdminActions({ tenantId, tenantSlug, currentStatus, listed
             ? 'Switching…'
             : `Switch to ${businessType === 'hotel' ? 'hostel' : 'hotel'}`}
         </button>
+
+        {businessType === 'hotel' && (
+          <button
+            onClick={switchAccommodationType}
+            disabled={loading !== null}
+            className="rounded-lg border border-white/20 hover:border-white/40 disabled:opacity-50 px-4 py-2 text-sm font-semibold text-white/70 hover:text-white transition-colors"
+          >
+            {loading === 'accommodation_type'
+              ? 'Switching…'
+              : `Switch to ${accommodationType === 'hotel' ? 'apartment' : 'hotel'} listing`}
+          </button>
+        )}
 
         <button
           onClick={toggleListedPublicly}

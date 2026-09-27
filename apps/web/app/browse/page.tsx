@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Search, MapPin, LayoutGrid, List as ListIcon, ChevronRight, SearchX } from 'lucide-react'
-import { searchListings } from '@/lib/directory'
+import { searchListings, type MarketplaceVertical } from '@/lib/directory'
 import { ListingCard } from '@/components/public/listing-card'
 import { ListingListRow } from '@/components/public/listing-list-row'
 import { ListingSortSelect } from '@/components/public/listing-sort-select'
@@ -39,10 +39,11 @@ export default async function BrowseDirectoryPage({
   const sort = (['name', 'price_asc', 'price_desc'].includes(sp.sort ?? '') ? sp.sort : 'name') as 'name' | 'price_asc' | 'price_desc'
   const view = sp.view === 'grid' ? 'grid' : 'list'
 
-  // Vertical comes from the hero search's tab (?type=hostel|hotel), or
-  // defaults to hostel — the only vertical with real listings today.
-  const businessType = sp.type === 'hotel' ? 'hotel' : 'hostel'
-  const nounSingular = businessType === 'hotel' ? 'hotel' : 'hostel'
+  // Vertical comes from the hero search's tab (?type=hostel|hotel|apartment).
+  const businessType: MarketplaceVertical =
+    sp.type === 'hotel' ? 'hotel' : sp.type === 'apartment' ? 'apartment' : 'hostel'
+  const nounSingular = businessType === 'hotel' ? 'hotel' : businessType === 'apartment' ? 'apartment' : 'hostel'
+  const nounPlural = businessType === 'hotel' ? 'Hotels' : businessType === 'apartment' ? 'Apartments' : 'Hostels'
 
   const { listings: allResults } = await searchListings({
     businessType, city: sp.city, region: sp.region, q: sp.q, sort, limit: 1000,
@@ -77,7 +78,11 @@ export default async function BrowseDirectoryPage({
               <input
                 name="q"
                 defaultValue={sp.q ?? ''}
-                placeholder={businessType === 'hotel' ? 'Hotel name or area' : 'Hostel name or campus'}
+                placeholder={
+                  businessType === 'hotel' ? 'Hotel name or area' :
+                  businessType === 'apartment' ? 'Apartment or short-let name' :
+                  'Hostel name or campus'
+                }
                 className="w-full text-sm outline-none placeholder:text-neutral-400"
                 style={{ color: MP.ink }}
               />
@@ -118,13 +123,13 @@ export default async function BrowseDirectoryPage({
         {sp.region ? (
           <>
             <Link href="/browse" className="hover:underline" style={{ color: MP.green }}>
-              {businessType === 'hotel' ? 'Hotels' : 'Hostels'}
+              {nounPlural}
             </Link>
             <span className="mx-1.5">›</span>
             <span>{sp.region}</span>
           </>
         ) : (
-          <span>{businessType === 'hotel' ? 'Hotels' : 'Hostels'}</span>
+          <span>{nounPlural}</span>
         )}
       </div>
 
@@ -262,7 +267,7 @@ export default async function BrowseDirectoryPage({
           )}
 
           <div className="mt-10 flex items-center justify-center gap-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
-            Run a {nounSingular}?
+            Run {businessType === 'apartment' ? 'an' : 'a'} {nounSingular}?
             <Link href="/list-your-property" className="font-semibold hover:underline" style={{ color: MP.green }}>
               List yours free <ChevronRight className="inline h-3 w-3" />
             </Link>

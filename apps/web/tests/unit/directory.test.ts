@@ -63,6 +63,29 @@ describe('searchListings', () => {
     expect(calls).not.toContainEqual({ op: 'eq', args: ['business_type', 'hotel'] })
   })
 
+  it('splits hotel vs apartment within the same business_type=hotel pool via accommodation_type', async () => {
+    queries.length = 0
+    await searchListings({ businessType: 'hotel' })
+    const hotelCalls = queries[0].calls
+    expect(hotelCalls).toContainEqual({ op: 'eq', args: ['business_type', 'hotel'] })
+    expect(hotelCalls).toContainEqual({ op: 'eq', args: ['accommodation_type', 'hotel'] })
+
+    queries.length = 0
+    await searchListings({ businessType: 'apartment' })
+    const apartmentCalls = queries[0].calls
+    expect(apartmentCalls).toContainEqual({ op: 'eq', args: ['business_type', 'hotel'] })
+    expect(apartmentCalls).toContainEqual({ op: 'eq', args: ['accommodation_type', 'apartment'] })
+    expect(apartmentCalls).not.toContainEqual({ op: 'eq', args: ['accommodation_type', 'hotel'] })
+  })
+
+  it('never filters accommodation_type for the hostel vertical', async () => {
+    queries.length = 0
+    await searchListings({ businessType: 'hostel' })
+
+    const calls = queries[0].calls
+    expect(calls.some((c) => c.op === 'eq' && c.args[0] === 'accommodation_type')).toBe(false)
+  })
+
   it('still applies the existing visibility filters alongside business_type', async () => {
     queries.length = 0
     await searchListings({ businessType: 'hostel' })

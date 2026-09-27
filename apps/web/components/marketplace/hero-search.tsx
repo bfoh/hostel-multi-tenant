@@ -11,11 +11,12 @@ import { MP } from '@/lib/marketplace-theme'
  * Expedia/Booking-style vertical-tabbed hero search. Hostels, hotels, and
  * apartments are live verticals — the search card was staged for all five
  * tabs from the start so it wouldn't need reshaping as each launched.
- * Hotels and apartments share the exact same business_type='hotel' listing
- * pool (no separate "apartment" vertical exists), so both search /browse
- * with type=hotel. "Things to Do" / "Places to Visit" remain on the
- * roadmap — unrelated to accommodation, switching to either shows a
- * "coming soon" panel instead of navigating anywhere.
+ * Hotels and apartments both live under the tenants.business_type='hotel'
+ * pool (that column also drives subdomain routing, so it stays binary), but
+ * are split into separate marketplace listings via tenants.accommodation_type
+ * — see lib/directory.ts's MarketplaceVertical. "Things to Do" / "Places to
+ * Visit" remain on the roadmap — unrelated to accommodation, switching to
+ * either shows a "coming soon" panel instead of navigating anywhere.
  */
 
 export type TabKey = 'hostels' | 'hotels' | 'apartments' | 'things-to-do' | 'places'
@@ -28,11 +29,11 @@ const TABS: Array<{ key: TabKey; label: string; icon: typeof BedDouble; enabled:
   { key: 'places', label: 'Places to Visit', icon: Landmark, enabled: false },
 ]
 
-/** Both hotels and apartments query the same business_type='hotel' pool. */
-export const SEARCH_BUSINESS_TYPE: Partial<Record<TabKey, 'hostel' | 'hotel'>> = {
+/** Each tab maps to its own marketplace vertical — see MarketplaceVertical. */
+export const SEARCH_BUSINESS_TYPE: Partial<Record<TabKey, 'hostel' | 'hotel' | 'apartment'>> = {
   hostels: 'hostel',
   hotels: 'hotel',
-  apartments: 'hotel',
+  apartments: 'apartment',
 }
 
 const SEARCH_PLACEHOLDER: Partial<Record<TabKey, string>> = {

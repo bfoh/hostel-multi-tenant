@@ -1,6 +1,17 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { BusinessType } from '@/lib/tenant/host-classification'
 
+/**
+ * Marketplace-facing vertical — distinct from the DB business_type column
+ * and from BusinessType (which also drives subdomain routing, see
+ * lib/tenant/host-classification.ts, and can't be split three ways without
+ * touching that). 'hostel' maps straight to business_type='hostel'. 'hotel'
+ * and 'apartment' both live under business_type='hotel', further split by
+ * the tenants.accommodation_type column (migration 131) so the two have
+ * separate marketplace pools despite sharing one vertical/subdomain root.
+ */
+export type MarketplaceVertical = 'hostel' | 'hotel' | 'apartment'
+
 export interface DirectoryListing {
   slug:           string
   name:           string
@@ -23,7 +34,7 @@ export interface DirectoryListing {
 export interface DirectorySearchParams {
   /** Which vertical to search — every caller is a specific vertical's
    *  marketplace page, so this is required rather than defaulting. */
-  businessType: BusinessType
+  businessType: MarketplaceVertical
   city?:   string | null
   region?: string | null
   q?:      string | null
@@ -36,9 +47,10 @@ export interface DirectorySearchParams {
  * Public, cross-tenant listing search shared by /api/public/directory, the
  * /browse directory page, and the homepage's "Featured" section — one query
  * implementation instead of three, and pages call it directly server-side
- * rather than self-fetching their own API route. Serves both verticals
- * (hostel/hotel) via the same tenants/room_categories tables, filtered by
- * business_type.
+ * rather than self-fetching their own API route. Serves all three
+ * marketplace verticals via the same tenants/room_categories tables:
+ * 'hostel' filters business_type alone, while 'hotel'/'apartment' both
+ * filter business_type='hotel' and are further split by accommodation_type.
  *
  * Visibility: listed_publicly = true and status in
  * ('trial','active','trial_expired') — i.e. tenant.is_active (migration
@@ -62,9 +74,14 @@ export async function searchListings(
     .from('tenants')
     .select('id, slug, name, tagline, logo_url, hero_image_url, primary_color, address_city, address_region, business_type, created_at, room_categories!inner(base_rate, is_active, image_urls, sort_order)')
     .eq('listed_publicly', true)
-    .eq('business_type', businessType)
     .in('status', ['trial', 'active', 'trial_expired'])
     .eq('room_categories.is_active', true)
+
+  if (businessType === 'hostel') {
+    query = query.eq('business_type', 'hostel')
+  } else {
+    query = query.eq('business_type', 'hotel').eq('accommodation_type', businessType)
+  }
 
   if (city)   query = query.ilike('address_city', `%${city}%`)
   if (region) query = query.eq('address_region', region)

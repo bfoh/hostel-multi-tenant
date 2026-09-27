@@ -137,6 +137,7 @@ export default async function TenantAdminPage({
           {[
             ['Listed publicly', tenant.listed_publicly ? 'Yes' : 'No'],
             ['Business type', tenant.business_type],
+            ...(tenant.business_type === 'hotel' ? [['Marketplace category', tenant.accommodation_type]] : []),
             ['Status counts', ['trial', 'active', 'trial_expired'].includes(tenant.status) ? 'OK (visible statuses)' : `${tenant.status} (hidden)`],
             ['Active room categories', String(stats.activeCategories)],
           ].map(([k, v]) => (
@@ -193,6 +194,7 @@ export default async function TenantAdminPage({
         currentStatus={tenant.status}
         listedPublicly={tenant.listed_publicly}
         businessType={tenant.business_type}
+        accommodationType={tenant.accommodation_type}
       />
     </div>
   )

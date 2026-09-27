@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { searchListings } from '@/lib/directory'
-import type { BusinessType } from '@/lib/tenant/host-classification'
+import { searchListings, type MarketplaceVertical } from '@/lib/directory'
 import { publicLimiter, enforceRateLimit } from '@/lib/rate-limit'
 
 /**
@@ -24,7 +23,9 @@ export async function GET(req: NextRequest) {
   if (limited) return limited
 
   const { searchParams } = req.nextUrl
-  const businessType = (searchParams.get('type') ?? req.headers.get('x-business-type') ?? 'hostel') as BusinessType
+  const rawType = searchParams.get('type') ?? req.headers.get('x-business-type') ?? 'hostel'
+  const businessType: MarketplaceVertical =
+    rawType === 'hotel' || rawType === 'apartment' ? rawType : 'hostel'
 
   try {
     const result = await searchListings({

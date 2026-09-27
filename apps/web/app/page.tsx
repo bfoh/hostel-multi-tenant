@@ -7,7 +7,7 @@ import { ShieldCheck, Zap, HandCoins } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
 import { ListingCard } from '@/components/public/listing-card'
-import { searchListings } from '@/lib/directory'
+import { searchListings, type MarketplaceVertical } from '@/lib/directory'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { HeroSearch, type TabKey } from '@/components/marketplace/hero-search'
@@ -124,7 +124,8 @@ export default async function LandingPage({
   // Component) in production despite working fine inside hero-search.tsx
   // (a Client Component), a cross-module bundling quirk in this project's
   // Turbopack build. Inlining removes the ambiguity entirely.
-  const featuredBusinessType: 'hostel' | 'hotel' = tab === 'hotels' || tab === 'apartments' ? 'hotel' : 'hostel'
+  const featuredBusinessType: MarketplaceVertical =
+    tab === 'hotels' ? 'hotel' : tab === 'apartments' ? 'apartment' : 'hostel'
   const tabLabel = TAB_LABEL[tab] ?? 'Hostels'
 
   const { listings: featuredHostels } = await searchListings({ businessType: featuredBusinessType, limit: 6, sort: 'newest' })
