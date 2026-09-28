@@ -6,53 +6,29 @@ import { getStaffRevenue, getStaffTransactions } from '@/lib/data/staff-revenue'
 import { formatGHS } from '@/lib/utils'
 import { notFound } from 'next/navigation'
 import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from '@/lib/payments/methods'
+import { getArchivePeriods, type ArchiveMode } from '@/lib/reports/period-archive'
+import { PeriodArchivePicker } from '@/components/reports/period-archive-picker'
 
 export const metadata: Metadata = { title: 'Staff Revenue Report' }
-
-const RANGE_OPTIONS = [
-  { value: 'today',      label: 'Today' },
-  { value: 'this_week',  label: 'This Week' },
-  { value: 'this_month', label: 'This Month' },
-  { value: 'last_month', label: 'Last Month' },
-]
-
-function getDateRange(range: string) {
-  const now = new Date()
-  const today = now.toISOString().slice(0, 10)
-
-  switch (range) {
-    case 'today':
-      return { from: `${today}T00:00:00`, to: `${today}T23:59:59` }
-    case 'this_week': {
-      const day = now.getDay()
-      const mon = new Date(now)
-      mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
-      return { from: `${mon.toISOString().slice(0, 10)}T00:00:00`, to: `${today}T23:59:59` }
-    }
-    case 'last_month': {
-      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const end   = new Date(now.getFullYear(), now.getMonth(), 0)
-      return { from: start.toISOString(), to: end.toISOString() }
-    }
-    default: { // this_month
-      const start = new Date(now.getFullYear(), now.getMonth(), 1)
-      return { from: start.toISOString(), to: `${today}T23:59:59` }
-    }
-  }
-}
 
 const ROW_GRID = 'grid grid-cols-[1fr_80px_100px_100px_100px] gap-2 sm:grid-cols-[1fr_80px_100px_100px_100px_96px]'
 
 export default async function StaffRevenuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string }>
+  searchParams: Promise<{ archiveMode?: string; archiveIdx?: string }>
 }) {
   const tenantId = await getServerTenantId()
   if (!tenantId) notFound()
 
-  const { range = 'this_month' } = await searchParams
-  const { from, to } = getDateRange(range)
+  const sp = await searchParams
+  const archiveMode: ArchiveMode = sp.archiveMode === 'month' || sp.archiveMode === 'year' ? sp.archiveMode : 'week'
+  const periods = getArchivePeriods(archiveMode)
+  const archiveIdx = Math.min(Math.max(parseInt(sp.archiveIdx ?? '0', 10) || 0, 0), periods.length - 1)
+  const selectedPeriod = periods[archiveIdx]
+
+  const from = `${selectedPeriod.from}T00:00:00`
+  const to   = `${selectedPeriod.to}T23:59:59`
   const staff = await getStaffRevenue(tenantId, from, to)
 
   // Charge lines per staff (for the expanded row's "Payment" column table) —
@@ -102,21 +78,14 @@ export default async function StaffRevenuePage({
         </div>
       </div>
 
-      {/* Date range filter */}
-      <div className="flex flex-wrap gap-2">
-        {RANGE_OPTIONS.map((opt) => (
-          <Link
-            key={opt.value}
-            href={`/reports/staff-revenue?range=${opt.value}`}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              range === opt.value
-                ? 'bg-brand text-white'
-                : 'bg-surface border border-border text-text-secondary hover:bg-surface-sunken'
-            }`}
-          >
-            {opt.label}
-          </Link>
-        ))}
+      {/* Period archive picker */}
+      <div>
+        <PeriodArchivePicker
+          basePath="/reports/staff-revenue"
+          mode={archiveMode}
+          periods={periods}
+          selectedIdx={archiveIdx}
+        />
       </div>
 
       {/* Summary cards */}

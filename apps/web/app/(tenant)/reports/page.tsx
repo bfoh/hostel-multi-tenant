@@ -17,33 +17,10 @@ import {
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { notFound } from 'next/navigation'
 import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from '@/lib/payments/methods'
+import { getArchivePeriods, type ArchiveMode } from '@/lib/reports/period-archive'
+import { PeriodArchivePicker } from '@/components/reports/period-archive-picker'
 
 export const metadata: Metadata = { title: 'Reports' }
-
-const PM_RANGE_OPTIONS = [
-  { value: 'this_week',  label: 'This Week' },
-  { value: 'this_month', label: 'This Month' },
-  { value: 'this_year',  label: 'This Year' },
-  { value: '12m',        label: '12 Months' },
-]
-
-function getPmDateRange(range: string): { from?: string; to?: string } {
-  const now = new Date()
-  switch (range) {
-    case 'this_week': {
-      const day = now.getDay()
-      const mon = new Date(now)
-      mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
-      return { from: mon.toISOString() }
-    }
-    case 'this_month':
-      return { from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString() }
-    case 'this_year':
-      return { from: new Date(now.getFullYear(), 0, 1).toISOString() }
-    default: // '12m'
-      return {}
-  }
-}
 
 const BOOKING_STATUS_LABEL: Record<string, string> = {
   pending_payment: 'Pending Payment',
@@ -103,14 +80,18 @@ const REPORT_TABS = [
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ report?: string; pmRange?: string }>
+  searchParams: Promise<{ report?: string; archiveMode?: string; archiveIdx?: string }>
 }) {
-  const { report = 'overview', pmRange = '12m' } = await searchParams
+  const { report = 'overview', archiveMode: rawArchiveMode, archiveIdx: rawArchiveIdx } = await searchParams
 
   const tenantId = await getServerTenantId()
   if (!tenantId) notFound()
 
-  const pmDateRange = getPmDateRange(pmRange)
+  const archiveMode: ArchiveMode = rawArchiveMode === 'week' || rawArchiveMode === 'year' ? rawArchiveMode : 'month'
+  const pmPeriods = getArchivePeriods(archiveMode)
+  const archiveIdx = Math.min(Math.max(parseInt(rawArchiveIdx ?? '0', 10) || 0, 0), pmPeriods.length - 1)
+  const selectedPmPeriod = pmPeriods[archiveIdx]
+  const pmDateRange = { from: `${selectedPmPeriod.from}T00:00:00`, to: `${selectedPmPeriod.to}T23:59:59` }
 
   // Fetch all data in parallel
   const [ytd, revenue6m, methods, outstanding, occupancy, overdue, bookings] = await Promise.all([
@@ -263,21 +244,13 @@ export default async function ReportsPage({
                   <CreditCard className="h-4 w-4 text-text-tertiary" />
                   <h2 className="font-semibold text-text-primary">Payment Methods</h2>
                 </div>
-                <div className="flex gap-1">
-                  {PM_RANGE_OPTIONS.map((opt) => (
-                    <Link
-                      key={opt.value}
-                      href={`/reports?report=overview&pmRange=${opt.value}`}
-                      className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
-                        pmRange === opt.value
-                          ? 'bg-brand text-white'
-                          : 'bg-surface-sunken text-text-secondary hover:text-text-primary'
-                      }`}
-                    >
-                      {opt.label}
-                    </Link>
-                  ))}
-                </div>
+                <PeriodArchivePicker
+                  basePath="/reports"
+                  extraParams={{ report: 'overview' }}
+                  mode={archiveMode}
+                  periods={pmPeriods}
+                  selectedIdx={archiveIdx}
+                />
               </div>
 
               {methods.length > 0 && (
@@ -472,9 +445,18 @@ export default async function ReportsPage({
 
           {/* Payment method table */}
           <div className="rounded-xl border border-border bg-surface overflow-hidden">
-            <div className="border-b border-border px-5 py-4">
-              <h2 className="font-semibold text-text-primary">Revenue by Payment Method</h2>
-              <p className="text-xs text-text-tertiary mt-0.5">Last 12 months</p>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-4">
+              <div>
+                <h2 className="font-semibold text-text-primary">Revenue by Payment Method</h2>
+                <p className="text-xs text-text-tertiary mt-0.5">{selectedPmPeriod.label}</p>
+              </div>
+              <PeriodArchivePicker
+                basePath="/reports"
+                extraParams={{ report: 'revenue' }}
+                mode={archiveMode}
+                periods={pmPeriods}
+                selectedIdx={archiveIdx}
+              />
             </div>
             {methods.length === 0 ? (
               <p className="px-5 py-8 text-center text-sm text-text-tertiary">No payment data yet.</p>
