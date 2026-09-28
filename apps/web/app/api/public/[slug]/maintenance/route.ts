@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { MAINTENANCE_CATEGORIES } from '@/lib/maintenance/categories'
 
 const schema = z.object({
   booking_ref:  z.string().min(1).max(50).toUpperCase(),
   phone:        z.string().min(9).max(20),
   title:        z.string().min(3).max(200),
-  category:     z.enum(['plumbing', 'electrical', 'hvac', 'structural', 'furniture', 'appliance', 'cleaning', 'pest_control', 'security', 'other']),
+  category:     z.enum(MAINTENANCE_CATEGORIES),
   priority:     z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
   description:  z.string().max(1000).optional().nullable(),
 })

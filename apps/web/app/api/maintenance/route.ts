@@ -2,11 +2,12 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { MAINTENANCE_CATEGORIES } from '@/lib/maintenance/categories'
 
 const schema = z.object({
   title:          z.string().min(1).max(200),
   description:    z.string().max(1000).optional().nullable(),
-  category:       z.enum(['plumbing', 'electrical', 'hvac', 'structural', 'furniture', 'appliance', 'cleaning', 'pest_control', 'security', 'other']),
+  category:       z.enum(MAINTENANCE_CATEGORIES),
   priority:       z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
   room_id:        z.string().uuid().optional().nullable(),
   contractor_id:  z.string().uuid().optional().nullable(),

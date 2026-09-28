@@ -6,6 +6,7 @@ import {
   CheckCircle2, Clock, XCircle, Phone, Download,
   Wrench, AlertCircle, Loader2, Plus, Bell, Star,
 } from 'lucide-react'
+import { GUEST_MAINTENANCE_CATEGORIES, MAINTENANCE_CATEGORY_LABEL } from '@/lib/maintenance/categories'
 
 interface Tenant {
   slug:       string
@@ -67,16 +68,9 @@ function formatDate(d: string) {
   return new Intl.DateTimeFormat('en-GH', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d))
 }
 
-const MAINT_CATEGORIES = [
-  { value: 'plumbing',     label: 'Plumbing' },
-  { value: 'electrical',   label: 'Electrical' },
-  { value: 'furniture',    label: 'Furniture' },
-  { value: 'appliance',    label: 'Appliance' },
-  { value: 'cleaning',     label: 'Cleaning' },
-  { value: 'pest_control', label: 'Pest Control' },
-  { value: 'structural',   label: 'Structural' },
-  { value: 'other',        label: 'Other' },
-]
+const MAINT_CATEGORIES = GUEST_MAINTENANCE_CATEGORIES.map((value) => ({
+  value, label: MAINTENANCE_CATEGORY_LABEL[value],
+}))
 
 interface OccupantPortalProps {
   tenant:      Tenant
@@ -179,7 +173,7 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
 
   // Maintenance form state
   const [mTitle,    setMTitle]    = useState('')
-  const [mCat,      setMCat]      = useState('plumbing')
+  const [mCat,      setMCat]      = useState(GUEST_MAINTENANCE_CATEGORIES[0])
   const [mPriority, setMPriority] = useState('medium')
   const [mDesc,     setMDesc]     = useState('')
   const [mSending,  setMSending]  = useState(false)
@@ -520,7 +514,7 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
             <div className="flex gap-1 rounded-2xl bg-white border border-gray-100 shadow-sm p-1">
               {([
                 { id: 'booking',     icon: BedDouble, label: 'My Booking' },
-                { id: 'maintenance', icon: Wrench,    label: 'Report Issue' },
+                { id: 'maintenance', icon: Wrench,    label: 'Requests' },
                 { id: 'notices',     icon: Bell,      label: 'Notices' },
               { id: 'feedback',    icon: Star,      label: 'Rate Stay' },
               ] as const).map((tab) => {
@@ -547,7 +541,7 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
             {/* Maintenance request form */}
             {activeTab === 'maintenance' && (
               <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900">Report a maintenance issue</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Request something or report an issue</h3>
 
                 {mSuccess && (
                   <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3 text-sm text-green-700 flex items-center gap-2">
@@ -558,7 +552,7 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
 
                 <form onSubmit={submitMaintenance} className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Issue title *</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Title *</label>
                     <input
                       value={mTitle}
                       onChange={(e) => setMTitle(e.target.value)}
@@ -572,7 +566,7 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
                       <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
                       <select
                         value={mCat}
-                        onChange={(e) => setMCat(e.target.value)}
+                        onChange={(e) => setMCat(e.target.value as typeof mCat)}
                         className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2"
                       >
                         {MAINT_CATEGORIES.map((c) => (

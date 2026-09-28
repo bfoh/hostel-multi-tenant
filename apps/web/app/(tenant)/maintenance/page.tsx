@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, HardHat, CalendarClock, Zap } from 'lucide-react'
+import { Plus, HardHat, CalendarClock, Zap, List, LayoutGrid } from 'lucide-react'
 
 import { getMaintenanceRequests, getMaintenanceStats } from '@/lib/data/maintenance'
 import { MaintenanceList, type MaintenanceRow } from '@/components/maintenance/maintenance-list'
+import { MaintenanceKanban } from '@/components/maintenance/maintenance-kanban'
 
 export const metadata: Metadata = { title: 'Maintenance' }
 
@@ -26,11 +27,21 @@ const PRIORITIES = [
 export default async function MaintenancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; priority?: string }>
+  searchParams: Promise<{ status?: string; priority?: string; view?: string }>
 }) {
-  const { status, priority } = await searchParams
+  const { status, priority, view } = await searchParams
   const activeStatus   = status   ?? 'all'
   const activePriority = priority ?? 'all'
+  const activeView     = view === 'kanban' ? 'kanban' : 'list'
+
+  function viewHref(v: 'list' | 'kanban') {
+    const params = new URLSearchParams()
+    if (activeStatus !== 'all')   params.set('status', activeStatus)
+    if (activePriority !== 'all') params.set('priority', activePriority)
+    if (v !== 'list') params.set('view', v)
+    const qs = params.toString()
+    return qs ? `/maintenance?${qs}` : '/maintenance'
+  }
 
   const [requests, stats] = await Promise.all([
     getMaintenanceRequests({ status: activeStatus, priority: activePriority }),
@@ -82,28 +93,45 @@ export default async function MaintenancePage({
       </div>
 
       {/* ── Filters ──────────────────────────────────────────────── */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
-          {STATUSES.map(s => (
-            <Link
-              key={s.value}
-              href={s.value === 'all' ? '/maintenance' : `/maintenance?status=${s.value}${activePriority !== 'all' ? `&priority=${activePriority}` : ''}`}
-              className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activeStatus === s.value ? 'bg-brand text-brand-fg shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'}`}
-            >
-              {s.label}
-            </Link>
-          ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
+            {STATUSES.map(s => (
+              <Link
+                key={s.value}
+                href={s.value === 'all' ? viewHref(activeView) : `/maintenance?status=${s.value}${activePriority !== 'all' ? `&priority=${activePriority}` : ''}${activeView === 'kanban' ? '&view=kanban' : ''}`}
+                className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activeStatus === s.value ? 'bg-brand text-brand-fg shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'}`}
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+          <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
+            {PRIORITIES.map(p => (
+              <Link
+                key={p.value}
+                href={p.value === 'all' ? `/maintenance${activeStatus !== 'all' ? `?status=${activeStatus}` : ''}${activeView === 'kanban' ? `${activeStatus !== 'all' ? '&' : '?'}view=kanban` : ''}` : `/maintenance?${activeStatus !== 'all' ? `status=${activeStatus}&` : ''}priority=${p.value}${activeView === 'kanban' ? '&view=kanban' : ''}`}
+                className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activePriority === p.value ? 'bg-brand text-brand-fg shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'}`}
+              >
+                {p.label}
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
-          {PRIORITIES.map(p => (
-            <Link
-              key={p.value}
-              href={p.value === 'all' ? `/maintenance${activeStatus !== 'all' ? `?status=${activeStatus}` : ''}` : `/maintenance?${activeStatus !== 'all' ? `status=${activeStatus}&` : ''}priority=${p.value}`}
-              className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activePriority === p.value ? 'bg-brand text-brand-fg shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'}`}
-            >
-              {p.label}
-            </Link>
-          ))}
+
+        <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+          <Link
+            href={viewHref('list')}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activeView === 'list' ? 'bg-brand text-brand-fg shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'}`}
+          >
+            <List className="h-3.5 w-3.5" /> List
+          </Link>
+          <Link
+            href={viewHref('kanban')}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activeView === 'kanban' ? 'bg-brand text-brand-fg shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'}`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" /> Kanban
+          </Link>
         </div>
       </div>
 
@@ -119,28 +147,30 @@ export default async function MaintenancePage({
             <Plus className="h-4 w-4" /> New request
           </Link>
         </div>
+      ) : activeView === 'kanban' ? (
+        <MaintenanceKanban requests={requests.map(toMaintenanceRow)} />
       ) : (
-        <MaintenanceList
-          requests={requests.map((req: any): MaintenanceRow => {
-            const room = Array.isArray(req.room) ? req.room[0] : req.room
-            const contractor = Array.isArray(req.contractor) ? req.contractor[0] : req.contractor
-            return {
-              id:             req.id,
-              ref_number:     req.ref_number,
-              title:          req.title,
-              description:    req.description ?? null,
-              priority:       req.priority,
-              category:       req.category,
-              status:         req.status,
-              created_at:     req.created_at,
-              roomLabel:      room ? `Room ${room.room_number}${room.block ? `, Block ${room.block}` : ''}` : null,
-              contractorName: contractor?.name ?? null,
-            }
-          })}
-        />
+        <MaintenanceList requests={requests.map(toMaintenanceRow)} />
       )}
     </div>
   )
+}
+
+function toMaintenanceRow(req: any): MaintenanceRow {
+  const room = Array.isArray(req.room) ? req.room[0] : req.room
+  const contractor = Array.isArray(req.contractor) ? req.contractor[0] : req.contractor
+  return {
+    id:             req.id,
+    ref_number:     req.ref_number,
+    title:          req.title,
+    description:    req.description ?? null,
+    priority:       req.priority,
+    category:       req.category,
+    status:         req.status,
+    created_at:     req.created_at,
+    roomLabel:      room ? `Room ${room.room_number}${room.block ? `, Block ${room.block}` : ''}` : null,
+    contractorName: contractor?.name ?? null,
+  }
 }
 
 function KpiCard({ label, value, color }: { label: string; value: number; color: 'warning' | 'brand' | 'success' | 'danger' }) {

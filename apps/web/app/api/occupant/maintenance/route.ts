@@ -5,10 +5,11 @@ import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { listMaintenanceStaffUserIds } from '@/lib/maintenance/messages'
 import { sendPushToUsers } from '@/lib/push'
+import { MAINTENANCE_CATEGORIES } from '@/lib/maintenance/categories'
 
 const createSchema = z.object({
   title:       z.string().min(3).max(200),
-  category:    z.enum(['plumbing', 'electrical', 'hvac', 'structural', 'furniture', 'appliance', 'cleaning', 'pest_control', 'security', 'other']),
+  category:    z.enum(MAINTENANCE_CATEGORIES),
   priority:    z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
   description: z.string().max(1000).optional().nullable(),
 })
