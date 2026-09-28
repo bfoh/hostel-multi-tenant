@@ -571,6 +571,7 @@ export type Database = {
           hold_expires_at: string | null
           paystack_reference: string | null
           group_id: string | null
+          review_token: string | null
           created_at: string
           updated_at: string
         }
@@ -607,6 +608,7 @@ export type Database = {
           hold_expires_at?: string | null
           paystack_reference?: string | null
           group_id?: string | null
+          review_token?: string | null
         }
         Update: {
           status?: BookingStatus
@@ -635,6 +637,7 @@ export type Database = {
           hold_expires_at?: string | null
           paystack_reference?: string | null
           group_id?: string | null
+          review_token?: string | null
         }
         Relationships: [
           { foreignKeyName: 'bookings_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
@@ -2372,6 +2375,9 @@ export type Database = {
           would_recommend: boolean | null
           comments: string | null
           is_anonymous: boolean
+          status: 'pending' | 'approved' | 'rejected'
+          featured: boolean
+          submitted_at: string
           created_at: string
         }
         Insert: {
@@ -2386,6 +2392,8 @@ export type Database = {
           would_recommend?: boolean | null
           comments?: string | null
           is_anonymous?: boolean
+          status?: 'pending' | 'approved' | 'rejected'
+          featured?: boolean
         }
         Update: {
           overall_rating?: number
@@ -2394,6 +2402,8 @@ export type Database = {
           value_rating?: number | null
           would_recommend?: boolean | null
           comments?: string | null
+          status?: 'pending' | 'approved' | 'rejected'
+          featured?: boolean
         }
         Relationships: [
           { foreignKeyName: 'occupant_feedback_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }

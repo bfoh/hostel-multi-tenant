@@ -473,8 +473,10 @@ export function checkoutSummaryHtml(opts: {
   roomName:     string
   checkOutDate: string
   totalPaid:    string
+  /** One-tap link straight to this guest's pre-filled "Rate your stay" tab. */
+  reviewUrl?:   string
 }) {
-  const { hostelName, primaryColor, logoUrl, guestName, bookingRef, roomName, checkOutDate, totalPaid } = opts
+  const { hostelName, primaryColor, logoUrl, guestName, bookingRef, roomName, checkOutDate, totalPaid, reviewUrl } = opts
 
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Thanks for staying with us!</p>
@@ -487,7 +489,8 @@ export function checkoutSummaryHtml(opts: {
       ${row('Checked out', checkOutDate)}
       ${row('Total paid', totalPaid)}
     </table>
-    <p style="font-size:14px;color:#374151;margin:0;">
+    ${reviewUrl ? button(reviewUrl, 'Rate your stay', primaryColor) : ''}
+    <p style="font-size:14px;color:#374151;margin:${reviewUrl ? '20px' : '0'} 0 0;">
       We'd love to have you back! Visit our booking page to reserve your next stay.
     </p>
   `

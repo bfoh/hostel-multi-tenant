@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Mail, BedDouble } from 'lucide-react'
+import { MapPin, Phone, Mail, BedDouble, Star } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS } from '@/lib/utils'
 import { amenityIcon } from '@/lib/amenity-icons'
@@ -39,7 +39,17 @@ async function getListing(slug: string) {
     .eq('is_active', true)
     .order('sort_order')
 
-  return { tenant, categories: categories ?? [] }
+  const { data: testimonials } = await supabase
+    .from('occupant_feedback')
+    .select('overall_rating, comments, submitted_at, occupants(first_name, last_name)')
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'approved')
+    .eq('featured', true)
+    .not('comments', 'is', null)
+    .order('submitted_at', { ascending: false })
+    .limit(6)
+
+  return { tenant, categories: categories ?? [], testimonials: testimonials ?? [] }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -57,7 +67,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
   const result = await getListing(slug)
   if (!result) notFound()
 
-  const { tenant, categories } = result
+  const { tenant, categories, testimonials } = result
   const cms = (tenant.website_content ?? {}) as CmsContent
   const isHotel = tenant.business_type === 'hotel'
   const nounSingular = isHotel ? 'hotel' : 'hostel'
@@ -240,6 +250,40 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                       >
                         <Icon className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
                         {f}
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Guest reviews — real, staff-moderated occupant_feedback,
+                never the platform's own marketplace reviews. */}
+            {testimonials.length > 0 && (
+              <section id="reviews">
+                <h2 className="text-[17px] font-bold" style={{ color: MP.ink }}>What guests say</h2>
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {testimonials.map((t, i) => {
+                    const occ = Array.isArray(t.occupants) ? t.occupants[0] : t.occupants
+                    return (
+                      <div
+                        key={i}
+                        className="mp-reveal rounded-xl bg-white p-4"
+                        style={{ border: `1px solid ${MP.border}`, animationDelay: `${Math.min(i, 5) * 30}ms` }}
+                      >
+                        <div className="flex items-center gap-0.5">
+                          {Array.from({ length: 5 }).map((_, s) => (
+                            <Star
+                              key={s}
+                              className="h-3.5 w-3.5"
+                              style={{ color: MP.goldDeep, fill: s < t.overall_rating ? MP.goldDeep : 'transparent' }}
+                            />
+                          ))}
+                        </div>
+                        <p className="mt-2 text-[13px] italic" style={{ color: MP.textSecondary }}>&quot;{t.comments}&quot;</p>
+                        <p className="mt-2 text-[12px] font-semibold" style={{ color: MP.ink }}>
+                          {occ ? `${occ.first_name} ${occ.last_name.charAt(0)}.` : 'Guest'}
+                        </p>
                       </div>
                     )
                   })}

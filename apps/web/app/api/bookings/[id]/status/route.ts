@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { sendEmail, bookingConfirmationHtml, checkoutSummaryHtml } from '@/lib/email'
+import { tenantHost, bareRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
 
 const schema = z.object({
   status: z.enum(['confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show']),
@@ -32,7 +33,7 @@ export async function PATCH(
       id, status, room_id, occupant_id, check_in_date, check_out_date, final_amount, paid_amount,
       occupants(first_name, last_name, email),
       rooms(room_number, room_categories(name)),
-      tenants(name, primary_color, logo_url, contact_phone, slug)
+      tenants(name, primary_color, logo_url, contact_phone, slug, business_type)
     `)
     .eq('id', id)
     .eq('tenant_id', tenantId)
@@ -47,12 +48,18 @@ export async function PATCH(
     actual_check_in?: string
     actual_check_out?: string
     cancelled_at?: string
+    review_token?: string
   } = { status: nextStatus }
 
+  // One-tap post-stay review link — generated once, at the moment of
+  // checkout, never regenerated on a later status change.
+  let reviewToken: string | null = null
   if (nextStatus === 'checked_in') {
     updatePayload.actual_check_in = new Date().toISOString()
   } else if (nextStatus === 'checked_out') {
     updatePayload.actual_check_out = new Date().toISOString()
+    reviewToken = crypto.randomUUID()
+    updatePayload.review_token = reviewToken
   } else if (nextStatus === 'cancelled') {
     updatePayload.cancelled_at = new Date().toISOString()
   }
@@ -126,6 +133,13 @@ export async function PATCH(
     }
 
     if (nextStatus === 'checked_out') {
+      let reviewUrl: string | undefined
+      if (reviewToken && tenant.slug && tenant.business_type) {
+        const rootDomain = bareRootDomain(process.env.NEXT_PUBLIC_APP_DOMAIN)
+        const host = tenantHost(tenant.slug, tenant.business_type as BusinessType, rootDomain)
+        reviewUrl = `https://${host}/portal?reviewToken=${reviewToken}`
+      }
+
       sendEmail({
         to:         occ.email,
         senderName: hostelName,
@@ -139,6 +153,7 @@ export async function PATCH(
           roomName:     cat?.name ?? room?.room_number ?? 'Your room',
           checkOutDate: new Date().toLocaleDateString('en-GH', { dateStyle: 'long' }),
           totalPaid:    formatGHS(booking.paid_amount ?? 0),
+          reviewUrl,
         }),
       }).catch(() => {})
     }

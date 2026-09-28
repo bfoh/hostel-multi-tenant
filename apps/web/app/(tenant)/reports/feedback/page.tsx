@@ -2,6 +2,13 @@ import type { Metadata } from 'next'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { FeedbackReviewActions } from '@/components/reports/feedback-review-actions'
+
+const STATUS_BADGE: Record<string, string> = {
+  pending:  'bg-warning-subtle text-warning-fg',
+  approved: 'bg-success-subtle text-success',
+  rejected: 'bg-danger-subtle text-danger',
+}
 
 export const metadata: Metadata = { title: 'Occupant Feedback' }
 
@@ -36,11 +43,19 @@ export default async function FeedbackPage() {
   const recPct = feedback.length
     ? Math.round((feedback.filter((f: any) => f.would_recommend).length / feedback.length) * 100)
     : 0
+  const pendingCount = feedback.filter((f: any) => f.status === 'pending').length
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Occupant Feedback</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
+          Occupant Feedback
+          {pendingCount > 0 && (
+            <span className="rounded-full bg-warning-subtle px-2.5 py-0.5 text-xs font-semibold text-warning-fg">
+              {pendingCount} pending review{pendingCount !== 1 ? 's' : ''}
+            </span>
+          )}
+        </h1>
         <p className="mt-0.5 text-sm text-text-secondary">{feedback.length} review{feedback.length !== 1 ? 's' : ''} collected</p>
       </div>
 
@@ -77,9 +92,19 @@ export default async function FeedbackPage() {
                   <div key={f.id} className="py-4 space-y-2">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="font-medium text-text-primary">
-                          {occ ? `${occ.first_name} ${occ.last_name}` : 'Anonymous'}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-text-primary">
+                            {occ ? `${occ.first_name} ${occ.last_name}` : 'Anonymous'}
+                          </p>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${STATUS_BADGE[f.status] ?? ''}`}>
+                            {f.status}
+                          </span>
+                          {f.featured && (
+                            <span className="rounded-full bg-warning-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning-fg">
+                              Featured
+                            </span>
+                          )}
+                        </div>
                         {booking && (
                           <p className="ref-number text-xs text-text-disabled">{booking.booking_ref}</p>
                         )}
@@ -111,9 +136,12 @@ export default async function FeedbackPage() {
                     {f.comments && (
                       <p className="text-sm text-text-secondary italic">"{f.comments}"</p>
                     )}
-                    <p className="text-xs text-text-disabled">
-                      {new Date(f.submitted_at).toLocaleDateString('en-GH', { dateStyle: 'medium' })}
-                    </p>
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-xs text-text-disabled">
+                        {new Date(f.submitted_at).toLocaleDateString('en-GH', { dateStyle: 'medium' })}
+                      </p>
+                      <FeedbackReviewActions feedbackId={f.id} status={f.status} featured={f.featured} />
+                    </div>
                   </div>
                 )
               })}

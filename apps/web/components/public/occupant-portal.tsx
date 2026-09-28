@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Search, BedDouble, Calendar, CreditCard,
   CheckCircle2, Clock, XCircle, Phone, Download,
@@ -78,13 +78,24 @@ const MAINT_CATEGORIES = [
   { value: 'other',        label: 'Other' },
 ]
 
-export function OccupantPortal({ tenant, payStatus }: { tenant: Tenant; payStatus?: 'success' | 'failed' | 'error' }) {
-  const [ref,     setRef]     = useState('')
-  const [phone,   setPhone]   = useState('')
+interface OccupantPortalProps {
+  tenant:      Tenant
+  payStatus?:  'success' | 'failed' | 'error'
+  /** Pre-filled from a one-tap review link (?reviewToken=) so the guest
+   *  doesn't retype their booking ref/phone — see the portal page's
+   *  server-side token resolution. */
+  initialRef?:   string
+  initialPhone?: string
+  initialTab?:   'booking' | 'maintenance' | 'notices' | 'feedback'
+}
+
+export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, initialTab }: OccupantPortalProps) {
+  const [ref,     setRef]     = useState(initialRef ?? '')
+  const [phone,   setPhone]   = useState(initialPhone ?? '')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
   const [result,  setResult]  = useState<BookingResult | null>(null)
-  const [activeTab, setActiveTab] = useState<'booking' | 'maintenance' | 'notices' | 'feedback'>('booking')
+  const [activeTab, setActiveTab] = useState<'booking' | 'maintenance' | 'notices' | 'feedback'>(initialTab ?? 'booking')
   const [notices, setNotices]     = useState<{ id: string; title: string; body: string; category: string; is_pinned: boolean; published_at: string }[] | null>(null)
   const [noticesLoading, setNoticesLoading] = useState(false)
 
@@ -205,8 +216,8 @@ export function OccupantPortal({ tenant, payStatus }: { tenant: Tenant; payStatu
     }
   }
 
-  async function lookup(e: React.FormEvent) {
-    e.preventDefault()
+  async function lookup(e?: React.FormEvent, refOverride?: string, phoneOverride?: string) {
+    e?.preventDefault()
     setLoading(true)
     setError(null)
     setResult(null)
@@ -215,7 +226,7 @@ export function OccupantPortal({ tenant, payStatus }: { tenant: Tenant; payStatu
       const res = await fetch(`/api/public/${tenant.slug}/portal`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ booking_ref: ref.trim(), phone: phone.trim() }),
+        body:    JSON.stringify({ booking_ref: (refOverride ?? ref).trim(), phone: (phoneOverride ?? phone).trim() }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Lookup failed')
@@ -226,6 +237,12 @@ export function OccupantPortal({ tenant, payStatus }: { tenant: Tenant; payStatu
       setLoading(false)
     }
   }
+
+  // Auto-run the lookup once when arriving via a pre-filled review link.
+  useEffect(() => {
+    if (initialRef && initialPhone) lookup(undefined, initialRef, initialPhone)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const room     = result ? (Array.isArray(result.room)     ? result.room[0]     : result.room)     : null
   const occupant = result ? (Array.isArray(result.occupant) ? result.occupant[0] : result.occupant) : null
