@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { Bot, Zap, MessageSquare, Phone } from 'lucide-react'
+import Link from 'next/link'
+import { Bot, Zap, MessageSquare, Phone, ArrowRight } from 'lucide-react'
 import { ChatWidget } from '@/components/ai/chat-widget'
 
 export const metadata: Metadata = { title: 'AI Assistant' }
@@ -9,11 +10,21 @@ export default function AIPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-text-primary">AI Booking Assistant</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Claude-powered agent that handles guest inquiries, checks availability, and escalates complex issues to staff.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-text-primary">AI Booking Assistant</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Claude-powered agent that handles guest inquiries, checks availability, and escalates complex issues to staff.
+          </p>
+        </div>
+        <Link
+          href="/ai/staff"
+          className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised"
+        >
+          <Bot className="h-4 w-4 text-brand" />
+          Staff Assistant
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
 
       {!configured && (
