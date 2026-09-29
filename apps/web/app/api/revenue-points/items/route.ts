@@ -33,6 +33,10 @@ export async function POST(req: NextRequest) {
       unit_price:       body.unit_price,
       unit:             body.unit ?? 'item',
       sort_order:       body.sort_order ?? 0,
+      // Leave stock_qty null (not stock-tracked) unless an initial count is
+      // given — services/passes never set this.
+      stock_qty:        typeof body.stock_qty === 'number' ? body.stock_qty : null,
+      reorder_point:    typeof body.reorder_point === 'number' ? body.reorder_point : 0,
     })
     .select()
     .single()

@@ -21,6 +21,9 @@ export interface RevenuePointItem {
   unit:             string
   is_active:        boolean
   sort_order:       number
+  /** null = not stock-tracked (services, passes, laundry-by-weight, etc.). */
+  stock_qty:        number | null
+  reorder_point:    number
 }
 
 /**

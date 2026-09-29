@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Minus, ShoppingCart, Loader2, CheckCircle, Trash2, Link2, Copy, X } from 'lucide-react'
+import { Plus, Minus, ShoppingCart, Loader2, CheckCircle, Trash2, Link2, Copy, X, PackagePlus } from 'lucide-react'
 import type { RevenuePointItem } from '@/lib/data/revenue-points'
 
 const PAYMENT_METHODS = [
@@ -44,6 +44,26 @@ export function POSClient({
   const [customItemPrice, setCustomItemPrice] = useState('')
   const [busy, setBusy] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [restockingId, setRestockingId] = useState<string | null>(null)
+
+  async function restock(item: RevenuePointItem, e: React.MouseEvent) {
+    e.stopPropagation()
+    const input = window.prompt(`Add how many "${item.name}" to stock?`, '')
+    const quantity = Number(input)
+    if (!input || !Number.isFinite(quantity) || quantity <= 0) return
+
+    setRestockingId(item.id)
+    try {
+      await fetch(`/api/revenue-points/items/${item.id}/restock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
+      })
+      router.refresh()
+    } finally {
+      setRestockingId(null)
+    }
+  }
 
   // Online checkout modal state
   const [online, setOnline] = useState<{
@@ -196,19 +216,35 @@ export function POSClient({
             <div key={category}>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary mb-2">{category}</h3>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                {catItems.map((item) => (
+                {catItems.map((item) => {
+                  const tracked = item.stock_qty !== null
+                  const lowStock = tracked && (item.stock_qty as number) <= item.reorder_point
+                  return (
                   <button
                     key={item.id}
                     onClick={() => addToCart(item)}
-                    className="rounded-lg border border-border bg-surface p-3 text-left transition-all hover:border-brand/30 hover:shadow-sm active:scale-95"
+                    className="group relative rounded-lg border border-border bg-surface p-3 text-left transition-all hover:border-brand/30 hover:shadow-sm active:scale-95"
                   >
-                    <p className="text-sm font-medium text-text-primary truncate">{item.name}</p>
+                    <span
+                      onClick={(e) => restock(item, e)}
+                      title="Restock"
+                      className="absolute right-1.5 top-1.5 rounded-md p-1 text-text-disabled opacity-0 transition-opacity hover:text-brand group-hover:opacity-100"
+                    >
+                      {restockingId === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackagePlus className="h-3.5 w-3.5" />}
+                    </span>
+                    <p className="pr-5 text-sm font-medium text-text-primary truncate">{item.name}</p>
                     <p className="mt-1 text-xs font-mono text-text-secondary">
                       GH₵ {(item.unit_price / 100).toFixed(2)}
                     </p>
                     <p className="text-[10px] text-text-disabled">per {item.unit}</p>
+                    {tracked && (
+                      <p className={`mt-1 text-[10px] font-medium ${lowStock ? 'text-danger' : 'text-text-tertiary'}`}>
+                        {item.stock_qty} in stock{lowStock ? ' · Low' : ''}
+                      </p>
+                    )}
                   </button>
-                ))}
+                  )
+                })}
               </div>
             </div>
           ))
