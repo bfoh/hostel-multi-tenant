@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import {
   Search, BedDouble, Calendar, CreditCard,
   CheckCircle2, Clock, XCircle, Phone, Download,
-  Wrench, AlertCircle, Loader2, Plus, Bell, Star,
+  Wrench, AlertCircle, Loader2, Plus, Bell, Star, MapPin,
 } from 'lucide-react'
 import { GUEST_MAINTENANCE_CATEGORIES, MAINTENANCE_CATEGORY_LABEL } from '@/lib/maintenance/categories'
 
@@ -80,7 +80,7 @@ interface OccupantPortalProps {
    *  server-side token resolution. */
   initialRef?:   string
   initialPhone?: string
-  initialTab?:   'booking' | 'maintenance' | 'notices' | 'feedback'
+  initialTab?:   'booking' | 'maintenance' | 'notices' | 'feedback' | 'guide'
 }
 
 export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, initialTab }: OccupantPortalProps) {
@@ -89,9 +89,11 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
   const [result,  setResult]  = useState<BookingResult | null>(null)
-  const [activeTab, setActiveTab] = useState<'booking' | 'maintenance' | 'notices' | 'feedback'>(initialTab ?? 'booking')
+  const [activeTab, setActiveTab] = useState<'booking' | 'maintenance' | 'notices' | 'feedback' | 'guide'>(initialTab ?? 'booking')
   const [notices, setNotices]     = useState<{ id: string; title: string; body: string; category: string; is_pinned: boolean; published_at: string }[] | null>(null)
   const [noticesLoading, setNoticesLoading] = useState(false)
+  const [localGuide, setLocalGuide] = useState<{ id: string; category: string; name: string; note: string | null; distance: string | null; link: string | null }[] | null>(null)
+  const [localGuideLoading, setLocalGuideLoading] = useState(false)
 
   // Pay-now state
   const [payAmount,   setPayAmount]   = useState('')
@@ -168,6 +170,17 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
       if (res.ok) setNotices(await res.json())
     } finally {
       setNoticesLoading(false)
+    }
+  }
+
+  async function loadLocalGuide() {
+    if (localGuide !== null) return
+    setLocalGuideLoading(true)
+    try {
+      const res = await fetch(`/api/public/${tenant.slug}/local-guide`)
+      if (res.ok) setLocalGuide(await res.json())
+    } finally {
+      setLocalGuideLoading(false)
     }
   }
 
@@ -515,6 +528,7 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
               {([
                 { id: 'booking',     icon: BedDouble, label: 'My Booking' },
                 { id: 'maintenance', icon: Wrench,    label: 'Requests' },
+                { id: 'guide',       icon: MapPin,    label: 'Local Guide' },
                 { id: 'notices',     icon: Bell,      label: 'Notices' },
               { id: 'feedback',    icon: Star,      label: 'Rate Stay' },
               ] as const).map((tab) => {
@@ -525,6 +539,7 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
                   onClick={() => {
                     setActiveTab(tab.id as any)
                     if (tab.id === 'notices') loadNotices()
+                    if (tab.id === 'guide') loadLocalGuide()
                   }}
                   className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium transition-colors ${
                     activeTab === tab.id ? 'text-white' : 'text-gray-500 hover:text-gray-700'
@@ -613,6 +628,48 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
                     {mSending ? 'Submitting…' : 'Submit request'}
                   </button>
                 </form>
+              </div>
+            )}
+
+            {/* Local Guide tab */}
+            {activeTab === 'guide' && (
+              <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5 space-y-3">
+                <h3 className="text-sm font-semibold text-gray-900">Local Guide</h3>
+                {localGuideLoading && (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  </div>
+                )}
+                {!localGuideLoading && (localGuide === null || localGuide.length === 0) && (
+                  <p className="py-6 text-center text-sm text-gray-400">Nothing added yet — check back soon</p>
+                )}
+                {!localGuideLoading && localGuide && localGuide.length > 0 && (
+                  <div className="space-y-3">
+                    {localGuide.map((entry) => (
+                      <div key={entry.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold text-gray-900">{entry.name}</p>
+                          <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium capitalize text-gray-600">
+                            {entry.category}
+                          </span>
+                        </div>
+                        {entry.distance && <p className="mt-1 text-xs text-gray-500">{entry.distance}</p>}
+                        {entry.note && <p className="mt-1.5 text-sm text-gray-600">{entry.note}</p>}
+                        {entry.link && (
+                          <a
+                            href={entry.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-block text-xs font-medium"
+                            style={{ color: tenant.brandColor }}
+                          >
+                            More info →
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

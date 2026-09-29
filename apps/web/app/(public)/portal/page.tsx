@@ -32,7 +32,7 @@ async function resolveReviewToken(tenantId: string, token: string) {
   const supabase = createAdminClient()
   const { data: booking } = await supabase
     .from('bookings')
-    .select('booking_ref, occupants(phone)')
+    .select('booking_ref, status, occupants(phone)')
     .eq('tenant_id', tenantId)
     .eq('review_token', token)
     .maybeSingle()
@@ -40,7 +40,10 @@ async function resolveReviewToken(tenantId: string, token: string) {
   if (!booking) return null
   const occ = Array.isArray(booking.occupants) ? booking.occupants[0] : booking.occupants
   if (!occ?.phone) return null
-  return { ref: booking.booking_ref, phone: occ.phone }
+  // Same one-tap link is sent at confirmation and again at checkout — jump
+  // straight to "Rate your stay" once it's actually over, otherwise land on
+  // the booking overview (Local Guide is one tab away either way).
+  return { ref: booking.booking_ref, phone: occ.phone, tab: booking.status === 'checked_out' ? 'feedback' as const : 'booking' as const }
 }
 
 export default async function PortalPage({
@@ -66,7 +69,7 @@ export default async function PortalPage({
       payStatus={pay as 'success' | 'failed' | 'error' | undefined}
       initialRef={resolved?.ref}
       initialPhone={resolved?.phone}
-      initialTab={resolved ? 'feedback' : undefined}
+      initialTab={resolved?.tab}
     />
   )
 }

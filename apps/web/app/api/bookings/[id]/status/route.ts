@@ -30,7 +30,7 @@ export async function PATCH(
   const { data: booking } = await supabase
     .from('bookings')
     .select(`
-      id, status, room_id, occupant_id, check_in_date, check_out_date, final_amount, paid_amount,
+      id, status, room_id, occupant_id, check_in_date, check_out_date, final_amount, paid_amount, review_token,
       occupants(first_name, last_name, email),
       rooms(room_number, room_categories(name)),
       tenants(name, primary_color, logo_url, contact_phone, slug, business_type)
@@ -51,17 +51,23 @@ export async function PATCH(
     review_token?: string
   } = { status: nextStatus }
 
-  // One-tap post-stay review link — generated once, at the moment of
-  // checkout, never regenerated on a later status change.
-  let reviewToken: string | null = null
+  // One-tap portal link — generated once, the first time it's needed
+  // (confirmation or checkout, whichever comes first) and reused for the
+  // rest of the booking's lifecycle rather than regenerated each time.
+  let reviewToken: string | null = booking.review_token
   if (nextStatus === 'checked_in') {
     updatePayload.actual_check_in = new Date().toISOString()
   } else if (nextStatus === 'checked_out') {
     updatePayload.actual_check_out = new Date().toISOString()
-    reviewToken = crypto.randomUUID()
-    updatePayload.review_token = reviewToken
+    if (!reviewToken) {
+      reviewToken = crypto.randomUUID()
+      updatePayload.review_token = reviewToken
+    }
   } else if (nextStatus === 'cancelled') {
     updatePayload.cancelled_at = new Date().toISOString()
+  } else if (nextStatus === 'confirmed' && !reviewToken) {
+    reviewToken = crypto.randomUUID()
+    updatePayload.review_token = reviewToken
   }
 
   const { error } = await supabase
@@ -112,6 +118,13 @@ export async function PATCH(
     const formatGHS    = (p: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(p / 100)
     const bookingRef   = id.slice(0, 8).toUpperCase()
 
+    let portalUrl: string | undefined
+    if (reviewToken && tenant.slug && tenant.business_type) {
+      const rootDomain = bareRootDomain(process.env.NEXT_PUBLIC_APP_DOMAIN)
+      const host = tenantHost(tenant.slug, tenant.business_type as BusinessType, rootDomain)
+      portalUrl = `https://${host}/portal?reviewToken=${reviewToken}`
+    }
+
     if (nextStatus === 'confirmed') {
       sendEmail({
         to:         occ.email,
@@ -128,18 +141,12 @@ export async function PATCH(
           checkOutDate: booking.check_out_date ? formatDate(booking.check_out_date) : 'TBD',
           amountGHS:    formatGHS(booking.final_amount ?? 0),
           contactPhone: tenant.contact_phone ?? undefined,
+          portalUrl,
         }),
       }).catch(() => {})
     }
 
     if (nextStatus === 'checked_out') {
-      let reviewUrl: string | undefined
-      if (reviewToken && tenant.slug && tenant.business_type) {
-        const rootDomain = bareRootDomain(process.env.NEXT_PUBLIC_APP_DOMAIN)
-        const host = tenantHost(tenant.slug, tenant.business_type as BusinessType, rootDomain)
-        reviewUrl = `https://${host}/portal?reviewToken=${reviewToken}`
-      }
-
       sendEmail({
         to:         occ.email,
         senderName: hostelName,
@@ -153,7 +160,7 @@ export async function PATCH(
           roomName:     cat?.name ?? room?.room_number ?? 'Your room',
           checkOutDate: new Date().toLocaleDateString('en-GH', { dateStyle: 'long' }),
           totalPaid:    formatGHS(booking.paid_amount ?? 0),
-          reviewUrl,
+          reviewUrl: portalUrl,
         }),
       }).catch(() => {})
     }

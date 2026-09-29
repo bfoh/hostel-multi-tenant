@@ -1940,6 +1940,44 @@ export type Database = {
         ]
       }
 
+      tenant_local_guide_entries: {
+        Row: {
+          id: string
+          tenant_id: string
+          category: 'restaurant' | 'attraction' | 'transport' | 'shopping' | 'emergency' | 'other'
+          name: string
+          note: string | null
+          distance: string | null
+          link: string | null
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          category?: 'restaurant' | 'attraction' | 'transport' | 'shopping' | 'emergency' | 'other'
+          name: string
+          note?: string | null
+          distance?: string | null
+          link?: string | null
+          sort_order?: number
+          created_by?: string | null
+        }
+        Update: {
+          category?: 'restaurant' | 'attraction' | 'transport' | 'shopping' | 'emergency' | 'other'
+          name?: string
+          note?: string | null
+          distance?: string | null
+          link?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          { foreignKeyName: 'tenant_local_guide_entries_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+        ]
+      }
+
       payment_plans: {
         Row: {
           id: string
