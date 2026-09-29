@@ -10,7 +10,7 @@ import {
   MessageSquare, MessageCircle, UserCog, ClipboardList, BookOpen, Bot,
   Package, Search, Building2, ListOrdered, TrendingDown,
   Monitor, Lock, Store, ClipboardCheck, Banknote,
-  Utensils, ShoppingBag, Activity,
+  Utensils, ShoppingBag, Activity, Megaphone,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -73,6 +73,7 @@ const OPS_ITEMS: NavItem[] = [
   { label: 'Communications', href: '/communications',  icon: MessageSquare,   anim: 'shake'  },
   { label: 'Security',       href: '/security',        icon: Shield,          anim: 'pop'    },
   { label: 'Revenue Points', href: '/revenue-points',  icon: Store,           anim: 'tilt'   },
+  { label: 'Marketing',      href: '/marketing',       icon: Megaphone,       anim: 'pop'    },
 ]
 
 /** Sensitive management — visible to owner / manager / admin ONLY */

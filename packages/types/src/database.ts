@@ -1978,6 +1978,50 @@ export type Database = {
         ]
       }
 
+      marketing_campaigns: {
+        Row: {
+          id: string
+          tenant_id: string
+          name: string
+          channel: 'sms' | 'email'
+          subject: string | null
+          body: string
+          audience: 'all_occupants' | 'active_occupants' | 'past_guests'
+          status: 'draft' | 'sent' | 'failed'
+          recipient_count: number
+          sent_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          name: string
+          channel: 'sms' | 'email'
+          subject?: string | null
+          body: string
+          audience?: 'all_occupants' | 'active_occupants' | 'past_guests'
+          status?: 'draft' | 'sent' | 'failed'
+          recipient_count?: number
+          sent_at?: string | null
+          created_by?: string | null
+        }
+        Update: {
+          name?: string
+          channel?: 'sms' | 'email'
+          subject?: string | null
+          body?: string
+          audience?: 'all_occupants' | 'active_occupants' | 'past_guests'
+          status?: 'draft' | 'sent' | 'failed'
+          recipient_count?: number
+          sent_at?: string | null
+        }
+        Relationships: [
+          { foreignKeyName: 'marketing_campaigns_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+        ]
+      }
+
       payment_plans: {
         Row: {
           id: string

@@ -52,6 +52,15 @@ async function send(to: string | string[], message: string): Promise<void> {
 }
 
 /**
+ * Public entry point for ad hoc bulk sends (e.g. marketing campaigns) that
+ * don't map to a specific transactional EventType template. Arkesel
+ * accepts the whole recipient list in one request.
+ */
+export async function sendBulkSms(recipients: string[], message: string): Promise<void> {
+  return send(recipients, message)
+}
+
+/**
  * Resolve the SMS body for an event. Uses the tenant template when `tenantId`
  * is provided; otherwise renders the hardcoded fallback directly.
  */
