@@ -23,7 +23,7 @@
  *
  * NEVER expose this client or the SERVICE_ROLE_KEY to the browser.
  */
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 
 import { createAdminClient } from './admin'
 
@@ -140,21 +140,27 @@ export function createTenantAdminClient(tenantId: string | null | undefined) {
 
 /**
  * Convenience: read `x-tenant-id` from request headers (middleware injects it)
- * and return a tenant-scoped admin client. Throws if the header is missing —
- * a missing header signals a programmer error (page mounted outside the
- * tenant route group, or middleware misconfiguration), not a recoverable
- * runtime condition.
+ * and return a tenant-scoped admin client. Falls back to the `__tenant_id`
+ * cookie middleware also persists — same fallback getServerTenantId() already
+ * relies on (lib/auth/tenant.ts) — since the header can be momentarily absent
+ * on a client-side RSC fetch even when the session's tenant is well known.
+ * Still throws if neither is present, since that does mean the caller is
+ * genuinely outside the tenant context (e.g. platform-admin routes).
  *
  * Use this in any `app/(tenant)/*` server component, server action, or API
  * route handler that runs after the tenant middleware.
  */
 export async function createTenantAdminClientFromHeaders() {
-  const tenantId = (await headers()).get('x-tenant-id')
+  const headersList = await headers()
+  let tenantId = headersList.get('x-tenant-id')
+  if (!tenantId) {
+    tenantId = (await cookies()).get('__tenant_id')?.value ?? null
+  }
   if (!tenantId) {
     throw new Error(
-      'createTenantAdminClientFromHeaders: missing x-tenant-id header. ' +
-        'Either the middleware did not run on this route, or the caller is ' +
-        'outside the tenant context (e.g. platform-admin routes).',
+      'createTenantAdminClientFromHeaders: missing x-tenant-id header and ' +
+        '__tenant_id cookie. Either the middleware did not run on this route, ' +
+        'or the caller is outside the tenant context (e.g. platform-admin routes).',
     )
   }
   return createTenantAdminClient(tenantId)
