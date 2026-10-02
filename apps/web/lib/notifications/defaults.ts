@@ -11,6 +11,9 @@ export type EventType =
   | 'payment_link'
   | 'checkin_reminder'
   | 'checkout_reminder'
+  | 'checked_in'
+  | 'checked_out'
+  | 'admin_booking_alert'
   | 'lease_expiry_reminder'
   | 'deposit_refund'
   | 'bank_draft_submitted'
@@ -180,6 +183,42 @@ export const DEFAULT_TEMPLATES: TemplateDefault[] = [
       'Please let us know whether you wish to renew your booking or arrange check-out. ' +
       'We are happy to help either way.\n\n' +
       'Thank you for staying with us.',
+  },
+
+  // ── Checked in ─────────────────────────────────────────────────────────────
+  {
+    event_type: 'checked_in',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, you\'re checked in at {{hostel_name}}! Room: {{room_number}}. ' +
+      'Ref: {{booking_ref}}. Have a great stay.',
+  },
+  {
+    event_type: 'checked_in',
+    channel:    'email',
+    subject:    'You\'re checked in — {{hostel_name}}',
+    body:
+      'Dear {{first_name}},\n\n' +
+      'You have been checked in at {{hostel_name}}.\n\n' +
+      'Room: {{room_number}}\n' +
+      'Booking Ref: {{booking_ref}}\n\n' +
+      'We hope you enjoy your stay!',
+  },
+
+  // ── Checked out ────────────────────────────────────────────────────────────
+  {
+    event_type: 'checked_out',
+    channel:    'sms',
+    body:
+      'Hi {{first_name}}, you\'ve checked out of {{hostel_name}}. Ref: {{booking_ref}}. ' +
+      'Thank you for staying with us — safe travels!',
+  },
+
+  // ── Admin booking alert (owner/manager-facing) ────────────────────────────
+  {
+    event_type: 'admin_booking_alert',
+    channel:    'sms',
+    body: '{{hostel_name}}: {{event_line}}',
   },
 
   // ── Lease expiry (30-day) ─────────────────────────────────────────────────

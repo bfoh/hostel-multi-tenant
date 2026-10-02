@@ -3,10 +3,11 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
-import { sendPaymentReceipt } from '@/lib/sms'
+import { sendPaymentReceipt, sendAdminBookingAlert } from '@/lib/sms'
 import { formatGHS } from '@/lib/utils'
-import { sendEmail, paymentReceiptHtml } from '@/lib/email'
+import { sendEmail, paymentReceiptHtml, adminAlertHtml } from '@/lib/email'
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from '@/lib/payments/methods'
+import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
 
 const schema = z.object({
   amount:    z.number().int().min(1),
@@ -128,6 +129,40 @@ export async function POST(
           balance:      formatGHS(balance),
         }),
       }).catch(() => {})
+    }
+
+    // Owner/admin alert (non-blocking)
+    if (ten) {
+      const admins = await getTenantAdminContacts(supabase, tenantId)
+      const eventLine = `Payment of ${formatGHS(parsed.data.amount)} received from ${occ ? `${occ.first_name} ${occ.last_name}` : 'a guest'} via ${methodLabel} (${bkn?.booking_ref ?? id})`
+
+      if (admins.smsEnabled) {
+        for (const phone of admins.phones) {
+          sendAdminBookingAlert({ phone, hostelName: ten.name, eventLine, tenantId }).catch(() => {})
+        }
+      }
+      if (admins.emailEnabled) {
+        for (const email of admins.emails) {
+          sendEmail({
+            to:         email,
+            senderName: ten.name,
+            subject:    `Payment received — ${bkn?.booking_ref ?? id}`,
+            html:    adminAlertHtml({
+              hostelName:   ten.name,
+              primaryColor: ten.primary_color ?? '#2563EB',
+              logoUrl:      (ten as any).logo_url ?? null,
+              title:        'Payment recorded',
+              lines: [
+                { label: 'Guest',   value: occ ? `${occ.first_name} ${occ.last_name}` : 'Guest' },
+                { label: 'Amount',  value: formatGHS(parsed.data.amount) },
+                { label: 'Method',  value: methodLabel },
+                { label: 'Booking', value: bkn?.booking_ref ?? id },
+                { label: 'Balance', value: formatGHS(balance) },
+              ],
+            }),
+          }).catch(() => {})
+        }
+      }
     }
   } catch { /* non-critical */ }
 

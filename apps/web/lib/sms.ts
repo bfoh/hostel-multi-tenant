@@ -286,6 +286,70 @@ export async function sendLeaseExpiryReminder(params: {
   await send(params.phone, msg)
 }
 
+export async function sendCheckedInSms(params: {
+  phone:       string
+  firstName:   string
+  roomNumber:  string
+  bookingRef:  string
+  hostelName:  string
+  tenantId?:   string
+}) {
+  const fallback =
+    'Hi {{first_name}}, you\'re checked in at {{hostel_name}}! Room: {{room_number}}. ' +
+    'Ref: {{booking_ref}}. Have a great stay.'
+
+  const msg = await resolveSmsBody('checked_in', fallback, {
+    first_name:  params.firstName,
+    room_number: params.roomNumber,
+    booking_ref: params.bookingRef,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
+export async function sendCheckedOutSms(params: {
+  phone:       string
+  firstName:   string
+  bookingRef:  string
+  hostelName:  string
+  tenantId?:   string
+}) {
+  const fallback =
+    'Hi {{first_name}}, you\'ve checked out of {{hostel_name}}. Ref: {{booking_ref}}. ' +
+    'Thank you for staying with us — safe travels!'
+
+  const msg = await resolveSmsBody('checked_out', fallback, {
+    first_name:  params.firstName,
+    booking_ref: params.bookingRef,
+    hostel_name: params.hostelName,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
+/**
+ * Single consolidated admin/owner alert covering every booking-lifecycle
+ * event (new booking, payment, check-in, check-out, cancellation) — one
+ * function + one customizable template rather than five near-identical
+ * ones, since there's no existing per-event admin-SMS convention to match.
+ */
+export async function sendAdminBookingAlert(params: {
+  phone:       string
+  hostelName:  string
+  eventLine:   string
+  tenantId?:   string
+}) {
+  const fallback = '{{hostel_name}}: {{event_line}}'
+
+  const msg = await resolveSmsBody('admin_booking_alert', fallback, {
+    hostel_name: params.hostelName,
+    event_line:  params.eventLine,
+  }, params.tenantId)
+
+  await send(params.phone, msg)
+}
+
 export async function sendBookingCancelled(params: {
   phone:      string
   firstName:  string

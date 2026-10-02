@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
-import { sendEmail, bookingConfirmationHtml, checkoutSummaryHtml } from '@/lib/email'
+import { sendEmail, bookingConfirmationHtml, checkoutSummaryHtml, checkInConfirmationHtml, bookingCancelledHtml, adminAlertHtml } from '@/lib/email'
+import { sendBookingConfirmation, sendCheckedInSms, sendCheckedOutSms, sendBookingCancelled, sendAdminBookingAlert } from '@/lib/sms'
+import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
 import { tenantHost, bareRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
 
 const schema = z.object({
@@ -162,6 +164,95 @@ export async function PATCH(
           totalPaid:    formatGHS(booking.paid_amount ?? 0),
           reviewUrl: portalUrl,
         }),
+      }).catch(() => {})
+    }
+
+    if (nextStatus === 'checked_in') {
+      sendEmail({
+        to:         occ.email,
+        senderName: hostelName,
+        subject:    `You're checked in — ${hostelName}`,
+        html:    checkInConfirmationHtml({
+          hostelName,
+          primaryColor,
+          logoUrl,
+          guestName,
+          bookingRef,
+          roomName: cat?.name ?? room?.room_number ?? 'Your room',
+        }),
+      }).catch(() => {})
+    }
+
+    if (nextStatus === 'cancelled') {
+      sendEmail({
+        to:         occ.email,
+        senderName: hostelName,
+        subject:    `Booking cancelled — ${bookingRef}`,
+        html:    bookingCancelledHtml({ hostelName, primaryColor, logoUrl, guestName, bookingRef }),
+      }).catch(() => {})
+    }
+  }
+
+  // Guest SMS + owner/admin alert for every status transition (non-blocking)
+  // — previously only the two email sends above existed, and nothing at all
+  // reached the owner/admin on any transition.
+  if (tenant) {
+    const guestName  = occ ? `${occ.first_name} ${occ.last_name}` : 'Guest'
+    const hostelName = tenant.name
+    const bookingRef = id.slice(0, 8).toUpperCase()
+    const roomLabel  = cat?.name ?? room?.room_number ?? ''
+
+    if (occ?.phone) {
+      if (nextStatus === 'confirmed') {
+        sendBookingConfirmation({
+          phone: occ.phone, firstName: occ.first_name, bookingRef,
+          roomNumber: roomLabel, checkInDate: booking.check_in_date,
+          hostelName, tenantId,
+        }).catch(() => {})
+      } else if (nextStatus === 'checked_in') {
+        sendCheckedInSms({ phone: occ.phone, firstName: occ.first_name, roomNumber: roomLabel, bookingRef, hostelName, tenantId }).catch(() => {})
+      } else if (nextStatus === 'checked_out') {
+        sendCheckedOutSms({ phone: occ.phone, firstName: occ.first_name, bookingRef, hostelName, tenantId }).catch(() => {})
+      } else if (nextStatus === 'cancelled') {
+        sendBookingCancelled({ phone: occ.phone, firstName: occ.first_name, bookingRef, hostelName, tenantId }).catch(() => {})
+      }
+    }
+
+    if (['confirmed', 'checked_in', 'checked_out', 'cancelled'].includes(nextStatus)) {
+      const eventLabel = {
+        confirmed:   'Booking confirmed',
+        checked_in:  'Guest checked in',
+        checked_out: 'Guest checked out',
+        cancelled:   'Booking cancelled',
+      }[nextStatus as 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled']
+      const eventLine = `${eventLabel}: ${guestName}${roomLabel ? ` — ${roomLabel}` : ''} (${bookingRef})`
+
+      getTenantAdminContacts(supabase, tenantId).then((admins) => {
+        if (admins.smsEnabled) {
+          for (const phone of admins.phones) {
+            sendAdminBookingAlert({ phone, hostelName, eventLine, tenantId }).catch(() => {})
+          }
+        }
+        if (admins.emailEnabled) {
+          for (const email of admins.emails) {
+            sendEmail({
+              to:         email,
+              senderName: hostelName,
+              subject:    `${eventLabel} — ${bookingRef}`,
+              html:    adminAlertHtml({
+                hostelName,
+                primaryColor: tenant.primary_color ?? '#2563EB',
+                logoUrl:      (tenant as any).logo_url ?? null,
+                title:        eventLabel,
+                lines: [
+                  { label: 'Guest',   value: guestName },
+                  ...(roomLabel ? [{ label: 'Room', value: roomLabel }] : []),
+                  { label: 'Booking', value: bookingRef },
+                ],
+              }),
+            }).catch(() => {})
+          }
+        }
       }).catch(() => {})
     }
   }

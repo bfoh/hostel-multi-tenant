@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { PaymentMethod } from '@/lib/payments/methods'
+import { sendBookingConfirmation, sendAdminBookingAlert } from '@/lib/sms'
+import { sendEmail, bookingConfirmationHtml, adminAlertHtml } from '@/lib/email'
+import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
+import { formatGHS } from '@/lib/utils'
 
 /**
  * Shared single-room booking creation, used by both the plain single
@@ -148,5 +152,112 @@ export async function createBooking(
     }
   }
 
+  // Guest confirmation + owner/admin alert (non-blocking) — this path
+  // (staff-created + group bookings) previously sent no notification at all.
+  notifyBookingCreated(supabase, {
+    tenantId,
+    bookingId:    data.id,
+    bookingRef:   data.booking_ref,
+    roomNumber:   room.room_number ?? '',
+    checkInDate:  params.check_in_date,
+    checkOutDate: params.check_out_date,
+    amount:       Math.max(0, baseRate - (params.discount_amount ?? 0)),
+    occupantId:   params.occupant_id,
+    status,
+  }).catch(() => {})
+
   return { ok: true, bookingId: data.id, bookingRef: data.booking_ref, roomNumber: room.room_number ?? null, status }
+}
+
+async function notifyBookingCreated(
+  supabase: SupabaseClient<any>,
+  params: {
+    tenantId:     string
+    bookingId:    string
+    bookingRef:   string
+    roomNumber:   string
+    checkInDate:  string
+    checkOutDate: string
+    amount:       number
+    occupantId:   string
+    status:       string
+  },
+): Promise<void> {
+  const [occupantRes, tenantRes, admins] = await Promise.all([
+    supabase.from('occupants').select('first_name, last_name, phone, email').eq('id', params.occupantId).single(),
+    supabase.from('tenants').select('name, primary_color, logo_url, contact_phone').eq('id', params.tenantId).single(),
+    getTenantAdminContacts(supabase, params.tenantId),
+  ])
+
+  const occ = occupantRes.data
+  const ten = tenantRes.data
+  if (!ten) return
+
+  const guestName  = occ ? `${occ.first_name} ${occ.last_name}` : 'Guest'
+  const amountGHS  = formatGHS(params.amount)
+  const checkInFmt = new Date(params.checkInDate + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
+
+  if (admins.smsEnabled && occ?.phone) {
+    sendBookingConfirmation({
+      phone:       occ.phone,
+      firstName:   occ.first_name,
+      bookingRef:  params.bookingRef,
+      roomNumber:  params.roomNumber,
+      checkInDate: checkInFmt,
+      hostelName:  ten.name,
+      tenantId:    params.tenantId,
+      amount:      amountGHS,
+    }).catch(() => {})
+  }
+
+  if (admins.emailEnabled && occ?.email) {
+    const checkOutFmt = new Date(params.checkOutDate + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
+    sendEmail({
+      to:         occ.email,
+      senderName: ten.name,
+      subject:    `Booking ${params.status === 'confirmed' ? 'confirmed' : 'received'} — ${ten.name}`,
+      html:    bookingConfirmationHtml({
+        hostelName:   ten.name,
+        primaryColor: ten.primary_color ?? '#2563EB',
+        logoUrl:      (ten as any).logo_url ?? null,
+        guestName,
+        bookingRef:   params.bookingRef,
+        roomName:     params.roomNumber ? `Room ${params.roomNumber}` : 'Your room',
+        checkInDate:  checkInFmt,
+        checkOutDate: checkOutFmt,
+        amountGHS,
+        contactPhone: ten.contact_phone ?? undefined,
+      }),
+    }).catch(() => {})
+  }
+
+  const eventLine = `New booking for ${guestName} — Room ${params.roomNumber}, ${checkInFmt} (${params.bookingRef})`
+
+  if (admins.smsEnabled) {
+    for (const phone of admins.phones) {
+      sendAdminBookingAlert({ phone, hostelName: ten.name, eventLine, tenantId: params.tenantId }).catch(() => {})
+    }
+  }
+  if (admins.emailEnabled) {
+    for (const email of admins.emails) {
+      sendEmail({
+        to:         email,
+        senderName: ten.name,
+        subject:    `New booking — ${params.bookingRef}`,
+        html:    adminAlertHtml({
+          hostelName:   ten.name,
+          primaryColor: ten.primary_color ?? '#2563EB',
+          logoUrl:      (ten as any).logo_url ?? null,
+          title:        'New booking',
+          lines: [
+            { label: 'Guest',    value: guestName },
+            { label: 'Room',     value: params.roomNumber },
+            { label: 'Check-in', value: checkInFmt },
+            { label: 'Amount',   value: amountGHS },
+            { label: 'Booking',  value: params.bookingRef },
+          ],
+        }),
+      }).catch(() => {})
+    }
+  }
 }

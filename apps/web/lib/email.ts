@@ -498,6 +498,80 @@ export function checkoutSummaryHtml(opts: {
   return baseTemplate(hostelName, primaryColor, content, logoUrl)
 }
 
+/* ── Check-in confirmation email ────────────────────────────────────────── */
+
+export function checkInConfirmationHtml(opts: {
+  hostelName:   string
+  primaryColor: string
+  logoUrl?:     string | null
+  guestName:    string
+  bookingRef:   string
+  roomName:     string
+}) {
+  const { hostelName, primaryColor, logoUrl, guestName, bookingRef, roomName } = opts
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">You're checked in!</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">
+      Hi ${guestName}, welcome to <strong>${hostelName}</strong>. We hope you have a great stay.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      ${row('Booking ref', bookingRef)}
+      ${row('Room', roomName)}
+    </table>
+  `
+
+  return baseTemplate(hostelName, primaryColor, content, logoUrl)
+}
+
+/* ── Booking cancelled email ────────────────────────────────────────────── */
+
+export function bookingCancelledHtml(opts: {
+  hostelName:   string
+  primaryColor: string
+  logoUrl?:     string | null
+  guestName:    string
+  bookingRef:   string
+}) {
+  const { hostelName, primaryColor, logoUrl, guestName, bookingRef } = opts
+
+  const content = `
+    <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Booking cancelled</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">
+      Hi ${guestName}, your booking <strong>${bookingRef}</strong> at <strong>${hostelName}</strong> has been cancelled.
+    </p>
+    <p style="font-size:14px;color:#374151;margin:0;">
+      If you believe this is a mistake or would like to discuss a refund, please contact the front desk.
+    </p>
+  `
+
+  return baseTemplate(hostelName, primaryColor, content, logoUrl)
+}
+
+/* ── Admin/owner alert email (booking/payment/check-in/check-out) ───────── */
+
+export function adminAlertHtml(opts: {
+  hostelName:   string
+  primaryColor: string
+  logoUrl?:     string | null
+  title:        string
+  lines:        { label: string; value: string }[]
+  ctaUrl?:      string
+  ctaLabel?:    string
+}) {
+  const { hostelName, primaryColor, logoUrl, title, lines, ctaUrl, ctaLabel } = opts
+
+  const content = `
+    <p style="margin:0 0 20px;font-size:20px;font-weight:700;color:#111827;">${title}</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      ${lines.map((l) => row(l.label, l.value)).join('')}
+    </table>
+    ${ctaUrl ? button(ctaUrl, ctaLabel ?? 'Open dashboard', primaryColor) : ''}
+  `
+
+  return baseTemplate(hostelName, primaryColor, content, logoUrl)
+}
+
 /* ── Trial warning email (T-3, T-1) ─────────────────────────────────────── */
 
 export function trialWarningHtml(opts: {

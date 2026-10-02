@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendBookingConfirmation } from '@/lib/sms'
-import { sendEmail, bookingConfirmationHtml } from '@/lib/email'
+import { sendBookingConfirmation, sendAdminBookingAlert } from '@/lib/sms'
+import { sendEmail, bookingConfirmationHtml, adminAlertHtml } from '@/lib/email'
 import { initBookingPayment } from '@/lib/booking-payment'
 import { calculateRoomHarmonyScore } from '@/lib/matching'
 import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
+import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
+import { formatGHS } from '@/lib/utils'
 
 const schema = z.object({
   category_id: z.string().uuid(),
@@ -320,7 +322,6 @@ export async function POST(
   // Email confirmation (non-blocking, only if email provided)
   if (d.email) {
     const formatDate = (s: string) => new Date(s + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
-    const formatGHS  = (p: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(p / 100)
     sendEmail({
       to:         d.email,
       senderName: tenant.name,
@@ -339,6 +340,41 @@ export async function POST(
       }),
     }).catch(() => {})
   }
+
+  // Owner/admin alert (non-blocking) — the gap Abrempong reported: no one on
+  // the hostel side previously heard about an online booking at all.
+  getTenantAdminContacts(supabase, tenant.id).then((admins) => {
+    const guestName  = `${d.first_name} ${d.last_name}`
+    const eventLine  = `New online booking from ${guestName} — ${category.name}, ${d.check_in_date} to ${d.check_out_date} (${booking.booking_ref})`
+
+    if (admins.smsEnabled) {
+      for (const phone of admins.phones) {
+        sendAdminBookingAlert({ phone, hostelName: tenant.name, eventLine, tenantId: tenant.id }).catch(() => {})
+      }
+    }
+    if (admins.emailEnabled) {
+      for (const email of admins.emails) {
+        sendEmail({
+          to:         email,
+          senderName: tenant.name,
+          subject:    `New booking — ${booking.booking_ref}`,
+          html:    adminAlertHtml({
+            hostelName:   tenant.name,
+            primaryColor,
+            logoUrl,
+            title:        'New online booking',
+            lines: [
+              { label: 'Guest',    value: guestName },
+              { label: 'Room',     value: category.name },
+              { label: 'Check-in', value: d.check_in_date },
+              { label: 'Amount',   value: formatGHS(category.base_rate) },
+              { label: 'Booking',  value: booking.booking_ref },
+            ],
+          }),
+        }).catch(() => {})
+      }
+    }
+  }).catch(() => {})
 
   return NextResponse.json({
     booking_ref:   booking.booking_ref,

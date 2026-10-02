@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { finalizeOnlineBookingPayment, notifyOnlinePayment } from '@/lib/payments/record-online-payment'
 
 // GET /api/public/[slug]/pay/callback?trxref=...&reference=...&booking_id=...&amount=...
 // Paystack redirects here after payment
@@ -53,30 +54,17 @@ export async function GET(
 
   if (!booking) return NextResponse.redirect(new URL(`/book/${slug}?pay=error`, req.url))
 
-  // Idempotency: check if reference already recorded
-  const { data: existing } = await supabase
-    .from('booking_payments')
-    .select('id')
-    .eq('paystack_reference', reference)
-    .maybeSingle()
+  const { recorded } = await finalizeOnlineBookingPayment(supabase, {
+    tenantId:  tenant.id,
+    bookingId,
+    amount,
+    reference,
+    method:    'card',
+    notes:     'Paid online via Paystack hosted checkout',
+  })
 
-  if (!existing) {
-    await supabase.from('booking_payments').insert({
-      tenant_id:          booking.tenant_id,
-      booking_id:         bookingId,
-      amount,
-      method:             'card',
-      paystack_reference: reference,
-      status:             'success',
-      paid_at:            new Date().toISOString(),
-      notes:              'Paid via occupant portal (Paystack)',
-    })
-
-    // Auto-confirm if fully paid
-    const newPaid = booking.paid_amount + amount
-    if (newPaid >= booking.final_amount && booking.status === 'pending_payment') {
-      await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId).eq('tenant_id', tenant.id)
-    }
+  if (recorded) {
+    notifyOnlinePayment(supabase, { tenantId: tenant.id, bookingId, amount }).catch(() => {})
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host')}`

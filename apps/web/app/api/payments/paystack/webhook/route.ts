@@ -470,7 +470,7 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
     })
     .eq('id', paymentId)
     .eq('status', 'pending')
-    .select('id, booking_id, amount')
+    .select('id, booking_id, amount, tenant_id')
     .single()
 
   if (payment) {
@@ -478,6 +478,13 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
       .from('bookings')
       .update({ updated_at: new Date().toISOString() } as any)
       .eq('id', payment.booking_id)
+
+    const { notifyOnlinePayment } = await import('@/lib/payments/record-online-payment')
+    notifyOnlinePayment(supabase, {
+      tenantId:  payment.tenant_id,
+      bookingId: payment.booking_id,
+      amount:    payment.amount,
+    }).catch(() => {})
   }
 }
 
