@@ -3,6 +3,7 @@
   "crons": [
     { "path": "/api/cron/daily-digest",  "schedule": "0 21 * * *" },
     { "path": "/api/cron/weekly-digest", "schedule": "0 6 * * 1" },
-    { "path": "/api/cron/trial-expiry",  "schedule": "0 9 * * *" }
+    { "path": "/api/cron/trial-expiry",  "schedule": "0 9 * * *" },
+    { "path": "/api/cron/checkin-checkout-reminder", "schedule": "0 7 * * *" }
   ]
 }
