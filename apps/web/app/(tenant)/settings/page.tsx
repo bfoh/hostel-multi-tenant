@@ -11,11 +11,12 @@ import { NotificationsForm } from '@/components/settings/notifications-form'
 import { PasswordForm } from '@/components/settings/password-form'
 import { PushToggle } from '@/components/settings/push-toggle'
 import { BillingClient } from '@/components/settings/billing-client'
+import { ListingSettingsForm } from '@/components/settings/listing-settings-form'
 import {
   listPlatformPlans, listAllPlanVariants, findPlanByCode, BILLING_INTERVALS,
 } from '@/lib/platform-plans'
 import { listSubscriptions } from '@/lib/paystack'
-import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode, ChevronRight, AlertTriangle, CheckCircle2, Inbox, Store, MapPin } from 'lucide-react'
+import { Globe, Bot, Link2, CalendarRange, Webhook, MessageSquare, Landmark, Receipt, QrCode, ChevronRight, AlertTriangle, CheckCircle2, Inbox, MapPin } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Settings' }
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,7 @@ export const dynamic = 'force-dynamic'
 const TABS = [
   { value: 'profile',       label: 'Profile'       },
   { value: 'branding',      label: 'Branding'      },
+  { value: 'listing',       label: 'Listing'       },
   { value: 'notifications', label: 'Notifications' },
   { value: 'digest',        label: 'Digest'        },
   { value: 'security',      label: 'Security'      },
@@ -44,6 +46,7 @@ async function getTenant() {
       currency, timezone,
       sms_enabled, email_enabled, momo_enabled,
       inter_occupant_dm_enabled, roommate_matching_enabled,
+      listed_publicly, online_booking_enabled, booking_payment_mode,
       status, plan, trial_ends_at,
       bank_name, bank_branch, bank_account_name, bank_account_number,
       bank_swift_code, bank_instructions, bank_deposits_enabled,
@@ -184,6 +187,19 @@ export default async function SettingsPage({
   const tenantId = await getServerTenantId()
   const billingData = tab === 'billing' && tenantId ? await getBillingData(tenantId, isHotel ? 'hotel' : 'hostel') : null
 
+  // Room categories (for the listing tab's price preview) only when active
+  let listingCategories: { id: string; name: string; base_rate: number; rate_unit: string }[] = []
+  if (tab === 'listing' && tenantId) {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('room_categories')
+      .select('id, name, base_rate, rate_unit')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('sort_order')
+    listingCategories = data ?? []
+  }
+
   // Bank deposit details are owner-only. Read the role from the
   // x-tenant-role request header injected by middleware (the standard pattern
   // used everywhere else in (tenant)/).
@@ -311,6 +327,29 @@ export default async function SettingsPage({
               </section>
             )}
 
+            {tab === 'listing' && (
+              <section className="space-y-4">
+                <div>
+                  <h2 className="text-base font-semibold text-text-primary">Public Listing</h2>
+                  <p className="mt-0.5 text-sm text-text-secondary">
+                    Control how your {nounSingular} appears on the GH Hostels marketplace, whether it accepts
+                    online bookings right now, and how guests pay.
+                  </p>
+                </div>
+                <ListingSettingsForm
+                  slug={tenant?.slug ?? ''}
+                  initialListed={(tenant as any)?.listed_publicly ?? true}
+                  initialOnlineBookingEnabled={(tenant as any)?.online_booking_enabled ?? true}
+                  initialPaymentMode={((tenant as any)?.booking_payment_mode as 'online' | 'pay_at_hostel') ?? 'online'}
+                  initialCity={(tenant as any)?.address_city ?? null}
+                  initialRegion={(tenant as any)?.address_region ?? null}
+                  hasPayoutAccount={!!(tenant as any)?.paystack_subaccount_code}
+                  categories={listingCategories}
+                  isHotel={isHotel}
+                />
+              </section>
+            )}
+
             {tab === 'notifications' && (
               <section className="space-y-4">
                 <div>
@@ -404,16 +443,6 @@ export default async function SettingsPage({
                     <div>
                       <p className="font-medium text-text-primary">Rate Management</p>
                       <p className="text-xs text-text-secondary">Seasonal pricing, promotions, and date-range rate overrides</p>
-                    </div>
-                  </Link>
-                  <Link
-                    href="/settings/listing"
-                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm hover:bg-surface transition-colors"
-                  >
-                    <Store className="h-4 w-4 text-brand shrink-0" />
-                    <div>
-                      <p className="font-medium text-text-primary">Public Listing</p>
-                      <p className="text-xs text-text-secondary">Marketplace visibility, guest checkout mode, and location</p>
                     </div>
                   </Link>
                   <Link
