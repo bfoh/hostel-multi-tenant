@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
@@ -20,22 +21,33 @@ export default async function RoommateMatchingPage() {
   // Resolve caller's tenant_members.role from the DB directly. We used to
   // trust the x-tenant-role header set by middleware, but that header can
   // be missing OR stale (e.g. JWT carries an old role after a role change,
-  // or fetchRoleForUser had a transient miss). The DB is authoritative.
+  // or fetchRoleForUser had a transient miss). The DB is authoritative —
+  // except for a super-admin impersonation session, which has no real
+  // tenant_members row for its own user_id by design; there, the header is
+  // the only source of truth and middleware only ever sets it to 'owner'
+  // after verifying platform_admins membership.
   const authClient = await createClient()
   const { data: { user } } = await authClient.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: member } = await supabase
-    .from('tenant_members')
-    .select('role, is_active')
-    .eq('user_id', user.id)
-    .eq('tenant_id', tenantId)
-    .maybeSingle()
+  const isImpersonating = (await headers()).get('x-admin-impersonating') === 'true'
 
-  const dbRole   = (member as any)?.role      ?? null
-  const dbActive = (member as any)?.is_active ?? null
+  let effectiveRole: string | null
+  if (isImpersonating) {
+    effectiveRole = (await headers()).get('x-tenant-role')
+  } else {
+    const { data: member } = await supabase
+      .from('tenant_members')
+      .select('role, is_active')
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
 
-  const effectiveRole = dbActive ? dbRole : null
+    const dbRole   = (member as any)?.role      ?? null
+    const dbActive = (member as any)?.is_active ?? null
+
+    effectiveRole = dbActive ? dbRole : null
+  }
   if (!effectiveRole || !ALLOWED_ROLES.includes(effectiveRole as (typeof ALLOWED_ROLES)[number])) {
     redirect('/dashboard')
   }

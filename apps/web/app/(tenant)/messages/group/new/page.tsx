@@ -20,14 +20,20 @@ export default async function NewGroupPage() {
   if (!user) redirect('/login')
 
   const admin = createAdminClient() as any
-  const { data: staff } = await admin
-    .from('tenant_members')
-    .select('role')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-  if (!staff) redirect('/messages')
+
+  // A super-admin impersonation session has no real tenant_members row for
+  // its own user_id, so trust the x-tenant-role header there instead
+  // (middleware only sets it after verifying platform_admins membership).
+  if (h.get('x-admin-impersonating') !== 'true') {
+    const { data: staff } = await admin
+      .from('tenant_members')
+      .select('role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (!staff) redirect('/messages')
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">

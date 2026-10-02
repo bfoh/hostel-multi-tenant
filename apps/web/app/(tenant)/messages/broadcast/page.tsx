@@ -21,15 +21,20 @@ export default async function BroadcastPage() {
 
   const admin = createAdminClient() as any
 
-  // Confirm staff
-  const { data: staff } = await admin
-    .from('tenant_members')
-    .select('role')
-    .eq('tenant_id', tenantId)
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-  if (!staff) redirect('/messages')
+  // Confirm staff — a super-admin impersonation session has no real
+  // tenant_members row for its own user_id, so trust the x-tenant-role
+  // header there instead (middleware only sets it after verifying
+  // platform_admins membership).
+  if (h.get('x-admin-impersonating') !== 'true') {
+    const { data: staff } = await admin
+      .from('tenant_members')
+      .select('role')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (!staff) redirect('/messages')
+  }
 
   // Block list for filter chips — distinct rooms.block values
   const { data: blocks } = await admin
