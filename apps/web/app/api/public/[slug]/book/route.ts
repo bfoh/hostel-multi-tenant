@@ -17,6 +17,10 @@ const schema = z.object({
   email:       z.string().email().optional().nullable(),
   institution: z.string().max(200).optional().nullable(),
   student_id:  z.string().max(50).optional().nullable(),
+  gender:              z.enum(['male', 'female', 'prefer_not_to_say']).optional().nullable(),
+  date_of_birth:       z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  national_id_type:    z.enum(['ghana_card', 'passport', 'voters_id', 'nhis']).optional().nullable(),
+  national_id_number:  z.string().max(50).optional().nullable(),
   notes:       z.string().max(500).optional().nullable(),
   matching_profile: z.object({
     cleanliness: z.number().int().min(1).max(5).nullable().optional(),
@@ -186,6 +190,10 @@ export async function POST(
         email:       d.email,
         institution: d.institution,
         student_id:  d.student_id,
+        gender:              d.gender,
+        date_of_birth:       d.date_of_birth,
+        national_id_type:    d.national_id_type,
+        national_id_number:  d.national_id_number,
         status:      'pending',
         type:        d.institution ? 'student' : 'guest',
       })

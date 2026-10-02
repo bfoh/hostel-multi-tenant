@@ -359,6 +359,10 @@ interface FormData {
   email: string
   institution: string
   student_id: string
+  gender: string
+  date_of_birth: string
+  national_id_type: string
+  national_id_number: string
   check_in_date: string
   check_out_date: string
   notes: string
@@ -464,6 +468,10 @@ function DetailsForm({
     email: '',
     institution: '',
     student_id: '',
+    gender: '',
+    date_of_birth: '',
+    national_id_type: '',
+    national_id_number: '',
     check_in_date: today,
     check_out_date: '',
     notes: '',
@@ -694,6 +702,60 @@ function DetailsForm({
               value={form.student_id}
               onChange={e => set('student_id', e.target.value)}
               placeholder="10123456"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      {/* Identification */}
+      <fieldset className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <legend className="px-1 text-sm font-semibold text-gray-700">Identification <span className="text-gray-400 font-normal text-xs">(optional)</span></legend>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Gender</label>
+            <select
+              value={form.gender}
+              onChange={e => set('gender', e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+            >
+              <option value="">Select...</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Date of birth</label>
+            <input
+              type="date"
+              value={form.date_of_birth}
+              onChange={e => set('date_of_birth', e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">ID type</label>
+            <select
+              value={form.national_id_type}
+              onChange={e => set('national_id_type', e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+            >
+              <option value="">Select...</option>
+              <option value="ghana_card">Ghana Card</option>
+              <option value="passport">Passport</option>
+              <option value="voters_id">Voter's ID</option>
+              <option value="nhis">NHIS</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">ID number</label>
+            <input
+              type="text"
+              maxLength={50}
+              value={form.national_id_number}
+              onChange={e => set('national_id_number', e.target.value)}
+              placeholder="GHA-XXXXXXXXX-X"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
             />
           </div>
@@ -1126,6 +1188,10 @@ export function BookingFlow({ categories, tenant }: BookingFlowProps) {
           email:          data.email || null,
           institution:    data.institution || null,
           student_id:     data.student_id || null,
+          gender:             data.gender || null,
+          date_of_birth:      data.date_of_birth || null,
+          national_id_type:   data.national_id_type || null,
+          national_id_number: data.national_id_number || null,
           notes:          data.notes || null,
           matching_profile: data.matching_profile || null,
         }),
