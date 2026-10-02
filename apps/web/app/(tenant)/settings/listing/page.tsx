@@ -30,7 +30,7 @@ export default async function ListingSettingsPage() {
   const admin = createAdminClient()
   const { data: tenant } = await admin
     .from('tenants')
-    .select('slug, listed_publicly, booking_payment_mode, address_city, address_region, paystack_subaccount_code')
+    .select('slug, listed_publicly, online_booking_enabled, booking_payment_mode, address_city, address_region, paystack_subaccount_code')
     .eq('id', tenantId ?? '')
     .single()
 
@@ -66,6 +66,7 @@ export default async function ListingSettingsPage() {
       <ListingSettingsForm
         slug={tenant?.slug ?? ''}
         initialListed={tenant?.listed_publicly ?? true}
+        initialOnlineBookingEnabled={tenant?.online_booking_enabled ?? true}
         initialPaymentMode={(tenant?.booking_payment_mode as 'online' | 'pay_at_hostel') ?? 'online'}
         initialCity={tenant?.address_city ?? null}
         initialRegion={tenant?.address_region ?? null}

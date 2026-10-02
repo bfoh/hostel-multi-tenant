@@ -136,6 +136,7 @@ export default async function TenantAdminPage({
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
           {[
             ['Listed publicly', tenant.listed_publicly ? 'Yes' : 'No'],
+            ['Online booking', tenant.online_booking_enabled === false ? 'Paused' : 'Enabled'],
             ['Business type', tenant.business_type],
             ...(tenant.business_type === 'hotel' ? [['Marketplace category', tenant.accommodation_type]] : []),
             ['Status counts', ['trial', 'active', 'trial_expired'].includes(tenant.status) ? 'OK (visible statuses)' : `${tenant.status} (hidden)`],
@@ -143,13 +144,19 @@ export default async function TenantAdminPage({
           ].map(([k, v]) => (
             <div key={k} className="flex gap-2">
               <dt className="text-white/30 w-40 shrink-0">{k}</dt>
-              <dd className={`capitalize ${k === 'Active room categories' && stats.activeCategories === 0 ? 'text-red-400' : k === 'Listed publicly' && !tenant.listed_publicly ? 'text-red-400' : 'text-white'}`}>{v}</dd>
+              <dd className={`capitalize ${k === 'Active room categories' && stats.activeCategories === 0 ? 'text-red-400' : (k === 'Listed publicly' && !tenant.listed_publicly) || (k === 'Online booking' && tenant.online_booking_enabled === false) ? 'text-red-400' : 'text-white'}`}>{v}</dd>
             </div>
           ))}
         </dl>
         {(!tenant.listed_publicly || stats.activeCategories === 0 || !['trial', 'active', 'trial_expired'].includes(tenant.status)) && (
           <p className="text-xs text-red-400/80">
             This tenant will not appear in the public directory until every row above is satisfied.
+          </p>
+        )}
+        {tenant.online_booking_enabled === false && (
+          <p className="text-xs text-red-400/80">
+            Online booking is paused by the owner — the booking page shows zero available rooms regardless of
+            listing visibility.
           </p>
         )}
       </div>

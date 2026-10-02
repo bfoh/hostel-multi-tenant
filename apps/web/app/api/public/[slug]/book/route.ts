@@ -54,12 +54,18 @@ export async function POST(
   // Resolve tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, is_active, paystack_subaccount_code, roommate_matching_enabled, booking_payment_mode')
+    .select('id, name, is_active, paystack_subaccount_code, roommate_matching_enabled, booking_payment_mode, online_booking_enabled')
     .eq('slug', slug)
     .single()
 
   if (!tenant || !tenant.is_active) {
     return NextResponse.json({ error: 'Hostel not found' }, { status: 404 })
+  }
+
+  // Defense in depth — the booking page itself already shows zero rooms
+  // when paused, but a stale page or a direct API hit shouldn't slip through.
+  if (tenant.online_booking_enabled === false) {
+    return NextResponse.json({ error: 'Online booking is currently paused for this property. Please contact them directly.' }, { status: 409 })
   }
 
   const body = await req.json().catch(() => null)

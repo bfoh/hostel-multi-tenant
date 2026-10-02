@@ -19,29 +19,31 @@ interface Category {
 }
 
 interface Props {
-  slug:                 string
-  initialListed:        boolean
-  initialPaymentMode:   'online' | 'pay_at_hostel'
-  initialCity:          string | null
-  initialRegion:        string | null
-  hasPayoutAccount:     boolean
-  categories:           Category[]
-  isHotel?:             boolean
+  slug:                       string
+  initialListed:              boolean
+  initialOnlineBookingEnabled: boolean
+  initialPaymentMode:         'online' | 'pay_at_hostel'
+  initialCity:                string | null
+  initialRegion:              string | null
+  hasPayoutAccount:           boolean
+  categories:                 Category[]
+  isHotel?:                   boolean
 }
 
 const inputCls = 'w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text-primary placeholder-text-tertiary focus:border-brand focus:outline-none transition-colors'
 
 export function ListingSettingsForm({
-  slug, initialListed, initialPaymentMode, initialCity, initialRegion, hasPayoutAccount, categories, isHotel,
+  slug, initialListed, initialOnlineBookingEnabled, initialPaymentMode, initialCity, initialRegion, hasPayoutAccount, categories, isHotel,
 }: Props) {
   const nounSingular = isHotel ? 'hotel' : 'hostel'
-  const [listed,      setListed]      = useState(initialListed)
-  const [paymentMode, setPaymentMode] = useState(initialPaymentMode)
-  const [city,        setCity]        = useState(initialCity ?? '')
-  const [region,      setRegion]      = useState(initialRegion ?? '')
-  const [saving,      setSaving]      = useState(false)
-  const [error,       setError]       = useState('')
-  const [success,     setSuccess]     = useState('')
+  const [listed,              setListed]              = useState(initialListed)
+  const [onlineBookingEnabled, setOnlineBookingEnabled] = useState(initialOnlineBookingEnabled)
+  const [paymentMode,         setPaymentMode]          = useState(initialPaymentMode)
+  const [city,                setCity]                 = useState(initialCity ?? '')
+  const [region,              setRegion]               = useState(initialRegion ?? '')
+  const [saving,              setSaving]               = useState(false)
+  const [error,               setError]                = useState('')
+  const [success,             setSuccess]              = useState('')
 
   async function save() {
     setSaving(true); setError(''); setSuccess('')
@@ -50,10 +52,11 @@ export function ListingSettingsForm({
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          listed_publicly:      listed,
-          booking_payment_mode: paymentMode,
-          address_city:         city.trim() || null,
-          address_region:       region || null,
+          listed_publicly:        listed,
+          online_booking_enabled: onlineBookingEnabled,
+          booking_payment_mode:   paymentMode,
+          address_city:           city.trim() || null,
+          address_region:         region || null,
         }),
       })
       const data = await res.json()
@@ -101,6 +104,35 @@ export function ListingSettingsForm({
           >
             View your public listing <ExternalLink className="h-3 w-3" />
           </a>
+        )}
+      </div>
+
+      {/* Online booking pause */}
+      <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-text-primary">Accept online bookings</p>
+            <p className="mt-0.5 text-xs text-text-secondary">
+              Turn off to pause new online bookings without unlisting your {nounSingular} — your rooms stay
+              visible, but the booking page shows none available until you turn this back on. Useful when
+              you've taken enough offline bookings and need time to allocate rooms before opening back up.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={onlineBookingEnabled}
+            onClick={() => setOnlineBookingEnabled(!onlineBookingEnabled)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${onlineBookingEnabled ? 'bg-brand' : 'bg-border'}`}
+          >
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${onlineBookingEnabled ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+          </button>
+        </div>
+        {!onlineBookingEnabled && (
+          <p className="rounded-lg border border-warning/30 bg-warning-subtle px-3 py-2 text-xs text-warning-fg">
+            Online booking is currently paused. Guests who visit your booking page will see "no rooms available"
+            and a prompt to contact you directly.
+          </p>
         )}
       </div>
 

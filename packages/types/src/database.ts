@@ -123,6 +123,7 @@ export type Database = {
           public_api_key: string | null
           roommate_matching_enabled: boolean
           listed_publicly: boolean
+          online_booking_enabled: boolean
           booking_payment_mode: 'online' | 'pay_at_hostel'
           business_type: 'hostel' | 'hotel'
           accommodation_type: 'hotel' | 'apartment'
@@ -185,6 +186,7 @@ export type Database = {
           public_api_key?: string | null
           roommate_matching_enabled?: boolean
           listed_publicly?: boolean
+          online_booking_enabled?: boolean
           booking_payment_mode?: 'online' | 'pay_at_hostel'
           business_type?: 'hostel' | 'hotel'
           accommodation_type?: 'hotel' | 'apartment'
@@ -244,6 +246,7 @@ export type Database = {
           public_api_key?: string | null
           roommate_matching_enabled?: boolean
           listed_publicly?: boolean
+          online_booking_enabled?: boolean
           booking_payment_mode?: 'online' | 'pay_at_hostel'
           business_type?: 'hostel' | 'hotel'
           accommodation_type?: 'hotel' | 'apartment'

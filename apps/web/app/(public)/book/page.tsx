@@ -49,6 +49,7 @@ interface TenantRow {
   website_url: string | null
   website_content: CmsContent
   roommate_matching_enabled?: boolean
+  online_booking_enabled: boolean
 }
 
 async function getTenantFromRequest(): Promise<TenantRow | null> {
@@ -59,7 +60,7 @@ async function getTenantFromRequest(): Promise<TenantRow | null> {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_line1, address_city, address_region, website_url, website_content, roommate_matching_enabled')
+    .select('id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_line1, address_city, address_region, website_url, website_content, roommate_matching_enabled, online_booking_enabled')
     .eq('id', tenantId)
     .single()
 
@@ -159,7 +160,10 @@ export default async function PublicBookingPage() {
   const tenant = await getTenantFromRequest()
   if (!tenant) notFound()
 
-  const categories = await getRoomCategories(tenant.id)
+  // Owner-paused online booking: rooms stay configured, but nothing shows
+  // as bookable until they turn this back on in Settings → Public Listing —
+  // reuses the existing "no rooms available" empty state below as-is.
+  const categories = tenant.online_booking_enabled === false ? [] : await getRoomCategories(tenant.id)
   const brandColor = tenant.primary_color ?? '#2563EB'
   const cms: CmsContent = tenant.website_content ?? {}
 

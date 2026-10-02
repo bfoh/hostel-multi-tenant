@@ -14,12 +14,17 @@ export async function GET(
   // Resolve tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, is_active')
+    .select('id, is_active, online_booking_enabled')
     .eq('slug', slug)
     .single()
 
   if (!tenant || !tenant.is_active) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  // Owner-paused online booking — same toggle as the main booking page.
+  if (tenant.online_booking_enabled === false) {
+    return NextResponse.json([])
   }
 
   // Fetch active categories with available room count

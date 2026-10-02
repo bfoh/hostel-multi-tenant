@@ -7,15 +7,17 @@ import { invalidateTenantCache } from '@/lib/tenant/resolve'
 
 /**
  * Owner-only controls for the tenant's public marketplace listing:
- * delist toggle, guest checkout mode, and location (reusing the existing
- * tenants.address_city/address_region columns, not new ones).
+ * delist toggle, online-booking pause toggle, guest checkout mode, and
+ * location (reusing the existing tenants.address_city/address_region
+ * columns, not new ones).
  */
 
 const schema = z.object({
-  listed_publicly:      z.boolean().optional(),
-  booking_payment_mode: z.enum(['online', 'pay_at_hostel']).optional(),
-  address_city:         z.string().max(100).optional().nullable(),
-  address_region:       z.string().max(100).optional().nullable(),
+  listed_publicly:        z.boolean().optional(),
+  booking_payment_mode:   z.enum(['online', 'pay_at_hostel']).optional(),
+  address_city:           z.string().max(100).optional().nullable(),
+  address_region:         z.string().max(100).optional().nullable(),
+  online_booking_enabled: z.boolean().optional(),
 })
 
 export async function GET() {
@@ -28,7 +30,7 @@ export async function GET() {
   const supabase = await createTenantAdminClientFromHeaders()
   const { data: tenant, error } = await supabase
     .from('tenants')
-    .select('listed_publicly, booking_payment_mode, address_city, address_region, paystack_subaccount_code, slug')
+    .select('listed_publicly, booking_payment_mode, address_city, address_region, paystack_subaccount_code, slug, online_booking_enabled')
     .eq('id', tenantId)
     .single()
 
@@ -67,11 +69,11 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  const { listed_publicly, booking_payment_mode, address_city, address_region } = parsed.data
+  const { listed_publicly, booking_payment_mode, address_city, address_region, online_booking_enabled } = parsed.data
 
   const { error, data: updated } = await supabase
     .from('tenants')
-    .update({ listed_publicly, booking_payment_mode, address_city, address_region })
+    .update({ listed_publicly, booking_payment_mode, address_city, address_region, online_booking_enabled })
     .eq('id', tenantId)
     .select('slug')
     .single()
