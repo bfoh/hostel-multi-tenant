@@ -116,11 +116,31 @@ export async function POST(req: NextRequest) {
     const gate = await requireTenantRole(tenantId, MANAGE_ROLES)
     if (gate instanceof NextResponse) return gate
 
+    // Deletion is a tidy-up tool for cancelled clutter, not a general
+    // escape hatch — a confirmed/paid/checked-in booking carries real
+    // history (payments, charges) and should be cancelled, not erased.
+    const { data: rows, error: fetchErr } = await supabase
+      .from('bookings')
+      .select('id, status')
+      .in('id', ids)
+      .eq('tenant_id', tenantId)
+
+    if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 })
+
+    const notCancelled = (rows ?? []).filter((r) => r.status !== 'cancelled')
+    if (notCancelled.length > 0) {
+      return NextResponse.json(
+        { error: `Only cancelled bookings can be deleted (${notCancelled.length} selected booking(s) are not cancelled).` },
+        { status: 409 },
+      )
+    }
+
     const { error } = await supabase
       .from('bookings')
       .delete()
       .in('id', ids)
       .eq('tenant_id', tenantId)
+      .eq('status', 'cancelled')
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true, affected: ids.length })

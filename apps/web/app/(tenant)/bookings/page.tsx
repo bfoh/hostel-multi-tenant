@@ -66,18 +66,27 @@ export default async function BookingsPage({
       .is('self_checkin_confirmed_at', null)
     pendingSelfCheckins = count ?? 0
 
-    // Resolve role from DB (header can be stale).
-    const authClient = await createClient()
-    const { data: { user } } = await authClient.auth.getUser()
-    if (user) {
-      const { data: member } = await admin
-        .from('tenant_members')
-        .select('role, is_active')
-        .eq('user_id', user.id)
-        .eq('tenant_id', tenantId)
-        .maybeSingle()
-      const role = (member as any)?.is_active ? (member as any).role : null
+    // Resolve role from DB (header can be stale) — except a super-admin
+    // impersonation session, which has no real tenant_members row for its
+    // own user_id by design, so the header (set only after middleware
+    // verifies platform_admins membership) is the only source of truth there.
+    const isImpersonating = (await headers()).get('x-admin-impersonating') === 'true'
+    if (isImpersonating) {
+      const role = (await headers()).get('x-tenant-role')
       canManage = !!role && (MANAGE_ROLES as readonly string[]).includes(role)
+    } else {
+      const authClient = await createClient()
+      const { data: { user } } = await authClient.auth.getUser()
+      if (user) {
+        const { data: member } = await admin
+          .from('tenant_members')
+          .select('role, is_active')
+          .eq('user_id', user.id)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+        const role = (member as any)?.is_active ? (member as any).role : null
+        canManage = !!role && (MANAGE_ROLES as readonly string[]).includes(role)
+      }
     }
   }
   if (readOnly) canManage = false

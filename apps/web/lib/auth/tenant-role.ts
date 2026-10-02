@@ -11,8 +11,18 @@
  * isn't an active tenant member (middleware only overwrites the header on
  * a successful role lookup). For security-critical actions we don't take
  * the chance — one PK lookup is cheap.
+ *
+ * Exception: a super-admin impersonation session has no real tenant_members
+ * row for its own user_id by design (impersonation grants access via a
+ * middleware-set header, not membership), so the DB lookup would always
+ * fail for it. middleware.ts strips any client-supplied
+ * x-admin-impersonating/x-tenant-role headers before setting its own, and
+ * only sets x-admin-impersonating back to 'true' after verifying the
+ * caller's session against platform_admins — so trusting it here doesn't
+ * reopen the spoofing risk the header-only approach was dropped for.
  */
 
+import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -39,6 +49,15 @@ export async function requireTenantRole(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const headersList = await headers()
+  if (headersList.get('x-admin-impersonating') === 'true') {
+    const role = (headersList.get('x-tenant-role') ?? 'owner') as TenantRole
+    if (!allowed.includes(role)) {
+      return NextResponse.json({ error: 'Insufficient role' }, { status: 403 })
+    }
+    return { userId: user.id, tenantId, role }
+  }
 
   const admin = createAdminClient()
   const { data: member } = await admin

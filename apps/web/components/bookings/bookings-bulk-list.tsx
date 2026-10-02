@@ -57,6 +57,8 @@ export function BookingsBulkList({
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const allSelected = bookings.length > 0 && selected.size === bookings.length
+  const selectedBookings = bookings.filter((b) => selected.has(b.id))
+  const canDeleteSelected = selectedBookings.length > 0 && selectedBookings.every((b) => b.status === 'cancelled')
 
   function toggleAll() {
     if (allSelected) {
@@ -146,11 +148,11 @@ export function BookingsBulkList({
               <CheckCheck className="h-3 w-3" />
               Mark paid
             </button>
-            {canManage && (
+            {canManage && canDeleteSelected && (
               <button
                 disabled={isPending}
                 onClick={() => {
-                  if (confirm(`Delete ${selected.size} booking(s)? This cannot be undone.`)) {
+                  if (confirm(`Delete ${selected.size} cancelled booking(s)? This cannot be undone.`)) {
                     bulkAction('delete')
                   }
                 }}
@@ -159,6 +161,11 @@ export function BookingsBulkList({
                 <Trash2 className="h-3 w-3" />
                 Delete
               </button>
+            )}
+            {canManage && selected.size > 0 && !canDeleteSelected && (
+              <span className="text-xs text-text-tertiary" title="Only cancelled bookings can be deleted — cancel these first, or deselect any that aren't cancelled.">
+                Delete available for cancelled bookings only
+              </span>
             )}
           </div>
           {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />}
@@ -229,14 +236,16 @@ export function BookingsBulkList({
                   >
                     <Pencil className="h-4 w-4" />
                   </Link>
-                  <button
-                    onClick={() => deleteSingle(b.id)}
-                    disabled={deletingId === b.id}
-                    aria-label="Delete booking"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
-                  >
-                    {deletingId === b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  </button>
+                  {b.status === 'cancelled' && (
+                    <button
+                      onClick={() => deleteSingle(b.id)}
+                      disabled={deletingId === b.id}
+                      aria-label="Delete booking"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+                    >
+                      {deletingId === b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    </button>
+                  )}
                 </div>
               )}
             </li>
@@ -339,14 +348,16 @@ export function BookingsBulkList({
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Link>
-                        <button
-                          onClick={() => deleteSingle(b.id)}
-                          disabled={deletingId === b.id}
-                          title="Delete booking"
-                          className="rounded-md p-1 text-text-tertiary hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {b.status === 'cancelled' && (
+                          <button
+                            onClick={() => deleteSingle(b.id)}
+                            disabled={deletingId === b.id}
+                            title="Delete booking"
+                            className="rounded-md p-1 text-text-tertiary hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   )}
