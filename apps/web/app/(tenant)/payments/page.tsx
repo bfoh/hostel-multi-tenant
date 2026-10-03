@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { formatGHS, formatDate } from '@/lib/utils'
+import { ReversePaymentButton } from '@/components/bookings/reverse-payment-button'
 
 export const metadata: Metadata = { title: 'Payments' }
 
@@ -56,9 +57,33 @@ async function getPayments(status: string, search: string, tenantId: string) {
 
   const rows = data ?? []
 
+  // Flag likely-duplicate manual entries: same booking + amount + method,
+  // both successful, recorded on the same calendar day — the exact shape
+  // of the accidental-retry duplicate found on ABR-2026-547138. This is a
+  // review aid for staff, not an automatic action; a genuine second
+  // payment for the same amount on the same day is rare enough for this
+  // booking model (semester-lump-sum, not daily installments) to be worth
+  // flagging for a human glance either way.
+  const groups = new Map<string, string[]>()
+  for (const p of rows) {
+    if (p.status !== 'success') continue
+    const booking = Array.isArray(p.booking) ? p.booking[0] : p.booking
+    if (!booking) continue
+    const day = (p.paid_at ?? p.created_at).slice(0, 10)
+    const key = `${booking.id}|${p.amount}|${p.method}|${day}`
+    const arr = groups.get(key) ?? []
+    arr.push(p.id)
+    groups.set(key, arr)
+  }
+  const duplicateIds = new Set<string>()
+  for (const ids of groups.values()) {
+    if (ids.length > 1) ids.forEach((pid) => duplicateIds.add(pid))
+  }
+  const flagged = rows.map((p) => ({ ...p, possibleDuplicate: duplicateIds.has(p.id) }))
+
   if (search) {
     const q = search.toLowerCase()
-    return rows.filter((p) => {
+    return flagged.filter((p) => {
       const booking = Array.isArray(p.booking) ? p.booking[0] : p.booking
       const occupant = Array.isArray(booking?.occupant) ? booking?.occupant[0] : booking?.occupant
       return (
@@ -71,7 +96,7 @@ async function getPayments(status: string, search: string, tenantId: string) {
     })
   }
 
-  return rows
+  return flagged
 }
 
 export default async function PaymentsPage({
@@ -80,12 +105,16 @@ export default async function PaymentsPage({
   searchParams: Promise<{ status?: string; q?: string }>
 }) {
   const { status = 'all', q = '' } = await searchParams
-  const tenantId = (await headers()).get('x-tenant-id') ?? ''
+  const headersList = await headers()
+  const tenantId = headersList.get('x-tenant-id') ?? ''
+  const callerRole = headersList.get('x-tenant-role')
+  const canManage = callerRole === 'owner' || callerRole === 'manager'
   const payments = await getPayments(status, q, tenantId)
 
-  const totalSuccess  = payments.filter((p) => p.status === 'success').reduce((s, p) => s + p.amount, 0)
-  const totalPending  = payments.filter((p) => p.status === 'pending').reduce((s, p) => s + p.amount, 0)
-  const totalReversed = payments.filter((p) => p.status === 'reversed').reduce((s, p) => s + p.amount, 0)
+  const totalSuccess   = payments.filter((p) => p.status === 'success').reduce((s, p) => s + p.amount, 0)
+  const totalPending   = payments.filter((p) => p.status === 'pending').reduce((s, p) => s + p.amount, 0)
+  const totalReversed  = payments.filter((p) => p.status === 'reversed').reduce((s, p) => s + p.amount, 0)
+  const duplicateCount = payments.filter((p) => p.possibleDuplicate).length
 
   return (
     <div className="space-y-6">
@@ -94,6 +123,14 @@ export default async function PaymentsPage({
         <h1 className="text-2xl font-bold text-text-primary">Payments</h1>
         <p className="mt-0.5 text-sm text-text-secondary">All payment transactions across bookings</p>
       </div>
+
+      {duplicateCount > 0 && (
+        <div className="rounded-xl border border-warning/30 bg-warning-subtle px-4 py-3 text-sm text-warning-fg">
+          <strong>{duplicateCount} payment{duplicateCount === 1 ? '' : 's'}</strong> look{duplicateCount === 1 ? 's' : ''} like possible duplicates
+          (marked below) — same booking, amount, and method recorded on the same day. Review each and use
+          {canManage ? ' the Reverse action' : ' a booking\'s Payments card'} to correct any genuine mistakes.
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -198,10 +235,20 @@ export default async function PaymentsPage({
                     </span>
                   </div>
                 </div>
+                {p.possibleDuplicate && (
+                  <p className="mt-2 inline-flex items-center rounded-full border border-warning/30 bg-warning-subtle px-2 py-0.5 text-[10px] font-medium text-warning-fg">
+                    Possible duplicate
+                  </p>
+                )}
                 {booking && (
                   <div className="mt-2.5 flex items-center justify-between border-t border-border pt-2.5 text-xs">
                     <span className="font-mono text-text-tertiary">{booking.booking_ref}</span>
-                    <Link href={`/bookings/${booking.id}`} className="font-medium text-brand hover:text-brand-hover">View →</Link>
+                    <div className="flex items-center gap-3">
+                      {canManage && p.status === 'success' && (
+                        <ReversePaymentButton bookingId={booking.id} paymentId={p.id} amount={p.amount} />
+                      )}
+                      <Link href={`/bookings/${booking.id}`} className="font-medium text-brand hover:text-brand-hover">View →</Link>
+                    </div>
                   </div>
                 )}
               </li>
@@ -269,16 +316,24 @@ export default async function PaymentsPage({
                       <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium capitalize ${STATUS_STYLES[p.status] ?? 'bg-surface-sunken text-text-secondary border-border'}`}>
                         {p.status}
                       </span>
+                      {p.possibleDuplicate && (
+                        <span className="mt-1 block text-[10px] font-medium text-warning-fg">Possible duplicate</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {booking && (
-                        <Link
-                          href={`/bookings/${booking.id}`}
-                          className="text-xs font-medium text-brand hover:text-brand-hover transition-colors"
-                        >
-                          View
-                        </Link>
-                      )}
+                      <div className="flex items-center justify-end gap-3">
+                        {canManage && booking && p.status === 'success' && (
+                          <ReversePaymentButton bookingId={booking.id} paymentId={p.id} amount={p.amount} />
+                        )}
+                        {booking && (
+                          <Link
+                            href={`/bookings/${booking.id}`}
+                            className="text-xs font-medium text-brand hover:text-brand-hover transition-colors"
+                          >
+                            View
+                          </Link>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
