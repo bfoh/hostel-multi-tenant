@@ -34,12 +34,15 @@ and safe around room capacity and payments.
 - [x] Send guest/admin notifications and external webhooks from the shared
       service using the real booking reference and occupant phone.
 - [x] Standardize online holds with `hold_expires_at`.
-- [x] Replace visitor-triggered cleanup with a scheduled hold sweep.
+- [x] Replace visitor-triggered cleanup with a Supabase `pg_cron` hold sweep.
 - [x] Track late payments against cancelled bookings in a resolution queue.
 - [ ] Apply migration 140 in staging.
+- [ ] Store `booking_holds_sweep_url` and `booking_holds_sweep_secret` in
+      Supabase Vault.
+- [ ] Apply migration 141 and verify the Supabase Cron job is active.
 - [ ] Run the hold sweep manually with `CRON_SECRET` and verify logs.
 - [ ] Verify email/SMS delivery with staging notification credentials.
-- [ ] Deploy application code, then enable the five-minute scheduler.
+- [ ] Deploy application code, then verify the five-minute Supabase scheduler.
 - [ ] Monitor cancellation failures and payment exceptions for 48 hours.
 
 ## Rollback strategy
