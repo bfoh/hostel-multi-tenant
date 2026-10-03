@@ -6,10 +6,10 @@
 const BREVO_API = 'https://api.brevo.com/v3/smtp/email'
 
 interface SendParams {
-  to:         string | string[]
-  subject:    string
-  html:       string
-  replyTo?:   string
+  to: string | string[]
+  subject: string
+  html: string
+  replyTo?: string
   senderName?: string
 }
 
@@ -40,20 +40,22 @@ export async function sendEmail(params: SendParams): Promise<{ ok: boolean; erro
   // the platform. The sending domain stays the verified platform domain.
   const senderName = params.senderName ?? 'Property Notifications'
 
-  const recipients = (Array.isArray(params.to) ? params.to : [params.to]).map((email) => ({ email }))
+  const recipients = (Array.isArray(params.to) ? params.to : [params.to]).map((email) => ({
+    email,
+  }))
 
   try {
     const res = await fetch(BREVO_API, {
       method: 'POST',
       headers: {
-        'api-key':      apiKey,
+        'api-key': apiKey,
         'Content-Type': 'application/json',
-        accept:         'application/json',
+        accept: 'application/json',
       },
       body: JSON.stringify({
-        sender:      { name: senderName, email: address },
-        to:          recipients,
-        subject:     params.subject,
+        sender: { name: senderName, email: address },
+        to: recipients,
+        subject: params.subject,
         htmlContent: params.html,
         ...(params.replyTo ? { replyTo: { email: params.replyTo } } : {}),
       }),
@@ -77,7 +79,7 @@ export function baseTemplate(
   hostelName: string,
   primaryColor: string,
   content: string,
-  logoUrl?: string | null,
+  logoUrl?: string | null
 ) {
   // When a logo is present, show it in a white rounded chip beside the
   // hostel name; otherwise fall back to the name alone.
@@ -152,21 +154,30 @@ export function button(href: string, text: string, color: string) {
 /* ── Booking confirmation email ─────────────────────────────────────────── */
 
 export function bookingConfirmationHtml(opts: {
-  hostelName:    string
-  primaryColor:  string
-  logoUrl?:      string | null
-  guestName:     string
-  bookingRef:    string
-  roomName:      string
-  checkInDate:   string
-  checkOutDate:  string
-  amountGHS:     string
+  hostelName: string
+  primaryColor: string
+  logoUrl?: string | null
+  guestName: string
+  bookingRef: string
+  roomName: string
+  checkInDate: string
+  checkOutDate: string
+  amountGHS: string
   contactPhone?: string
-  portalUrl?:    string
+  portalUrl?: string
 }) {
   const {
-    hostelName, primaryColor, logoUrl, guestName, bookingRef,
-    roomName, checkInDate, checkOutDate, amountGHS, contactPhone, portalUrl,
+    hostelName,
+    primaryColor,
+    logoUrl,
+    guestName,
+    bookingRef,
+    roomName,
+    checkInDate,
+    checkOutDate,
+    amountGHS,
+    contactPhone,
+    portalUrl,
   } = opts
 
   const content = `
@@ -198,21 +209,29 @@ export function bookingConfirmationHtml(opts: {
 /* ── Group booking confirmation email ───────────────────────────────────── */
 
 export function groupBookingConfirmationHtml(opts: {
-  hostelName:   string
+  hostelName: string
   primaryColor: string
-  logoUrl?:     string | null
-  contactName:  string
-  groupRef:     string
-  checkInDate:  string
+  logoUrl?: string | null
+  contactName: string
+  groupRef: string
+  checkInDate: string
   checkOutDate: string
-  rooms:        Array<{ roomName: string; guestName: string; amountGHS: string }>
+  rooms: Array<{ roomName: string; guestName: string; amountGHS: string }>
   contactPhone?: string
 }) {
-  const { hostelName, primaryColor, logoUrl, contactName, groupRef, checkInDate, checkOutDate, rooms, contactPhone } = opts
+  const {
+    hostelName,
+    primaryColor,
+    logoUrl,
+    contactName,
+    groupRef,
+    checkInDate,
+    checkOutDate,
+    rooms,
+    contactPhone,
+  } = opts
 
-  const roomRows = rooms
-    .map((r) => row(r.roomName, `${r.guestName} · ${r.amountGHS}`))
-    .join('')
+  const roomRows = rooms.map((r) => row(r.roomName, `${r.guestName} · ${r.amountGHS}`)).join('')
 
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Group Booking Confirmed</p>
@@ -242,16 +261,25 @@ export function groupBookingConfirmationHtml(opts: {
 /* ── Stay extension email (hotel-only) ──────────────────────────────────── */
 
 export function stayExtensionHtml(opts: {
-  hostelName:   string
+  hostelName: string
   primaryColor: string
-  logoUrl?:     string | null
-  guestName:    string
-  bookingRef:   string
-  roomName:     string
+  logoUrl?: string | null
+  guestName: string
+  bookingRef: string
+  roomName: string
   checkOutDate: string
-  amountGHS:    string
+  amountGHS: string
 }) {
-  const { hostelName, primaryColor, logoUrl, guestName, bookingRef, roomName, checkOutDate, amountGHS } = opts
+  const {
+    hostelName,
+    primaryColor,
+    logoUrl,
+    guestName,
+    bookingRef,
+    roomName,
+    checkOutDate,
+    amountGHS,
+  } = opts
 
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Stay Extended</p>
@@ -273,17 +301,27 @@ export function stayExtensionHtml(opts: {
 /* ── Payment receipt email ──────────────────────────────────────────────── */
 
 export function paymentReceiptHtml(opts: {
-  hostelName:   string
+  hostelName: string
   primaryColor: string
-  logoUrl?:     string | null
-  guestName:    string
-  bookingRef:   string
-  amountGHS:    string
-  method:       string
-  paidAt:       string
-  balance:      string
+  logoUrl?: string | null
+  guestName: string
+  bookingRef: string
+  amountGHS: string
+  method: string
+  paidAt: string
+  balance: string
 }) {
-  const { hostelName, primaryColor, logoUrl, guestName, bookingRef, amountGHS, method, paidAt, balance } = opts
+  const {
+    hostelName,
+    primaryColor,
+    logoUrl,
+    guestName,
+    bookingRef,
+    amountGHS,
+    method,
+    paidAt,
+    balance,
+  } = opts
 
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Payment Received</p>
@@ -297,11 +335,12 @@ export function paymentReceiptHtml(opts: {
       ${row('Date', paidAt)}
       ${row('Balance due', balance)}
     </table>
-    ${parseFloat(balance.replace(/[^0-9.]/g, '')) > 0
-      ? `<div style="background:#fef3c7;border-radius:8px;padding:14px 16px;">
+    ${
+      parseFloat(balance.replace(/[^0-9.]/g, '')) > 0
+        ? `<div style="background:#fef3c7;border-radius:8px;padding:14px 16px;">
            <p style="margin:0;font-size:13px;color:#92400e;">Remaining balance of <strong>${balance}</strong> is due at check-in.</p>
          </div>`
-      : `<div style="background:#d1fae5;border-radius:8px;padding:14px 16px;">
+        : `<div style="background:#d1fae5;border-radius:8px;padding:14px 16px;">
            <p style="margin:0;font-size:13px;color:#065f46;">Your account is <strong>fully paid</strong>. We look forward to hosting you!</p>
          </div>`
     }
@@ -313,13 +352,13 @@ export function paymentReceiptHtml(opts: {
 /* ── Invoice pay link email ─────────────────────────────────────────────── */
 
 export function invoicePayLinkHtml(opts: {
-  hostelName:    string
-  primaryColor:  string
-  logoUrl?:      string | null
-  guestName:     string
+  hostelName: string
+  primaryColor: string
+  logoUrl?: string | null
+  guestName: string
   invoiceNumber: string
-  amountGHS:     string
-  url:           string
+  amountGHS: string
+  url: string
 }) {
   const { hostelName, primaryColor, logoUrl, guestName, invoiceNumber, amountGHS, url } = opts
 
@@ -346,16 +385,25 @@ export function invoicePayLinkHtml(opts: {
 /* ── Portal credentials email ───────────────────────────────────────────── */
 
 export function portalCredentialsHtml(opts: {
-  hostelName:        string
-  primaryColor:      string
-  logoUrl?:          string | null
-  firstName:         string
-  email:             string
-  password:          string
-  loginUrl:          string
+  hostelName: string
+  primaryColor: string
+  logoUrl?: string | null
+  firstName: string
+  email: string
+  password: string
+  loginUrl: string
   changePasswordUrl: string
 }) {
-  const { hostelName, primaryColor, logoUrl, firstName, email, password, loginUrl, changePasswordUrl } = opts
+  const {
+    hostelName,
+    primaryColor,
+    logoUrl,
+    firstName,
+    email,
+    password,
+    loginUrl,
+    changePasswordUrl,
+  } = opts
 
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Your Resident Portal Access</p>
@@ -384,13 +432,13 @@ export function portalCredentialsHtml(opts: {
 /* ── Staff credentials email ────────────────────────────────────────────── */
 
 export function staffCredentialsHtml(opts: {
-  hostelName:        string
-  primaryColor:      string
-  logoUrl?:          string | null
-  firstName:         string
-  email:             string
-  password:          string
-  loginUrl:          string
+  hostelName: string
+  primaryColor: string
+  logoUrl?: string | null
+  firstName: string
+  email: string
+  password: string
+  loginUrl: string
   changePasswordUrl: string
 }) {
   const { hostelName, primaryColor, logoUrl, firstName, email, password, loginUrl } = opts
@@ -421,13 +469,13 @@ export function staffCredentialsHtml(opts: {
 /* ── Magic-link invite email ────────────────────────────────────────────── */
 
 export function inviteHtml(opts: {
-  hostelName:     string
-  primaryColor:   string
-  logoUrl?:       string | null
-  firstName:      string
-  portalLabel:    string  // e.g. "staff dashboard" / "resident portal"
-  verifyUrl:      string  // /auth/verify-otp?email=...
-  otpCode?:       string  // 6-digit code from supabase generateLink
+  hostelName: string
+  primaryColor: string
+  logoUrl?: string | null
+  firstName: string
+  portalLabel: string // e.g. "staff dashboard" / "resident portal"
+  verifyUrl: string // /auth/verify-otp?email=...
+  otpCode?: string // 6-digit code from supabase generateLink
 }) {
   const { hostelName, primaryColor, logoUrl, firstName, portalLabel, verifyUrl, otpCode } = opts
 
@@ -465,18 +513,28 @@ export function inviteHtml(opts: {
 /* ── Check-out summary email ────────────────────────────────────────────── */
 
 export function checkoutSummaryHtml(opts: {
-  hostelName:   string
+  hostelName: string
   primaryColor: string
-  logoUrl?:     string | null
-  guestName:    string
-  bookingRef:   string
-  roomName:     string
+  logoUrl?: string | null
+  guestName: string
+  bookingRef: string
+  roomName: string
   checkOutDate: string
-  totalPaid:    string
+  totalPaid: string
   /** One-tap link straight to this guest's pre-filled "Rate your stay" tab. */
-  reviewUrl?:   string
+  reviewUrl?: string
 }) {
-  const { hostelName, primaryColor, logoUrl, guestName, bookingRef, roomName, checkOutDate, totalPaid, reviewUrl } = opts
+  const {
+    hostelName,
+    primaryColor,
+    logoUrl,
+    guestName,
+    bookingRef,
+    roomName,
+    checkOutDate,
+    totalPaid,
+    reviewUrl,
+  } = opts
 
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Thanks for staying with us!</p>
@@ -501,12 +559,12 @@ export function checkoutSummaryHtml(opts: {
 /* ── Check-in confirmation email ────────────────────────────────────────── */
 
 export function checkInConfirmationHtml(opts: {
-  hostelName:   string
+  hostelName: string
   primaryColor: string
-  logoUrl?:     string | null
-  guestName:    string
-  bookingRef:   string
-  roomName:     string
+  logoUrl?: string | null
+  guestName: string
+  bookingRef: string
+  roomName: string
 }) {
   const { hostelName, primaryColor, logoUrl, guestName, bookingRef, roomName } = opts
 
@@ -527,21 +585,32 @@ export function checkInConfirmationHtml(opts: {
 /* ── Booking cancelled email ────────────────────────────────────────────── */
 
 export function bookingCancelledHtml(opts: {
-  hostelName:   string
+  hostelName: string
   primaryColor: string
-  logoUrl?:     string | null
-  guestName:    string
-  bookingRef:   string
+  logoUrl?: string | null
+  guestName: string
+  bookingRef: string
+  reason?: string | null
+  hasPayment?: boolean
 }) {
-  const { hostelName, primaryColor, logoUrl, guestName, bookingRef } = opts
+  const { hostelName, primaryColor, logoUrl, guestName, bookingRef, reason, hasPayment } = opts
+  const safeReason = reason
+    ?.replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
 
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Booking cancelled</p>
     <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">
       Hi ${guestName}, your booking <strong>${bookingRef}</strong> at <strong>${hostelName}</strong> has been cancelled.
     </p>
+    ${safeReason ? `<p style="margin:0 0 20px;font-size:14px;color:#374151;"><strong>Reason:</strong> ${safeReason}</p>` : ''}
     <p style="font-size:14px;color:#374151;margin:0;">
-      If you believe this is a mistake or would like to discuss a refund, please contact the front desk.
+      ${hasPayment
+        ? 'A payment is recorded on this booking. Please contact the front desk to discuss the refund or next steps.'
+        : 'If you believe this is a mistake or would still like to stay with us, please contact the front desk.'}
     </p>
   `
 
@@ -551,13 +620,13 @@ export function bookingCancelledHtml(opts: {
 /* ── Admin/owner alert email (booking/payment/check-in/check-out) ───────── */
 
 export function adminAlertHtml(opts: {
-  hostelName:   string
+  hostelName: string
   primaryColor: string
-  logoUrl?:     string | null
-  title:        string
-  lines:        { label: string; value: string }[]
-  ctaUrl?:      string
-  ctaLabel?:    string
+  logoUrl?: string | null
+  title: string
+  lines: { label: string; value: string }[]
+  ctaUrl?: string
+  ctaLabel?: string
 }) {
   const { hostelName, primaryColor, logoUrl, title, lines, ctaUrl, ctaLabel } = opts
 
@@ -575,13 +644,13 @@ export function adminAlertHtml(opts: {
 /* ── Trial warning email (T-3, T-1) ─────────────────────────────────────── */
 
 export function trialWarningHtml(opts: {
-  hostelName:    string
-  primaryColor:  string
-  logoUrl?:      string | null
-  ownerName?:    string | null
-  daysLeft:      number
-  trialEndsAt:   string
-  billingUrl:    string
+  hostelName: string
+  primaryColor: string
+  logoUrl?: string | null
+  ownerName?: string | null
+  daysLeft: number
+  trialEndsAt: string
+  billingUrl: string
 }) {
   const { hostelName, primaryColor, logoUrl, ownerName, daysLeft, trialEndsAt, billingUrl } = opts
   const dayWord = daysLeft === 1 ? 'day' : 'days'
@@ -611,11 +680,11 @@ export function trialWarningHtml(opts: {
 /* ── Trial-expired email (T+0) ──────────────────────────────────────────── */
 
 export function trialExpiredHtml(opts: {
-  hostelName:    string
-  primaryColor:  string
-  logoUrl?:      string | null
-  ownerName?:    string | null
-  billingUrl:    string
+  hostelName: string
+  primaryColor: string
+  logoUrl?: string | null
+  ownerName?: string | null
+  billingUrl: string
 }) {
   const { hostelName, primaryColor, logoUrl, ownerName, billingUrl } = opts
 
@@ -641,27 +710,40 @@ export function trialExpiredHtml(opts: {
 /* ── Internal ops: new-tenant lead notification ─────────────────────────── */
 
 export function newTenantLeadHtml(opts: {
-  hostelName:    string
-  ownerEmail:    string
-  ownerName?:    string | null
-  slug:          string
+  hostelName: string
+  ownerEmail: string
+  ownerName?: string | null
+  slug: string
   customDomain?: string | null
   contactPhone?: string | null
   contactEmail?: string | null
-  city?:         string | null
-  region?:       string | null
-  tagline?:      string | null
+  city?: string | null
+  region?: string | null
+  tagline?: string | null
   selectedPlan?: string | null
-  signupAt:      string
+  signupAt: string
   dashboardUrl?: string
 }) {
   const {
-    hostelName, ownerEmail, ownerName, slug, customDomain, contactPhone,
-    contactEmail, city, region, tagline, selectedPlan, signupAt, dashboardUrl,
+    hostelName,
+    ownerEmail,
+    ownerName,
+    slug,
+    customDomain,
+    contactPhone,
+    contactEmail,
+    city,
+    region,
+    tagline,
+    selectedPlan,
+    signupAt,
+    dashboardUrl,
   } = opts
 
   const location = [city, region].filter(Boolean).join(', ') || '—'
-  const planLabel = selectedPlan ? selectedPlan[0].toUpperCase() + selectedPlan.slice(1) : 'Not selected'
+  const planLabel = selectedPlan
+    ? selectedPlan[0].toUpperCase() + selectedPlan.slice(1)
+    : 'Not selected'
 
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">New hostel signup</p>
@@ -681,9 +763,11 @@ export function newTenantLeadHtml(opts: {
       ${row('Plan picked', planLabel)}
       ${row('Signed up', signupAt)}
     </table>
-    ${dashboardUrl
-      ? `<p style="margin:0;font-size:13px;color:#374151;">Open in admin: <a href="${dashboardUrl}" style="color:#1B4F72;">${dashboardUrl}</a></p>`
-      : ''}
+    ${
+      dashboardUrl
+        ? `<p style="margin:0;font-size:13px;color:#374151;">Open in admin: <a href="${dashboardUrl}" style="color:#1B4F72;">${dashboardUrl}</a></p>`
+        : ''
+    }
   `
 
   return baseTemplate('GH Hostels — Ops', '#0A3729', content, null)
@@ -692,11 +776,11 @@ export function newTenantLeadHtml(opts: {
 /* ── Password reset email ───────────────────────────────────────────────── */
 
 export function passwordResetHtml(opts: {
-  hostelName:   string
+  hostelName: string
   primaryColor: string
-  logoUrl?:     string | null
-  resetCode:    string
-  resetUrl:     string
+  logoUrl?: string | null
+  resetCode: string
+  resetUrl: string
 }) {
   const { hostelName, primaryColor, logoUrl, resetCode, resetUrl } = opts
 
@@ -710,7 +794,7 @@ export function passwordResetHtml(opts: {
       <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.08em;color:#6b7280;text-transform:uppercase;">Your reset code</p>
       <p style="margin:0;font-family:'Menlo',Consolas,monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#111827;">${resetCode}</p>
     </div>
-    ${button(resetUrl, "Open reset page", primaryColor)}
+    ${button(resetUrl, 'Open reset page', primaryColor)}
     <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">
       This code is valid for 1 hour. If you did not request a password reset,
       ignore this email \u2014 your password stays unchanged.

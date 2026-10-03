@@ -6,6 +6,7 @@ import { classifyHost, tenantHost, type BusinessType } from '@/lib/tenant/host-c
 const BYPASS_PATHS = [
   '/widget',
   '/api/webhooks',
+  '/api/cron',
   '/api/payments/paystack/webhook',
   '/api/auth/forgot-password',
   '/api/auth/signup',

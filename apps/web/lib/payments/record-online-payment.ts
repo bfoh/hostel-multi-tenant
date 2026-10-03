@@ -17,14 +17,14 @@ import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
 export async function finalizeOnlineBookingPayment(
   supabase: SupabaseClient<any>,
   params: {
-    tenantId:  string
+    tenantId: string
     bookingId: string
-    amount:    number
+    amount: number
     reference: string
-    method?:   PaymentMethod
-    notes?:    string
-  },
-): Promise<{ recorded: boolean }> {
+    method?: PaymentMethod
+    notes?: string
+  }
+): Promise<{ recorded: boolean; requiresResolution?: boolean }> {
   const { data: booking } = await supabase
     .from('bookings')
     .select('id, tenant_id, paid_amount, final_amount, status')
@@ -42,16 +42,51 @@ export async function finalizeOnlineBookingPayment(
 
   if (existing) return { recorded: false }
 
-  await supabase.from('booking_payments').insert({
-    tenant_id:          params.tenantId,
-    booking_id:         params.bookingId,
-    amount:             params.amount,
-    method:             params.method ?? 'card',
+  const { error: insertError } = await supabase.from('booking_payments').insert({
+    tenant_id: params.tenantId,
+    booking_id: params.bookingId,
+    amount: params.amount,
+    method: params.method ?? 'card',
     paystack_reference: params.reference,
-    status:             'success',
-    paid_at:            new Date().toISOString(),
-    notes:              params.notes ?? 'Paid online via Paystack',
+    status: 'success',
+    paid_at: new Date().toISOString(),
+    notes: params.notes ?? 'Paid online via Paystack',
   })
+
+  if (insertError) throw new Error(`Could not record online payment: ${insertError.message}`)
+
+  if (booking.status === 'cancelled') {
+    await supabase.from('booking_payment_exceptions').upsert(
+      {
+        tenant_id: params.tenantId,
+        booking_id: params.bookingId,
+        paystack_reference: params.reference,
+        exception_type: 'late_payment_after_cancellation',
+        status: 'open',
+        amount: params.amount,
+        details: {
+          booking_status: booking.status,
+          note: 'Payment succeeded after the booking had already been cancelled',
+        },
+      },
+      { onConflict: 'tenant_id,paystack_reference,exception_type' }
+    )
+
+    await supabase.from('audit_log').insert({
+      tenant_id: params.tenantId,
+      action: 'payment.requires_resolution',
+      entity_type: 'booking',
+      entity_id: params.bookingId,
+      description: `Late payment received for cancelled booking (${params.reference})`,
+      new_values: {
+        amount: params.amount,
+        paystack_reference: params.reference,
+        resolution: 'refund_or_capacity_checked_restore',
+      },
+    })
+
+    return { recorded: true, requiresResolution: true }
+  }
 
   const newPaid = booking.paid_amount + params.amount
   if (newPaid >= booking.final_amount && booking.status === 'pending_payment') {
@@ -72,7 +107,7 @@ export async function finalizeOnlineBookingPayment(
  */
 export async function notifyOnlinePayment(
   supabase: SupabaseClient<any>,
-  params: { tenantId: string; bookingId: string; amount: number },
+  params: { tenantId: string; bookingId: string; amount: number; requiresResolution?: boolean }
 ): Promise<void> {
   try {
     const [occupantRes, bookingRes, tenantRes, admins] = await Promise.all([
@@ -95,9 +130,9 @@ export async function notifyOnlinePayment(
     ])
 
     const occRaw = (occupantRes.data as any)?.occupant
-    const occ    = Array.isArray(occRaw) ? occRaw[0] : occRaw
-    const bkn    = bookingRes.data
-    const ten    = tenantRes.data
+    const occ = Array.isArray(occRaw) ? occRaw[0] : occRaw
+    const bkn = bookingRes.data
+    const ten = tenantRes.data
     const balance = Math.max(0, (bkn?.final_amount ?? 0) - (bkn?.paid_amount ?? 0))
     const guestName = occ ? `${occ.first_name} ${occ.last_name}` : 'Guest'
     const bookingRef = bkn?.booking_ref ?? params.bookingId.slice(0, 8).toUpperCase()
@@ -105,37 +140,39 @@ export async function notifyOnlinePayment(
 
     if (admins.smsEnabled && occ?.phone) {
       sendPaymentReceipt({
-        phone:      occ.phone,
-        firstName:  occ.first_name,
+        phone: occ.phone,
+        firstName: occ.first_name,
         amountGHS,
-        method:     'Online',
+        method: 'Online',
         bookingRef,
-        balance:    formatGHS(balance),
+        balance: formatGHS(balance),
         hostelName: ten?.name ?? 'Your Property',
-        tenantId:   params.tenantId,
+        tenantId: params.tenantId,
       }).catch(() => {})
     }
 
     if (admins.emailEnabled && occ?.email && ten) {
       sendEmail({
-        to:         occ.email,
+        to: occ.email,
         senderName: ten.name,
-        subject:    `Payment receipt — ${ten.name}`,
-        html:    paymentReceiptHtml({
-          hostelName:   ten.name,
+        subject: `Payment receipt — ${ten.name}`,
+        html: paymentReceiptHtml({
+          hostelName: ten.name,
           primaryColor: ten.primary_color ?? '#2563EB',
-          logoUrl:      (ten as any).logo_url ?? null,
+          logoUrl: (ten as any).logo_url ?? null,
           guestName,
           bookingRef,
           amountGHS,
-          method:       'Online',
-          paidAt:       new Date().toLocaleDateString('en-GH', { dateStyle: 'long' }),
-          balance:      formatGHS(balance),
+          method: 'Online',
+          paidAt: new Date().toLocaleDateString('en-GH', { dateStyle: 'long' }),
+          balance: formatGHS(balance),
         }),
       }).catch(() => {})
     }
 
-    const eventLine = `Payment of ${amountGHS} received online from ${guestName} (${bookingRef})`
+    const eventLine = params.requiresResolution
+      ? `ACTION REQUIRED: ${amountGHS} received after cancelled booking ${bookingRef}. Review refund or restoration.`
+      : `Payment of ${amountGHS} received online from ${guestName} (${bookingRef})`
 
     if (admins.smsEnabled) {
       for (const phone of admins.phones) {
@@ -143,7 +180,7 @@ export async function notifyOnlinePayment(
           phone,
           hostelName: ten?.name ?? 'Your Property',
           eventLine,
-          tenantId:   params.tenantId,
+          tenantId: params.tenantId,
         }).catch(() => {})
       }
     }
@@ -151,17 +188,19 @@ export async function notifyOnlinePayment(
     if (admins.emailEnabled && ten) {
       for (const email of admins.emails) {
         sendEmail({
-          to:         email,
+          to: email,
           senderName: ten.name,
-          subject:    `Payment received — ${bookingRef}`,
-          html:    adminAlertHtml({
-            hostelName:   ten.name,
+          subject: `${params.requiresResolution ? 'Payment needs resolution' : 'Payment received'} — ${bookingRef}`,
+          html: adminAlertHtml({
+            hostelName: ten.name,
             primaryColor: ten.primary_color ?? '#2563EB',
-            logoUrl:      (ten as any).logo_url ?? null,
-            title:        'Payment received online',
+            logoUrl: (ten as any).logo_url ?? null,
+            title: params.requiresResolution
+              ? 'Late payment needs resolution'
+              : 'Payment received online',
             lines: [
-              { label: 'Guest',   value: guestName },
-              { label: 'Amount',  value: amountGHS },
+              { label: 'Guest', value: guestName },
+              { label: 'Amount', value: amountGHS },
               { label: 'Booking', value: bookingRef },
               { label: 'Balance', value: formatGHS(balance) },
             ],

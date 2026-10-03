@@ -20,45 +20,48 @@ interface Booking {
 
 const STATUS_STYLES: Record<string, string> = {
   pending_payment: 'bg-warning-subtle text-warning-fg border-warning/20',
-  confirmed:       'bg-brand-subtle text-brand border-brand/20',
-  checked_in:      'bg-success-subtle text-success border-success/20',
-  checked_out:     'bg-surface-sunken text-text-secondary border-border',
-  cancelled:       'bg-danger-subtle text-danger border-danger/20',
-  no_show:         'bg-danger-subtle text-danger border-danger/20',
-  enquiry:         'bg-info-subtle text-info border-info/20',
+  confirmed: 'bg-brand-subtle text-brand border-brand/20',
+  checked_in: 'bg-success-subtle text-success border-success/20',
+  checked_out: 'bg-surface-sunken text-text-secondary border-border',
+  cancelled: 'bg-danger-subtle text-danger border-danger/20',
+  no_show: 'bg-danger-subtle text-danger border-danger/20',
+  enquiry: 'bg-info-subtle text-info border-info/20',
 }
 
 const PAYMENT_STYLES: Record<string, string> = {
-  unpaid:   'text-danger',
-  partial:  'text-warning',
-  paid:     'text-success',
+  unpaid: 'text-danger',
+  partial: 'text-warning',
+  paid: 'text-success',
   refunded: 'text-info',
 }
 
 const BULK_STATUSES = [
-  { value: 'confirmed',       label: 'Confirm' },
-  { value: 'checked_in',      label: 'Check In' },
-  { value: 'checked_out',     label: 'Check Out' },
-  { value: 'cancelled',       label: 'Cancel' },
-  { value: 'pending_payment', label: 'Pending Payment' },
+  { value: 'confirmed', label: 'Confirm' },
+  { value: 'checked_in', label: 'Check In' },
+  { value: 'checked_out', label: 'Check Out' },
 ]
 
 export function BookingsBulkList({
   bookings,
   canManage = false,
+  canUpdate = false,
 }: {
   bookings: Booking[]
   canManage?: boolean
+  canUpdate?: boolean
 }) {
   const router = useRouter()
-  const [selected, setSelected]  = useState<Set<string>>(new Set())
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
-  const [error, setError]        = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showBulkCancel, setShowBulkCancel] = useState(false)
+  const [bulkCancelReason, setBulkCancelReason] = useState('')
 
   const allSelected = bookings.length > 0 && selected.size === bookings.length
   const selectedBookings = bookings.filter((b) => selected.has(b.id))
-  const canDeleteSelected = selectedBookings.length > 0 && selectedBookings.every((b) => b.status === 'cancelled')
+  const canDeleteSelected =
+    selectedBookings.length > 0 && selectedBookings.every((b) => b.status === 'cancelled')
 
   function toggleAll() {
     if (allSelected) {
@@ -98,7 +101,7 @@ export function BookingsBulkList({
     setDeletingId(null)
   }
 
-  async function bulkAction(action: string, value?: string) {
+  async function bulkAction(action: string, value?: string, reason?: string) {
     setError(null)
     const ids = Array.from(selected)
     if (ids.length === 0) return
@@ -107,14 +110,19 @@ export function BookingsBulkList({
       const res = await fetch('/api/bookings/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, action, value }),
+        body: JSON.stringify({ ids, action, value, reason }),
       })
       const data = await res.json()
       if (!res.ok) {
         setError(data.error ?? 'Bulk action failed')
         return
       }
+      if (data.failed?.length) {
+        setError(`${data.affected} cancelled; ${data.failed.length} could not be cancelled.`)
+      }
       setSelected(new Set())
+      setShowBulkCancel(false)
+      setBulkCancelReason('')
       startTransition(() => router.refresh())
     } catch {
       setError('Network error')
@@ -125,57 +133,127 @@ export function BookingsBulkList({
     <div>
       {/* Bulk toolbar */}
       {selected.size > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-4 py-2.5">
-          <span className="text-sm font-medium text-brand">
-            {selected.size} selected
-          </span>
-          <div className="flex flex-wrap gap-2 ml-2">
-            {BULK_STATUSES.map((s) => (
+        <div className="border-brand/30 bg-brand/5 mb-3 flex flex-wrap items-center gap-2 rounded-lg border px-4 py-2.5">
+          <span className="text-brand text-sm font-medium">{selected.size} selected</span>
+          <div className="ml-2 flex flex-wrap gap-2">
+            {canUpdate &&
+              BULK_STATUSES.map((s) => (
+                <button
+                  key={s.value}
+                  disabled={isPending}
+                  onClick={() => bulkAction('set_status', s.value)}
+                  className="border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50"
+                >
+                  {s.label}
+                </button>
+              ))}
+            {canUpdate && (
               <button
-                key={s.value}
                 disabled={isPending}
-                onClick={() => bulkAction('set_status', s.value)}
-                className="rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors disabled:opacity-50"
+                onClick={() => bulkAction('mark_paid')}
+                className="border-success/30 bg-success/5 text-success hover:bg-success/10 flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50"
               >
-                {s.label}
+                <CheckCheck className="h-3 w-3" />
+                Mark paid
               </button>
-            ))}
-            <button
-              disabled={isPending}
-              onClick={() => bulkAction('mark_paid')}
-              className="flex items-center gap-1 rounded-md border border-success/30 bg-success/5 px-2.5 py-1 text-xs font-medium text-success hover:bg-success/10 transition-colors disabled:opacity-50"
-            >
-              <CheckCheck className="h-3 w-3" />
-              Mark paid
-            </button>
+            )}
+            {canManage && (
+              <button
+                disabled={isPending}
+                onClick={() => setShowBulkCancel(true)}
+                className="border-danger/30 bg-danger/5 text-danger hover:bg-danger/10 rounded-md border px-2.5 py-1 text-xs font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
             {canManage && canDeleteSelected && (
               <button
                 disabled={isPending}
                 onClick={() => {
-                  if (confirm(`Delete ${selected.size} cancelled booking(s)? This cannot be undone.`)) {
+                  if (
+                    confirm(`Delete ${selected.size} cancelled booking(s)? This cannot be undone.`)
+                  ) {
                     bulkAction('delete')
                   }
                 }}
-                className="flex items-center gap-1 rounded-md border border-danger/30 bg-danger/5 px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+                className="border-danger/30 bg-danger/5 text-danger hover:bg-danger/10 flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50"
               >
                 <Trash2 className="h-3 w-3" />
                 Delete
               </button>
             )}
             {canManage && selected.size > 0 && !canDeleteSelected && (
-              <span className="text-xs text-text-tertiary" title="Only cancelled bookings can be deleted — cancel these first, or deselect any that aren't cancelled.">
+              <span
+                className="text-text-tertiary text-xs"
+                title="Only cancelled bookings can be deleted — cancel these first, or deselect any that aren't cancelled."
+              >
                 Delete available for cancelled bookings only
               </span>
             )}
           </div>
-          {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />}
-          {error && <span className="text-xs text-danger">{error}</span>}
+          {isPending && <Loader2 className="text-text-tertiary h-3.5 w-3.5 animate-spin" />}
+          {error && <span className="text-danger text-xs">{error}</span>}
           <button
             onClick={() => setSelected(new Set())}
-            className="ml-auto text-xs text-text-tertiary hover:text-text-primary"
+            className="text-text-tertiary hover:text-text-primary ml-auto text-xs"
           >
             Clear
           </button>
+        </div>
+      )}
+
+      {showBulkCancel && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-cancel-title"
+            className="border-border bg-surface w-full max-w-md rounded-xl border p-5 shadow-xl"
+          >
+            <h2 id="bulk-cancel-title" className="text-text-primary text-lg font-semibold">
+              Cancel {selected.size} booking{selected.size === 1 ? '' : 's'}
+            </h2>
+            <p className="text-text-secondary mt-1 text-sm">
+              Only pending or confirmed bookings can be cancelled. One reason will be recorded on
+              every selected booking.
+            </p>
+            <label
+              htmlFor="bulk-cancellation-reason"
+              className="text-text-primary mt-4 block text-sm font-medium"
+            >
+              Cancellation reason
+            </label>
+            <textarea
+              id="bulk-cancellation-reason"
+              value={bulkCancelReason}
+              onChange={(event) => setBulkCancelReason(event.target.value)}
+              maxLength={500}
+              rows={4}
+              autoFocus
+              className="border-border bg-surface text-text-primary focus:border-brand focus:ring-brand/20 mt-1.5 w-full resize-none rounded-md border px-3 py-2 text-sm outline-none focus:ring-2"
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkCancel(false)}
+                disabled={isPending}
+                className="border-border text-text-secondary hover:bg-surface-raised rounded-md border px-3 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                Keep bookings
+              </button>
+              <button
+                type="button"
+                onClick={() => bulkAction('cancel', undefined, bulkCancelReason.trim())}
+                disabled={isPending || bulkCancelReason.trim().length < 3}
+                className="bg-danger rounded-md px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                Confirm cancellation
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -186,53 +264,60 @@ export function BookingsBulkList({
           return (
             <li
               key={b.id}
-              className={`rounded-xl border bg-surface p-3.5 transition-colors ${isSelected ? 'border-brand/40 bg-brand/5' : 'border-border'}`}
+              className={`bg-surface rounded-xl border p-3.5 transition-colors ${isSelected ? 'border-brand/40 bg-brand/5' : 'border-border'}`}
             >
               <div className="flex items-start gap-3">
                 <button
                   onClick={() => toggle(b.id)}
-                  className="mt-0.5 shrink-0 text-text-tertiary hover:text-brand"
+                  className="text-text-tertiary hover:text-brand mt-0.5 shrink-0"
                   aria-label="Select booking"
                 >
-                  {isSelected ? <CheckSquare className="h-5 w-5 text-brand" /> : <Square className="h-5 w-5" />}
+                  {isSelected ? (
+                    <CheckSquare className="text-brand h-5 w-5" />
+                  ) : (
+                    <Square className="h-5 w-5" />
+                  )}
                 </button>
                 <Link href={`/bookings/${b.id}`} className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-text-primary">
+                    <p className="text-text-primary truncate text-sm font-semibold">
                       {b.occupant?.first_name} {b.occupant?.last_name}
                     </p>
                     <span
-                      className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-                        STATUS_STYLES[b.status] ?? 'bg-surface-sunken text-text-secondary border-border'
+                      className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                        STATUS_STYLES[b.status] ??
+                        'bg-surface-sunken text-text-secondary border-border'
                       }`}
                     >
                       {b.status.replace(/_/g, ' ')}
                     </span>
                   </div>
-                  <p className="ref-number mt-0.5 text-[11px] text-text-tertiary">
+                  <p className="ref-number text-text-tertiary mt-0.5 text-[11px]">
                     {b.booking_ref}
                     {b.group_id && (
-                      <span className="ml-1.5 inline-flex items-center rounded-full border border-brand/20 bg-brand-subtle px-1.5 py-0.5 text-[9px] font-semibold text-brand">
+                      <span className="border-brand/20 bg-brand-subtle text-brand ml-1.5 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold">
                         GROUP
                       </span>
                     )}
                   </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
+                  <div className="text-text-secondary mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     {b.room && <span>Room {b.room.room_number}</span>}
                     <span>{formatDate(b.check_in_date)}</span>
                     <span className={PAYMENT_STYLES[b.payment_status] ?? 'text-text-tertiary'}>
                       {b.payment_status}
                     </span>
-                    <span className="ml-auto font-semibold text-text-primary">{formatGHS(b.final_amount)}</span>
+                    <span className="text-text-primary ml-auto font-semibold">
+                      {formatGHS(b.final_amount)}
+                    </span>
                   </div>
                 </Link>
               </div>
               {canManage && (
-                <div className="mt-3 flex items-center justify-end gap-1 border-t border-border pt-2.5">
+                <div className="border-border mt-3 flex items-center justify-end gap-1 border-t pt-2.5">
                   <Link
                     href={`/bookings/${b.id}`}
                     aria-label="Edit booking"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:text-brand hover:bg-brand/10 transition-colors"
+                    className="text-text-secondary hover:text-brand hover:bg-brand/10 flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
                   >
                     <Pencil className="h-4 w-4" />
                   </Link>
@@ -241,9 +326,13 @@ export function BookingsBulkList({
                       onClick={() => deleteSingle(b.id)}
                       disabled={deletingId === b.id}
                       aria-label="Delete booking"
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+                      className="text-text-secondary hover:text-danger hover:bg-danger/10 flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-50"
                     >
-                      {deletingId === b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      {deletingId === b.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                     </button>
                   )}
                 </div>
@@ -254,27 +343,37 @@ export function BookingsBulkList({
       </ul>
 
       {/* ── Desktop: table ─────────────────────────────────────── */}
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-surface md:block">
+      <div className="border-border bg-surface hidden overflow-x-auto rounded-xl border md:block">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border">
+            <tr className="border-border border-b">
               <th className="w-10 px-3 py-3">
                 <button onClick={toggleAll} className="text-text-tertiary hover:text-text-primary">
-                  {allSelected
-                    ? <CheckSquare className="h-4 w-4 text-brand" />
-                    : <Square className="h-4 w-4" />}
+                  {allSelected ? (
+                    <CheckSquare className="text-brand h-4 w-4" />
+                  ) : (
+                    <Square className="h-4 w-4" />
+                  )}
                 </button>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Ref</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Occupant</th>
-              <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary sm:table-cell">Room</th>
-              <th className="hidden px-4 py-3 text-left text-xs font-medium text-text-tertiary md:table-cell">Check in</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">Status</th>
-              <th className="hidden px-4 py-3 text-right text-xs font-medium text-text-tertiary lg:table-cell">Amount</th>
+              <th className="text-text-tertiary px-4 py-3 text-left text-xs font-medium">Ref</th>
+              <th className="text-text-tertiary px-4 py-3 text-left text-xs font-medium">
+                Occupant
+              </th>
+              <th className="text-text-tertiary hidden px-4 py-3 text-left text-xs font-medium sm:table-cell">
+                Room
+              </th>
+              <th className="text-text-tertiary hidden px-4 py-3 text-left text-xs font-medium md:table-cell">
+                Check in
+              </th>
+              <th className="text-text-tertiary px-4 py-3 text-left text-xs font-medium">Status</th>
+              <th className="text-text-tertiary hidden px-4 py-3 text-right text-xs font-medium lg:table-cell">
+                Amount
+              </th>
               {canManage && <th className="w-20 px-2 py-3"></th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-border divide-y">
             {bookings.map((b) => {
               const isSelected = selected.has(b.id)
               return (
@@ -283,20 +382,28 @@ export function BookingsBulkList({
                   className={`hover:bg-surface-raised transition-colors ${isSelected ? 'bg-brand/5' : ''}`}
                 >
                   <td className="px-3 py-3">
-                    <button onClick={() => toggle(b.id)} className="text-text-tertiary hover:text-brand">
-                      {isSelected
-                        ? <CheckSquare className="h-4 w-4 text-brand" />
-                        : <Square className="h-4 w-4" />}
+                    <button
+                      onClick={() => toggle(b.id)}
+                      className="text-text-tertiary hover:text-brand"
+                    >
+                      {isSelected ? (
+                        <CheckSquare className="text-brand h-4 w-4" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
                     </button>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/bookings/${b.id}`} className="text-xs text-brand hover:text-brand-hover transition-colors">
+                    <Link
+                      href={`/bookings/${b.id}`}
+                      className="text-brand hover:text-brand-hover text-xs transition-colors"
+                    >
                       {b.booking_ref}
                     </Link>
                     {b.group_id && (
                       <Link
                         href={`/bookings/groups/${b.group_id}`}
-                        className="ml-1.5 inline-flex items-center rounded-full border border-brand/20 bg-brand-subtle px-1.5 py-0.5 text-[9px] font-semibold text-brand hover:bg-brand/20"
+                        className="border-brand/20 bg-brand-subtle text-brand hover:bg-brand/20 ml-1.5 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold"
                       >
                         GROUP
                       </Link>
@@ -304,39 +411,44 @@ export function BookingsBulkList({
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/bookings/${b.id}`} className="block">
-                      <p className="text-sm font-medium text-text-primary">
+                      <p className="text-text-primary text-sm font-medium">
                         {b.occupant?.first_name} {b.occupant?.last_name}
                       </p>
                       {b.occupant?.phone && (
-                        <p className="text-xs text-text-tertiary">{b.occupant.phone}</p>
+                        <p className="text-text-tertiary text-xs">{b.occupant.phone}</p>
                       )}
                     </Link>
                   </td>
                   <td className="hidden px-4 py-3 sm:table-cell">
-                    <p className="text-sm text-text-secondary">
+                    <p className="text-text-secondary text-sm">
                       {b.room ? `Room ${b.room.room_number}` : '—'}
                     </p>
                     {b.room?.category && (
-                      <p className="text-xs text-text-tertiary">{b.room.category.name}</p>
+                      <p className="text-text-tertiary text-xs">{b.room.category.name}</p>
                     )}
                   </td>
-                  <td className="hidden px-4 py-3 md:table-cell text-sm text-text-secondary">
+                  <td className="text-text-secondary hidden px-4 py-3 text-sm md:table-cell">
                     {formatDate(b.check_in_date)}
                   </td>
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-                        STATUS_STYLES[b.status] ?? 'bg-surface-sunken text-text-secondary border-border'
+                        STATUS_STYLES[b.status] ??
+                        'bg-surface-sunken text-text-secondary border-border'
                       }`}
                     >
                       {b.status.replace(/_/g, ' ')}
                     </span>
-                    <p className={`mt-0.5 text-[11px] ${PAYMENT_STYLES[b.payment_status] ?? 'text-text-tertiary'}`}>
+                    <p
+                      className={`mt-0.5 text-[11px] ${PAYMENT_STYLES[b.payment_status] ?? 'text-text-tertiary'}`}
+                    >
                       {b.payment_status}
                     </p>
                   </td>
                   <td className="hidden px-4 py-3 text-right lg:table-cell">
-                    <p className="text-sm font-medium text-text-primary">{formatGHS(b.final_amount)}</p>
+                    <p className="text-text-primary text-sm font-medium">
+                      {formatGHS(b.final_amount)}
+                    </p>
                   </td>
                   {canManage && (
                     <td className="px-2 py-3">
@@ -344,7 +456,7 @@ export function BookingsBulkList({
                         <Link
                           href={`/bookings/${b.id}`}
                           title="Edit booking"
-                          className="rounded-md p-1 text-text-tertiary hover:bg-surface-raised hover:text-brand transition-colors"
+                          className="text-text-tertiary hover:bg-surface-raised hover:text-brand rounded-md p-1 transition-colors"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Link>
@@ -353,7 +465,7 @@ export function BookingsBulkList({
                             onClick={() => deleteSingle(b.id)}
                             disabled={deletingId === b.id}
                             title="Delete booking"
-                            className="rounded-md p-1 text-text-tertiary hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                            className="text-text-tertiary rounded-md p-1 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

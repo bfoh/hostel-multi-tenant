@@ -1154,13 +1154,13 @@ export function BookingFlow({ categories, tenant }: BookingFlowProps) {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<BookingResult | null>(null)
   const [submittedPhone, setSubmittedPhone] = useState('')
-  const [payStatus, setPayStatus] = useState<'success' | 'failed' | 'error' | null>(null)
+  const [payStatus, setPayStatus] = useState<'success' | 'failed' | 'error' | 'resolution' | null>(null)
 
-  // Read ?pay=success|failed|error after Paystack redirects back
+  // Read the Paystack result after redirecting back.
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search)
     const p = sp.get('pay')
-    if (p === 'success' || p === 'failed' || p === 'error') {
+    if (p === 'success' || p === 'failed' || p === 'error' || p === 'resolution') {
       setPayStatus(p)
       // Clean URL so banner doesn't reappear on refresh
       const url = new URL(window.location.href)
@@ -1224,6 +1224,11 @@ export function BookingFlow({ categories, tenant }: BookingFlowProps) {
       {payStatus === 'success' && (
         <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           ✓ Payment received. Your booking is confirmed — see your inbox/SMS for the receipt.
+        </div>
+      )}
+      {payStatus === 'resolution' && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Payment was received after the booking hold expired. The hostel has been notified and will contact you to restore the booking or arrange a refund.
         </div>
       )}
       {payStatus === 'failed' && (

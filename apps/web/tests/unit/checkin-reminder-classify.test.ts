@@ -4,7 +4,7 @@
  * "overdue" (staff already missed it) buckets.
  */
 import { describe, expect, it } from 'vitest'
-import { classifyDueBookings } from '@/app/api/cron/checkin-checkout-reminder/route'
+import { classifyDueBookings } from '@/lib/bookings/classify-due-bookings'
 
 const occ = (name: string) => ({ first_name: name, last_name: 'Guest', phone: '0244000000' })
 const room = { room_number: '101', block: null }
@@ -15,7 +15,7 @@ describe('classifyDueBookings', () => {
     const { todayArrivals, overdueArrivals } = classifyDueBookings(
       [{ id: '1', booking_ref: 'A1', check_in_date: today, occupant: occ('Ama'), room }],
       [],
-      today,
+      today
     )
     expect(todayArrivals).toHaveLength(1)
     expect(overdueArrivals).toHaveLength(0)
@@ -26,7 +26,7 @@ describe('classifyDueBookings', () => {
     const { todayArrivals, overdueArrivals } = classifyDueBookings(
       [{ id: '1', booking_ref: 'A1', check_in_date: '2026-10-01', occupant: occ('Ama'), room }],
       [],
-      today,
+      today
     )
     expect(overdueArrivals).toHaveLength(1)
     expect(todayArrivals).toHaveLength(0)
@@ -37,7 +37,7 @@ describe('classifyDueBookings', () => {
     const { todayDepartures, overdueDepartures } = classifyDueBookings(
       [],
       [{ id: '2', booking_ref: 'D1', check_out_date: '2026-09-30', occupant: occ('Kofi'), room }],
-      today,
+      today
     )
     expect(overdueDepartures).toHaveLength(1)
     expect(todayDepartures).toHaveLength(0)
@@ -48,7 +48,7 @@ describe('classifyDueBookings', () => {
     const { todayDepartures, overdueDepartures } = classifyDueBookings(
       [],
       [{ id: '2', booking_ref: 'D1', check_out_date: today, occupant: occ('Kofi'), room }],
-      today,
+      today
     )
     expect(todayDepartures).toHaveLength(1)
     expect(overdueDepartures).toHaveLength(0)

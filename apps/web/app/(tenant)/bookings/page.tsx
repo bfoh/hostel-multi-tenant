@@ -15,12 +15,12 @@ const MANAGE_ROLES = ['owner', 'manager'] as const
 export const metadata: Metadata = { title: 'Bookings' }
 
 const STATUSES = [
-  { value: 'all',             label: 'All' },
+  { value: 'all', label: 'All' },
   { value: 'pending_payment', label: 'Pending' },
-  { value: 'confirmed',       label: 'Confirmed' },
-  { value: 'checked_in',      label: 'Checked In' },
-  { value: 'checked_out',     label: 'Checked Out' },
-  { value: 'cancelled',       label: 'Cancelled' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'checked_in', label: 'Checked In' },
+  { value: 'checked_out', label: 'Checked Out' },
+  { value: 'cancelled', label: 'Cancelled' },
 ]
 
 export default async function BookingsPage({
@@ -55,6 +55,7 @@ export default async function BookingsPage({
   // Self check-in pending count + caller role for management gating.
   let pendingSelfCheckins = 0
   let canManage = false
+  let canUpdate = false
   const tenantId = await getServerTenantId()
   if (tenantId) {
     const admin = createAdminClient()
@@ -74,9 +75,12 @@ export default async function BookingsPage({
     if (isImpersonating) {
       const role = (await headers()).get('x-tenant-role')
       canManage = !!role && (MANAGE_ROLES as readonly string[]).includes(role)
+      canUpdate = canManage || role === 'receptionist'
     } else {
       const authClient = await createClient()
-      const { data: { user } } = await authClient.auth.getUser()
+      const {
+        data: { user },
+      } = await authClient.auth.getUser()
       if (user) {
         const { data: member } = await admin
           .from('tenant_members')
@@ -86,35 +90,43 @@ export default async function BookingsPage({
           .maybeSingle()
         const role = (member as any)?.is_active ? (member as any).role : null
         canManage = !!role && (MANAGE_ROLES as readonly string[]).includes(role)
+        canUpdate = canManage || role === 'receptionist'
       }
     }
   }
   if (readOnly) canManage = false
+  if (readOnly) canUpdate = false
 
   // Normalise bookings for client component
   const rows = bookings.map((b) => {
     const occupant = Array.isArray(b.occupant) ? b.occupant[0] : b.occupant
-    const room     = Array.isArray(b.room)     ? b.room[0]     : b.room
+    const room = Array.isArray(b.room) ? b.room[0] : b.room
     const category = room?.category
-      ? Array.isArray(room.category) ? room.category[0] : room.category
+      ? Array.isArray(room.category)
+        ? room.category[0]
+        : room.category
       : null
     return {
-      id:             b.id,
-      booking_ref:    b.booking_ref,
-      status:         b.status,
+      id: b.id,
+      booking_ref: b.booking_ref,
+      status: b.status,
       payment_status: b.payment_status,
-      check_in_date:  b.check_in_date,
-      final_amount:   b.final_amount,
-      group_id:       b.group_id,
-      occupant:       occupant ? {
-        first_name: occupant.first_name,
-        last_name:  occupant.last_name,
-        phone:      occupant.phone,
-      } : null,
-      room: room ? {
-        room_number: room.room_number,
-        category:    category ? { name: category.name } : null,
-      } : null,
+      check_in_date: b.check_in_date,
+      final_amount: b.final_amount,
+      group_id: b.group_id,
+      occupant: occupant
+        ? {
+            first_name: occupant.first_name,
+            last_name: occupant.last_name,
+            phone: occupant.phone,
+          }
+        : null,
+      room: room
+        ? {
+            room_number: room.room_number,
+            category: category ? { name: category.name } : null,
+          }
+        : null,
     }
   })
 
@@ -123,8 +135,8 @@ export default async function BookingsPage({
       {/* ── Header ───────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Bookings</h1>
-          <p className="mt-0.5 text-sm text-text-secondary">
+          <h1 className="text-text-primary text-2xl font-bold">Bookings</h1>
+          <p className="text-text-secondary mt-0.5 text-sm">
             {bookings.length} booking{bookings.length !== 1 ? 's' : ''}
             {activeStatus !== 'all' ? ` · ${activeStatus.replace('_', ' ')}` : ''}
             {search ? ` · matching "${search}"` : ''}
@@ -133,19 +145,19 @@ export default async function BookingsPage({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/bookings/self-checkins"
-            className="relative flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
+            className="border-border text-text-secondary hover:text-text-primary hover:bg-surface-raised relative flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors"
           >
             <Inbox className="h-4 w-4" />
             Self check-ins
             {pendingSelfCheckins > 0 && (
-              <span className="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-semibold text-white">
+              <span className="bg-brand ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white">
                 {pendingSelfCheckins}
               </span>
             )}
           </Link>
           <Link
             href="/bookings/calendar"
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
+            className="border-border text-text-secondary hover:text-text-primary hover:bg-surface-raised flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors"
           >
             <LayoutGrid className="h-4 w-4" />
             Calendar
@@ -154,14 +166,14 @@ export default async function BookingsPage({
             <>
               <Link
                 href="/bookings/bulk-import"
-                className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors"
+                className="border-border text-text-secondary hover:text-text-primary hover:bg-surface-raised flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors"
               >
                 <Upload className="h-4 w-4" />
                 Import
               </Link>
               <Link
                 href="/bookings/new"
-                className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+                className="bg-brand text-brand-fg hover:bg-brand-hover flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 New booking
@@ -172,7 +184,7 @@ export default async function BookingsPage({
       </div>
 
       {/* ── Status filter tabs ───────────────────────────────────── */}
-      <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
+      <div className="border-border bg-surface flex gap-1 overflow-x-auto rounded-lg border p-1">
         {STATUSES.map((s) => (
           <Link
             key={s.value}
@@ -192,13 +204,13 @@ export default async function BookingsPage({
       <form action="/bookings" method="get" className="flex flex-wrap items-center gap-2">
         {activeStatus !== 'all' && <input type="hidden" name="status" value={activeStatus} />}
         <div className="relative min-w-[200px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-disabled" />
+          <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
           <input
             type="text"
             name="search"
             defaultValue={search ?? ''}
             placeholder="Search by name, phone, ref, or room…"
-            className="w-full rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-disabled focus:border-brand focus:outline-none"
+            className="border-border bg-surface text-text-primary placeholder:text-text-disabled focus:border-brand w-full rounded-md border py-2 pl-9 pr-3 text-sm focus:outline-none"
           />
         </div>
         <input
@@ -206,26 +218,26 @@ export default async function BookingsPage({
           name="from"
           defaultValue={from ?? ''}
           aria-label="Check-in from"
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
+          className="border-border bg-surface text-text-primary focus:border-brand rounded-md border px-3 py-2 text-sm focus:outline-none"
         />
-        <span className="text-sm text-text-secondary">to</span>
+        <span className="text-text-secondary text-sm">to</span>
         <input
           type="date"
           name="to"
           defaultValue={to ?? ''}
           aria-label="Check-in to"
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
+          className="border-border bg-surface text-text-primary focus:border-brand rounded-md border px-3 py-2 text-sm focus:outline-none"
         />
         <button
           type="submit"
-          className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+          className="bg-brand text-brand-fg hover:bg-brand-hover rounded-md px-3 py-2 text-sm font-semibold transition-colors"
         >
           Filter
         </button>
         {(search || from || to) && (
           <Link
             href={activeStatus !== 'all' ? `/bookings?status=${activeStatus}` : '/bookings'}
-            className="text-sm text-text-secondary underline hover:text-text-primary"
+            className="text-text-secondary hover:text-text-primary text-sm underline"
           >
             Clear
           </Link>
@@ -234,11 +246,11 @@ export default async function BookingsPage({
 
       {/* ── Bookings list ────────────────────────────────────────── */}
       {bookings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-          <CalendarCheck className="h-10 w-10 text-text-disabled" />
+        <div className="border-border flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+          <CalendarCheck className="text-text-disabled h-10 w-10" />
           <div>
-            <p className="font-medium text-text-primary">No bookings found</p>
-            <p className="mt-0.5 text-sm text-text-secondary">
+            <p className="text-text-primary font-medium">No bookings found</p>
+            <p className="text-text-secondary mt-0.5 text-sm">
               {activeStatus !== 'all'
                 ? 'Try a different filter or create a new booking.'
                 : 'Create your first booking to get started.'}
@@ -247,7 +259,7 @@ export default async function BookingsPage({
           {!readOnly && (
             <Link
               href="/bookings/new"
-              className="mt-2 flex items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition-colors"
+              className="bg-brand text-brand-fg hover:bg-brand-hover mt-2 flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-colors"
             >
               <Plus className="h-4 w-4" />
               New booking
@@ -255,7 +267,7 @@ export default async function BookingsPage({
           )}
         </div>
       ) : (
-        <BookingsBulkList bookings={rows} canManage={canManage} />
+        <BookingsBulkList bookings={rows} canManage={canManage} canUpdate={canUpdate} />
       )}
     </div>
   )

@@ -3,6 +3,7 @@
 export type BookingStatus =
   | 'enquiry'
   | 'pending_payment'
+  | 'pending_confirmation'
   | 'confirmed'
   | 'checked_in'
   | 'checked_out'
@@ -10,6 +11,17 @@ export type BookingStatus =
   | 'no_show'
 
 export type BookingSource = 'walk_in' | 'phone' | 'website' | 'widget' | 'voice_ai' | 'referral'
+
+export type CancellationSource =
+  | 'staff'
+  | 'bulk'
+  | 'group'
+  | 'payment_expired'
+  | 'self_checkin_expired'
+  | 'self_checkin_rejected'
+  | 'ai_assistant'
+  | 'guest'
+  | 'legacy'
 
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded' | 'disputed'
 
@@ -25,16 +37,16 @@ export type PaymentMethod =
 export interface Booking {
   id: string
   tenantId: string
-  bookingRef: string            // Human-readable ref e.g. "ABR-2024-001847"
+  bookingRef: string // Human-readable ref e.g. "ABR-2024-001847"
   occupantId: string
   roomId: string
 
   status: BookingStatus
   source: BookingSource
 
-  checkInDate: string           // ISO date
-  checkOutDate: string          // ISO date
-  actualCheckIn: string | null  // ISO datetime (set on check-in)
+  checkInDate: string // ISO date
+  checkOutDate: string // ISO date
+  actualCheckIn: string | null // ISO datetime (set on check-in)
   actualCheckOut: string | null // ISO datetime (set on check-out)
 
   // Pricing (all in pesewas — GHS × 100)
@@ -49,13 +61,15 @@ export interface Booking {
   paymentStatus: PaymentStatus
   paidAmount: number
 
-  semester: string | null       // e.g. "2024/25 Semester 1" for student bookings
+  semester: string | null // e.g. "2024/25 Semester 1" for student bookings
   academicYear: string | null
 
   notes: string | null
   cancelledAt: string | null
   cancellationReason: string | null
-  createdBy: string             // user id
+  cancellationSource: CancellationSource | null
+  cancelledBy: string | null
+  createdBy: string // user id
   createdAt: string
   updatedAt: string
 
@@ -68,13 +82,13 @@ export interface BookingPayment {
   id: string
   tenantId: string
   bookingId: string
-  amount: number                // pesewas
+  amount: number // pesewas
   method: PaymentMethod
-  reference: string | null      // Paystack ref, MoMo transaction ID
+  reference: string | null // Paystack ref, MoMo transaction ID
   paystackReference: string | null
   status: 'pending' | 'success' | 'failed' | 'reversed'
   paidAt: string | null
-  receivedBy: string | null     // staff user id
+  receivedBy: string | null // staff user id
   notes: string | null
   createdAt: string
 }

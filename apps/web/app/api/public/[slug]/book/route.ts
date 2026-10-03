@@ -11,37 +11,47 @@ import { formatGHS } from '@/lib/utils'
 
 const schema = z.object({
   category_id: z.string().uuid(),
-  check_in_date:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  check_in_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   check_out_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  first_name:  z.string().min(1).max(100),
-  last_name:   z.string().min(1).max(100),
-  phone:       z.string().min(9).max(20),
-  email:       z.string().email().optional().nullable(),
+  first_name: z.string().min(1).max(100),
+  last_name: z.string().min(1).max(100),
+  phone: z.string().min(9).max(20),
+  email: z.string().email().optional().nullable(),
   institution: z.string().max(200).optional().nullable(),
-  student_id:  z.string().max(50).optional().nullable(),
-  gender:              z.enum(['male', 'female', 'prefer_not_to_say']).optional().nullable(),
-  date_of_birth:       z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
-  national_id_type:    z.enum(['ghana_card', 'passport', 'voters_id', 'nhis']).optional().nullable(),
-  national_id_number:  z.string().max(50).optional().nullable(),
-  notes:       z.string().max(500).optional().nullable(),
-  matching_profile: z.object({
-    cleanliness: z.number().int().min(1).max(5).nullable().optional(),
-    sleep_schedule: z.enum(['early_bird', 'night_owl', 'flexible']).nullable().optional(),
-    study_preference: z.enum(['in_room_quiet', 'in_room_background_noise', 'library']).nullable().optional(),
-    guest_frequency: z.enum(['none', 'rare', 'frequent']).nullable().optional(),
-    noise_tolerance: z.number().int().min(1).max(5).nullable().optional(),
-    ac_preference: z.enum(['ac_cold', 'fan_only', 'no_preference']).nullable().optional(),
-    hobbies: z.array(z.string()).default([]),
-    religion: z.enum(['christian', 'muslim', 'traditional', 'other', 'none', 'prefer_not_to_say']).nullable().optional(),
-    religiosity_level: z.enum(['devout', 'moderate', 'not_religious']).nullable().optional(),
-    relationship_status: z.enum(['single', 'in_relationship', 'married']).nullable().optional(),
-  }).nullable().optional(),
+  student_id: z.string().max(50).optional().nullable(),
+  gender: z.enum(['male', 'female', 'prefer_not_to_say']).optional().nullable(),
+  date_of_birth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .nullable(),
+  national_id_type: z.enum(['ghana_card', 'passport', 'voters_id', 'nhis']).optional().nullable(),
+  national_id_number: z.string().max(50).optional().nullable(),
+  notes: z.string().max(500).optional().nullable(),
+  matching_profile: z
+    .object({
+      cleanliness: z.number().int().min(1).max(5).nullable().optional(),
+      sleep_schedule: z.enum(['early_bird', 'night_owl', 'flexible']).nullable().optional(),
+      study_preference: z
+        .enum(['in_room_quiet', 'in_room_background_noise', 'library'])
+        .nullable()
+        .optional(),
+      guest_frequency: z.enum(['none', 'rare', 'frequent']).nullable().optional(),
+      noise_tolerance: z.number().int().min(1).max(5).nullable().optional(),
+      ac_preference: z.enum(['ac_cold', 'fan_only', 'no_preference']).nullable().optional(),
+      hobbies: z.array(z.string()).default([]),
+      religion: z
+        .enum(['christian', 'muslim', 'traditional', 'other', 'none', 'prefer_not_to_say'])
+        .nullable()
+        .optional(),
+      religiosity_level: z.enum(['devout', 'moderate', 'not_religious']).nullable().optional(),
+      relationship_status: z.enum(['single', 'in_relationship', 'married']).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 })
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   // This route creates a booking AND fans out to Paystack + SMS + email per
   // hit, matching the cost profile of the other Paystack-initiating routes
   // (paymentLimiter) rather than a plain public read (publicLimiter).
@@ -54,7 +64,9 @@ export async function POST(
   // Resolve tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, is_active, paystack_subaccount_code, roommate_matching_enabled, booking_payment_mode, online_booking_enabled')
+    .select(
+      'id, name, is_active, paystack_subaccount_code, roommate_matching_enabled, booking_payment_mode, online_booking_enabled'
+    )
     .eq('slug', slug)
     .single()
 
@@ -65,7 +77,13 @@ export async function POST(
   // Defense in depth — the booking page itself already shows zero rooms
   // when paused, but a stale page or a direct API hit shouldn't slip through.
   if (tenant.online_booking_enabled === false) {
-    return NextResponse.json({ error: 'Online booking is currently paused for this property. Please contact them directly.' }, { status: 409 })
+    return NextResponse.json(
+      {
+        error:
+          'Online booking is currently paused for this property. Please contact them directly.',
+      },
+      { status: 409 }
+    )
   }
 
   const body = await req.json().catch(() => null)
@@ -89,14 +107,6 @@ export async function POST(
     return NextResponse.json({ error: 'Room type not found' }, { status: 404 })
   }
 
-  // Free abandoned Paystack holds (pending_payment + unpaid + source=website
-  // older than 30 minutes) before checking availability — otherwise a stale
-  // unpaid booking could block a fresh guest from grabbing the last bed.
-  await supabase.rpc('release_stale_pending_payment_bookings', {
-    p_tenant_id: tenant.id,
-    p_max_age_minutes: 30,
-  })
-
   // Bed-level availability via room_occupancy_v. A room qualifies when it has
   // at least one free bed and isn't manually held for maintenance/blocked.
   // Prefer partially-filled rooms (fewer free_beds first) so we fill rooms
@@ -119,7 +129,7 @@ export async function POST(
   // If roommate matching is enabled and room category capacity is shared (>1)
   if (tenant.roommate_matching_enabled && category.capacity > 1) {
     try {
-      const roomIds = roomCandidates.map(rc => rc.room_id as string)
+      const roomIds = roomCandidates.map((rc) => rc.room_id as string)
       // Fetch active bookings in these candidate rooms during the requested dates
       const { data: activeBookings } = await supabase
         .from('bookings')
@@ -130,23 +140,23 @@ export async function POST(
         .in('status', ['pending_payment', 'confirmed', 'checked_in'])
 
       if (activeBookings && activeBookings.length > 0) {
-        const occupantIds = Array.from(new Set(activeBookings.map(b => b.occupant_id)))
+        const occupantIds = Array.from(new Set(activeBookings.map((b) => b.occupant_id)))
         const { data: profiles } = await supabase
           .from('occupant_matching_profiles')
           .select('*')
           .in('occupant_id', occupantIds)
 
-        const profileMap = new Map(profiles?.map(p => [p.occupant_id, p]) ?? [])
+        const profileMap = new Map(profiles?.map((p) => [p.occupant_id, p]) ?? [])
 
         // Score each candidate room
-        const scoredRooms = roomCandidates.map(rc => {
+        const scoredRooms = roomCandidates.map((rc) => {
           // Get occupants in this room
           const occupantIdsInRoom = activeBookings
-            .filter(b => b.room_id === rc.room_id)
-            .map(b => b.occupant_id)
+            .filter((b) => b.room_id === rc.room_id)
+            .map((b) => b.occupant_id)
 
           const roomProfiles = occupantIdsInRoom
-            .map(oid => profileMap.get(oid))
+            .map((oid) => profileMap.get(oid))
             .filter((p): p is NonNullable<typeof p> => !!p)
 
           const targetProfile = d.matching_profile ?? null
@@ -191,19 +201,19 @@ export async function POST(
     const { data: newOccupant, error: occupantError } = await supabase
       .from('occupants')
       .insert({
-        tenant_id:   tenant.id,
-        first_name:  d.first_name,
-        last_name:   d.last_name,
-        phone:       d.phone,
-        email:       d.email,
+        tenant_id: tenant.id,
+        first_name: d.first_name,
+        last_name: d.last_name,
+        phone: d.phone,
+        email: d.email,
         institution: d.institution,
-        student_id:  d.student_id,
-        gender:              d.gender,
-        date_of_birth:       d.date_of_birth,
-        national_id_type:    d.national_id_type,
-        national_id_number:  d.national_id_number,
-        status:      'pending',
-        type:        d.institution ? 'student' : 'guest',
+        student_id: d.student_id,
+        gender: d.gender,
+        date_of_birth: d.date_of_birth,
+        national_id_type: d.national_id_type,
+        national_id_number: d.national_id_number,
+        status: 'pending',
+        type: d.institution ? 'student' : 'guest',
       })
       .select('id')
       .single()
@@ -215,9 +225,9 @@ export async function POST(
   }
 
   // Generate booking reference: e.g. ABR-2026-047382
-  const prefix    = slug.replace(/-/g, '').slice(0, 3).toUpperCase()
-  const year      = new Date().getFullYear()
-  const suffix    = Math.floor(100000 + Math.random() * 900000)
+  const prefix = slug.replace(/-/g, '').slice(0, 3).toUpperCase()
+  const year = new Date().getFullYear()
+  const suffix = Math.floor(100000 + Math.random() * 900000)
   const bookingRef = `${prefix}-${year}-${suffix}`
 
   // Guest checkout mode is an explicit owner choice (Settings → Public
@@ -227,25 +237,27 @@ export async function POST(
   // pays on arrival, which is already a valid state used elsewhere for
   // walk-in/manual admin bookings.
   const payAtHostel = tenant.booking_payment_mode === 'pay_at_hostel'
+  const holdExpiresAt = payAtHostel ? null : new Date(Date.now() + 30 * 60_000).toISOString()
 
   // Create booking
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
     .insert({
-      tenant_id:      tenant.id,
-      occupant_id:    occupantId,
-      room_id:        assignedRoomId,
-      booking_ref:    bookingRef,
-      check_in_date:  d.check_in_date,
+      tenant_id: tenant.id,
+      occupant_id: occupantId,
+      room_id: assignedRoomId,
+      booking_ref: bookingRef,
+      check_in_date: d.check_in_date,
       check_out_date: d.check_out_date,
-      rate_per_unit:  category.base_rate,
-      rate_unit:      category.rate_unit,
-      total_amount:   category.base_rate,
-      paid_amount:    0,
+      rate_per_unit: category.base_rate,
+      rate_unit: category.rate_unit,
+      total_amount: category.base_rate,
+      paid_amount: 0,
       payment_status: 'unpaid',
-      status:         payAtHostel ? 'confirmed' : 'pending_payment',
-      source:         'website',
-      notes:          d.notes,
+      status: payAtHostel ? 'confirmed' : 'pending_payment',
+      source: 'website',
+      hold_expires_at: holdExpiresAt,
+      notes: d.notes,
     })
     .select('id, booking_ref')
     .single()
@@ -257,13 +269,14 @@ export async function POST(
   // Save occupant matching profile if roommate matching is enabled and provided
   if (tenant.roommate_matching_enabled && category.capacity > 1 && d.matching_profile) {
     try {
-      await supabase
-        .from('occupant_matching_profiles')
-        .upsert({
+      await supabase.from('occupant_matching_profiles').upsert(
+        {
           tenant_id: tenant.id,
           occupant_id: occupantId,
           ...d.matching_profile,
-        }, { onConflict: 'tenant_id,occupant_id' })
+        },
+        { onConflict: 'tenant_id,occupant_id' }
+      )
     } catch (err) {
       console.error('[Roommate Matching] Error upserting matching profile:', err)
     }
@@ -275,27 +288,28 @@ export async function POST(
   // mark the whole room held even when other beds remain bookable.
 
   // Initialize Paystack hosted payment (card / momo / bank / bank_transfer)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host') ?? 'localhost:3000'}`
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host') ?? 'localhost:3000'}`
   const callbackUrl = `${appUrl}/api/public/${slug}/pay/callback?booking_id=${booking.id}&amount=${category.base_rate}`
 
   let payment: { authorization_url: string; reference: string; amount: number } | null = null
   if (!payAtHostel) {
     try {
       const result = await initBookingPayment({
-        tenantId:         tenant.id,
+        tenantId: tenant.id,
         tenantSubaccount: tenant.paystack_subaccount_code ?? null,
-        bookingId:        booking.id,
-        bookingRef:       booking.booking_ref,
-        amountPesewas:    category.base_rate,
-        email:            d.email ?? null,
+        bookingId: booking.id,
+        bookingRef: booking.booking_ref,
+        amountPesewas: category.base_rate,
+        email: d.email ?? null,
         callbackUrl,
-        source:           'public_booking',
+        source: 'public_booking',
       })
       if (result) {
         payment = {
           authorization_url: result.authorizationUrl,
-          reference:         result.reference,
-          amount:            result.amount,
+          reference: result.reference,
+          amount: result.amount,
         }
       }
     } catch (err) {
@@ -312,36 +326,37 @@ export async function POST(
     .single()
 
   const primaryColor = tenantFull?.primary_color ?? '#2563EB'
-  const logoUrl      = (tenantFull as any)?.logo_url ?? null
+  const logoUrl = (tenantFull as any)?.logo_url ?? null
 
   // SMS confirmation (non-blocking)
   sendBookingConfirmation({
-    phone:       d.phone,
-    firstName:   d.first_name,
-    bookingRef:  booking.booking_ref,
-    roomNumber:  assignedRoomId,
+    phone: d.phone,
+    firstName: d.first_name,
+    bookingRef: booking.booking_ref,
+    roomNumber: assignedRoomId,
     checkInDate: d.check_in_date,
-    hostelName:  tenant.name,
-    tenantId:    tenant.id,
+    hostelName: tenant.name,
+    tenantId: tenant.id,
   }).catch(() => {})
 
   // Email confirmation (non-blocking, only if email provided)
   if (d.email) {
-    const formatDate = (s: string) => new Date(s + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
+    const formatDate = (s: string) =>
+      new Date(s + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
     sendEmail({
-      to:         d.email,
+      to: d.email,
       senderName: tenant.name,
-      subject:    `Booking received — ${tenant.name}`,
-      html:    bookingConfirmationHtml({
-        hostelName:   tenant.name,
+      subject: `Booking received — ${tenant.name}`,
+      html: bookingConfirmationHtml({
+        hostelName: tenant.name,
         primaryColor,
         logoUrl,
-        guestName:    `${d.first_name} ${d.last_name}`,
-        bookingRef:   booking.booking_ref,
-        roomName:     category.name,
-        checkInDate:  formatDate(d.check_in_date),
+        guestName: `${d.first_name} ${d.last_name}`,
+        bookingRef: booking.booking_ref,
+        roomName: category.name,
+        checkInDate: formatDate(d.check_in_date),
         checkOutDate: formatDate(d.check_out_date),
-        amountGHS:    formatGHS(category.base_rate),
+        amountGHS: formatGHS(category.base_rate),
         contactPhone: tenantFull?.contact_phone ?? undefined,
       }),
     }).catch(() => {})
@@ -349,49 +364,59 @@ export async function POST(
 
   // Owner/admin alert (non-blocking) — the gap Abrempong reported: no one on
   // the hostel side previously heard about an online booking at all.
-  getTenantAdminContacts(supabase, tenant.id).then((admins) => {
-    const guestName  = `${d.first_name} ${d.last_name}`
-    const eventLine  = `New online booking from ${guestName} — ${category.name}, ${d.check_in_date} to ${d.check_out_date} (${booking.booking_ref})`
+  getTenantAdminContacts(supabase, tenant.id)
+    .then((admins) => {
+      const guestName = `${d.first_name} ${d.last_name}`
+      const eventLine = `New online booking from ${guestName} — ${category.name}, ${d.check_in_date} to ${d.check_out_date} (${booking.booking_ref})`
 
-    if (admins.smsEnabled) {
-      for (const phone of admins.phones) {
-        sendAdminBookingAlert({ phone, hostelName: tenant.name, eventLine, tenantId: tenant.id }).catch(() => {})
+      if (admins.smsEnabled) {
+        for (const phone of admins.phones) {
+          sendAdminBookingAlert({
+            phone,
+            hostelName: tenant.name,
+            eventLine,
+            tenantId: tenant.id,
+          }).catch(() => {})
+        }
       }
-    }
-    if (admins.emailEnabled) {
-      for (const email of admins.emails) {
-        sendEmail({
-          to:         email,
-          senderName: tenant.name,
-          subject:    `New booking — ${booking.booking_ref}`,
-          html:    adminAlertHtml({
-            hostelName:   tenant.name,
-            primaryColor,
-            logoUrl,
-            title:        'New online booking',
-            lines: [
-              { label: 'Guest',    value: guestName },
-              { label: 'Room',     value: category.name },
-              { label: 'Check-in', value: d.check_in_date },
-              { label: 'Amount',   value: formatGHS(category.base_rate) },
-              { label: 'Booking',  value: booking.booking_ref },
-            ],
-          }),
-        }).catch(() => {})
+      if (admins.emailEnabled) {
+        for (const email of admins.emails) {
+          sendEmail({
+            to: email,
+            senderName: tenant.name,
+            subject: `New booking — ${booking.booking_ref}`,
+            html: adminAlertHtml({
+              hostelName: tenant.name,
+              primaryColor,
+              logoUrl,
+              title: 'New online booking',
+              lines: [
+                { label: 'Guest', value: guestName },
+                { label: 'Room', value: category.name },
+                { label: 'Check-in', value: d.check_in_date },
+                { label: 'Amount', value: formatGHS(category.base_rate) },
+                { label: 'Booking', value: booking.booking_ref },
+              ],
+            }),
+          }).catch(() => {})
+        }
       }
-    }
-  }).catch(() => {})
+    })
+    .catch(() => {})
 
-  return NextResponse.json({
-    booking_ref:   booking.booking_ref,
-    booking_id:    booking.id,
-    room_type:     category.name,
-    check_in_date: d.check_in_date,
-    check_out_date: d.check_out_date,
-    amount:        category.base_rate,
-    rate_unit:     category.rate_unit,
-    status:        payAtHostel ? 'confirmed' : 'pending_payment',
-    pay_at_hostel: payAtHostel,
-    payment,
-  }, { status: 201 })
+  return NextResponse.json(
+    {
+      booking_ref: booking.booking_ref,
+      booking_id: booking.id,
+      room_type: category.name,
+      check_in_date: d.check_in_date,
+      check_out_date: d.check_out_date,
+      amount: category.base_rate,
+      rate_unit: category.rate_unit,
+      status: payAtHostel ? 'confirmed' : 'pending_payment',
+      pay_at_hostel: payAtHostel,
+      payment,
+    },
+    { status: 201 }
+  )
 }

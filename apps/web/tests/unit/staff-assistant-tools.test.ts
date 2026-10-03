@@ -9,7 +9,7 @@
  * matters most: a new write tool can't accidentally ship without the gate.
  */
 import { describe, expect, it } from 'vitest'
-import { WRITE_TOOLS, buildTools } from '@/app/api/ai/staff-assistant/route'
+import { WRITE_TOOLS, buildTools } from '@/lib/ai/staff-assistant-tools'
 
 describe('staff assistant — WRITE_TOOLS gate', () => {
   it('flags every mutating tool as requiring confirmation', () => {

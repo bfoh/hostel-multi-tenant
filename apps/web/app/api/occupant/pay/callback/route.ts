@@ -2,17 +2,20 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { createClient } from '@/lib/supabase/server'
-import { finalizeOnlineBookingPayment, notifyOnlinePayment } from '@/lib/payments/record-online-payment'
+import {
+  finalizeOnlineBookingPayment,
+  notifyOnlinePayment,
+} from '@/lib/payments/record-online-payment'
 
 // GET /api/occupant/pay/callback — Paystack redirects here after payment
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const reference = searchParams.get('reference') ?? searchParams.get('trxref')
   const bookingId = searchParams.get('booking_id')
-  const amount    = parseInt(searchParams.get('amount') ?? '0', 10)
+  const amount = parseInt(searchParams.get('amount') ?? '0', 10)
 
-  const host   = req.headers.get('host') ?? 'localhost:3000'
-  const proto  = host.includes('localhost') ? 'http' : 'https'
+  const host = req.headers.get('host') ?? 'localhost:3000'
+  const proto = host.includes('localhost') ? 'http' : 'https'
   const origin = `${proto}://${host}`
 
   if (!reference || !bookingId || !amount) {
@@ -25,9 +28,12 @@ export async function GET(req: NextRequest) {
   }
 
   // Verify with Paystack
-  const verifyRes  = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-    headers: { Authorization: `Bearer ${paystackKey}` },
-  })
+  const verifyRes = await fetch(
+    `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+    {
+      headers: { Authorization: `Bearer ${paystackKey}` },
+    }
+  )
   const verifyData = await verifyRes.json()
 
   if (!verifyData.status || verifyData.data?.status !== 'success') {
@@ -39,7 +45,9 @@ export async function GET(req: NextRequest) {
   // user could record payments against bookings in other tenants by forging
   // the booking_id query param.
   const auth = await createClient()
-  const { data: { user } } = await auth.auth.getUser()
+  const {
+    data: { user },
+  } = await auth.auth.getUser()
   if (!user) {
     return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
   }
@@ -71,18 +79,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
   }
 
-  const { recorded } = await finalizeOnlineBookingPayment(admin, {
-    tenantId:  occupant.tenant_id,
+  const { recorded, requiresResolution } = await finalizeOnlineBookingPayment(admin, {
+    tenantId: occupant.tenant_id,
     bookingId,
     amount,
     reference,
-    method:    'card',
-    notes:     'Paid via occupant portal (Paystack)',
+    method: 'card',
+    notes: 'Paid via occupant portal (Paystack)',
   })
 
   if (recorded) {
-    notifyOnlinePayment(admin, { tenantId: occupant.tenant_id, bookingId, amount }).catch(() => {})
+    notifyOnlinePayment(admin, {
+      tenantId: occupant.tenant_id,
+      bookingId,
+      amount,
+      requiresResolution,
+    }).catch(() => {})
   }
 
-  return NextResponse.redirect(new URL('/occupant-portal/payments?pay=success', origin))
+  return NextResponse.redirect(
+    new URL(
+      `/occupant-portal/payments?pay=${requiresResolution ? 'resolution' : 'success'}`,
+      origin
+    )
+  )
 }

@@ -21,7 +21,11 @@ import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import { PAYMENT_METHOD_LABEL } from '@/lib/payments/methods'
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
   const { id } = await params
   const b = await getBookingById(id)
   return { title: b ? `Booking ${b.booking_ref}` : 'Booking not found' }
@@ -29,11 +33,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 const STATUS_BADGE: Record<string, string> = {
   pending_payment: 'bg-warning-subtle text-warning-fg border-warning/20',
-  confirmed:       'bg-brand-subtle text-brand border-brand/20',
-  checked_in:      'bg-success-subtle text-success border-success/20',
-  checked_out:     'bg-surface-sunken text-text-secondary border-border',
-  cancelled:       'bg-danger-subtle text-danger border-danger/20',
-  no_show:         'bg-danger-subtle text-danger border-danger/20',
+  confirmed: 'bg-brand-subtle text-brand border-brand/20',
+  checked_in: 'bg-success-subtle text-success border-success/20',
+  checked_out: 'bg-surface-sunken text-text-secondary border-border',
+  cancelled: 'bg-danger-subtle text-danger border-danger/20',
+  no_show: 'bg-danger-subtle text-danger border-danger/20',
 }
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -50,6 +54,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   // (UI-only gating; the reverse API route enforces the real check).
   const callerRole = (await headers()).get('x-tenant-role')
   const canManagePayments = callerRole === 'owner' || callerRole === 'manager'
+  const canCancelBooking = callerRole === 'owner' || callerRole === 'manager'
 
   // Fetch payment plan (if any)
   const supabase = await createTenantAdminClientFromHeaders()
@@ -77,24 +82,25 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   // Paystack is only live when both the platform key AND the tenant's subaccount are set
   const tenantId = await getServerTenantId()
   const { data: tenantRow } = tenantId
-    ? await supabase
-        .from('tenants')
-        .select('paystack_subaccount_code')
-        .eq('id', tenantId)
-        .single()
+    ? await supabase.from('tenants').select('paystack_subaccount_code').eq('id', tenantId).single()
     : { data: null }
-  const paystackReady =
-    !!process.env.PAYSTACK_SECRET_KEY && !!tenantRow?.paystack_subaccount_code
+  const paystackReady = !!process.env.PAYSTACK_SECRET_KEY && !!tenantRow?.paystack_subaccount_code
 
   const occupant = Array.isArray(booking.occupant) ? booking.occupant[0] : booking.occupant
   const room = Array.isArray(booking.room) ? booking.room[0] : booking.room
-  const category = room?.category ? (Array.isArray(room.category) ? room.category[0] : room.category) : null
+  const category = room?.category
+    ? Array.isArray(room.category)
+      ? room.category[0]
+      : room.category
+    : null
   const payments = Array.isArray(booking.booking_payments) ? booking.booking_payments : []
   const successPayments = payments.filter((p) => p.status === 'success')
   // A booking's true bill is final_amount + its folio charges (hotel-only,
   // deliberately not folded into the final_amount generated column — see
   // supabase/migrations/20240001000128_booking_charges.sql).
-  const chargesOwed = (charges ?? []).filter((c: any) => !c.paid).reduce((s: number, c: any) => s + c.amount, 0)
+  const chargesOwed = (charges ?? [])
+    .filter((c: any) => !c.paid)
+    .reduce((s: number, c: any) => s + c.amount, 0)
   const balance = booking.final_amount - booking.paid_amount + chargesOwed
 
   return (
@@ -102,15 +108,20 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       {/* ── Header ───────────────────────────────────────────────── */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <Link href="/bookings" className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors">
+          <Link
+            href="/bookings"
+            className="text-text-secondary hover:text-text-primary flex items-center gap-1 text-sm transition-colors"
+          >
             <ChevronLeft className="h-4 w-4" />
             Bookings
           </Link>
           <div className="flex items-center gap-3">
-            <h1 className="font-display text-xl font-bold text-text-primary ref-number">
+            <h1 className="font-display text-text-primary ref-number text-xl font-bold">
               {booking.booking_ref}
             </h1>
-            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE[booking.status] ?? 'bg-surface-sunken text-text-secondary border-border'}`}>
+            <span
+              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE[booking.status] ?? 'bg-surface-sunken text-text-secondary border-border'}`}
+            >
               {booking.status.replace('_', ' ')}
             </span>
           </div>
@@ -123,7 +134,13 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             currentRoomId={room?.id ?? ''}
             bookingStatus={booking.status}
           />
-          <BookingActions bookingId={id} status={booking.status} />
+          <BookingActions
+            bookingId={id}
+            status={booking.status}
+            paymentStatus={booking.payment_status}
+            paidAmount={booking.paid_amount}
+            canCancel={canCancelBooking}
+          />
         </div>
       </div>
 
@@ -132,65 +149,91 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         <div className="space-y-4">
           {/* Occupant */}
           <Card>
-            <CardHeader><CardTitle>Occupant</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Occupant</CardTitle>
+            </CardHeader>
             <CardContent className="pt-0">
               {occupant ? (
-                <Link href={`/occupants/${occupant.id}`} className="flex items-center gap-3 group">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-sm font-semibold text-brand">
+                <Link href={`/occupants/${occupant.id}`} className="group flex items-center gap-3">
+                  <div className="bg-brand-subtle text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
                     {occupant.photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={occupant.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+                      <img
+                        src={occupant.photo_url}
+                        alt=""
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
                     ) : (
                       initials(`${occupant.first_name} ${occupant.last_name}`)
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-medium text-text-primary group-hover:text-brand transition-colors">
+                    <p className="text-text-primary group-hover:text-brand font-medium transition-colors">
                       {occupant.first_name} {occupant.last_name}
                     </p>
-                    <p className="text-xs text-text-tertiary">{occupant.phone ?? occupant.email}</p>
+                    <p className="text-text-tertiary text-xs">{occupant.phone ?? occupant.email}</p>
                     {occupant.student_id && (
-                      <p className="ref-number text-[11px] text-text-disabled">{occupant.student_id}</p>
+                      <p className="ref-number text-text-disabled text-[11px]">
+                        {occupant.student_id}
+                      </p>
                     )}
                   </div>
                 </Link>
               ) : (
-                <p className="text-sm text-text-tertiary">No occupant linked</p>
+                <p className="text-text-tertiary text-sm">No occupant linked</p>
               )}
             </CardContent>
           </Card>
 
           {/* Room */}
           <Card>
-            <CardHeader><CardTitle>Room</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Room</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2 pt-0">
               {room ? (
-                <Link href={`/rooms/${room.id}`} className="block group">
-                  <p className="font-medium text-text-primary group-hover:text-brand transition-colors">
+                <Link href={`/rooms/${room.id}`} className="group block">
+                  <p className="text-text-primary group-hover:text-brand font-medium transition-colors">
                     Room {room.room_number}
                     {room.block ? ` · Block ${room.block}` : ''}
                     {room.floor != null ? ` · Floor ${room.floor}` : ''}
                   </p>
                   {category && (
-                    <p className="text-sm text-text-secondary">{category.name} · Capacity {category.capacity}</p>
+                    <p className="text-text-secondary text-sm">
+                      {category.name} · Capacity {category.capacity}
+                    </p>
                   )}
                 </Link>
               ) : (
-                <p className="text-sm text-text-tertiary">No room assigned</p>
+                <p className="text-text-tertiary text-sm">No room assigned</p>
               )}
             </CardContent>
           </Card>
 
           {/* Dates */}
           <Card>
-            <CardHeader><CardTitle>Dates</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Dates</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2 pt-0">
               <Row label="Check-in">{formatDate(booking.check_in_date)}</Row>
-              <Row label="Check-out">{booking.check_out_date ? formatDate(booking.check_out_date) : '—'}</Row>
-              {!isHotel && booking.semester && <Row label="Semester" className="capitalize">{booking.semester}</Row>}
-              {booking.actual_check_in && <Row label="Actual check-in">{formatDate(booking.actual_check_in)}</Row>}
-              {booking.actual_check_out && <Row label="Actual check-out">{formatDate(booking.actual_check_out)}</Row>}
-              <Row label="Source"><span className="capitalize">{booking.source.replace('_', ' ')}</span></Row>
+              <Row label="Check-out">
+                {booking.check_out_date ? formatDate(booking.check_out_date) : '—'}
+              </Row>
+              {!isHotel && booking.semester && (
+                <Row label="Semester" className="capitalize">
+                  {booking.semester}
+                </Row>
+              )}
+              {booking.actual_check_in && (
+                <Row label="Actual check-in">{formatDate(booking.actual_check_in)}</Row>
+              )}
+              {booking.actual_check_out && (
+                <Row label="Actual check-out">{formatDate(booking.actual_check_out)}</Row>
+              )}
+              <Row label="Source">
+                <span className="capitalize">{booking.source.replace('_', ' ')}</span>
+              </Row>
             </CardContent>
           </Card>
         </div>
@@ -199,37 +242,55 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         <div className="space-y-4 lg:col-span-2">
           {/* Financial summary */}
           <Card>
-            <CardHeader><CardTitle>Financial Summary</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Financial Summary</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-3 pt-0">
               <Row label="Rate">
                 <span className="currency-amount">
                   {formatGHS(booking.rate_per_unit)}/{booking.rate_unit}
                 </span>
               </Row>
-              <Row label="Subtotal"><span className="currency-amount">{formatGHS(booking.total_amount)}</span></Row>
+              <Row label="Subtotal">
+                <span className="currency-amount">{formatGHS(booking.total_amount)}</span>
+              </Row>
               {booking.discount_amount > 0 && (
-                <Row label={`Discount${booking.discount_reason ? ` (${booking.discount_reason})` : ''}`}>
-                  <span className="currency-amount text-success">−{formatGHS(booking.discount_amount)}</span>
+                <Row
+                  label={`Discount${booking.discount_reason ? ` (${booking.discount_reason})` : ''}`}
+                >
+                  <span className="currency-amount text-success">
+                    −{formatGHS(booking.discount_amount)}
+                  </span>
                 </Row>
               )}
               {booking.tax_amount > 0 && (
-                <Row label="Tax"><span className="currency-amount">{formatGHS(booking.tax_amount)}</span></Row>
+                <Row label="Tax">
+                  <span className="currency-amount">{formatGHS(booking.tax_amount)}</span>
+                </Row>
               )}
-              <div className="border-t border-border pt-3">
+              <div className="border-border border-t pt-3">
                 <Row label="Total">
-                  <span className="currency-amount font-bold text-text-primary text-base">{formatGHS(booking.final_amount)}</span>
+                  <span className="currency-amount text-text-primary text-base font-bold">
+                    {formatGHS(booking.final_amount)}
+                  </span>
                 </Row>
                 <Row label="Paid">
-                  <span className="currency-amount text-success">{formatGHS(booking.paid_amount)}</span>
+                  <span className="currency-amount text-success">
+                    {formatGHS(booking.paid_amount)}
+                  </span>
                 </Row>
                 {isHotel && chargesOwed > 0 && (
                   <Row label="Unpaid charges">
-                    <span className="currency-amount text-warning-fg">{formatGHS(chargesOwed)}</span>
+                    <span className="currency-amount text-warning-fg">
+                      {formatGHS(chargesOwed)}
+                    </span>
                   </Row>
                 )}
                 {balance > 0 && (
                   <Row label="Balance due">
-                    <span className="currency-amount font-semibold text-danger">{formatGHS(balance)}</span>
+                    <span className="currency-amount text-danger font-semibold">
+                      {formatGHS(balance)}
+                    </span>
                   </Row>
                 )}
               </div>
@@ -239,7 +300,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           {/* Additional charges — hotel-only folio (minibar, laundry, etc.) */}
           {isHotel && (
             <Card>
-              <CardHeader><CardTitle>Additional Charges</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Additional Charges</CardTitle>
+              </CardHeader>
               <CardContent className="pt-0">
                 <BookingChargesCard
                   bookingId={id}
@@ -253,7 +316,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           {/* Extend stay — hotel-only, with availability pre-check */}
           {isHotel && ['confirmed', 'checked_in'].includes(booking.status) && (
             <Card>
-              <CardHeader><CardTitle>Extend Stay</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Extend Stay</CardTitle>
+              </CardHeader>
               <CardContent className="pt-0">
                 <ExtendStayCard
                   bookingId={id}
@@ -273,24 +338,27 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             </CardHeader>
             <CardContent className="pt-0">
               {successPayments.length === 0 ? (
-                <p className="py-4 text-center text-sm text-text-tertiary">No payments recorded yet</p>
+                <p className="text-text-tertiary py-4 text-center text-sm">
+                  No payments recorded yet
+                </p>
               ) : (
-                <div className="divide-y divide-border">
+                <div className="divide-border divide-y">
                   {successPayments.map((p) => (
                     <div key={p.id} className="flex items-center justify-between py-3">
                       <div>
-                        <p className="text-sm font-medium text-text-primary">
-                          {PAYMENT_METHOD_LABEL[p.method as keyof typeof PAYMENT_METHOD_LABEL] ?? p.method}
+                        <p className="text-text-primary text-sm font-medium">
+                          {PAYMENT_METHOD_LABEL[p.method as keyof typeof PAYMENT_METHOD_LABEL] ??
+                            p.method}
                         </p>
                         {p.reference && (
-                          <p className="ref-number text-[11px] text-text-tertiary">{p.reference}</p>
+                          <p className="ref-number text-text-tertiary text-[11px]">{p.reference}</p>
                         )}
                         {p.paid_at && (
-                          <p className="text-xs text-text-tertiary">{formatDate(p.paid_at)}</p>
+                          <p className="text-text-tertiary text-xs">{formatDate(p.paid_at)}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <p className="currency-amount text-sm font-semibold text-success">
+                        <p className="currency-amount text-success text-sm font-semibold">
                           +{formatGHS(p.amount)}
                         </p>
                         {canManagePayments && (
@@ -304,7 +372,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
               {/* Record payment form (shown when balance > 0) */}
               {balance > 0 && booking.status !== 'cancelled' && (
-                <div className="mt-4 border-t border-border pt-4">
+                <div className="border-border mt-4 border-t pt-4">
                   <RecordPaymentForm
                     bookingId={id}
                     balance={balance}
@@ -317,7 +385,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
           {/* Payment plan */}
           <Card>
-            <CardHeader><CardTitle>Payment Plan</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Payment Plan</CardTitle>
+            </CardHeader>
             <CardContent className="pt-0">
               <PaymentPlanCard
                 bookingId={id}
@@ -330,7 +400,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
           {/* Damage deposit */}
           <Card>
-            <CardHeader><CardTitle>Damage Deposit</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Damage Deposit</CardTitle>
+            </CardHeader>
             <CardContent className="pt-0">
               <DepositCard
                 bookingId={id}
@@ -344,9 +416,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           {/* Notes */}
           {booking.notes && (
             <Card>
-              <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Notes</CardTitle>
+              </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-sm text-text-secondary">{booking.notes}</p>
+                <p className="text-text-secondary text-sm">{booking.notes}</p>
               </CardContent>
             </Card>
           )}
@@ -354,12 +428,18 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           {/* Cancellation info */}
           {booking.cancellation_reason && (
             <Card>
-              <CardHeader><CardTitle>Cancellation</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Cancellation</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-2 pt-0">
-                <Row label="Cancelled">{booking.cancelled_at ? formatDate(booking.cancelled_at) : '—'}</Row>
+                <Row label="Cancelled">
+                  {booking.cancelled_at ? formatDate(booking.cancelled_at) : '—'}
+                </Row>
                 <div>
-                  <p className="text-xs text-text-tertiary">Reason</p>
-                  <p className="mt-0.5 text-sm text-text-secondary">{booking.cancellation_reason}</p>
+                  <p className="text-text-tertiary text-xs">Reason</p>
+                  <p className="text-text-secondary mt-0.5 text-sm">
+                    {booking.cancellation_reason}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -370,11 +450,19 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   )
 }
 
-function Row({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function Row({
+  label,
+  children,
+  className,
+}: {
+  label: string
+  children: React.ReactNode
+  className?: string
+}) {
   return (
     <div className="flex items-start justify-between gap-2">
-      <p className="shrink-0 text-xs text-text-tertiary">{label}</p>
-      <div className={`text-right text-sm text-text-primary ${className ?? ''}`}>{children}</div>
+      <p className="text-text-tertiary shrink-0 text-xs">{label}</p>
+      <div className={`text-text-primary text-right text-sm ${className ?? ''}`}>{children}</div>
     </div>
   )
 }

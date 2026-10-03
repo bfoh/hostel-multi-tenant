@@ -3,24 +3,30 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { cancelBooking } from '@/lib/bookings/cancel-booking'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
+
+const SELF_CHECKIN_ROLES = ['owner', 'manager', 'receptionist'] as const
 
 const bodySchema = z.object({
   action: z.enum(['confirm', 'reject']),
   reason: z.string().max(300).optional(),
 })
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
   const tenantId = await getServerTenantId()
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const role = await requireTenantRole(tenantId, SELF_CHECKIN_ROLES)
+  if (role instanceof NextResponse) return role
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {
@@ -30,7 +36,9 @@ export async function POST(
   const admin = await createTenantAdminClientFromHeaders()
 
   const { data: bookingRaw } = await (admin.from('bookings') as any)
-    .select('id, status, room_id, occupant_id, self_checkin_submitted_at, self_checkin_confirmed_at, payment_status')
+    .select(
+      'id, status, room_id, occupant_id, self_checkin_submitted_at, self_checkin_confirmed_at, payment_status'
+    )
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .single()
@@ -59,7 +67,7 @@ export async function POST(
     const { error: updErr } = await admin
       .from('bookings')
       .update({
-        status:                   newStatus as 'confirmed',
+        status: newStatus as 'confirmed',
         self_checkin_confirmed_at: new Date().toISOString(),
         self_checkin_confirmed_by: user.id,
       } as any)
@@ -84,24 +92,32 @@ export async function POST(
   }
 
   // ── reject ───────────────────────────────────────────────────
-  const { error: updErr } = await admin
+  try {
+    await cancelBooking(admin, {
+      tenantId,
+      bookingId: id,
+      reason: parsed.data.reason ?? 'Rejected at self check-in confirmation',
+      source: 'self_checkin_rejected',
+      actorId: role.userId,
+      expectedStatus: booking.status,
+    })
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Cancellation failed',
+      },
+      { status: 409 }
+    )
+  }
+
+  await admin
     .from('bookings')
     .update({
-      status:                    'cancelled' as const,
-      cancellation_reason:        parsed.data.reason ?? 'Rejected at self check-in confirmation',
-      cancelled_at:               new Date().toISOString(),
-      self_checkin_confirmed_at:  new Date().toISOString(),
-      self_checkin_confirmed_by:  user.id,
+      self_checkin_confirmed_at: new Date().toISOString(),
+      self_checkin_confirmed_by: user.id,
     } as any)
     .eq('id', id)
     .eq('tenant_id', tenantId)
-
-  if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
-
-  // Free the room (only if it was reserved/occupied by this booking)
-  if (booking.room_id) {
-    await admin.from('rooms').update({ status: 'available' }).eq('id', booking.room_id)
-  }
 
   return NextResponse.json({ ok: true, status: 'cancelled' })
 }

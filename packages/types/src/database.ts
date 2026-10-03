@@ -14,33 +14,69 @@ type Json = string | number | boolean | null | { [key: string]: Json } | Json[]
 
 // ── Enum string unions ───────────────────────────────────────────────────────
 
-type SubscriptionPlan   = 'starter' | 'growth' | 'pro' | 'enterprise'
-type TenantStatus       = 'trial' | 'active' | 'trial_expired' | 'suspended' | 'cancelled'
-type TenantRole         = 'owner' | 'manager' | 'receptionist' | 'housekeeper' | 'accountant' | 'security' | 'occupant'
-type RoomStatus         = 'available' | 'occupied' | 'reserved' | 'maintenance' | 'blocked'
+type SubscriptionPlan = 'starter' | 'growth' | 'pro' | 'enterprise'
+type TenantStatus = 'trial' | 'active' | 'trial_expired' | 'suspended' | 'cancelled'
+type TenantRole =
+  | 'owner'
+  | 'manager'
+  | 'receptionist'
+  | 'housekeeper'
+  | 'accountant'
+  | 'security'
+  | 'occupant'
+type RoomStatus = 'available' | 'occupied' | 'reserved' | 'maintenance' | 'blocked'
 type HousekeepingStatus = 'clean' | 'dirty' | 'inspecting' | 'out_of_order'
-type RoomType           = 'single' | 'double' | 'twin' | 'triple' | 'quad' | 'dormitory' | 'suite' | 'studio'
-type BookingStatus      = 'enquiry' | 'pending_payment' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show'
-type BookingSource      = 'walk_in' | 'phone' | 'website' | 'widget' | 'voice_ai' | 'referral' | 'online'
-type PaymentStatus      = 'unpaid' | 'partial' | 'paid' | 'refunded' | 'disputed'
-type PaymentMethod      = 'momo_mtn' | 'momo_vodafone' | 'momo_airteltigo' | 'card' | 'bank_transfer' | 'cash' | 'cheque'
-type OccupantType       = 'student' | 'non_student' | 'professional' | 'guest' | 'staff'
-type OccupantStatus     = 'active' | 'checked_out' | 'pending' | 'suspended' | 'blacklisted'
-type GenderType         = 'male' | 'female' | 'prefer_not_to_say'
-type IdType             = 'ghana_card' | 'passport' | 'voters_id' | 'nhis'
-type EmploymentType     = 'full_time' | 'part_time' | 'contract' | 'casual'
-type LeaveType          = 'annual' | 'sick' | 'maternity' | 'paternity' | 'emergency' | 'unpaid'
-type LeaveStatus        = 'pending' | 'approved' | 'rejected' | 'cancelled'
-type PayrollStatus      = 'draft' | 'approved' | 'paid'
-type MaintenancePriority  = 'low' | 'medium' | 'high' | 'urgent'
-type MaintenanceStatus    = 'open' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled'
-type MaintenanceCategory  = 'plumbing' | 'electrical' | 'hvac' | 'structural' | 'cleaning' | 'furniture' | 'appliance' | 'pest_control' | 'security' | 'other' | 'housekeeping' | 'transport' | 'food' | 'amenity'
-type IncidentSeverity   = 'low' | 'medium' | 'high' | 'critical'
-type IncidentStatus     = 'open' | 'investigating' | 'closed'
-type VisitorPurpose     = 'visit_occupant' | 'delivery' | 'maintenance' | 'official' | 'other'
-type LostFoundType      = 'lost' | 'found'
-type LostFoundStatus    = 'unclaimed' | 'claimed' | 'disposed'
-type SmsBlastStatus     = 'pending' | 'scheduled' | 'sent' | 'failed'
+type RoomType = 'single' | 'double' | 'twin' | 'triple' | 'quad' | 'dormitory' | 'suite' | 'studio'
+type BookingStatus =
+  | 'enquiry'
+  | 'pending_payment'
+  | 'pending_confirmation'
+  | 'confirmed'
+  | 'checked_in'
+  | 'checked_out'
+  | 'cancelled'
+  | 'no_show'
+type BookingSource = 'walk_in' | 'phone' | 'website' | 'widget' | 'voice_ai' | 'referral' | 'online'
+type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded' | 'disputed'
+type PaymentMethod =
+  | 'momo_mtn'
+  | 'momo_vodafone'
+  | 'momo_airteltigo'
+  | 'card'
+  | 'bank_transfer'
+  | 'cash'
+  | 'cheque'
+type OccupantType = 'student' | 'non_student' | 'professional' | 'guest' | 'staff'
+type OccupantStatus = 'active' | 'checked_out' | 'pending' | 'suspended' | 'blacklisted'
+type GenderType = 'male' | 'female' | 'prefer_not_to_say'
+type IdType = 'ghana_card' | 'passport' | 'voters_id' | 'nhis'
+type EmploymentType = 'full_time' | 'part_time' | 'contract' | 'casual'
+type LeaveType = 'annual' | 'sick' | 'maternity' | 'paternity' | 'emergency' | 'unpaid'
+type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
+type PayrollStatus = 'draft' | 'approved' | 'paid'
+type MaintenancePriority = 'low' | 'medium' | 'high' | 'urgent'
+type MaintenanceStatus = 'open' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled'
+type MaintenanceCategory =
+  | 'plumbing'
+  | 'electrical'
+  | 'hvac'
+  | 'structural'
+  | 'cleaning'
+  | 'furniture'
+  | 'appliance'
+  | 'pest_control'
+  | 'security'
+  | 'other'
+  | 'housekeeping'
+  | 'transport'
+  | 'food'
+  | 'amenity'
+type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical'
+type IncidentStatus = 'open' | 'investigating' | 'closed'
+type VisitorPurpose = 'visit_occupant' | 'delivery' | 'maintenance' | 'official' | 'other'
+type LostFoundType = 'lost' | 'found'
+type LostFoundStatus = 'unclaimed' | 'claimed' | 'disposed'
+type SmsBlastStatus = 'pending' | 'scheduled' | 'sent' | 'failed'
 type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete'
 
 type SleepSchedule = 'early_bird' | 'night_owl' | 'flexible'
@@ -286,7 +322,13 @@ export type Database = {
           joined_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'tenant_members_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'tenant_members_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -334,7 +376,13 @@ export type Database = {
           sort_order?: number
         }
         Relationships: [
-          { foreignKeyName: 'room_categories_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'room_categories_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -379,8 +427,20 @@ export type Database = {
           last_inspected_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'rooms_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'rooms_category_id_fkey'; columns: ['category_id']; isOneToOne: false; referencedRelation: 'room_categories'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'rooms_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'rooms_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'room_categories'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -482,7 +542,13 @@ export type Database = {
           portal_invite_sent_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'occupants_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'occupants_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -535,8 +601,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          { foreignKeyName: 'occupant_matching_profiles_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'occupant_matching_profiles_occupant_id_fkey'; columns: ['occupant_id']; isOneToOne: false; referencedRelation: 'occupants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'occupant_matching_profiles_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'occupant_matching_profiles_occupant_id_fkey'
+            columns: ['occupant_id']
+            isOneToOne: false
+            referencedRelation: 'occupants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -567,6 +645,8 @@ export type Database = {
           notes: string | null
           cancelled_at: string | null
           cancellation_reason: string | null
+          cancellation_source: string | null
+          cancelled_by: string | null
           created_by: string | null
           vat_amount: number | null
           nhil_amount: number | null
@@ -604,6 +684,8 @@ export type Database = {
           notes?: string | null
           cancelled_at?: string | null
           cancellation_reason?: string | null
+          cancellation_source?: string | null
+          cancelled_by?: string | null
           created_by?: string | null
           vat_amount?: number | null
           nhil_amount?: number | null
@@ -634,6 +716,8 @@ export type Database = {
           room_id?: string
           cancelled_at?: string | null
           cancellation_reason?: string | null
+          cancellation_source?: string | null
+          cancelled_by?: string | null
           vat_amount?: number | null
           nhil_amount?: number | null
           getfund_amount?: number | null
@@ -643,10 +727,34 @@ export type Database = {
           review_token?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'bookings_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'bookings_occupant_id_fkey'; columns: ['occupant_id']; isOneToOne: false; referencedRelation: 'occupants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'bookings_room_id_fkey'; columns: ['room_id']; isOneToOne: false; referencedRelation: 'rooms'; referencedColumns: ['id'] },
-          { foreignKeyName: 'bookings_group_id_fkey'; columns: ['group_id']; isOneToOne: false; referencedRelation: 'booking_groups'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'bookings_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'bookings_occupant_id_fkey'
+            columns: ['occupant_id']
+            isOneToOne: false
+            referencedRelation: 'occupants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'bookings_room_id_fkey'
+            columns: ['room_id']
+            isOneToOne: false
+            referencedRelation: 'rooms'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'bookings_group_id_fkey'
+            columns: ['group_id']
+            isOneToOne: false
+            referencedRelation: 'booking_groups'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -689,8 +797,20 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'booking_payments_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'booking_payments_booking_id_fkey'; columns: ['booking_id']; isOneToOne: false; referencedRelation: 'bookings'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'booking_payments_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'booking_payments_booking_id_fkey'
+            columns: ['booking_id']
+            isOneToOne: false
+            referencedRelation: 'bookings'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -734,8 +854,20 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'booking_charges_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'booking_charges_booking_id_fkey'; columns: ['booking_id']; isOneToOne: false; referencedRelation: 'bookings'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'booking_charges_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'booking_charges_booking_id_fkey'
+            columns: ['booking_id']
+            isOneToOne: false
+            referencedRelation: 'bookings'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -769,7 +901,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
-          { foreignKeyName: 'booking_groups_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'booking_groups_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -930,8 +1068,20 @@ export type Database = {
           region?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'staff_profiles_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'staff_profiles_member_id_fkey'; columns: ['member_id']; isOneToOne: true; referencedRelation: 'tenant_members'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'staff_profiles_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'staff_profiles_member_id_fkey'
+            columns: ['member_id']
+            isOneToOne: true
+            referencedRelation: 'tenant_members'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -979,8 +1129,20 @@ export type Database = {
           recorded_by?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'attendance_records_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'attendance_records_staff_id_fkey'; columns: ['staff_id']; isOneToOne: false; referencedRelation: 'staff_profiles'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'attendance_records_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'attendance_records_staff_id_fkey'
+            columns: ['staff_id']
+            isOneToOne: false
+            referencedRelation: 'staff_profiles'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1025,8 +1187,20 @@ export type Database = {
           review_note?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'leave_requests_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'leave_requests_staff_id_fkey'; columns: ['staff_id']; isOneToOne: false; referencedRelation: 'staff_profiles'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'leave_requests_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'leave_requests_staff_id_fkey'
+            columns: ['staff_id']
+            isOneToOne: false
+            referencedRelation: 'staff_profiles'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1064,7 +1238,13 @@ export type Database = {
           paid_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'payroll_runs_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'payroll_runs_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1109,9 +1289,27 @@ export type Database = {
           status?: string
         }
         Relationships: [
-          { foreignKeyName: 'payroll_items_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'payroll_items_payroll_run_id_fkey'; columns: ['payroll_run_id']; isOneToOne: false; referencedRelation: 'payroll_runs'; referencedColumns: ['id'] },
-          { foreignKeyName: 'payroll_items_staff_id_fkey'; columns: ['staff_id']; isOneToOne: false; referencedRelation: 'staff_profiles'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'payroll_items_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'payroll_items_payroll_run_id_fkey'
+            columns: ['payroll_run_id']
+            isOneToOne: false
+            referencedRelation: 'payroll_runs'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'payroll_items_staff_id_fkey'
+            columns: ['staff_id']
+            isOneToOne: false
+            referencedRelation: 'staff_profiles'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1152,7 +1350,13 @@ export type Database = {
           is_active?: boolean
         }
         Relationships: [
-          { foreignKeyName: 'contractors_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'contractors_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1220,9 +1424,27 @@ export type Database = {
           reported_by?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'maintenance_requests_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] },
-          { foreignKeyName: 'maintenance_requests_room_id_fkey'; columns: ['room_id']; isOneToOne: false; referencedRelation: 'rooms'; referencedColumns: ['id'] },
-          { foreignKeyName: 'maintenance_requests_contractor_id_fkey'; columns: ['contractor_id']; isOneToOne: false; referencedRelation: 'contractors'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'maintenance_requests_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'maintenance_requests_room_id_fkey'
+            columns: ['room_id']
+            isOneToOne: false
+            referencedRelation: 'rooms'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'maintenance_requests_contractor_id_fkey'
+            columns: ['contractor_id']
+            isOneToOne: false
+            referencedRelation: 'contractors'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1272,7 +1494,13 @@ export type Database = {
           recorded_by?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'visitor_log_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'visitor_log_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1321,7 +1549,13 @@ export type Database = {
           police_ref?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'incident_reports_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'incident_reports_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1389,7 +1623,13 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'lost_found_items_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'lost_found_items_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1436,7 +1676,13 @@ export type Database = {
           sent_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'sms_blasts_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'sms_blasts_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1501,7 +1747,13 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'assets_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'assets_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1571,7 +1823,13 @@ export type Database = {
           lift_reason?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'occupant_blacklist_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'occupant_blacklist_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1613,7 +1871,13 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'room_keys_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'room_keys_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1646,7 +1910,13 @@ export type Database = {
           description?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'webhook_endpoints_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'webhook_endpoints_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1748,7 +2018,13 @@ export type Database = {
           is_active?: boolean
         }
         Relationships: [
-          { foreignKeyName: 'pm_schedules_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'pm_schedules_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1784,7 +2060,13 @@ export type Database = {
           reviewer_id?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'id_verification_reviews_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'id_verification_reviews_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1817,7 +2099,13 @@ export type Database = {
           is_active?: boolean
         }
         Relationships: [
-          { foreignKeyName: 'notification_templates_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'notification_templates_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1848,7 +2136,13 @@ export type Database = {
           keys?: Json | null
         }
         Relationships: [
-          { foreignKeyName: 'push_subscriptions_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'push_subscriptions_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1895,7 +2189,13 @@ export type Database = {
           is_active?: boolean
         }
         Relationships: [
-          { foreignKeyName: 'report_schedules_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'report_schedules_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1939,7 +2239,13 @@ export type Database = {
           expires_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'notices_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'notices_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -1977,7 +2283,13 @@ export type Database = {
           sort_order?: number
         }
         Relationships: [
-          { foreignKeyName: 'tenant_local_guide_entries_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'tenant_local_guide_entries_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2021,7 +2333,13 @@ export type Database = {
           sent_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'marketing_campaigns_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'marketing_campaigns_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2055,7 +2373,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
-          { foreignKeyName: 'payment_plans_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'payment_plans_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2146,7 +2470,13 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'expenses_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'expenses_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2176,7 +2506,13 @@ export type Database = {
           url?: string
         }
         Relationships: [
-          { foreignKeyName: 'occupant_documents_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'occupant_documents_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2225,7 +2561,13 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'housekeeping_tasks_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'housekeeping_tasks_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2255,7 +2597,13 @@ export type Database = {
           inspected_at?: string
         }
         Relationships: [
-          { foreignKeyName: 'room_inspections_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'room_inspections_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2294,7 +2642,13 @@ export type Database = {
           is_active?: boolean
         }
         Relationships: [
-          { foreignKeyName: 'rate_overrides_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'rate_overrides_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2323,7 +2677,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
-          { foreignKeyName: 'shift_rotations_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'shift_rotations_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2395,7 +2755,13 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'meter_readings_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'meter_readings_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2443,7 +2809,13 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'damage_deposits_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'damage_deposits_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2491,7 +2863,13 @@ export type Database = {
           featured?: boolean
         }
         Relationships: [
-          { foreignKeyName: 'occupant_feedback_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'occupant_feedback_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2531,7 +2909,13 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'staff_shifts_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'staff_shifts_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2567,7 +2951,13 @@ export type Database = {
           sms_sent_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'anomaly_alerts_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'anomaly_alerts_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2637,7 +3027,13 @@ export type Database = {
           notes?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'visitor_logs_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'visitor_logs_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2696,7 +3092,13 @@ export type Database = {
           next_payment_at?: string | null
         }
         Relationships: [
-          { foreignKeyName: 'tenant_subscriptions_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'tenant_subscriptions_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
 
@@ -2798,24 +3200,36 @@ export type Database = {
           status?: string
         }
         Relationships: [
-          { foreignKeyName: 'waiting_list_tenant_id_fkey'; columns: ['tenant_id']; isOneToOne: false; referencedRelation: 'tenants'; referencedColumns: ['id'] }
+          {
+            foreignKeyName: 'waiting_list_tenant_id_fkey'
+            columns: ['tenant_id']
+            isOneToOne: false
+            referencedRelation: 'tenants'
+            referencedColumns: ['id']
+          },
         ]
       }
     }
-    Views: Record<string, {
-      Row: Record<string, unknown>
-      Relationships: {
-        foreignKeyName: string
-        columns: string[]
-        isOneToOne: boolean
-        referencedRelation: string
-        referencedColumns: string[]
-      }[]
-    }>
-    Functions: Record<string, {
-      Args: Record<string, unknown>
-      Returns: unknown
-    }>
+    Views: Record<
+      string,
+      {
+        Row: Record<string, unknown>
+        Relationships: {
+          foreignKeyName: string
+          columns: string[]
+          isOneToOne: boolean
+          referencedRelation: string
+          referencedColumns: string[]
+        }[]
+      }
+    >
+    Functions: Record<
+      string,
+      {
+        Args: Record<string, unknown>
+        Returns: unknown
+      }
+    >
     Enums: {
       subscription_plan: SubscriptionPlan
       tenant_status: TenantStatus

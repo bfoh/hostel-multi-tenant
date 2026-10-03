@@ -115,6 +115,15 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           </div>
         </div>
       )}
+      {payMsg === 'resolution' && (
+        <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5">
+          <AlertCircle className="h-5 w-5 shrink-0 text-amber-500" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Payment received — review required</p>
+            <p className="text-xs text-amber-600">The booking was already cancelled. Reception has been notified and will contact you about restoration or a refund.</p>
+          </div>
+        </div>
+      )}
       {payMsg === 'failed' && (
         <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-3.5">
           <XCircle className="h-5 w-5 shrink-0 text-red-500" />

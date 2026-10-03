@@ -2,22 +2,45 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
-import { sendEmail, bookingConfirmationHtml, checkoutSummaryHtml, checkInConfirmationHtml, bookingCancelledHtml, adminAlertHtml } from '@/lib/email'
-import { sendBookingConfirmation, sendCheckedInSms, sendCheckedOutSms, sendBookingCancelled, sendAdminBookingAlert } from '@/lib/sms'
+import {
+  sendEmail,
+  bookingConfirmationHtml,
+  checkoutSummaryHtml,
+  checkInConfirmationHtml,
+  adminAlertHtml,
+} from '@/lib/email'
+import {
+  sendBookingConfirmation,
+  sendCheckedInSms,
+  sendCheckedOutSms,
+  sendAdminBookingAlert,
+} from '@/lib/sms'
 import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
 import { tenantHost, bareRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 const schema = z.object({
-  status: z.enum(['confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show']),
+  status: z.enum(['confirmed', 'checked_in', 'checked_out', 'no_show']),
 })
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id }    = await params
+const STATUS_ROLES = ['owner', 'manager', 'receptionist'] as const
+const ALLOWED_TRANSITIONS: Record<string, readonly string[]> = {
+  enquiry: ['confirmed'],
+  pending_confirmation: ['confirmed'],
+  pending_payment: ['confirmed', 'no_show'],
+  confirmed: ['checked_in', 'no_show'],
+  checked_in: ['checked_out'],
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const headersList = await headers()
-  const tenantId  = headersList.get('x-tenant-id') ?? ''
+  const tenantId = headersList.get('x-tenant-id') ?? ''
+  if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+
+  const role = await requireTenantRole(tenantId, STATUS_ROLES)
+  if (role instanceof NextResponse) return role
+
   const body = await request.json().catch(() => null)
   const parsed = schema.safeParse(body)
 
@@ -31,12 +54,14 @@ export async function PATCH(
   // Fetch current booking with guest + room + tenant context for emails
   const { data: booking } = await supabase
     .from('bookings')
-    .select(`
+    .select(
+      `
       id, status, room_id, occupant_id, check_in_date, check_out_date, final_amount, paid_amount, review_token,
       occupants(first_name, last_name, email),
       rooms(room_number, room_categories(name)),
       tenants(name, primary_color, logo_url, contact_phone, slug, business_type)
-    `)
+    `
+    )
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .single()
@@ -45,11 +70,17 @@ export async function PATCH(
     return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
   }
 
+  if (!(ALLOWED_TRANSITIONS[booking.status] ?? []).includes(nextStatus)) {
+    return NextResponse.json(
+      { error: `Invalid booking status transition: ${booking.status} -> ${nextStatus}` },
+      { status: 409 }
+    )
+  }
+
   const updatePayload: {
     status: typeof nextStatus
     actual_check_in?: string
     actual_check_out?: string
-    cancelled_at?: string
     review_token?: string
   } = { status: nextStatus }
 
@@ -65,17 +96,12 @@ export async function PATCH(
       reviewToken = crypto.randomUUID()
       updatePayload.review_token = reviewToken
     }
-  } else if (nextStatus === 'cancelled') {
-    updatePayload.cancelled_at = new Date().toISOString()
   } else if (nextStatus === 'confirmed' && !reviewToken) {
     reviewToken = crypto.randomUUID()
     updatePayload.review_token = reviewToken
   }
 
-  const { error } = await supabase
-    .from('bookings')
-    .update(updatePayload)
-    .eq('id', id)
+  const { error } = await supabase.from('bookings').update(updatePayload).eq('id', id)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -106,19 +132,25 @@ export async function PATCH(
   }
 
   // Send transactional email (non-blocking)
-  const occ    = Array.isArray(booking.occupants) ? booking.occupants[0] : booking.occupants
-  const room   = Array.isArray(booking.rooms) ? booking.rooms[0] : booking.rooms
-  const cat    = room ? (Array.isArray((room as any).room_categories) ? (room as any).room_categories[0] : (room as any).room_categories) : null
+  const occ = Array.isArray(booking.occupants) ? booking.occupants[0] : booking.occupants
+  const room = Array.isArray(booking.rooms) ? booking.rooms[0] : booking.rooms
+  const cat = room
+    ? Array.isArray((room as any).room_categories)
+      ? (room as any).room_categories[0]
+      : (room as any).room_categories
+    : null
   const tenant = Array.isArray(booking.tenants) ? booking.tenants[0] : booking.tenants
 
   if (occ?.email && tenant) {
-    const guestName    = `${occ.first_name} ${occ.last_name}`
-    const hostelName   = tenant.name
+    const guestName = `${occ.first_name} ${occ.last_name}`
+    const hostelName = tenant.name
     const primaryColor = tenant.primary_color ?? '#2563EB'
-    const logoUrl      = (tenant as any).logo_url ?? null
-    const formatDate   = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
-    const formatGHS    = (p: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(p / 100)
-    const bookingRef   = id.slice(0, 8).toUpperCase()
+    const logoUrl = (tenant as any).logo_url ?? null
+    const formatDate = (d: string) =>
+      new Date(d + 'T00:00:00').toLocaleDateString('en-GH', { dateStyle: 'long' })
+    const formatGHS = (p: number) =>
+      new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(p / 100)
+    const bookingRef = id.slice(0, 8).toUpperCase()
 
     let portalUrl: string | undefined
     if (reviewToken && tenant.slug && tenant.business_type) {
@@ -129,19 +161,19 @@ export async function PATCH(
 
     if (nextStatus === 'confirmed') {
       sendEmail({
-        to:         occ.email,
+        to: occ.email,
         senderName: hostelName,
-        subject:    `Booking Confirmed — ${hostelName}`,
-        html:    bookingConfirmationHtml({
+        subject: `Booking Confirmed — ${hostelName}`,
+        html: bookingConfirmationHtml({
           hostelName,
           primaryColor,
           logoUrl,
           guestName,
           bookingRef,
-          roomName:     cat?.name ?? room?.room_number ?? 'Your room',
-          checkInDate:  formatDate(booking.check_in_date),
+          roomName: cat?.name ?? room?.room_number ?? 'Your room',
+          checkInDate: formatDate(booking.check_in_date),
           checkOutDate: booking.check_out_date ? formatDate(booking.check_out_date) : 'TBD',
-          amountGHS:    formatGHS(booking.final_amount ?? 0),
+          amountGHS: formatGHS(booking.final_amount ?? 0),
           contactPhone: tenant.contact_phone ?? undefined,
           portalUrl,
         }),
@@ -150,18 +182,18 @@ export async function PATCH(
 
     if (nextStatus === 'checked_out') {
       sendEmail({
-        to:         occ.email,
+        to: occ.email,
         senderName: hostelName,
-        subject:    `Thanks for staying — ${hostelName}`,
-        html:    checkoutSummaryHtml({
+        subject: `Thanks for staying — ${hostelName}`,
+        html: checkoutSummaryHtml({
           hostelName,
           primaryColor,
           logoUrl,
           guestName,
           bookingRef,
-          roomName:     cat?.name ?? room?.room_number ?? 'Your room',
+          roomName: cat?.name ?? room?.room_number ?? 'Your room',
           checkOutDate: new Date().toLocaleDateString('en-GH', { dateStyle: 'long' }),
-          totalPaid:    formatGHS(booking.paid_amount ?? 0),
+          totalPaid: formatGHS(booking.paid_amount ?? 0),
           reviewUrl: portalUrl,
         }),
       }).catch(() => {})
@@ -169,10 +201,10 @@ export async function PATCH(
 
     if (nextStatus === 'checked_in') {
       sendEmail({
-        to:         occ.email,
+        to: occ.email,
         senderName: hostelName,
-        subject:    `You're checked in — ${hostelName}`,
-        html:    checkInConfirmationHtml({
+        subject: `You're checked in — ${hostelName}`,
+        html: checkInConfirmationHtml({
           hostelName,
           primaryColor,
           logoUrl,
@@ -182,78 +214,85 @@ export async function PATCH(
         }),
       }).catch(() => {})
     }
-
-    if (nextStatus === 'cancelled') {
-      sendEmail({
-        to:         occ.email,
-        senderName: hostelName,
-        subject:    `Booking cancelled — ${bookingRef}`,
-        html:    bookingCancelledHtml({ hostelName, primaryColor, logoUrl, guestName, bookingRef }),
-      }).catch(() => {})
-    }
   }
 
   // Guest SMS + owner/admin alert for every status transition (non-blocking)
   // — previously only the two email sends above existed, and nothing at all
   // reached the owner/admin on any transition.
   if (tenant) {
-    const guestName  = occ ? `${occ.first_name} ${occ.last_name}` : 'Guest'
+    const guestName = occ ? `${occ.first_name} ${occ.last_name}` : 'Guest'
     const hostelName = tenant.name
     const bookingRef = id.slice(0, 8).toUpperCase()
-    const roomLabel  = cat?.name ?? room?.room_number ?? ''
+    const roomLabel = cat?.name ?? room?.room_number ?? ''
 
     if (occ?.phone) {
       if (nextStatus === 'confirmed') {
         sendBookingConfirmation({
-          phone: occ.phone, firstName: occ.first_name, bookingRef,
-          roomNumber: roomLabel, checkInDate: booking.check_in_date,
-          hostelName, tenantId,
+          phone: occ.phone,
+          firstName: occ.first_name,
+          bookingRef,
+          roomNumber: roomLabel,
+          checkInDate: booking.check_in_date,
+          hostelName,
+          tenantId,
         }).catch(() => {})
       } else if (nextStatus === 'checked_in') {
-        sendCheckedInSms({ phone: occ.phone, firstName: occ.first_name, roomNumber: roomLabel, bookingRef, hostelName, tenantId }).catch(() => {})
+        sendCheckedInSms({
+          phone: occ.phone,
+          firstName: occ.first_name,
+          roomNumber: roomLabel,
+          bookingRef,
+          hostelName,
+          tenantId,
+        }).catch(() => {})
       } else if (nextStatus === 'checked_out') {
-        sendCheckedOutSms({ phone: occ.phone, firstName: occ.first_name, bookingRef, hostelName, tenantId }).catch(() => {})
-      } else if (nextStatus === 'cancelled') {
-        sendBookingCancelled({ phone: occ.phone, firstName: occ.first_name, bookingRef, hostelName, tenantId }).catch(() => {})
+        sendCheckedOutSms({
+          phone: occ.phone,
+          firstName: occ.first_name,
+          bookingRef,
+          hostelName,
+          tenantId,
+        }).catch(() => {})
       }
     }
 
-    if (['confirmed', 'checked_in', 'checked_out', 'cancelled'].includes(nextStatus)) {
+    if (['confirmed', 'checked_in', 'checked_out'].includes(nextStatus)) {
       const eventLabel = {
-        confirmed:   'Booking confirmed',
-        checked_in:  'Guest checked in',
+        confirmed: 'Booking confirmed',
+        checked_in: 'Guest checked in',
         checked_out: 'Guest checked out',
-        cancelled:   'Booking cancelled',
-      }[nextStatus as 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled']
+      }[nextStatus as 'confirmed' | 'checked_in' | 'checked_out']
       const eventLine = `${eventLabel}: ${guestName}${roomLabel ? ` — ${roomLabel}` : ''} (${bookingRef})`
 
-      getTenantAdminContacts(supabase, tenantId).then((admins) => {
-        if (admins.smsEnabled) {
-          for (const phone of admins.phones) {
-            sendAdminBookingAlert({ phone, hostelName, eventLine, tenantId }).catch(() => {})
+      getTenantAdminContacts(supabase, tenantId)
+        .then((admins) => {
+          if (admins.smsEnabled) {
+            for (const phone of admins.phones) {
+              sendAdminBookingAlert({ phone, hostelName, eventLine, tenantId }).catch(() => {})
+            }
           }
-        }
-        if (admins.emailEnabled) {
-          for (const email of admins.emails) {
-            sendEmail({
-              to:         email,
-              senderName: hostelName,
-              subject:    `${eventLabel} — ${bookingRef}`,
-              html:    adminAlertHtml({
-                hostelName,
-                primaryColor: tenant.primary_color ?? '#2563EB',
-                logoUrl:      (tenant as any).logo_url ?? null,
-                title:        eventLabel,
-                lines: [
-                  { label: 'Guest',   value: guestName },
-                  ...(roomLabel ? [{ label: 'Room', value: roomLabel }] : []),
-                  { label: 'Booking', value: bookingRef },
-                ],
-              }),
-            }).catch(() => {})
+          if (admins.emailEnabled) {
+            for (const email of admins.emails) {
+              sendEmail({
+                to: email,
+                senderName: hostelName,
+                subject: `${eventLabel} — ${bookingRef}`,
+                html: adminAlertHtml({
+                  hostelName,
+                  primaryColor: tenant.primary_color ?? '#2563EB',
+                  logoUrl: (tenant as any).logo_url ?? null,
+                  title: eventLabel,
+                  lines: [
+                    { label: 'Guest', value: guestName },
+                    ...(roomLabel ? [{ label: 'Room', value: roomLabel }] : []),
+                    { label: 'Booking', value: bookingRef },
+                  ],
+                }),
+              }).catch(() => {})
+            }
           }
-        }
-      }).catch(() => {})
+        })
+        .catch(() => {})
     }
   }
 
@@ -283,8 +322,9 @@ export async function PATCH(
       // This booking is now checked in — checked_in counts as active
       const totalActive = activeRemaining + 1
       roomStatus = totalActive >= capacity ? 'occupied' : 'reserved'
-    } else if (nextStatus === 'checked_out' || nextStatus === 'cancelled' || nextStatus === 'no_show') {
-      roomStatus = activeRemaining === 0 ? 'available' : activeRemaining >= capacity ? 'occupied' : 'reserved'
+    } else if (nextStatus === 'checked_out' || nextStatus === 'no_show') {
+      roomStatus =
+        activeRemaining === 0 ? 'available' : activeRemaining >= capacity ? 'occupied' : 'reserved'
     } else {
       roomStatus = activeRemaining >= capacity ? 'occupied' : 'reserved'
     }
@@ -308,14 +348,18 @@ export async function PATCH(
         .limit(1)
         .single()
 
-      const dueBy     = nextBooking?.check_in_date ?? null
+      const dueBy = nextBooking?.check_in_date ?? null
       const daysUntil = dueBy
         ? Math.ceil((new Date(dueBy).getTime() - Date.now()) / 86400000)
         : null
-      const priority  = daysUntil === null ? 'normal'
-        : daysUntil <= 0 ? 'urgent'
-        : daysUntil === 1 ? 'high'
-        : 'normal'
+      const priority =
+        daysUntil === null
+          ? 'normal'
+          : daysUntil <= 0
+            ? 'urgent'
+            : daysUntil === 1
+              ? 'high'
+              : 'normal'
 
       // Find a housekeeper (staff in housekeeping department)
       const { data: housekeeper } = await supabase
@@ -329,14 +373,14 @@ export async function PATCH(
 
       if (tenantId) {
         await supabase.from('housekeeping_tasks').insert({
-          tenant_id:   tenantId,
-          room_id:     booking.room_id,
-          booking_id:  id,
+          tenant_id: tenantId,
+          room_id: booking.room_id,
+          booking_id: id,
           assigned_to: housekeeper?.id ?? null,
-          status:      'pending',
+          status: 'pending',
           priority,
-          due_by:      dueBy,
-          source:      'checkout',
+          due_by: dueBy,
+          source: 'checkout',
         })
       }
     }

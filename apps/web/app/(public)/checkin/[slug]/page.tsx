@@ -5,9 +5,11 @@ import { SelfCheckinFlow } from '@/components/public/self-checkin-flow'
 
 export const dynamic = 'force-dynamic'
 
-export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> },
-): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}): Promise<Metadata> {
   const { slug } = await params
   const admin = createAdminClient()
   const { data } = await admin.from('tenants').select('name').eq('slug', slug).maybeSingle()
@@ -18,11 +20,7 @@ export async function generateMetadata(
   }
 }
 
-export default async function SelfCheckinPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
+export default async function SelfCheckinPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const admin = createAdminClient()
 
@@ -33,13 +31,6 @@ export default async function SelfCheckinPage({
     .maybeSingle()
 
   if (!tenant || !tenant.is_active) notFound()
-
-  // Free up rooms held by abandoned self-checkin submissions so the
-  // category list reflects what's actually bookable right now.
-  await admin.rpc('release_stale_self_checkin_reservations', {
-    p_tenant_id: tenant.id,
-    p_max_age_minutes: 30,
-  })
 
   // Categories with at least one free bed. Bed counts are derived from
   // room_occupancy_v (active bookings vs category capacity), not from
@@ -63,13 +54,26 @@ export default async function SelfCheckinPage({
     .select('id, block, floor')
     .eq('tenant_id', tenant.id)
 
-  const blockById = new Map((roomRows ?? []).map((r: any) => [r.id as string, { block: r.block as string | null, floor: r.floor as number | null }]))
+  const blockById = new Map(
+    (roomRows ?? []).map((r: any) => [
+      r.id as string,
+      { block: r.block as string | null, floor: r.floor as number | null },
+    ])
+  )
 
   const freeByCategory = new Map<string, number>()
-  const roomsByCategory = new Map<string, Array<{
-    room_id: string; room_number: string; block: string | null; floor: number | null;
-    capacity: number; beds_taken: number; free_beds: number
-  }>>()
+  const roomsByCategory = new Map<
+    string,
+    Array<{
+      room_id: string
+      room_number: string
+      block: string | null
+      floor: number | null
+      capacity: number
+      beds_taken: number
+      free_beds: number
+    }>
+  >()
 
   for (const row of (occupancy ?? []) as any[]) {
     const key = row.category_id as string
@@ -79,33 +83,34 @@ export default async function SelfCheckinPage({
     const meta = blockById.get(row.room_id as string)
     const arr = roomsByCategory.get(key) ?? []
     arr.push({
-      room_id:     row.room_id,
+      room_id: row.room_id,
       room_number: row.room_number,
-      block:       meta?.block ?? null,
-      floor:       meta?.floor ?? null,
-      capacity:    row.capacity,
-      beds_taken:  row.beds_taken,
-      free_beds:   row.free_beds,
+      block: meta?.block ?? null,
+      floor: meta?.floor ?? null,
+      capacity: row.capacity,
+      beds_taken: row.beds_taken,
+      free_beds: row.free_beds,
     })
     roomsByCategory.set(key, arr)
   }
   // sort rooms by (block, room_number) for stable dropdown order
   for (const arr of roomsByCategory.values()) {
-    arr.sort((a, b) =>
-      (a.block ?? '').localeCompare(b.block ?? '') ||
-      a.room_number.localeCompare(b.room_number, undefined, { numeric: true })
+    arr.sort(
+      (a, b) =>
+        (a.block ?? '').localeCompare(b.block ?? '') ||
+        a.room_number.localeCompare(b.room_number, undefined, { numeric: true })
     )
   }
 
   const categories = (cats ?? [])
     .map((c) => ({
-      id:          c.id,
-      name:        c.name,
+      id: c.id,
+      name: c.name,
       description: c.description as string | null,
-      base_rate:   c.base_rate as number,
-      rate_unit:   c.rate_unit as string,
-      available:   freeByCategory.get(c.id) ?? 0,
-      rooms:       roomsByCategory.get(c.id) ?? [],
+      base_rate: c.base_rate as number,
+      rate_unit: c.rate_unit as string,
+      available: freeByCategory.get(c.id) ?? 0,
+      rooms: roomsByCategory.get(c.id) ?? [],
     }))
     .filter((c) => c.available > 0)
 
@@ -123,21 +128,19 @@ export default async function SelfCheckinPage({
             />
           )}
           <div>
-            <h1 className="text-lg font-bold text-text-primary">{tenant.name}</h1>
-            <p className="text-xs text-text-secondary">Self check-in</p>
+            <h1 className="text-text-primary text-lg font-bold">{tenant.name}</h1>
+            <p className="text-text-secondary text-xs">Self check-in</p>
           </div>
         </div>
 
         {categories.length === 0 ? (
-          <div className="rounded-xl border border-border bg-surface p-6 text-center">
-            <p className="font-medium text-text-primary">No rooms available right now</p>
-            <p className="mt-1 text-sm text-text-secondary">
-              Please speak to the front desk.
-            </p>
+          <div className="border-border bg-surface rounded-xl border p-6 text-center">
+            <p className="text-text-primary font-medium">No rooms available right now</p>
+            <p className="text-text-secondary mt-1 text-sm">Please speak to the front desk.</p>
             {tenant.contact_phone && (
               <a
                 href={`tel:${tenant.contact_phone}`}
-                className="mt-3 inline-block text-sm font-medium text-brand"
+                className="text-brand mt-3 inline-block text-sm font-medium"
               >
                 Call {tenant.contact_phone}
               </a>
