@@ -19,11 +19,22 @@ export default async function RoomsPage() {
 
   const cards: RoomCardData[] = rooms.map((room) => {
     const category = Array.isArray(room.category) ? room.category[0] : room.category
-    const occupant = room.activeBooking
-      ? Array.isArray(room.activeBooking.occupant)
-        ? room.activeBooking.occupant[0]
-        : room.activeBooking.occupant
-      : null
+    const occupants = room.activeBookings.flatMap((booking) => {
+      const occupant = Array.isArray(booking.occupant)
+        ? booking.occupant[0]
+        : booking.occupant
+
+      if (!occupant) return []
+
+      const name = `${occupant.first_name ?? ''} ${occupant.last_name ?? ''}`.trim()
+
+      return [{
+        bookingId: booking.id,
+        name: name || 'Unnamed occupant',
+        phone: occupant.phone ?? null,
+      }]
+    }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+
     return {
       id:                  room.id,
       room_number:         room.room_number,
@@ -36,8 +47,7 @@ export default async function RoomsPage() {
       categoryName:        category?.name ?? null,
       categoryRate:        category?.base_rate ?? null,
       categoryRateUnit:    category?.rate_unit ?? null,
-      occupantName:        occupant ? `${occupant.first_name} ${occupant.last_name}` : null,
-      occupantPhone:       occupant?.phone ?? null,
+      occupants,
     }
   })
 

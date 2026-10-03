@@ -1,12 +1,18 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Trash2, Loader2, X, CheckSquare } from 'lucide-react'
+import { Trash2, Loader2, X, CheckSquare, Phone, UsersRound } from 'lucide-react'
 
 import { formatGHS } from '@/lib/utils'
 import { DeleteRoomButton } from '@/components/rooms/delete-room-button'
+
+interface RoomOccupantSummary {
+  bookingId: string
+  name:      string
+  phone:     string | null
+}
 
 export interface RoomCardData {
   id:                 string
@@ -20,8 +26,7 @@ export interface RoomCardData {
   categoryName:       string | null
   categoryRate:       number | null
   categoryRateUnit:   string | null
-  occupantName:       string | null
-  occupantPhone:      string | null
+  occupants:          RoomOccupantSummary[]
 }
 
 const ROOM_STATUS_STYLES: Record<string, string> = {
@@ -37,6 +42,13 @@ const HK_STATUS_STYLES: Record<string, string> = {
   dirty:       'text-warning',
   inspecting:  'text-info',
   out_of_order:'text-danger',
+}
+
+function occupantInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
 export function RoomsGrid({ rooms }: { rooms: RoomCardData[] }) {
@@ -89,48 +101,43 @@ export function RoomsGrid({ rooms }: { rooms: RoomCardData[] }) {
     }
   }
 
-  const selectionBar = useMemo(() => {
-    if (!selectMode) {
-      return (
-        <button
-          type="button"
-          onClick={() => setSelectMode(true)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
-        >
-          <CheckSquare className="h-4 w-4" />
-          Select
-        </button>
-      )
-    }
-    return (
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={toggleAll}
-          className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
-        >
-          {allSelected ? 'Clear all' : 'Select all'}
-        </button>
-        <button
-          type="button"
-          onClick={bulkDelete}
-          disabled={busy || selected.size === 0}
-          className="inline-flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-          Delete{selected.size > 0 ? ` (${selected.size})` : ''}
-        </button>
-        <button
-          type="button"
-          onClick={exitSelect}
-          className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
-        >
-          <X className="h-4 w-4" />
-          Cancel
-        </button>
-      </div>
-    )
-  }, [selectMode, allSelected, busy, selected.size])
+  const selectionBar = !selectMode ? (
+    <button
+      type="button"
+      onClick={() => setSelectMode(true)}
+      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
+    >
+      <CheckSquare className="h-4 w-4" />
+      Select
+    </button>
+  ) : (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={toggleAll}
+        className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
+      >
+        {allSelected ? 'Clear all' : 'Select all'}
+      </button>
+      <button
+        type="button"
+        onClick={bulkDelete}
+        disabled={busy || selected.size === 0}
+        className="inline-flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+      >
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        Delete{selected.size > 0 ? ` (${selected.size})` : ''}
+      </button>
+      <button
+        type="button"
+        onClick={exitSelect}
+        className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
+      >
+        <X className="h-4 w-4" />
+        Cancel
+      </button>
+    </div>
+  )
 
   return (
     <div className="space-y-3">
@@ -152,7 +159,7 @@ export function RoomsGrid({ rooms }: { rooms: RoomCardData[] }) {
           const isSel = selected.has(room.id)
           const card = (
             <div
-              className={`group relative flex flex-col rounded-xl border bg-surface p-4 transition-all ${
+              className={`group relative flex h-full flex-col rounded-xl border bg-surface p-4 transition-all ${
                 selectMode
                   ? isSel
                     ? 'border-brand ring-2 ring-brand/30'
@@ -202,16 +209,49 @@ export function RoomsGrid({ rooms }: { rooms: RoomCardData[] }) {
                 <p className="mt-2 text-xs font-medium text-text-secondary">{room.categoryName}</p>
               )}
 
-              {room.occupantName ? (
-                <div className="mt-3 rounded-lg bg-surface-sunken px-3 py-2">
-                  <p className="truncate text-xs font-medium text-text-primary">{room.occupantName}</p>
-                  <p className="text-[11px] text-text-tertiary">{room.occupantPhone}</p>
+              <div className="mt-3 overflow-hidden rounded-lg border border-border bg-surface-sunken/60">
+                <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+                    <UsersRound className="h-3.5 w-3.5" />
+                    Occupants
+                  </span>
+                  <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold tabular-nums text-text-tertiary ring-1 ring-inset ring-border">
+                    {room.occupants.length} of {room.capacity}
+                  </span>
                 </div>
-              ) : (
-                <div className="mt-3 flex-1" />
-              )}
 
-              <div className="mt-3 flex items-center justify-between">
+                {room.occupants.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {room.occupants.map((occupant) => (
+                      <div key={occupant.bookingId} className="flex items-center gap-2.5 px-3 py-2.5">
+                        <span
+                          aria-hidden="true"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-[10px] font-bold tracking-wide text-brand ring-1 ring-inset ring-brand/10"
+                        >
+                          {occupantInitials(occupant.name)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-text-primary">
+                            {occupant.name}
+                          </p>
+                          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-text-tertiary">
+                            <Phone className="h-3 w-3 shrink-0" />
+                            <span className="truncate font-mono">
+                              {occupant.phone || 'No phone number'}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex min-h-14 items-center justify-center px-3 py-3 text-center">
+                    <p className="text-[11px] text-text-tertiary">No occupants assigned</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-auto flex items-center justify-between pt-3">
                 {room.categoryRate != null ? (
                   <p className="currency-amount text-xs font-medium text-text-secondary">
                     {formatGHS(room.categoryRate)}/{room.categoryRateUnit}
@@ -226,11 +266,11 @@ export function RoomsGrid({ rooms }: { rooms: RoomCardData[] }) {
 
           // In select mode the whole card toggles selection; otherwise it links.
           return selectMode ? (
-            <button key={room.id} type="button" onClick={() => toggle(room.id)} className="text-left">
+            <button key={room.id} type="button" onClick={() => toggle(room.id)} className="h-full text-left">
               {card}
             </button>
           ) : (
-            <Link key={room.id} href={`/rooms/${room.id}`}>
+            <Link key={room.id} href={`/rooms/${room.id}`} className="h-full">
               {card}
             </Link>
           )
