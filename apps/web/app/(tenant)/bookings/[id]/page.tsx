@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { ChevronLeft } from 'lucide-react'
 
 import { getBookingById } from '@/lib/data/bookings'
@@ -8,6 +9,7 @@ import { formatGHS, formatDate, initials } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookingActions } from '@/components/bookings/booking-actions'
 import { RecordPaymentForm } from '@/components/bookings/record-payment-form'
+import { ReversePaymentButton } from '@/components/bookings/reverse-payment-button'
 import { PaymentPlanCard } from '@/components/bookings/payment-plan-card'
 import { InvoicePdfButton } from '@/components/bookings/invoice-pdf-button'
 import { LeasePdfButton } from '@/components/bookings/lease-pdf-button'
@@ -42,6 +44,12 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   ])
 
   if (!booking) notFound()
+
+  // Reversing a payment is owner/manager-only — matches the same plain
+  // x-tenant-role read already used for canEditBank in settings/page.tsx
+  // (UI-only gating; the reverse API route enforces the real check).
+  const callerRole = (await headers()).get('x-tenant-role')
+  const canManagePayments = callerRole === 'owner' || callerRole === 'manager'
 
   // Fetch payment plan (if any)
   const supabase = await createTenantAdminClientFromHeaders()
@@ -281,9 +289,14 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                           <p className="text-xs text-text-tertiary">{formatDate(p.paid_at)}</p>
                         )}
                       </div>
-                      <p className="currency-amount text-sm font-semibold text-success">
-                        +{formatGHS(p.amount)}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <p className="currency-amount text-sm font-semibold text-success">
+                          +{formatGHS(p.amount)}
+                        </p>
+                        {canManagePayments && (
+                          <ReversePaymentButton bookingId={id} paymentId={p.id} amount={p.amount} />
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

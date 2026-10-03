@@ -10,11 +10,20 @@ import { PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from '@/lib/payments/methods'
 import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
 
 const schema = z.object({
-  amount:    z.number().int().min(1),
-  method:    z.enum(PAYMENT_METHODS),
-  reference: z.string().max(100).optional().nullable(),
-  notes:     z.string().max(300).optional().nullable(),
+  amount:           z.number().int().min(1),
+  method:           z.enum(PAYMENT_METHODS),
+  reference:        z.string().max(100).optional().nullable(),
+  notes:            z.string().max(300).optional().nullable(),
+  confirmDuplicate: z.boolean().optional(),
 })
+
+// A manual entry has no reference to dedupe on (unlike online payments,
+// which are protected by booking_payments.paystack_reference being unique)
+// — this is the window within which an identical amount+method success on
+// the same booking is treated as a likely accidental re-submission (e.g. a
+// slow/failed response the staff member didn't see, prompting a retry)
+// rather than a genuine second payment.
+const DUPLICATE_WINDOW_MS = 3 * 60 * 1000
 
 export async function POST(
   request: NextRequest,
@@ -57,6 +66,33 @@ export async function POST(
 
   if (booking.status === 'cancelled') {
     return NextResponse.json({ error: 'Cannot record payment on a cancelled booking.' }, { status: 409 })
+  }
+
+  if (!parsed.data.confirmDuplicate) {
+    const since = new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString()
+    const { data: recent } = await supabase
+      .from('booking_payments')
+      .select('id, paid_at')
+      .eq('booking_id', id)
+      .eq('amount', parsed.data.amount)
+      .eq('method', parsed.data.method)
+      .eq('status', 'success')
+      .gte('paid_at', since)
+      .order('paid_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (recent?.paid_at) {
+      const secondsAgo = Math.max(1, Math.round((Date.now() - new Date(recent.paid_at).getTime()) / 1000))
+      const methodLabel = PAYMENT_METHOD_LABEL[parsed.data.method] ?? parsed.data.method
+      return NextResponse.json(
+        {
+          error: 'possible_duplicate',
+          message: `A ${methodLabel} payment of ${formatGHS(parsed.data.amount)} was already recorded ${secondsAgo}s ago for this booking. Record this one anyway?`,
+        },
+        { status: 409 },
+      )
+    }
   }
 
   const { data, error } = await supabase

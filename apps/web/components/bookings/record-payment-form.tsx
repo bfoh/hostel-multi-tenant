@@ -69,22 +69,34 @@ export function RecordPaymentForm({ bookingId, balance, paystackEnabled = false 
     defaultValues: { method: 'momo_mtn', amount: balance / 100 },
   })
 
-  async function submitManual(values: ManualValues) {
+  async function submitManual(values: ManualValues, confirmDuplicate = false) {
     setManualError(null)
-    const res = await fetch(`/api/bookings/${bookingId}/payments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...values, amount: Math.round(values.amount * 100) }),
-    })
-    if (!res.ok) {
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...values, amount: Math.round(values.amount * 100), confirmDuplicate }),
+      })
       const d = await res.json().catch(() => ({}))
-      setManualError(d.error ?? 'Recording failed.')
-      return
+      if (!res.ok) {
+        if (d.error === 'possible_duplicate') {
+          if (confirm(`${d.message}\n\nClick OK to record it anyway, or Cancel to stop.`)) {
+            return submitManual(values, true)
+          }
+          return
+        }
+        setManualError(typeof d.error === 'string' ? d.error : 'Recording failed.')
+        return
+      }
+      setManualSuccess(true)
+      manual.reset()
+      router.refresh()
+      setTimeout(() => setManualSuccess(false), 3000)
+    } catch {
+      setManualError(
+        'Network error — the payment may or may not have been recorded. Check the payment history below before retrying, to avoid recording it twice.',
+      )
     }
-    setManualSuccess(true)
-    manual.reset()
-    router.refresh()
-    setTimeout(() => setManualSuccess(false), 3000)
   }
 
   /* ── Pay link ── */
@@ -404,7 +416,7 @@ export function RecordPaymentForm({ bookingId, balance, paystackEnabled = false 
 
       {/* ── Manual tab ── */}
       {tab === 'manual' && (
-        <form onSubmit={manual.handleSubmit(submitManual)} className="space-y-3" noValidate>
+        <form onSubmit={manual.handleSubmit((values) => submitManual(values))} className="space-y-3" noValidate>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-text-secondary">Amount (GH₵)</label>
