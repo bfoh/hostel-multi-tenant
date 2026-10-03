@@ -209,7 +209,7 @@ export function MatchingDashboard({ rooms, bookings, profiles, matchingEnabled }
 
   // Handle reassigning room
   async function executeReassignment() {
-    if (!selectedBookingId || !targetRoomId) return
+    if (!selectedBookingId || !targetRoomId || !selectedBooking) return
     setErrorMsg(null)
 
     const res = await fetch(`/api/bookings/${selectedBookingId}/reassign`, {
@@ -218,6 +218,8 @@ export function MatchingDashboard({ rooms, bookings, profiles, matchingEnabled }
       body: JSON.stringify({
         room_id: targetRoomId,
         reason: reassignReason,
+        expected_room_id: selectedBooking.room_id,
+        expected_status: selectedBooking.status,
       })
     })
 

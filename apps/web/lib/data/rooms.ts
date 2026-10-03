@@ -126,6 +126,7 @@ export async function getRoomsWithCurrentBooking() {
   if (error) return []
 
   const ACTIVE_BOOKING_STATUSES = new Set([
+    'pending_payment',
     'pending_confirmation',
     'confirmed',
     'checked_in',

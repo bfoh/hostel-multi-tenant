@@ -9,6 +9,7 @@ import { sendStayExtension } from '@/lib/sms'
 import { sendEmail, stayExtensionHtml } from '@/lib/email'
 import { formatGHS, formatDate } from '@/lib/utils'
 import { PAYMENT_METHODS } from '@/lib/payments/methods'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 /**
  * POST /api/bookings/[id]/extend-stay — hotel-only.
@@ -53,6 +54,9 @@ export async function POST(
   const h = await headers()
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const role = await requireTenantRole(tenantId, ['owner', 'manager', 'receptionist'])
+  if (role instanceof NextResponse) return role
 
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
@@ -130,7 +134,13 @@ export async function POST(
       check_out_date: newCheckOut,
       total_amount:   newTotal,
       ...(parsed.data.new_room_id && parsed.data.new_room_id !== booking.room_id
-        ? { room_id: parsed.data.new_room_id }
+        ? {
+            room_id: parsed.data.new_room_id,
+            room_assignment_source: 'stay_extension',
+            room_assignment_locked: true,
+            room_assigned_by: role.userId,
+            room_assigned_at: new Date().toISOString(),
+          }
         : {}),
     })
     .eq('id', id)

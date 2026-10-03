@@ -24,17 +24,22 @@ export function RoomTransferButton({
   const [reason, setReason]   = useState('')
   const [error, setError]     = useState<string | null>(null)
 
-  const canTransfer = ['confirmed', 'checked_in'].includes(bookingStatus)
+  const canTransfer = [
+    'pending_confirmation',
+    'pending_payment',
+    'confirmed',
+    'checked_in',
+  ].includes(bookingStatus)
 
   useEffect(() => {
     if (!open || rooms.length > 0) return
     setLoading(true)
-    fetch('/api/transfer/available-rooms')
+    fetch(`/api/transfer/available-rooms?booking_id=${encodeURIComponent(bookingId)}`)
       .then((r) => r.json())
       .then((data) => setRooms((Array.isArray(data) ? data : []).filter((r: Room) => r.id !== currentRoomId)))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [open, currentRoomId, rooms.length])
+  }, [open, bookingId, currentRoomId, rooms.length])
 
   async function transfer() {
     if (!selectedRoom) { setError('Select a room'); return }
@@ -43,7 +48,12 @@ export function RoomTransferButton({
       const res = await fetch(`/api/bookings/${bookingId}/transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_room_id: selectedRoom, reason: reason || undefined }),
+        body: JSON.stringify({
+          new_room_id: selectedRoom,
+          reason: reason || undefined,
+          expected_room_id: currentRoomId,
+          expected_status: bookingStatus,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Transfer failed')
@@ -118,7 +128,7 @@ export function RoomTransferButton({
                   </div>
 
                   <p className="rounded-lg bg-warning-subtle px-3 py-2 text-xs text-warning-fg">
-                    The booking will be updated to the new room. The rate will be adjusted to match the new room's category rate.
+                    This becomes the booking&apos;s authoritative room assignment. The agreed booking rate will not change.
                   </p>
 
                   {error && <p className="text-xs text-danger">{error}</p>}

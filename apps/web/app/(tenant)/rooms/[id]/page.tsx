@@ -18,6 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 async function getRoomBookings(roomId: string) {
   const supabase = await createTenantAdminClientFromHeaders()
+  const today = new Date().toISOString().slice(0, 10)
   const { data } = await supabase
     .from('bookings')
     .select(`
@@ -26,13 +27,15 @@ async function getRoomBookings(roomId: string) {
       occupant:occupants(first_name, last_name, phone, institution)
     `)
     .eq('room_id', roomId)
-    .order('check_in_date', { ascending: false })
-    .limit(10)
+    .in('status', ['pending_confirmation', 'pending_payment', 'confirmed', 'checked_in'])
+    .gt('check_out_date', today)
+    .order('check_in_date', { ascending: true })
 
   return data ?? []
 }
 
 const STATUS_STYLES: Record<string, string> = {
+  pending_confirmation: 'bg-warning-subtle text-warning-fg border-warning/20',
   pending_payment: 'bg-warning-subtle text-warning-fg border-warning/20',
   confirmed:       'bg-brand-subtle text-brand border-brand/20',
   checked_in:      'bg-success-subtle text-success border-success/20',
@@ -172,7 +175,7 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
           )}
         </div>
 
-        {/* ── Booking history + Inspections ──────────────────── */}
+        {/* ── Current room assignments + Inspections ─────────── */}
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader><CardTitle>Inspections</CardTitle></CardHeader>
@@ -182,7 +185,7 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle>Booking History</CardTitle>
+              <CardTitle>Currently Assigned Occupants</CardTitle>
               <Link
                 href={`/bookings/new?room=${id}`}
                 className="text-xs font-medium text-brand hover:text-brand-hover transition-colors"
@@ -194,7 +197,7 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
               {bookings.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
                   <BedDouble className="h-8 w-8 text-text-disabled" />
-                  <p className="text-sm text-text-secondary">No bookings for this room yet</p>
+                  <p className="text-sm text-text-secondary">No occupants are currently assigned to this room</p>
                 </div>
               ) : (
                 <div className="divide-y divide-border">

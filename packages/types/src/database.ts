@@ -647,6 +647,10 @@ export type Database = {
           cancellation_reason: string | null
           cancellation_source: string | null
           cancelled_by: string | null
+          room_assignment_source: 'legacy' | 'booking' | 'staff_reassignment' | 'stay_extension'
+          room_assignment_locked: boolean
+          room_assigned_by: string | null
+          room_assigned_at: string
           created_by: string | null
           vat_amount: number | null
           nhil_amount: number | null
@@ -686,6 +690,10 @@ export type Database = {
           cancellation_reason?: string | null
           cancellation_source?: string | null
           cancelled_by?: string | null
+          room_assignment_source?: 'legacy' | 'booking' | 'staff_reassignment' | 'stay_extension'
+          room_assignment_locked?: boolean
+          room_assigned_by?: string | null
+          room_assigned_at?: string
           created_by?: string | null
           vat_amount?: number | null
           nhil_amount?: number | null
@@ -718,6 +726,10 @@ export type Database = {
           cancellation_reason?: string | null
           cancellation_source?: string | null
           cancelled_by?: string | null
+          room_assignment_source?: 'legacy' | 'booking' | 'staff_reassignment' | 'stay_extension'
+          room_assignment_locked?: boolean
+          room_assigned_by?: string | null
+          room_assigned_at?: string
           vat_amount?: number | null
           nhil_amount?: number | null
           getfund_amount?: number | null
