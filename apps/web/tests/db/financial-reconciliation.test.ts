@@ -223,6 +223,7 @@ beforeAll(async () => {
       '20240001000143_booking_charge_journal_source.sql',
       '20240001000144_financial_reconciliation.sql',
       '20240001000145_canonical_financial_reporting.sql',
+      '20240001000146_payment_idempotency_and_reconciliation.sql',
     ],
   })
   client = db.client
@@ -286,7 +287,7 @@ describe('financial reconciliation', () => {
     await expect(client.query(
       `select record_booking_payment($1, $2, 60000, 'cash', null, 'Retry', $3, true)`,
       [tenantId, bookingId, actorId],
-    )).rejects.toThrow(/matching payment was recorded/i)
+    )).rejects.toThrow(/matching payment (was recorded|already exists)/i)
 
     await expect(client.query(
       `select record_booking_payment($1, $2, 50000, 'cash', null, null, $3, false)`,
@@ -826,5 +827,105 @@ describe('financial reconciliation', () => {
     )
     expect(canonicalTotals.rows[0].summary.mtd_recognized).toBe(225_000)
     expect(canonicalTotals.rows[0].platform_total).toBe(235_000)
+  })
+
+  it('makes manual payment retries idempotent and rejects fresh duplicate attempts', async () => {
+    const retryBookingId = randomUUID()
+    const idempotencyKey = randomUUID()
+    await client.query(
+      `insert into bookings (
+         id, tenant_id, booking_ref, occupant_id, room_id, status, source,
+         check_in_date, check_out_date, rate_per_unit, total_amount
+       ) values (
+         $1, $2, 'FIN-IDEM', $3, $4, 'pending_payment', 'walk_in',
+         current_date + 40, current_date + 70, 200000, 200000
+       )`,
+      [retryBookingId, tenantId, occupantId, roomId],
+    )
+
+    const first = await client.query(
+      `select record_booking_payment_idempotent(
+         $1, $2, 80000, 'momo_mtn', null, 'First request', $3, false, $4
+       ) as result`,
+      [tenantId, retryBookingId, actorId, idempotencyKey],
+    )
+    const retry = await client.query(
+      `select record_booking_payment_idempotent(
+         $1, $2, 80000, 'momo_mtn', null, 'Transport retry', $3, false, $4
+       ) as result`,
+      [tenantId, retryBookingId, actorId, idempotencyKey],
+    )
+
+    expect(first.rows[0].result).toMatchObject({ recorded: true, idempotent: true })
+    expect(retry.rows[0].result).toMatchObject({
+      id: first.rows[0].result.id,
+      recorded: false,
+      idempotent: true,
+    })
+
+    await expect(client.query(
+      `select record_booking_payment_idempotent(
+         $1, $2, 80000, 'momo_mtn', null, 'Fresh duplicate', $3, false, $4
+       )`,
+      [tenantId, retryBookingId, actorId, randomUUID()],
+    )).rejects.toThrow(/matching payment already exists/i)
+
+    // The table trigger/index must protect direct and future writer paths too,
+    // not only callers that remember to use the canonical RPC.
+    await expect(client.query(
+      `insert into booking_payments (
+         tenant_id, booking_id, amount, method, status, paid_at, received_by
+       ) values ($1, $2, 80000, 'momo_mtn', 'success', now(), $3)`,
+      [tenantId, retryBookingId, actorId],
+    )).rejects.toThrow(/matching unreferenced payment already exists/i)
+
+    const genuineSecond = await client.query(
+      `select record_booking_payment_idempotent(
+         $1, $2, 80000, 'momo_mtn', 'MOMO-SECOND-001', 'Separate transfer', $3, false, $4
+       ) as result`,
+      [tenantId, retryBookingId, actorId, randomUUID()],
+    )
+    expect(genuineSecond.rows[0].result.recorded).toBe(true)
+
+    const count = await client.query(
+      `select count(*)::int as count
+         from booking_payments
+        where booking_id = $1 and status = 'success'`,
+      [retryBookingId],
+    )
+    expect(count.rows[0].count).toBe(2)
+  })
+
+  it('traces unapplied receipts to their exact booking and reason', async () => {
+    const cancelledBookingId = randomUUID()
+    await client.query(
+      `insert into bookings (
+         id, tenant_id, booking_ref, occupant_id, room_id, status, source,
+         check_in_date, check_out_date, rate_per_unit, total_amount
+       ) values (
+         $1, $2, 'FIN-HELD', $3, $4, 'cancelled', 'walk_in',
+         current_date + 80, current_date + 90, 29000, 29000
+       )`,
+      [cancelledBookingId, tenantId, occupantId, roomId],
+    )
+    await client.query(
+      `insert into booking_payments (
+         tenant_id, booking_id, amount, method, reference, status, paid_at, received_by
+       ) values ($1, $2, 29000, 'cash', 'HELD-29000', 'success', now(), $3)`,
+      [tenantId, cancelledBookingId, actorId],
+    )
+
+    const result = await client.query(
+      `select * from get_unapplied_booking_receipts($1) where booking_id = $2`,
+      [tenantId, cancelledBookingId],
+    )
+    expect(result.rows[0]).toMatchObject({
+      booking_ref: 'FIN-HELD',
+      booking_status: 'cancelled',
+      total_receipts: '29000',
+      invoice_received: '0',
+      unapplied_amount: '29000',
+      reason: 'cancelled_booking_receipt',
+    })
   })
 })

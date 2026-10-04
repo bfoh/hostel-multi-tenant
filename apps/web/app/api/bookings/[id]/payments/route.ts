@@ -10,20 +10,12 @@ import { PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from '@/lib/payments/methods'
 import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
 
 const schema = z.object({
-  amount:           z.number().int().min(1),
-  method:           z.enum(PAYMENT_METHODS),
-  reference:        z.string().max(100).optional().nullable(),
-  notes:            z.string().max(300).optional().nullable(),
-  confirmDuplicate: z.boolean().optional(),
+  amount:          z.number().int().min(1),
+  method:          z.enum(PAYMENT_METHODS),
+  reference:       z.string().max(100).optional().nullable(),
+  notes:           z.string().max(300).optional().nullable(),
+  idempotency_key: z.string().min(16).max(200),
 })
-
-// A manual entry has no reference to dedupe on (unlike online payments,
-// which are protected by booking_payments.paystack_reference being unique)
-// — this is the window within which an identical amount+method success on
-// the same booking is treated as a likely accidental re-submission (e.g. a
-// slow/failed response the staff member didn't see, prompting a retry)
-// rather than a genuine second payment.
-const DUPLICATE_WINDOW_MS = 3 * 60 * 1000
 
 export async function POST(
   request: NextRequest,
@@ -64,38 +56,7 @@ export async function POST(
     return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
   }
 
-  if (booking.status === 'cancelled') {
-    return NextResponse.json({ error: 'Cannot record payment on a cancelled booking.' }, { status: 409 })
-  }
-
-  if (!parsed.data.confirmDuplicate) {
-    const since = new Date(Date.now() - DUPLICATE_WINDOW_MS).toISOString()
-    const { data: recent } = await supabase
-      .from('booking_payments')
-      .select('id, paid_at')
-      .eq('booking_id', id)
-      .eq('amount', parsed.data.amount)
-      .eq('method', parsed.data.method)
-      .eq('status', 'success')
-      .gte('paid_at', since)
-      .order('paid_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (recent?.paid_at) {
-      const secondsAgo = Math.max(1, Math.round((Date.now() - new Date(recent.paid_at).getTime()) / 1000))
-      const methodLabel = PAYMENT_METHOD_LABEL[parsed.data.method] ?? parsed.data.method
-      return NextResponse.json(
-        {
-          error: 'possible_duplicate',
-          message: `A ${methodLabel} payment of ${formatGHS(parsed.data.amount)} was already recorded ${secondsAgo}s ago for this booking. Record this one anyway?`,
-        },
-        { status: 409 },
-      )
-    }
-  }
-
-  const { data, error } = await (supabase as any).rpc('record_booking_payment', {
+  const { data, error } = await (supabase as any).rpc('record_booking_payment_idempotent', {
     p_tenant_id: tenantId,
     p_booking_id: id,
     p_amount: parsed.data.amount,
@@ -104,16 +65,24 @@ export async function POST(
     p_notes: parsed.data.notes ?? null,
     p_actor_id: user.id,
     p_allow_overpayment: false,
-    p_allow_duplicate: parsed.data.confirmDuplicate ?? false,
+    p_idempotency_key: parsed.data.idempotency_key,
   })
 
   if (error) {
     const duplicate = error.code === '23505'
     const conflict = duplicate || error.code === '22003' || error.code === '23514'
     return NextResponse.json({
-      error: duplicate ? 'possible_duplicate' : error.message,
-      ...(duplicate ? { message: error.message } : {}),
+      error: duplicate ? 'duplicate_payment' : error.message,
+      ...(duplicate ? {
+        message: `${error.message}. If this is a separate genuine payment, enter its unique transaction reference.`,
+      } : {}),
     }, { status: conflict ? 409 : 500 })
+  }
+
+  // A transport retry receives the original result. Do not send a second
+  // receipt or admin alert for an operation that did not create a new row.
+  if (data?.recorded === false) {
+    return NextResponse.json(data, { status: 200 })
   }
 
   // Fire SMS + email receipt — non-blocking

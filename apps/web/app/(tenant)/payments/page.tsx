@@ -4,7 +4,11 @@ import { headers } from 'next/headers'
 import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { formatGHS, formatDate } from '@/lib/utils'
 import { ReversePaymentButton } from '@/components/bookings/reverse-payment-button'
-import { getBookingFinancialSummary } from '@/lib/data/booking-finance'
+import {
+  getBookingFinancialSummary,
+  getBookingRevenueBreakdown,
+  getUnappliedBookingReceipts,
+} from '@/lib/data/booking-finance'
 import { ListPagination } from '@/components/ui/list-pagination'
 import { normalisePage, paginateRows } from '@/lib/data/listing'
 
@@ -111,25 +115,58 @@ async function getPayments(status: string, search: string, requestedPage: number
 export default async function PaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string; page?: string }>
+  searchParams: Promise<{ status?: string; q?: string; page?: string; period?: string }>
 }) {
-  const { status = 'all', q = '', page: pageParam } = await searchParams
+  const { status = 'all', q = '', page: pageParam, period: requestedPeriod } = await searchParams
+  const period = requestedPeriod === 'mtd' || requestedPeriod === 'all' ? requestedPeriod : 'ytd'
   const headersList = await headers()
   const tenantId = headersList.get('x-tenant-id') ?? ''
   const callerRole = headersList.get('x-tenant-role')
   const canManage = callerRole === 'owner' || callerRole === 'manager'
-  const [result, summary] = await Promise.all([
+  const [result, summary, unappliedRows, allTimeRevenueRows] = await Promise.all([
     getPayments(status, q, Number.parseInt(pageParam ?? '1', 10), tenantId),
     getBookingFinancialSummary(tenantId),
+    getUnappliedBookingReceipts(tenantId),
+    period === 'all'
+      ? getBookingRevenueBreakdown(tenantId, '1970-01-01T00:00:00.000Z', new Date(Date.now() + 86_400_000))
+      : Promise.resolve([]),
   ])
   const { rows: payments, total, page, pageSize, duplicateCount } = result
+  const periodLabel = period === 'mtd' ? 'Month to date' : period === 'ytd' ? 'Year to date' : 'All time'
+  const periodReceived = period === 'mtd'
+    ? summary.mtd_received
+    : period === 'ytd' ? summary.ytd_received : summary.total_receipts
+  const periodRecognized = period === 'mtd'
+    ? summary.mtd_recognized
+    : period === 'ytd'
+      ? summary.ytd_recognized
+      : allTimeRevenueRows.reduce((sum, row) => sum + row.total_amount, 0)
+  const periodVariance = periodReceived - periodRecognized
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-text-primary">Payments</h1>
-        <p className="mt-0.5 text-sm text-text-secondary">All payment transactions across bookings</p>
+        <p className="mt-0.5 text-sm text-text-secondary">Receipts, recognized revenue, and booking-level reconciliation</p>
+      </div>
+
+      <div className="flex w-fit rounded-lg border border-border bg-surface-sunken p-1">
+        {([
+          ['mtd', 'Month to date'],
+          ['ytd', 'Year to date'],
+          ['all', 'All time'],
+        ] as const).map(([value, label]) => (
+          <Link
+            key={value}
+            href={`/payments?period=${value}${status !== 'all' ? `&status=${status}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              period === value ? 'bg-brand text-brand-fg' : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
       </div>
 
       {duplicateCount > 0 && (
@@ -140,15 +177,29 @@ export default async function PaymentsPage({
         </div>
       )}
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Summary cards: every period-sensitive figure uses the same window. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-xs text-text-tertiary">Total booking receipts</p>
-          <p className="mt-1 font-mono text-xl font-bold text-success">{formatGHS(summary.total_receipts)}</p>
+          <p className="text-xs text-text-tertiary">Cash received · {periodLabel}</p>
+          <p className="mt-1 font-mono text-xl font-bold text-success">{formatGHS(periodReceived)}</p>
           <p className="mt-0.5 text-xs text-text-secondary">
-            {summary.room_payment_count + summary.charge_payment_count} transactions ·{' '}
-            {formatGHS(summary.room_payments_received)} room ·{' '}
-            {formatGHS(summary.charge_payments_received)} folio
+            Successful room and folio receipts in this period
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs text-text-tertiary">Recognized revenue · {periodLabel}</p>
+          <p className="mt-1 font-mono text-xl font-bold text-text-primary">{formatGHS(periodRecognized)}</p>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            Net revenue posted to the general ledger
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs text-text-tertiary">Cash / revenue variance · {periodLabel}</p>
+          <p className={`mt-1 font-mono text-xl font-bold ${periodVariance === 0 ? 'text-success' : 'text-warning-fg'}`}>
+            {formatGHS(periodVariance)}
+          </p>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            Timing, cancellation reclassification, or unapplied receipts
           </p>
         </div>
         <div className="rounded-xl border border-border bg-surface p-4">
@@ -156,6 +207,13 @@ export default async function PaymentsPage({
           <p className="mt-1 font-mono text-xl font-bold text-warning-fg">{formatGHS(summary.pending_payments)}</p>
           <p className="mt-0.5 text-xs text-text-secondary">
             {summary.pending_payment_count} transactions
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs text-text-tertiary">Unapplied / held · All time</p>
+          <p className="mt-1 font-mono text-xl font-bold text-danger">{formatGHS(summary.unapplied_receipts)}</p>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            {unappliedRows.length} booking{unappliedRows.length === 1 ? '' : 's'} explain the receipt/invoice gap
           </p>
         </div>
         <div className="rounded-xl border border-border bg-surface p-4">
@@ -168,13 +226,60 @@ export default async function PaymentsPage({
         </div>
       </div>
 
+      {unappliedRows.length > 0 && (
+        <details className="rounded-xl border border-danger/20 bg-danger-subtle/40 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-text-primary">
+            Trace {formatGHS(summary.unapplied_receipts)} to {unappliedRows.length} booking{unappliedRows.length === 1 ? '' : 's'}
+          </summary>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-border bg-surface">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-surface-sunken text-left text-xs uppercase tracking-wide text-text-tertiary">
+                <tr>
+                  <th className="px-3 py-2">Booking</th>
+                  <th className="px-3 py-2">Occupant</th>
+                  <th className="px-3 py-2">Reason</th>
+                  <th className="px-3 py-2 text-right">Receipts</th>
+                  <th className="px-3 py-2 text-right">Applied</th>
+                  <th className="px-3 py-2 text-right">Unapplied</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {unappliedRows.map((row) => (
+                  <tr key={row.booking_id}>
+                    <td className="px-3 py-2">
+                      <Link href={`/bookings/${row.booking_id}`} className="font-mono text-xs text-brand hover:text-brand-hover">
+                        {row.booking_ref}
+                      </Link>
+                      <p className="text-[11px] capitalize text-text-tertiary">{row.booking_status.replaceAll('_', ' ')}</p>
+                    </td>
+                    <td className="px-3 py-2 text-text-secondary">{row.occupant_name || '—'}</td>
+                    <td className="px-3 py-2 text-xs text-text-secondary">
+                      {row.reason === 'cancelled_booking_receipt'
+                        ? 'Cancelled booking — cash held for resolution'
+                        : row.reason === 'customer_credit'
+                          ? 'Payment exceeds invoice'
+                          : row.reason === 'enquiry_receipt'
+                            ? 'Receipt attached to enquiry'
+                            : 'Receipt not applied to invoice'}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono">{formatGHS(row.total_receipts)}</td>
+                    <td className="px-3 py-2 text-right font-mono">{formatGHS(row.invoice_received)}</td>
+                    <td className="px-3 py-2 text-right font-mono font-semibold text-danger">{formatGHS(row.unapplied_amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
+
       {/* Filters + search */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-2">
           {FILTERS.map((f) => (
             <Link
               key={f.value}
-              href={`/payments?status=${f.value}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+              href={`/payments?status=${f.value}&period=${period}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
               className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                 status === f.value
                   ? 'bg-brand text-brand-fg'
@@ -188,6 +293,7 @@ export default async function PaymentsPage({
 
         <form method="GET" action="/payments" className="flex gap-2">
           {status !== 'all' && <input type="hidden" name="status" value={status} />}
+          <input type="hidden" name="period" value={period} />
           <input
             type="search"
             name="q"
@@ -360,7 +466,7 @@ export default async function PaymentsPage({
             </p>
           </div>
         </div>
-          <ListPagination pathname="/payments" page={page} pageSize={pageSize} total={total} params={{ status: status === 'all' ? undefined : status, q }} />
+          <ListPagination pathname="/payments" page={page} pageSize={pageSize} total={total} params={{ status: status === 'all' ? undefined : status, q, period }} />
         </>
       )}
     </div>

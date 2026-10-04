@@ -43,6 +43,18 @@ export interface BookingRevenueBreakdownRow {
   transaction_count: number
 }
 
+export interface UnappliedBookingReceiptRow {
+  booking_id: string
+  booking_ref: string
+  booking_status: string
+  occupant_id: string | null
+  occupant_name: string | null
+  total_receipts: number
+  invoice_received: number
+  unapplied_amount: number
+  reason: 'cancelled_booking_receipt' | 'enquiry_receipt' | 'customer_credit' | 'unapplied_receipt'
+}
+
 export interface StaffShiftFinancials {
   system_cash: number
   system_digital: number
@@ -170,6 +182,27 @@ export async function getBookingRevenueBreakdown(
     method: row.method,
     total_amount: Number(row.total_amount ?? 0),
     transaction_count: Number(row.transaction_count ?? 0),
+  }))
+}
+
+export async function getUnappliedBookingReceipts(
+  tenantId: string,
+): Promise<UnappliedBookingReceiptRow[]> {
+  const supabase = createAdminClient()
+  const { data, error } = await (supabase as any).rpc('get_unapplied_booking_receipts', {
+    p_tenant_id: tenantId,
+  })
+  if (error) throw new Error(`Could not load unapplied booking receipts: ${error.message}`)
+  return ((data ?? []) as any[]).map((row) => ({
+    booking_id: row.booking_id,
+    booking_ref: row.booking_ref,
+    booking_status: row.booking_status,
+    occupant_id: row.occupant_id ?? null,
+    occupant_name: row.occupant_name ?? null,
+    total_receipts: Number(row.total_receipts ?? 0),
+    invoice_received: Number(row.invoice_received ?? 0),
+    unapplied_amount: Number(row.unapplied_amount ?? 0),
+    reason: row.reason,
   }))
 }
 

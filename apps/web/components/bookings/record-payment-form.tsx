@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -63,38 +63,44 @@ export function RecordPaymentForm({ bookingId, balance, paystackEnabled = false 
   /* ── Manual ── */
   const [manualError, setManualError] = useState<string | null>(null)
   const [manualSuccess, setManualSuccess] = useState(false)
+  const manualIdempotencyKey = useRef<string | null>(null)
 
   const manual = useForm<ManualValues>({
     resolver: zodResolver(manualSchema),
     defaultValues: { method: 'momo_mtn', amount: balance / 100 },
   })
 
-  async function submitManual(values: ManualValues, confirmDuplicate = false) {
+  async function submitManual(values: ManualValues) {
     setManualError(null)
+    manualIdempotencyKey.current ??= globalThis.crypto?.randomUUID?.()
+      ?? `${Date.now()}-${Math.random().toString(36).slice(2)}-manual-payment`
     try {
       const res = await fetch(`/api/bookings/${bookingId}/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...values, amount: Math.round(values.amount * 100), confirmDuplicate }),
+        body: JSON.stringify({
+          ...values,
+          amount: Math.round(values.amount * 100),
+          idempotency_key: manualIdempotencyKey.current,
+        }),
       })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) {
-        if (d.error === 'possible_duplicate') {
-          if (confirm(`${d.message}\n\nClick OK to record it anyway, or Cancel to stop.`)) {
-            return submitManual(values, true)
-          }
-          return
-        }
-        setManualError(typeof d.error === 'string' ? d.error : 'Recording failed.')
+        setManualError(
+          typeof d.message === 'string'
+            ? d.message
+            : typeof d.error === 'string' ? d.error : 'Recording failed.',
+        )
         return
       }
       setManualSuccess(true)
+      manualIdempotencyKey.current = null
       manual.reset()
       router.refresh()
       setTimeout(() => setManualSuccess(false), 3000)
     } catch {
       setManualError(
-        'Network error — the payment may or may not have been recorded. Check the payment history below before retrying, to avoid recording it twice.',
+        'Network error. It is safe to retry: this payment attempt keeps the same receipt key and cannot be posted twice.',
       )
     }
   }
