@@ -5,10 +5,9 @@ import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 /**
  * PATCH /api/bookings/[id]/payments/[paymentId] — reverse a successful
- * payment (e.g. a duplicate manual entry). Flips status to 'reversed',
- * which the existing sync_booking_paid_amount trigger (migration 001)
- * already excludes from its sum — booking.paid_amount/payment_status
- * correct themselves automatically, no extra bookkeeping needed here.
+ * payment (e.g. a duplicate manual entry). The database atomically updates
+ * the booking subledger and appends a linked reversing journal entry, so the
+ * accounting cash/revenue balances cannot retain the reversed receipt.
  */
 export async function PATCH(
   _req: NextRequest,

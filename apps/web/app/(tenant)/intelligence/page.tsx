@@ -78,8 +78,8 @@ export default async function IntelligencePage() {
   const criticalCount = alerts.filter((a) => a.severity === 'critical').length
   const warningCount  = alerts.filter((a) => a.severity === 'warning').length
 
-  const forecastTotal    = forecast.reduce((s, b) => s + b.final_amount, 0)
-  const forecastCollected= forecast.reduce((s, b) => s + Math.min(b.paid_amount, b.final_amount), 0)
+  const forecastTotal    = forecast.reduce((s, b) => s + b.invoiceTotal, 0)
+  const forecastCollected= forecast.reduce((s, b) => s + b.invoiceReceived, 0)
   const forecastBalance  = forecast.reduce((s, b) => s + b.balance, 0)
 
   return (
@@ -408,7 +408,7 @@ export default async function IntelligencePage() {
                         <span className="font-mono text-xs text-text-tertiary">{b.booking_ref}</span>
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-text-secondary">
-                        {formatGHS(b.final_amount)}
+                        {formatGHS(b.invoiceTotal)}
                       </td>
                       <td className="px-4 py-3 text-right font-mono font-semibold">
                         <span className={b.balance > 0 ? 'text-warning-fg' : 'text-success'}>
@@ -417,14 +417,14 @@ export default async function IntelligencePage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                          b.payment_status === 'paid'    ? 'bg-success-subtle text-success border border-success/20' :
-                          b.payment_status === 'partial' ? 'bg-warning-subtle text-warning-fg border border-warning/20' :
+                          b.invoicePaymentStatus === 'paid'    ? 'bg-success-subtle text-success border border-success/20' :
+                          b.invoicePaymentStatus === 'partial' ? 'bg-warning-subtle text-warning-fg border border-warning/20' :
                           'bg-danger-subtle text-danger border border-danger/20'
                         }`}>
-                          {b.payment_status === 'paid'    ? <CheckCircle2 className="h-2.5 w-2.5" /> :
-                           b.payment_status === 'partial' ? <Clock className="h-2.5 w-2.5" /> :
+                          {b.invoicePaymentStatus === 'paid'    ? <CheckCircle2 className="h-2.5 w-2.5" /> :
+                           b.invoicePaymentStatus === 'partial' ? <Clock className="h-2.5 w-2.5" /> :
                            <XCircle className="h-2.5 w-2.5" />}
-                          {b.payment_status}
+                          {b.invoicePaymentStatus}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">

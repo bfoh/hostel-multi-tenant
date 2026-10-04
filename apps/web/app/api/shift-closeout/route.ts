@@ -2,11 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { getStaffShiftFinancials } from '@/lib/data/booking-finance'
 
 /**
  * POST /api/shift-closeout
  * Staff submits their cash declaration. System computes the actual cash/digital
- * totals from booking_payments for the day and records the discrepancy.
+ * totals from booking/folio receipts and deposit cash movements for the
+ * tenant-local day, then records the discrepancy.
  */
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -24,20 +26,13 @@ export async function POST(req: NextRequest) {
   const shiftDate = body.shift_date ?? new Date().toISOString().slice(0, 10)
   const admin = await createTenantAdminClientFromHeaders()
 
-  // Calculate system totals for this staff member today
-  const { data: payments } = await admin
-    .from('booking_payments')
-    .select('amount, method')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'success')
-    .eq('received_by', user.id)
-    .gte('paid_at', `${shiftDate}T00:00:00`)
-    .lte('paid_at', `${shiftDate}T23:59:59`)
-
-  const rows = payments ?? []
-  const systemCash    = rows.filter(p => p.method === 'cash').reduce((s, p) => s + p.amount, 0)
-  const systemDigital = rows.filter(p => p.method !== 'cash').reduce((s, p) => s + p.amount, 0)
-  const paymentCount  = rows.filter(p => p.method === 'cash').length
+  // Includes booking/folio receipts plus security-deposit cash movements.
+  // The database resolves the tenant's local-day boundaries, avoiding UTC
+  // midnight drift for properties outside UTC.
+  const shift = await getStaffShiftFinancials(tenantId, user.id, shiftDate)
+  const systemCash = shift.system_cash
+  const systemDigital = shift.system_digital
+  const paymentCount = shift.cash_activity_count
 
   const declaredCash = body.declared_cash as number
   const discrepancy  = declaredCash - systemCash

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Building2, Users, BedDouble, TrendingUp, AlertTriangle, ExternalLink } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getBookingFinancialSummary } from '@/lib/data/booking-finance'
 
 export const metadata: Metadata = { title: 'Portfolio Overview' }
 
@@ -38,7 +39,7 @@ async function getPortfolioData(userId: string): Promise<PropertySummary[]> {
 
   if (!memberships || memberships.length === 0) return []
 
-  const now   = new Date()
+  const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
   const results = await Promise.all(
@@ -49,12 +50,12 @@ async function getPortfolioData(userId: string): Promise<PropertySummary[]> {
       const [
         { data: rooms },
         { data: bookings },
-        { data: payments },
+        finance,
         { count: alertCount },
       ] = await Promise.all([
         supabase.from('rooms').select('id, status').eq('tenant_id', tid),
         supabase.from('bookings').select('id, status, payment_status').eq('tenant_id', tid).in('status', ['confirmed', 'pending_payment']),
-        supabase.from('payments').select('amount').eq('tenant_id', tid).gte('created_at', start).eq('status', 'completed'),
+        getBookingFinancialSummary(tid),
         supabase.from('anomaly_alerts').select('id', { count: 'exact', head: true }).eq('tenant_id', tid).in('severity', ['critical', 'warning']).gte('created_at', start),
       ])
 
@@ -63,7 +64,7 @@ async function getPortfolioData(userId: string): Promise<PropertySummary[]> {
       const occupancyRate  = totalRooms > 0 ? Math.round(((totalRooms - availableRooms) / totalRooms) * 100) : 0
       const activeBookings = (bookings ?? []).length
       const pendingPayments = (bookings ?? []).filter(b => b.payment_status === 'unpaid').length
-      const revenueThisMonth = (payments ?? []).reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0)
+      const revenueThisMonth = finance.mtd_recognized
 
       return {
         id:               tenant.id,

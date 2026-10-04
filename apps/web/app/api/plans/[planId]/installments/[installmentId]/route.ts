@@ -1,18 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
+import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ planId: string; installmentId: string }> }
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
-
   const headersList = await headers()
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
+
+  const gate = await requireTenantRole(tenantId, ['owner', 'manager', 'receptionist', 'accountant'])
+  if (gate instanceof NextResponse) return gate
+  const supabase = await createTenantAdminClientFromHeaders()
 
   const { installmentId } = await params
   const body = await req.json()
@@ -23,53 +24,49 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
   }
 
-  const update: Record<string, unknown> = { status, notes }
   if (status === 'paid') {
-    update.paid_at = new Date().toISOString()
-    update.payment_method = payment_method ?? null
-    update.reference = reference ?? null
+    if (!payment_method) {
+      return NextResponse.json({ error: 'Payment method is required' }, { status: 422 })
+    }
+
+    const { data, error } = await (supabase as any).rpc('settle_payment_plan_installment', {
+      p_tenant_id: tenantId,
+      p_installment_id: installmentId,
+      p_method: payment_method,
+      p_reference: reference ?? null,
+      p_actor_id: gate.userId,
+      p_paid_at: new Date().toISOString(),
+    })
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: ['22003', '23514'].includes(error.code) ? 409 : 500 },
+      )
+    }
+    return NextResponse.json(data)
+  }
+
+  const { data: existing } = await (supabase.from('payment_plan_installments') as any)
+    .select('status')
+    .eq('id', installmentId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (existing?.status === 'paid') {
+    return NextResponse.json(
+      { error: 'A paid installment cannot be changed; reverse its payment instead.' },
+      { status: 409 },
+    )
   }
 
   const { data, error } = await (supabase.from('payment_plan_installments') as any)
-    .update(update)
+    .update({ status, notes })
     .eq('id', installmentId)
     .eq('tenant_id', tenantId)
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  // If paid, update booking's paid_amount
-  if (status === 'paid' && data) {
-    const { data: plan } = await supabase
-      .from('payment_plans')
-      .select('booking_id')
-      .eq('id', data.plan_id)
-      .single()
-
-    if (plan) {
-      const { data: booking } = await supabase
-        .from('bookings')
-        .select('paid_amount, final_amount, status')
-        .eq('id', plan.booking_id)
-        .single()
-
-      if (booking) {
-        const newPaid = booking.paid_amount + data.amount
-        const fullyPaid = newPaid >= booking.final_amount
-        const newPaymentStatus = fullyPaid ? 'paid'
-          : newPaid > 0 ? 'partial' : 'unpaid'
-        const patch: Record<string, unknown> = {
-          paid_amount:    newPaid,
-          payment_status: newPaymentStatus,
-        }
-        if (fullyPaid && booking.status === 'pending_payment') patch.status = 'confirmed'
-        await (supabase.from('bookings') as any)
-          .update(patch)
-          .eq('id', plan.booking_id)
-      }
-    }
-  }
 
   return NextResponse.json(data)
 }

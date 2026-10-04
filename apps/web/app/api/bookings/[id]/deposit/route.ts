@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { z } from 'zod'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 const schema = z.object({
   amount:       z.number().int().positive(),
@@ -43,6 +44,9 @@ export async function POST(
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const role = await requireTenantRole(tenantId, ['owner', 'manager', 'receptionist', 'accountant'])
+  if (role instanceof NextResponse) return role
+
   const supabase = await createTenantAdminClientFromHeaders()
 
   const { data: booking } = await supabase
@@ -78,6 +82,7 @@ export async function POST(
       collected_at: parsed.data.collected_at ?? new Date().toISOString(),
       notes:        parsed.data.notes,
       status:       'held',
+      collected_by: role.userId,
     })
     .select()
     .single()

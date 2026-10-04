@@ -203,6 +203,11 @@ export async function startTestDb(opts?: {
     password: 'postgres',
     port,
     persistent: false,
+    // macOS has a low system-wide SysV shared-memory segment limit. The DB
+    // suite creates many short-lived clusters, so use Postgres' mmap-backed
+    // implementation and avoid exhausting SHMMNI after interrupted runs.
+    initdbFlags: ['--set', 'shared_memory_type=mmap'],
+    postgresFlags: ['-c', 'shared_memory_type=mmap'],
     onLog: () => {},
     onError: () => {},
   })

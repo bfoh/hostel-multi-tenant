@@ -13,7 +13,7 @@ async function getTenant(id: string) {
     { count: roomCount },
     { count: occupantCount },
     { count: bookingCount },
-    { data: revenueRows },
+    { data: totalRevenueData },
     { data: members },
     { count: activeCategoryCount },
   ] = await Promise.all([
@@ -21,7 +21,7 @@ async function getTenant(id: string) {
     admin.from('rooms').select('*', { count: 'exact', head: true }).eq('tenant_id', id),
     admin.from('occupants').select('*', { count: 'exact', head: true }).eq('tenant_id', id),
     admin.from('bookings').select('*', { count: 'exact', head: true }).eq('tenant_id', id),
-    admin.from('payments').select('amount').eq('tenant_id', id),
+    (admin as any).rpc('get_platform_booking_revenue_total', { p_tenant_id: id }),
     admin.from('tenant_members').select('user_id, role, is_active, joined_at').eq('tenant_id', id),
     // Marketplace visibility diagnostic — searchListings() requires at least
     // one active room category (inner join), so a tenant with zero here
@@ -31,7 +31,7 @@ async function getTenant(id: string) {
 
   if (!tenant) return null
 
-  const totalRevenue = revenueRows?.reduce((s, r) => s + ((r.amount as number) ?? 0), 0) ?? 0
+  const totalRevenue = Number(totalRevenueData ?? 0)
 
   return {
     tenant,

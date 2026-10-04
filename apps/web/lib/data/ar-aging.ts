@@ -1,5 +1,5 @@
-import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { getBookingAgingRows } from '@/lib/data/booking-finance'
 
 export interface OutstandingInvoice {
   id:              string
@@ -70,19 +70,7 @@ export async function getAgingReport(): Promise<AgingReport | null> {
   const tenantId = await getServerTenantId()
   if (!tenantId) return null
 
-  const supabase = createAdminClient()
-
-  const { data } = await (supabase as any)
-    .from('bookings')
-    .select(`
-      id, booking_ref, check_in_date, check_out_date,
-      final_amount, paid_amount,
-      occupant:occupants(id, first_name, last_name, other_names, phone, email)
-    `)
-    .eq('tenant_id', tenantId)
-    .not('status', 'in', '(enquiry,cancelled,refunded)')
-    .order('check_in_date', { ascending: true })
-    .limit(1000)
+  const rows = await getBookingAgingRows(tenantId)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -90,17 +78,23 @@ export async function getAgingReport(): Promise<AgingReport | null> {
 
   const invoices: OutstandingInvoice[] = []
 
-  for (const row of (data ?? []) as any[]) {
-    const final  = Number(row.final_amount ?? 0)
-    const paid   = Number(row.paid_amount  ?? 0)
-    const balance = Math.max(0, final - paid)
-    if (balance <= 0) continue
+  for (const row of rows) {
+    const final = Number(row.invoice_total ?? 0)
+    const paid = Number(row.invoice_received ?? 0)
+    const balance = Number(row.outstanding ?? 0)
 
     const due = row.check_in_date ? new Date(row.check_in_date) : null
     if (due) due.setHours(0, 0, 0, 0)
     const daysOverdue = due ? daysBetween(today, due) : 0
 
-    const occ = Array.isArray(row.occupant) ? row.occupant[0] : row.occupant
+    const occ = row.occupant_id ? {
+      id: row.occupant_id,
+      first_name: row.first_name ?? '',
+      last_name: row.last_name ?? '',
+      other_names: row.other_names,
+      phone: row.phone,
+      email: row.email,
+    } : null
     invoices.push({
       id:             row.id,
       booking_ref:    row.booking_ref,

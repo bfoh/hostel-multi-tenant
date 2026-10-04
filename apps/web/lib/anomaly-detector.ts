@@ -5,6 +5,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getBookingReceiptBreakdown, getBookingRevenueBreakdown } from '@/lib/data/booking-finance'
 
 export interface AnomalyResult {
   tenantId:  string
@@ -60,28 +61,19 @@ async function evaluateRule(
 }
 
 /** Revenue this week vs same period last week. Alert if drop > threshold% */
-async function checkRevenueDrop(tenantId: string, rule: any, now: Date, supabase: any): Promise<AnomalyResult | null> {
+async function checkRevenueDrop(tenantId: string, rule: any, now: Date, _supabase: any): Promise<AnomalyResult | null> {
   const days = rule.window_days ?? 7
   const periodEnd   = now.toISOString()
   const periodStart = new Date(now.getTime() - days * 86400000).toISOString()
   const prevStart   = new Date(now.getTime() - days * 2 * 86400000).toISOString()
 
-  const { data: current } = await supabase
-    .from('payments')
-    .select('amount')
-    .eq('tenant_id', tenantId)
-    .gte('created_at', periodStart)
-    .lte('created_at', periodEnd)
+  const [current, previous] = await Promise.all([
+    getBookingRevenueBreakdown(tenantId, periodStart, periodEnd),
+    getBookingRevenueBreakdown(tenantId, prevStart, periodStart),
+  ])
 
-  const { data: previous } = await supabase
-    .from('payments')
-    .select('amount')
-    .eq('tenant_id', tenantId)
-    .gte('created_at', prevStart)
-    .lt('created_at', periodStart)
-
-  const currentTotal  = (current  ?? []).reduce((s: number, r: any) => s + (r.amount ?? 0), 0)
-  const previousTotal = (previous ?? []).reduce((s: number, r: any) => s + (r.amount ?? 0), 0)
+  const currentTotal = current.reduce((sum, row) => sum + row.total_amount, 0)
+  const previousTotal = previous.reduce((sum, row) => sum + row.total_amount, 0)
 
   if (previousTotal === 0) return null  // No baseline, skip
 
@@ -129,15 +121,12 @@ async function checkOccupancyLow(tenantId: string, rule: any, now: Date, supabas
 }
 
 /** No payments recorded in the last N days */
-async function checkPaymentDrought(tenantId: string, rule: any, now: Date, supabase: any): Promise<AnomalyResult | null> {
+async function checkPaymentDrought(tenantId: string, rule: any, now: Date, _supabase: any): Promise<AnomalyResult | null> {
   const days = rule.window_days ?? 3
   const since = new Date(now.getTime() - days * 86400000).toISOString()
 
-  const { count } = await supabase
-    .from('payments')
-    .select('id', { count: 'exact', head: true })
-    .eq('tenant_id', tenantId)
-    .gte('created_at', since)
+  const receipts = await getBookingReceiptBreakdown(tenantId, since, now.toISOString())
+  const count = receipts.reduce((sum, row) => sum + row.transaction_count, 0)
 
   if ((count ?? 0) === 0) {
     return {
@@ -159,25 +148,54 @@ async function checkLargeCashPayment(tenantId: string, rule: any, now: Date, sup
   const since = new Date(now.getTime() - hours * 3600000).toISOString()
   const threshold = rule.threshold ?? 50000 // 500 GHS default
 
-  const { data } = await supabase
-    .from('booking_payments')
-    .select('amount, paid_at')
-    .eq('tenant_id', tenantId)
-    .eq('method', 'cash')
-    .eq('status', 'success')
-    .gte('paid_at', since)
-    .gt('amount', threshold)
-    .order('amount', { ascending: false })
-    .limit(1)
+  const [{ data: room }, { data: folio }, { data: deposits }] = await Promise.all([
+    supabase
+      .from('booking_payments')
+      .select('amount, paid_at')
+      .eq('tenant_id', tenantId)
+      .eq('method', 'cash')
+      .eq('status', 'success')
+      .gte('paid_at', since)
+      .gt('amount', threshold)
+      .order('amount', { ascending: false })
+      .limit(1),
+    supabase
+      .from('booking_charges')
+      .select('amount, updated_at')
+      .eq('tenant_id', tenantId)
+      .eq('payment_method', 'cash')
+      .eq('paid', true)
+      .gte('updated_at', since)
+      .gt('amount', threshold)
+      .order('amount', { ascending: false })
+      .limit(1),
+    supabase
+      .from('damage_deposits')
+      .select('amount, collected_at')
+      .eq('tenant_id', tenantId)
+      .eq('method', 'cash')
+      .gte('collected_at', since)
+      .gt('amount', threshold)
+      .order('amount', { ascending: false })
+      .limit(1),
+  ])
 
-  if (data && data.length > 0) {
+  const candidates = [
+    room?.[0] && { amount: room[0].amount, occurredAt: room[0].paid_at, source: 'room payment' },
+    folio?.[0] && { amount: folio[0].amount, occurredAt: folio[0].updated_at, source: 'folio receipt' },
+    deposits?.[0] && { amount: deposits[0].amount, occurredAt: deposits[0].collected_at, source: 'security deposit' },
+  ].filter(Boolean) as { amount: number; occurredAt: string; source: string }[]
+  candidates.sort((a, b) => b.amount - a.amount)
+
+  if (candidates.length > 0) {
+    const largest = candidates[0]
     return {
       tenantId,
       metric:   rule.metric,
       severity: rule.severity,
       ruleId:   rule.id,
-      message:  `Large cash payment: GH₵${(data[0].amount / 100).toFixed(2)} — please verify`,
-      details:  { amount: data[0].amount, paidAt: data[0].paid_at, threshold },
+      message:  `Large cash ${largest.source}: GH₵${(largest.amount / 100).toFixed(2)} — please verify`,
+      details:  { amount: largest.amount, occurredAt: largest.occurredAt, source: largest.source, threshold },
     }
   }
   return null

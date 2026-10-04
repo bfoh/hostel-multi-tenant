@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { FileText } from 'lucide-react'
 import { getInvoices } from '@/lib/data/invoices'
+import { calculateInvoiceFinancials, getBookingFinancialSummary } from '@/lib/data/booking-finance'
 import { formatGHS, formatDate } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Invoices' }
@@ -30,11 +31,13 @@ export default async function InvoicesPage({
   const headersList = await headers()
   const tenantName = headersList.get('x-tenant-name') ?? 'Your Property'
 
-  const invoices = await getInvoices({ payment_status: status })
-
-  const totalInvoiced = invoices.reduce((s, i) => s + i.final_amount, 0)
-  const totalPaid     = invoices.reduce((s, i) => s + Math.min(i.paid_amount, i.final_amount), 0)
-  const totalBalance  = totalInvoiced - totalPaid
+  const [allInvoices, summary] = await Promise.all([
+    getInvoices(),
+    getBookingFinancialSummary(),
+  ])
+  const invoices = status === 'all'
+    ? allInvoices
+    : allInvoices.filter((invoice) => calculateInvoiceFinancials(invoice).paymentStatus === status)
 
   return (
     <div className="space-y-6">
@@ -47,11 +50,12 @@ export default async function InvoicesPage({
       </div>
 
       {/* Summary bar */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
         {[
-          { label: 'Total invoiced', value: totalInvoiced, color: 'text-text-primary' },
-          { label: 'Total received', value: totalPaid,     color: 'text-success' },
-          { label: 'Outstanding',    value: totalBalance,  color: totalBalance > 0 ? 'text-danger' : 'text-text-primary' },
+          { label: 'Total invoiced', value: summary.total_invoiced, color: 'text-text-primary' },
+          { label: 'Applied receipts', value: summary.invoice_received, color: 'text-success' },
+          { label: 'Outstanding', value: summary.outstanding, color: summary.outstanding > 0 ? 'text-danger' : 'text-text-primary' },
+          { label: 'Unapplied / credit', value: summary.unapplied_receipts, color: summary.unapplied_receipts > 0 ? 'text-warning-fg' : 'text-text-primary' },
         ].map((s) => (
           <div key={s.label} className="rounded-xl border border-border bg-surface p-4">
             <p className="text-xs text-text-tertiary">{s.label}</p>
@@ -110,7 +114,7 @@ export default async function InvoicesPage({
                 const occupant = Array.isArray(inv.occupant) ? inv.occupant[0] : inv.occupant
                 const room     = Array.isArray(inv.room)     ? inv.room[0]     : inv.room
                 const cat      = Array.isArray(room?.category) ? room?.category[0] : room?.category
-                const balance  = Math.max(0, inv.final_amount - inv.paid_amount)
+                const financials = calculateInvoiceFinancials(inv)
 
                 return (
                   <tr key={inv.id} className="hover:bg-surface-raised transition-colors">
@@ -132,16 +136,16 @@ export default async function InvoicesPage({
                       {formatDate(inv.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right font-mono font-medium text-text-primary">
-                      {formatGHS(inv.final_amount)}
+                      {formatGHS(financials.invoiceTotal)}
                     </td>
                     <td className="px-4 py-3 text-right font-mono hidden sm:table-cell">
-                      <span className={balance > 0 ? 'text-danger font-semibold' : 'text-success'}>
-                        {formatGHS(balance)}
+                      <span className={financials.outstanding > 0 ? 'text-danger font-semibold' : 'text-success'}>
+                        {formatGHS(financials.outstanding)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize ${PAYMENT_BADGE[inv.payment_status] ?? 'bg-surface-sunken text-text-secondary border-border'}`}>
-                        {inv.payment_status}
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize ${PAYMENT_BADGE[financials.paymentStatus] ?? 'bg-surface-sunken text-text-secondary border-border'}`}>
+                        {financials.paymentStatus}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">

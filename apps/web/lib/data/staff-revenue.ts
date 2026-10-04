@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { PaymentMethod } from '@/lib/payments/methods'
+import { getBookingReceiptBreakdown } from '@/lib/data/booking-finance'
 
 export interface StaffRevenueRow {
   staffId:        string
@@ -28,26 +29,11 @@ export async function getStaffRevenue(
 ): Promise<StaffRevenueRow[]> {
   const supabase = createAdminClient()
 
-  const [{ data: payments }, { data: charges }] = await Promise.all([
-    supabase
-      .from('booking_payments')
-      .select('amount, method, received_by')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'success')
-      .gte('paid_at', from)
-      .lte('paid_at', to)
-      .not('received_by', 'is', null),
-    supabase
-      .from('booking_charges')
-      .select('amount, payment_method, created_by')
-      .eq('tenant_id', tenantId)
-      .eq('paid', true)
-      .not('payment_method', 'is', null)
-      .gte('created_at', from)
-      .lte('created_at', to),
-  ])
+  const endExclusive = new Date(new Date(to).getTime() + 1).toISOString()
+  const receipts = await getBookingReceiptBreakdown(tenantId, from, endExclusive)
+  const staffReceipts = receipts.filter((row) => row.collector_id)
 
-  if ((!payments || payments.length === 0) && (!charges || charges.length === 0)) return []
+  if (staffReceipts.length === 0) return []
 
   interface StaffAccumulator {
     roomRevenue:    number
@@ -60,31 +46,22 @@ export async function getStaffRevenue(
   const map = new Map<string, StaffAccumulator>()
   const staffIds = new Set<string>()
 
-  function addMethod(entry: StaffAccumulator, method: string, amount: number) {
+  function addMethod(entry: StaffAccumulator, method: string, amount: number, count: number) {
     const m = method as PaymentMethod
     const e = entry.methodTotals[m] ?? { count: 0, amount: 0 }
-    e.count++
+    e.count += count
     e.amount += amount
     entry.methodTotals[m] = e
   }
 
-  for (const p of payments ?? []) {
-    const sid = p.received_by as string
+  for (const receipt of staffReceipts) {
+    const sid = receipt.collector_id as string
     staffIds.add(sid)
     const entry = map.get(sid) ?? { roomRevenue: 0, chargesRevenue: 0, count: 0, methodTotals: {} }
-    entry.count++
-    entry.roomRevenue += p.amount
-    addMethod(entry, p.method, p.amount)
-    map.set(sid, entry)
-  }
-
-  for (const c of charges ?? []) {
-    const sid = c.created_by as string
-    staffIds.add(sid)
-    const entry = map.get(sid) ?? { roomRevenue: 0, chargesRevenue: 0, count: 0, methodTotals: {} }
-    entry.count++
-    entry.chargesRevenue += c.amount
-    addMethod(entry, c.payment_method as string, c.amount)
+    entry.count += receipt.transaction_count
+    if (receipt.source === 'room_payment') entry.roomRevenue += receipt.total_amount
+    else entry.chargesRevenue += receipt.total_amount
+    addMethod(entry, receipt.method, receipt.total_amount, receipt.transaction_count)
     map.set(sid, entry)
   }
 
@@ -153,16 +130,16 @@ export async function getStaffTransactions(
     supabase
       .from('booking_charges')
       .select(`
-        id, amount, payment_method, created_at, description, notes,
+        id, amount, payment_method, updated_at, description, notes,
         booking:bookings(booking_ref, occupant:occupants(first_name, last_name))
       `)
       .eq('tenant_id', tenantId)
       .eq('created_by', staffId)
       .eq('paid', true)
       .not('payment_method', 'is', null)
-      .gte('created_at', from)
-      .lte('created_at', to)
-      .order('created_at', { ascending: false })
+      .gte('updated_at', from)
+      .lte('updated_at', to)
+      .order('updated_at', { ascending: false })
       .limit(100),
   ])
 
@@ -175,7 +152,7 @@ export async function getStaffTransactions(
         id:           r.id,
         amount:       r.amount,
         method:       source === 'payment' ? r.method : r.payment_method,
-        date:         source === 'payment' ? r.paid_at : r.created_at,
+        date:         source === 'payment' ? r.paid_at : r.updated_at,
         reference:    r.reference ?? null,
         description:  r.description ?? null,
         notes:        r.notes ?? null,

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getBookingRevenueReport } from '@/lib/data/booking-finance'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 // Reuse same aggregation logic as the page
 async function runReport(tenantId: string, metric: string, from: string, to: string, groupBy: string) {
@@ -20,26 +22,7 @@ async function runReport(tenantId: string, metric: string, from: string, to: str
   }
 
   if (metric === 'revenue') {
-    const { data } = await supabase
-      .from('payments')
-      .select('amount, method, paid_at, bookings(room_categories(name))')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'completed')
-      .gte('paid_at', from + 'T00:00:00Z')
-      .lte('paid_at', to   + 'T23:59:59Z')
-      .order('paid_at')
-
-    const map = new Map<string, { count: number; amount: number }>()
-    for (const p of (data ?? []) as any[]) {
-      let label: string
-      if (groupBy === 'payment_method') label = p.method ?? 'Unknown'
-      else if (groupBy === 'room_category') label = p.bookings?.room_categories?.name ?? 'Unknown'
-      else label = truncDate(p.paid_at ?? '', groupBy)
-
-      const e = map.get(label) ?? { count: 0, amount: 0 }
-      map.set(label, { count: e.count + 1, amount: e.amount + (p.amount ?? 0) })
-    }
-    return Array.from(map.entries()).map(([label, v]) => ({ label, count: v.count, amount: v.amount }))
+    return getBookingRevenueReport(tenantId, from, to, groupBy)
   }
 
   if (metric === 'bookings') {
@@ -107,6 +90,9 @@ export async function GET(req: NextRequest) {
   const headersList = await headers()
   const tenantId    = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const role = await requireTenantRole(tenantId, ['owner', 'manager', 'accountant'])
+  if (role instanceof NextResponse) return role
 
   const { searchParams } = req.nextUrl
   const metric  = searchParams.get('metric')  ?? 'revenue'

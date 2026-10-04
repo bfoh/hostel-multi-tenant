@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { getBookingFinancialSummary } from '@/lib/data/booking-finance'
 
 /* ── Types ────────────────────────────────────────────────────────────── */
 
@@ -144,53 +145,22 @@ export async function getTrialBalance(
 
   const supabase = createAdminClient()
 
-  // Fetch all journal lines (optionally filtered by entry date)
-  let q = (supabase as any)
-    .from('journal_lines')
-    .select(`
-      account_id, debit, credit,
-      entry:journal_entries!inner(entry_date),
-      account:chart_of_accounts(code, name, type)
-    `)
-    .eq('tenant_id', tenantId)
-
-  if (dateFrom) q = q.gte('journal_entries.entry_date', dateFrom)
-  if (dateTo)   q = q.lte('journal_entries.entry_date', dateTo)
-
-  const { data } = await q
-
-  // Aggregate by account
-  const map = new Map<string, TrialBalanceLine>()
-
-  for (const line of (data ?? []) as any[]) {
-    const acct = Array.isArray(line.account) ? line.account[0] : line.account
-    if (!acct) continue
-    const key = line.account_id as string
-    if (!map.has(key)) {
-      map.set(key, {
-        account_id: key,
-        code: acct.code,
-        name: acct.name,
-        type: acct.type,
-        total_debit: 0,
-        total_credit: 0,
-        balance: 0,
-      })
-    }
-    const entry = map.get(key)!
-    entry.total_debit  += line.debit as number
-    entry.total_credit += line.credit as number
+  const { data, error } = await (supabase as any).rpc('get_trial_balance', {
+    p_tenant_id: tenantId,
+    p_date_from: dateFrom ?? null,
+    p_date_to: dateTo ?? null,
+  })
+  if (error) {
+    console.error('[accounting] trial balance query failed', error)
+    return []
   }
 
-  // Compute normal balance
-  for (const entry of map.values()) {
-    const debitNormal = entry.type === 'asset' || entry.type === 'expense'
-    entry.balance = debitNormal
-      ? entry.total_debit - entry.total_credit
-      : entry.total_credit - entry.total_debit
-  }
-
-  return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code))
+  return ((data ?? []) as any[]).map((row) => ({
+    ...row,
+    total_debit: Number(row.total_debit ?? 0),
+    total_credit: Number(row.total_credit ?? 0),
+    balance: Number(row.balance ?? 0),
+  })) as TrialBalanceLine[]
 }
 
 /* ── P&L statement ────────────────────────────────────────────────────── */
@@ -222,7 +192,24 @@ export async function getBalanceSheet(asOf: string) {
 
   const assets      = tb.filter((a) => a.type === 'asset')
   const liabilities = tb.filter((a) => a.type === 'liability')
-  const equity      = tb.filter((a) => a.type === 'equity')
+  const currentEarnings = tb
+    .filter((a) => a.type === 'revenue')
+    .reduce((sum, account) => sum + account.balance, 0)
+    - tb
+      .filter((a) => a.type === 'expense')
+      .reduce((sum, account) => sum + account.balance, 0)
+  const equity: TrialBalanceLine[] = [
+    ...tb.filter((a) => a.type === 'equity'),
+    {
+      account_id: 'current-earnings',
+      code: '3999',
+      name: 'Current earnings',
+      type: 'equity',
+      total_debit: currentEarnings < 0 ? Math.abs(currentEarnings) : 0,
+      total_credit: currentEarnings > 0 ? currentEarnings : 0,
+      balance: currentEarnings,
+    },
+  ]
 
   const totalAssets      = assets.reduce((s, a) => s + a.balance, 0)
   const totalLiabilities = liabilities.reduce((s, a) => s + a.balance, 0)
@@ -245,7 +232,8 @@ export interface CashFlowReport {
 }
 
 /**
- * Direct-method cash flow built from journal lines that touch the Cash account (1020).
+ * Direct-method cash flow built from journal lines that touch till cash (1010)
+ * or bank/mobile-money cash (1020).
  * Debits to cash = inflows; credits to cash = outflows.
  * Groups by journal entry source for a meaningful breakdown.
  */
@@ -254,37 +242,17 @@ export async function getCashFlow(dateFrom: string, dateTo: string): Promise<Cas
   if (!tenantId) return { period_start: dateFrom, period_end: dateTo, operating: [], totalOperating: 0, netChange: 0 }
 
   const supabase = createAdminClient()
-
-  const { data } = await supabase
-    .from('journal_lines')
-    .select(`
-      debit, credit,
-      entry:journal_entries!inner(source, entry_date),
-      account:chart_of_accounts!inner(code)
-    `)
-    .eq('tenant_id', tenantId)
-    .gte('journal_entries.entry_date', dateFrom)
-    .lte('journal_entries.entry_date', dateTo)
-
-  // Only lines hitting the Cash account (code starts with 1020)
-  const cashLines = (data ?? []).filter((l: any) => {
-    const acct = Array.isArray(l.account) ? l.account[0] : l.account
-    return acct?.code?.startsWith('1020')
+  const { data, error } = await (supabase as any).rpc('get_cash_flow_by_source', {
+    p_tenant_id: tenantId,
+    p_date_from: dateFrom,
+    p_date_to: dateTo,
   })
-
-  // Aggregate inflows / outflows by source
-  const sourceMap = new Map<string, { in: number; out: number }>()
-  for (const line of cashLines as any[]) {
-    const entry  = Array.isArray(line.entry) ? line.entry[0] : line.entry
-    const src    = entry?.source ?? 'other'
-    if (!sourceMap.has(src)) sourceMap.set(src, { in: 0, out: 0 })
-    const s = sourceMap.get(src)!
-    s.in  += line.debit
-    s.out += line.credit
-  }
+  if (error) throw new Error(`Could not load cash flow: ${error.message}`)
 
   const SOURCE_LABELS: Record<string, string> = {
     booking_payment:     'Room payment receipts',
+    booking_charge:      'Folio charge receipts',
+    damage_deposit:      'Damage deposits (net)',
     payroll:             'Staff payroll payments',
     expense:             'Operating expense payments',
     refund:              'Refunds paid',
@@ -294,7 +262,10 @@ export async function getCashFlow(dateFrom: string, dateTo: string): Promise<Cas
 
   const operating: CashFlowReport['operating'] = []
 
-  for (const [src, { in: inflow, out: outflow }] of sourceMap.entries()) {
+  for (const row of (data ?? []) as any[]) {
+    const src = String(row.source ?? 'other')
+    const inflow = Number(row.total_inflow ?? 0)
+    const outflow = Number(row.total_outflow ?? 0)
     const net = inflow - outflow
     if (net === 0) continue
     operating.push({
@@ -339,12 +310,23 @@ export interface FinancialHealth {
     quickRatio:    number | null
     debtToEquity:  number | null
   }
-  mtd: { revenue: number; expenses: number; netProfit: number }
-  ytd: { revenue: number; expenses: number; netProfit: number }
+  mtd: { revenue: number; expenses: number; netProfit: number; bookingRevenue: number; otherRevenue: number }
+  ytd: { revenue: number; expenses: number; netProfit: number; bookingRevenue: number; otherRevenue: number }
   cashRunwayMonths:   number | null
   monthlyTrend:       MonthlyTrendPoint[]
   topRevenueMtd:      { account_id: string; code: string; name: string; amount: number }[]
   topExpensesMtd:     { account_id: string; code: string; name: string; amount: number }[]
+  integrity: {
+    paymentJournalGaps:        number
+    chargeJournalGaps:         number
+    depositJournalGaps:        number
+    unbalancedJournals:        number
+    crossTenantJournalLines:   number
+    bookingBalanceMismatches:  number
+    cancelledRevenueExposure: number
+    depositLiabilityMismatches:number
+    totalIssues:               number
+  }
 }
 
 export async function getFinancialHealth(): Promise<FinancialHealth | null> {
@@ -364,21 +346,27 @@ export async function getFinancialHealth(): Promise<FinancialHealth | null> {
   const trendStartDate = new Date(y, now.getMonth() - 5, 1)
   const trendStart = trendStartDate.toISOString().slice(0, 10)
 
-  const [tb, mtdPnL, ytdPnL, trendLines] = await Promise.all([
+  const [tb, mtdPnL, ytdPnL, trendLines, bookingFinance, integrityResult] = await Promise.all([
     getTrialBalance(undefined, today),
     getPnL(mtdStart, today),
     getPnL(ytdStart, today),
-    (supabase as any)
-      .from('journal_lines')
-      .select(`
-        debit, credit,
-        entry:journal_entries!inner(entry_date),
-        account:chart_of_accounts(type)
-      `)
-      .eq('tenant_id', tenantId)
-      .gte('journal_entries.entry_date', trendStart)
-      .lte('journal_entries.entry_date', today),
+    (supabase as any).rpc('get_monthly_financial_trend', {
+      p_tenant_id: tenantId,
+      p_date_from: trendStart,
+      p_date_to: today,
+    }),
+    getBookingFinancialSummary(tenantId),
+    (supabase as any).rpc('get_financial_integrity_summary', {
+      p_tenant_id: tenantId,
+    }),
   ])
+
+  if (integrityResult.error || !integrityResult.data) {
+    throw new Error(
+      `Could not verify financial integrity: ${integrityResult.error?.message ?? 'empty response'}`,
+    )
+  }
+  const integrityRow = integrityResult.data as Record<string, unknown>
 
   // Account-balance helpers
   const byCodePrefix = (prefix: string) => tb
@@ -386,7 +374,11 @@ export async function getFinancialHealth(): Promise<FinancialHealth | null> {
     .reduce((s, a) => s + a.balance, 0)
 
   const cashPosition = byCodePrefix('10')                                       // 1010 + 1020
-  const arOutstanding = byCodePrefix('1100')
+  // Booking invoices are currently maintained as an operational subledger;
+  // they are not posted to the 1100 control account until cash is received.
+  // Surface the canonical amount customers actually owe instead of a
+  // misleading zero from the cash-basis general ledger.
+  const arOutstanding = bookingFinance.outstanding
   const apOutstanding = byCodePrefix('2010')
   const vatPayable = ['2100', '2110', '2120'].reduce((s, c) => s + byCodePrefix(c), 0)
   const payeAndSsnitPayable = ['2200', '2210', '2220'].reduce((s, c) => s + byCodePrefix(c), 0)
@@ -401,7 +393,15 @@ export async function getFinancialHealth(): Promise<FinancialHealth | null> {
 
   const totalAssets      = tb.filter((a) => a.type === 'asset')    .reduce((s, a) => s + a.balance, 0)
   const totalLiabilities = tb.filter((a) => a.type === 'liability').reduce((s, a) => s + a.balance, 0)
-  const totalEquity      = tb.filter((a) => a.type === 'equity')   .reduce((s, a) => s + a.balance, 0)
+  const currentEarnings = tb
+    .filter((a) => a.type === 'revenue')
+    .reduce((sum, account) => sum + account.balance, 0)
+    - tb
+      .filter((a) => a.type === 'expense')
+      .reduce((sum, account) => sum + account.balance, 0)
+  const totalEquity = tb
+    .filter((a) => a.type === 'equity')
+    .reduce((sum, account) => sum + account.balance, 0) + currentEarnings
 
   // Quick ratio = (current assets − inventory) / current liabilities
   const inventoryBalance = byCodePrefix('1300')
@@ -423,14 +423,11 @@ export async function getFinancialHealth(): Promise<FinancialHealth | null> {
   }
 
   for (const row of ((trendLines as any)?.data ?? []) as any[]) {
-    const entry = Array.isArray(row.entry) ? row.entry[0] : row.entry
-    const acct  = Array.isArray(row.account) ? row.account[0] : row.account
-    if (!entry || !acct) continue
-    const monthKey = String(entry.entry_date).slice(0, 7)
+    const monthKey = String(row.month).slice(0, 7)
     const slot = monthlyMap.get(monthKey)
     if (!slot) continue
-    if (acct.type === 'revenue') slot.revenue  += (row.credit as number) - (row.debit as number)
-    if (acct.type === 'expense') slot.expenses += (row.debit as number) - (row.credit as number)
+    slot.revenue += Number(row.revenue ?? 0)
+    slot.expenses += Number(row.expenses ?? 0)
   }
 
   const monthlyTrend: MonthlyTrendPoint[] = Array.from(monthlyMap.entries()).map(([month, v]) => {
@@ -467,12 +464,35 @@ export async function getFinancialHealth(): Promise<FinancialHealth | null> {
     totalLiabilities,
     totalEquity,
     ratios,
-    mtd: { revenue: mtdPnL.totalRevenue, expenses: mtdPnL.totalExpenses, netProfit: mtdPnL.netProfit },
-    ytd: { revenue: ytdPnL.totalRevenue, expenses: ytdPnL.totalExpenses, netProfit: ytdPnL.netProfit },
+    mtd: {
+      revenue: mtdPnL.totalRevenue,
+      expenses: mtdPnL.totalExpenses,
+      netProfit: mtdPnL.netProfit,
+      bookingRevenue: bookingFinance.mtd_recognized,
+      otherRevenue: mtdPnL.totalRevenue - bookingFinance.mtd_recognized,
+    },
+    ytd: {
+      revenue: ytdPnL.totalRevenue,
+      expenses: ytdPnL.totalExpenses,
+      netProfit: ytdPnL.netProfit,
+      bookingRevenue: bookingFinance.ytd_recognized,
+      otherRevenue: ytdPnL.totalRevenue - bookingFinance.ytd_recognized,
+    },
     cashRunwayMonths,
     monthlyTrend,
     topRevenueMtd,
     topExpensesMtd,
+    integrity: {
+      paymentJournalGaps:         Number(integrityRow.payment_journal_gaps ?? 0),
+      chargeJournalGaps:          Number(integrityRow.charge_journal_gaps ?? 0),
+      depositJournalGaps:         Number(integrityRow.deposit_journal_gaps ?? 0),
+      unbalancedJournals:         Number(integrityRow.unbalanced_journals ?? 0),
+      crossTenantJournalLines:    Number(integrityRow.cross_tenant_journal_lines ?? 0),
+      bookingBalanceMismatches:   Number(integrityRow.booking_balance_mismatches ?? 0),
+      cancelledRevenueExposure:  Number(integrityRow.cancelled_revenue_exposure ?? 0),
+      depositLiabilityMismatches: Number(integrityRow.deposit_liability_mismatches ?? 0),
+      totalIssues:                Number(integrityRow.total_issues ?? 0),
+    },
   }
 }
 

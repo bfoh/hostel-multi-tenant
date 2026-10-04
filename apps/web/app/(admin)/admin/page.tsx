@@ -16,7 +16,7 @@ async function getPlatformStats() {
     { count: suspendedTenants },
     { count: totalRooms },
     { count: totalBookings },
-    { data: revenueRows },
+    { data: totalRevenueData },
   ] = await Promise.all([
     admin.from('tenants').select('*', { count: 'exact', head: true }),
     admin.from('tenants').select('*', { count: 'exact', head: true }).eq('status', 'active'),
@@ -25,10 +25,10 @@ async function getPlatformStats() {
     admin.from('tenants').select('*', { count: 'exact', head: true }).eq('status', 'suspended'),
     admin.from('rooms').select('*', { count: 'exact', head: true }),
     admin.from('bookings').select('*', { count: 'exact', head: true }),
-    admin.from('payments').select('amount'),
+    (admin as any).rpc('get_platform_booking_revenue_total', { p_tenant_id: null }),
   ])
 
-  const totalRevenue = revenueRows?.reduce((s, r) => s + ((r.amount as number) ?? 0), 0) ?? 0
+  const totalRevenue = Number(totalRevenueData ?? 0)
 
   return {
     totalTenants: totalTenants ?? 0,

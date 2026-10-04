@@ -25,79 +25,21 @@ export async function finalizeOnlineBookingPayment(
     notes?: string
   }
 ): Promise<{ recorded: boolean; requiresResolution?: boolean }> {
-  const { data: booking } = await supabase
-    .from('bookings')
-    .select('id, tenant_id, paid_amount, final_amount, status')
-    .eq('id', params.bookingId)
-    .eq('tenant_id', params.tenantId)
-    .maybeSingle()
-
-  if (!booking) return { recorded: false }
-
-  const { data: existing } = await supabase
-    .from('booking_payments')
-    .select('id')
-    .eq('paystack_reference', params.reference)
-    .maybeSingle()
-
-  if (existing) return { recorded: false }
-
-  const { error: insertError } = await supabase.from('booking_payments').insert({
-    tenant_id: params.tenantId,
-    booking_id: params.bookingId,
-    amount: params.amount,
-    method: params.method ?? 'card',
-    paystack_reference: params.reference,
-    status: 'success',
-    paid_at: new Date().toISOString(),
-    notes: params.notes ?? 'Paid online via Paystack',
+  const { data, error } = await (supabase as any).rpc('finalize_online_booking_payment', {
+    p_tenant_id: params.tenantId,
+    p_booking_id: params.bookingId,
+    p_amount: params.amount,
+    p_reference: params.reference,
+    p_method: params.method ?? 'card',
+    p_notes: params.notes ?? 'Paid online via Paystack',
   })
 
-  if (insertError) throw new Error(`Could not record online payment: ${insertError.message}`)
+  if (error) throw new Error(`Could not record online payment: ${error.message}`)
 
-  if (booking.status === 'cancelled') {
-    await supabase.from('booking_payment_exceptions').upsert(
-      {
-        tenant_id: params.tenantId,
-        booking_id: params.bookingId,
-        paystack_reference: params.reference,
-        exception_type: 'late_payment_after_cancellation',
-        status: 'open',
-        amount: params.amount,
-        details: {
-          booking_status: booking.status,
-          note: 'Payment succeeded after the booking had already been cancelled',
-        },
-      },
-      { onConflict: 'tenant_id,paystack_reference,exception_type' }
-    )
-
-    await supabase.from('audit_log').insert({
-      tenant_id: params.tenantId,
-      action: 'payment.requires_resolution',
-      entity_type: 'booking',
-      entity_id: params.bookingId,
-      description: `Late payment received for cancelled booking (${params.reference})`,
-      new_values: {
-        amount: params.amount,
-        paystack_reference: params.reference,
-        resolution: 'refund_or_capacity_checked_restore',
-      },
-    })
-
-    return { recorded: true, requiresResolution: true }
+  return {
+    recorded: Boolean(data?.recorded),
+    requiresResolution: Boolean(data?.requires_resolution) || undefined,
   }
-
-  const newPaid = booking.paid_amount + params.amount
-  if (newPaid >= booking.final_amount && booking.status === 'pending_payment') {
-    await supabase
-      .from('bookings')
-      .update({ status: 'confirmed' })
-      .eq('id', params.bookingId)
-      .eq('tenant_id', params.tenantId)
-  }
-
-  return { recorded: true }
 }
 
 /**

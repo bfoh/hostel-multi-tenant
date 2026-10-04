@@ -5,6 +5,7 @@ import { ArrowLeft, Download } from 'lucide-react'
 
 import { getOccupantSession } from '@/lib/auth/occupant-session'
 import { getOccupantInvoiceById } from '@/lib/data/occupant-invoices'
+import { calculateInvoiceFinancials } from '@/lib/data/booking-finance'
 
 export const metadata: Metadata = { title: 'Invoice · My Portal' }
 
@@ -43,10 +44,12 @@ export default async function OccupantInvoiceDetailPage({
   const occupant = Array.isArray(inv.occupant) ? inv.occupant[0] : inv.occupant
 
   const payments     = (inv.booking_payments ?? []).filter((p: any) => p.status === 'success')
+  const charges      = Array.isArray(inv.booking_charges) ? inv.booking_charges : []
+  const financials   = calculateInvoiceFinancials(inv)
   const subtotal     = inv.total_amount ?? inv.final_amount
   const taxAmount    = ((inv as any).vat_amount ?? 0) + ((inv as any).nhil_amount ?? 0) + ((inv as any).getfund_amount ?? 0)
-  const total        = inv.final_amount
-  const balance      = Math.max(0, inv.final_amount - inv.paid_amount)
+  const total        = financials.invoiceTotal
+  const balance      = financials.outstanding
   const heading      = (inv as any).invoice_number ?? inv.booking_ref
   const isCancelled  = inv.status === 'cancelled'
 
@@ -94,6 +97,13 @@ export default async function OccupantInvoiceDetailPage({
           {(inv as any).vat_amount > 0      && <Row label="VAT (15%)"     value={ghs((inv as any).vat_amount)} />}
           {(inv as any).nhil_amount > 0     && <Row label="NHIL (2.5%)"   value={ghs((inv as any).nhil_amount)} />}
           {(inv as any).getfund_amount > 0  && <Row label="GETFund (2.5%)" value={ghs((inv as any).getfund_amount)} />}
+          {charges.map((charge: any) => (
+            <Row
+              key={charge.id}
+              label={`${charge.description}${charge.paid ? ' · paid' : ''}`}
+              value={ghs(charge.amount)}
+            />
+          ))}
           {taxAmount > 0 && (
             <p className="pt-1 text-right text-[10px] text-slate-400">Tax total: {ghs(taxAmount)}</p>
           )}
@@ -122,7 +132,7 @@ export default async function OccupantInvoiceDetailPage({
           </div>
         )}
         <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 space-y-1.5">
-          <Row label="Paid"    value={ghs(inv.paid_amount)} />
+          <Row label="Paid"    value={ghs(financials.invoiceReceived)} />
           <Row label="Balance" value={ghs(balance)} bold />
         </div>
       </section>

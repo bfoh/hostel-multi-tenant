@@ -95,30 +95,25 @@ export async function POST(
     }
   }
 
-  const { data, error } = await supabase
-    .from('booking_payments')
-    .insert({
-      tenant_id:    tenantId,
-      booking_id:   id,
-      amount:       parsed.data.amount,
-      method:       parsed.data.method,
-      reference:    parsed.data.reference ?? null,
-      notes:        parsed.data.notes ?? null,
-      status:       'success',
-      paid_at:      new Date().toISOString(),
-      received_by:  user.id,
-    })
-    .select('id')
-    .single()
+  const { data, error } = await (supabase as any).rpc('record_booking_payment', {
+    p_tenant_id: tenantId,
+    p_booking_id: id,
+    p_amount: parsed.data.amount,
+    p_method: parsed.data.method,
+    p_reference: parsed.data.reference ?? null,
+    p_notes: parsed.data.notes ?? null,
+    p_actor_id: user.id,
+    p_allow_overpayment: false,
+    p_allow_duplicate: parsed.data.confirmDuplicate ?? false,
+  })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  // Check if fully paid — auto-confirm if was pending_payment
-  const newPaidAmount = booking.paid_amount + parsed.data.amount
-  if (newPaidAmount >= booking.final_amount && booking.status === 'pending_payment') {
-    await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', id)
+    const duplicate = error.code === '23505'
+    const conflict = duplicate || error.code === '22003' || error.code === '23514'
+    return NextResponse.json({
+      error: duplicate ? 'possible_duplicate' : error.message,
+      ...(duplicate ? { message: error.message } : {}),
+    }, { status: conflict ? 409 : 500 })
   }
 
   // Fire SMS + email receipt — non-blocking
@@ -132,7 +127,7 @@ export async function POST(
     const occ       = occupantRes.data
     const bkn       = bookingRes.data
     const ten       = tenantRes.data
-    const balance   = Math.max(0, (bkn?.final_amount ?? 0) - ((bkn?.paid_amount ?? 0) + parsed.data.amount))
+    const balance   = Math.max(0, (bkn?.final_amount ?? 0) - (bkn?.paid_amount ?? 0))
     const methodLabel = PAYMENT_METHOD_LABEL[parsed.data.method] ?? parsed.data.method
 
     if (occ?.phone) {

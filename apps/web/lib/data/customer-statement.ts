@@ -60,7 +60,8 @@ export async function getCustomerStatement(
       .from('bookings')
       .select(`
         id, booking_ref, check_in_date, final_amount, status,
-        booking_payments(id, amount, paid_at, status, method, reference)
+        booking_payments(id, amount, paid_at, status, method, reference),
+        booking_charges(id, description, amount, paid, payment_method, created_at, updated_at)
       `)
       .eq('tenant_id', tenantId)
       .eq('occupant_id', occupantId)
@@ -87,7 +88,7 @@ export async function getCustomerStatement(
       })
     }
     for (const p of ((b.booking_payments ?? []) as any[])) {
-      if (p.status !== 'success' && p.status !== 'paid') continue
+      if (p.status !== 'success') continue
       events.push({
         date:        String(p.paid_at).slice(0, 10),
         kind:        'payment',
@@ -95,6 +96,26 @@ export async function getCustomerStatement(
         description: `Payment received · ${p.method ?? 'unknown'}`,
         amount:      Number(p.amount ?? 0),
       })
+    }
+    for (const charge of ((b.booking_charges ?? []) as any[])) {
+      const chargeDate = String(charge.created_at).slice(0, 10)
+      events.push({
+        date: chargeDate,
+        kind: 'invoice',
+        reference: b.booking_ref ?? b.id.slice(0, 8),
+        description: charge.description,
+        amount: Number(charge.amount ?? 0),
+        link: `/invoices/${b.id}`,
+      })
+      if (charge.paid) {
+        events.push({
+          date: String(charge.updated_at ?? charge.created_at).slice(0, 10),
+          kind: 'payment',
+          reference: charge.id.slice(0, 8),
+          description: `Folio payment · ${charge.payment_method ?? 'unspecified'}`,
+          amount: Number(charge.amount ?? 0),
+        })
+      }
     }
   }
 

@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { formatGHS, formatDate } from '@/lib/utils'
 import { ReversePaymentButton } from '@/components/bookings/reverse-payment-button'
+import { getBookingFinancialSummary } from '@/lib/data/booking-finance'
 
 export const metadata: Metadata = { title: 'Payments' }
 
@@ -109,11 +110,10 @@ export default async function PaymentsPage({
   const tenantId = headersList.get('x-tenant-id') ?? ''
   const callerRole = headersList.get('x-tenant-role')
   const canManage = callerRole === 'owner' || callerRole === 'manager'
-  const payments = await getPayments(status, q, tenantId)
-
-  const totalSuccess   = payments.filter((p) => p.status === 'success').reduce((s, p) => s + p.amount, 0)
-  const totalPending   = payments.filter((p) => p.status === 'pending').reduce((s, p) => s + p.amount, 0)
-  const totalReversed  = payments.filter((p) => p.status === 'reversed').reduce((s, p) => s + p.amount, 0)
+  const [payments, summary] = await Promise.all([
+    getPayments(status, q, tenantId),
+    getBookingFinancialSummary(tenantId),
+  ])
   const duplicateCount = payments.filter((p) => p.possibleDuplicate).length
 
   return (
@@ -135,24 +135,27 @@ export default async function PaymentsPage({
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-xs text-text-tertiary">Total received</p>
-          <p className="mt-1 font-mono text-xl font-bold text-success">{formatGHS(totalSuccess)}</p>
+          <p className="text-xs text-text-tertiary">Total booking receipts</p>
+          <p className="mt-1 font-mono text-xl font-bold text-success">{formatGHS(summary.total_receipts)}</p>
           <p className="mt-0.5 text-xs text-text-secondary">
-            {payments.filter((p) => p.status === 'success').length} transactions
+            {summary.room_payment_count + summary.charge_payment_count} transactions ·{' '}
+            {formatGHS(summary.room_payments_received)} room ·{' '}
+            {formatGHS(summary.charge_payments_received)} folio
           </p>
         </div>
         <div className="rounded-xl border border-border bg-surface p-4">
           <p className="text-xs text-text-tertiary">Pending</p>
-          <p className="mt-1 font-mono text-xl font-bold text-warning-fg">{formatGHS(totalPending)}</p>
+          <p className="mt-1 font-mono text-xl font-bold text-warning-fg">{formatGHS(summary.pending_payments)}</p>
           <p className="mt-0.5 text-xs text-text-secondary">
-            {payments.filter((p) => p.status === 'pending').length} transactions
+            {summary.pending_payment_count} transactions
           </p>
         </div>
         <div className="rounded-xl border border-border bg-surface p-4">
           <p className="text-xs text-text-tertiary">Reversed / Refunded</p>
-          <p className="mt-1 font-mono text-xl font-bold text-text-secondary">{formatGHS(totalReversed)}</p>
+          <p className="mt-1 font-mono text-xl font-bold text-text-secondary">{formatGHS(summary.total_reversed)}</p>
           <p className="mt-0.5 text-xs text-text-secondary">
-            {payments.filter((p) => p.status === 'reversed').length} transactions
+            {summary.reversed_payment_count + summary.reversed_charge_count} transactions
+            {summary.reversed_charges > 0 && ` · ${formatGHS(summary.reversed_charges)} folio reversals`}
           </p>
         </div>
       </div>

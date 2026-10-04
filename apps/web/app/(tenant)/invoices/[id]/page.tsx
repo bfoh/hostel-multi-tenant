@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/utils'
 import { PrintButton } from '@/components/invoices/print-button'
 import { InvoicePayLinkActions } from '@/components/invoices/pay-link-actions'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { calculateInvoiceFinancials } from '@/lib/data/booking-finance'
 
 export const metadata: Metadata = { title: 'Invoice' }
 
@@ -70,7 +71,9 @@ export default async function InvoicePage({
   const cat      = Array.isArray(room?.category) ? room?.category[0] : room?.category
   // booking_payments.status enum: 'pending' | 'success' | 'failed' | 'reversed'
   const payments = (inv.booking_payments ?? []).filter((p: any) => p.status === 'success')
-  const balance  = Math.max(0, inv.final_amount - inv.paid_amount)
+  const charges = Array.isArray(inv.booking_charges) ? inv.booking_charges : []
+  const financials = calculateInvoiceFinancials(inv)
+  const balance = financials.outstanding
 
   // Tax breakdown — prefer stored itemised fields; fall back to splitting combined tax_amount
   const hasItemisedTax = (inv as any).vat_amount > 0 || (inv as any).nhil_amount > 0
@@ -160,8 +163,8 @@ export default async function InvoicePage({
             </p>
             <p className="font-mono text-sm font-bold text-gray-900 mt-1">{invoiceNumber}</p>
             <p className="text-xs text-gray-500 mt-1">Issued: {formatDate(inv.created_at)}</p>
-            <span className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${PAYMENT_BADGE[inv.payment_status] ?? 'bg-surface-raised text-text-secondary border-border'}`}>
-              {inv.payment_status}
+            <span className={`mt-2 inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${PAYMENT_BADGE[financials.paymentStatus] ?? 'bg-surface-raised text-text-secondary border-border'}`}>
+              {financials.paymentStatus}
             </span>
           </div>
         </div>
@@ -224,6 +227,17 @@ export default async function InvoicePage({
                   <td className="py-3 text-right font-mono text-green-700">−{ghs(inv.discount_amount)}</td>
                 </tr>
               )}
+              {charges.map((charge: any) => (
+                <tr key={charge.id}>
+                  <td className="py-3 text-gray-700">
+                    {charge.description}
+                    <span className="ml-2 text-xs text-gray-400">
+                      {charge.quantity} × {ghs(charge.unit_price)}{charge.paid ? ' · paid' : ''}
+                    </span>
+                  </td>
+                  <td className="py-3 text-right font-mono">{ghs(charge.amount)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -248,7 +262,7 @@ export default async function InvoicePage({
               <span className="font-mono">{ghs(getfundAmt)}</span>
             </div>
             <div className="flex justify-between border-t border-gray-200 pt-1.5 font-semibold text-gray-900">
-              <span>Total</span>
+              <span>Accommodation total</span>
               <span className="font-mono">{ghs(inv.final_amount)}</span>
             </div>
           </div>
@@ -266,7 +280,7 @@ export default async function InvoicePage({
                   </tr>
                 )}
                 <tr className="border-t border-gray-300">
-                  <td className="pr-8 pt-2 font-bold text-gray-900 text-base">Total</td>
+                  <td className="pr-8 pt-2 font-bold text-gray-900 text-base">Accommodation total</td>
                   <td className="pt-2 text-right font-mono font-bold text-base">{ghs(inv.final_amount)}</td>
                 </tr>
               </tbody>
@@ -278,10 +292,26 @@ export default async function InvoicePage({
         <div className="mt-3 flex justify-end">
           <table className="text-sm w-64">
             <tbody>
+              {financials.chargesAmount > 0 && (
+                <tr>
+                  <td className="pr-8 text-gray-500">Additional charges</td>
+                  <td className="text-right font-mono">{ghs(financials.chargesAmount)}</td>
+                </tr>
+              )}
+              <tr className="border-b border-gray-200">
+                <td className="pr-8 pb-2 font-semibold text-gray-900">Invoice total</td>
+                <td className="pb-2 text-right font-mono font-semibold">{ghs(financials.invoiceTotal)}</td>
+              </tr>
               <tr>
                 <td className="pr-8 text-green-700">Amount paid</td>
-                <td className="text-right font-mono text-green-700">{ghs(inv.paid_amount)}</td>
+                <td className="text-right font-mono text-green-700">{ghs(financials.invoiceReceived)}</td>
               </tr>
+              {financials.customerCredit > 0 && (
+                <tr>
+                  <td className="pr-8 text-blue-700">Customer credit</td>
+                  <td className="text-right font-mono text-blue-700">{ghs(financials.customerCredit)}</td>
+                </tr>
+              )}
               {balance > 0 && (
                 <tr>
                   <td className="pr-8 font-semibold text-red-600">Balance due</td>

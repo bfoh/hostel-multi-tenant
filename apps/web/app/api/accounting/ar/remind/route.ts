@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { formatPhone, sendOverdueReminder } from '@/lib/sms'
+import { getBookingAgingRows } from '@/lib/data/booking-finance'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 interface RemindBody {
   /** Either a single bookingId for a per-invoice nudge, or occupantId to bundle all open balances. */
@@ -29,13 +30,15 @@ export async function POST(req: NextRequest) {
   const tenantName = h.get('x-tenant-name') ?? 'Your Property'
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
+  const role = await requireTenantRole(tenantId, ['owner', 'manager', 'receptionist', 'accountant'])
+  if (role instanceof NextResponse) return role
+
   let body: RemindBody
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
   if (!body.booking_id && !body.occupant_id) {
     return NextResponse.json({ error: 'booking_id or occupant_id required' }, { status: 400 })
   }
 
-  const admin = await createTenantAdminClientFromHeaders()
   const today = new Date(); today.setHours(0, 0, 0, 0)
 
   let phone:        string | null = null
@@ -45,42 +48,24 @@ export async function POST(req: NextRequest) {
   let bookingRef   = ''
 
   if (body.booking_id) {
-    const { data: b } = await (admin as any)
-      .from('bookings')
-      .select('id, booking_ref, check_in_date, final_amount, paid_amount, occupant:occupants(first_name, phone)')
-      .eq('id', body.booking_id)
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
-    if (!b) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+    const rows = await getBookingAgingRows(tenantId, { bookingId: body.booking_id })
+    const b = rows[0]
+    if (!b) return NextResponse.json({ error: 'No open balance for this booking' }, { status: 400 })
 
-    const occ = Array.isArray(b.occupant) ? b.occupant[0] : b.occupant
-    phone = occ?.phone ?? null
-    firstName = occ?.first_name ?? 'Customer'
-    balance = Math.max(0, Number(b.final_amount) - Number(b.paid_amount))
+    phone = b.phone
+    firstName = b.first_name ?? 'Customer'
+    balance = b.outstanding
     const dueDate = b.check_in_date ? new Date(b.check_in_date) : today
     daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / 86_400_000))
     bookingRef = b.booking_ref ?? b.id.slice(0, 8)
   } else if (body.occupant_id) {
-    const { data: rows } = await (admin as any)
-      .from('bookings')
-      .select('id, booking_ref, check_in_date, final_amount, paid_amount, occupant:occupants(first_name, phone)')
-      .eq('tenant_id', tenantId)
-      .eq('occupant_id', body.occupant_id)
-      .not('status', 'in', '(enquiry,cancelled,refunded)')
-
-    if (!rows || rows.length === 0) return NextResponse.json({ error: 'No bookings for this occupant' }, { status: 404 })
-
-    const openRows = (rows as any[])
-      .filter((r) => Math.max(0, Number(r.final_amount) - Number(r.paid_amount)) > 0)
-      .sort((a, b) => String(a.check_in_date).localeCompare(String(b.check_in_date)))
-
+    const openRows = await getBookingAgingRows(tenantId, { occupantId: body.occupant_id })
     if (openRows.length === 0) return NextResponse.json({ error: 'No open balance for this occupant' }, { status: 400 })
 
-    balance = openRows.reduce((s, r) => s + Math.max(0, Number(r.final_amount) - Number(r.paid_amount)), 0)
+    balance = openRows.reduce((sum, item) => sum + item.outstanding, 0)
     const oldest = openRows[0]
-    const occ = Array.isArray(oldest.occupant) ? oldest.occupant[0] : oldest.occupant
-    phone = occ?.phone ?? null
-    firstName = occ?.first_name ?? 'Customer'
+    phone = oldest.phone
+    firstName = oldest.first_name ?? 'Customer'
     const dueDate = oldest.check_in_date ? new Date(oldest.check_in_date) : today
     daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / 86_400_000))
     bookingRef = oldest.booking_ref ?? oldest.id.slice(0, 8)

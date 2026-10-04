@@ -5,6 +5,7 @@ import { FileText } from 'lucide-react'
 import { getOccupantSession } from '@/lib/auth/occupant-session'
 import { getOccupantInvoices } from '@/lib/data/occupant-invoices'
 import { InvoiceCard } from '@/components/occupant-portal/invoice-card'
+import { calculateInvoiceFinancials } from '@/lib/data/booking-finance'
 
 export const metadata: Metadata = { title: 'Invoices · My Portal' }
 
@@ -41,6 +42,7 @@ export default async function OccupantInvoicesPage() {
         <div className="space-y-3">
           {invoices.map((inv: any) => {
             const room = Array.isArray(inv.room) ? inv.room[0] : inv.room
+            const financials = calculateInvoiceFinancials(inv)
             return (
               <InvoiceCard
                 key={inv.id}
@@ -48,8 +50,8 @@ export default async function OccupantInvoicesPage() {
                 invoiceNumber={inv.invoice_number ?? null}
                 bookingRef={inv.booking_ref}
                 status={inv.status}
-                finalAmount={inv.final_amount}
-                paidAmount={inv.paid_amount}
+                finalAmount={financials.invoiceTotal}
+                paidAmount={financials.invoiceReceived}
                 checkInDate={inv.check_in_date ?? null}
                 checkOutDate={inv.check_out_date ?? null}
                 room={room ? { room_number: room.room_number, block: room.block } : null}

@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Activity,
   ArrowRight,
+  CheckCircle2,
 } from 'lucide-react'
 
 import { getFinancialHealth } from '@/lib/data/accounting'
@@ -43,6 +44,30 @@ export default async function AccountingDashboardPage() {
         </p>
       </div>
 
+      {h.integrity.totalIssues === 0 ? (
+        <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/40">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
+          <div>
+            <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">Financial integrity checks passed</p>
+            <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-400">
+              Payment, charge, deposit, booking balance, and journal-ledger checks are reconciled.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800 dark:bg-red-950/40">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-700 dark:text-red-300" />
+          <div>
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">
+              {h.integrity.totalIssues} financial integrity {h.integrity.totalIssues === 1 ? 'issue requires' : 'issues require'} review
+            </p>
+            <p className="mt-0.5 text-xs text-red-700 dark:text-red-400">
+              Do not publish or close the affected period until the underlying payment, balance, deposit, or journal discrepancy is resolved.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Position KPIs — current state of cash + receivables/payables */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiTile
@@ -61,7 +86,7 @@ export default async function AccountingDashboardPage() {
           value={formatGHS(h.arOutstanding)}
           icon={ArrowDownToLine}
           tone={h.arOutstanding > 0 ? 'warning' : 'neutral'}
-          sublabel="Customers owe us"
+          sublabel="Open booking and folio balances"
         />
         <KpiTile
           label="Accounts payable"
@@ -222,7 +247,7 @@ function PerfPanel({
   data,
 }: {
   title: string
-  data: { revenue: number; expenses: number; netProfit: number }
+  data: { revenue: number; expenses: number; netProfit: number; bookingRevenue: number; otherRevenue: number }
 }) {
   const margin = data.revenue > 0 ? (data.netProfit / data.revenue) * 100 : null
   const profitTone = data.netProfit >= 0 ? 'text-success' : 'text-danger'
@@ -251,6 +276,10 @@ function PerfPanel({
           <p className={`mt-0.5 text-base font-bold currency-amount ${profitTone}`}>{formatGHS(data.netProfit)}</p>
         </div>
       </div>
+      <p className="mt-3 border-t border-border/60 pt-2 text-[11px] text-text-tertiary">
+        Ledger revenue: {formatGHS(data.bookingRevenue)} booking and folio revenue
+        {data.otherRevenue !== 0 && ` · ${formatGHS(data.otherRevenue)} other income`}
+      </p>
     </div>
   )
 }

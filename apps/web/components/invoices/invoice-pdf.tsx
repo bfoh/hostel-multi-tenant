@@ -171,6 +171,7 @@ export interface InvoicePDFProps {
   room: { room_number: string; block?: string | null; floor?: number | null } | null
   categoryName:  string
   payments: { id: string; amount: number; method: string; reference?: string | null; paid_at?: string | null }[]
+  charges?: { id: string; description: string; quantity: number; unit_price: number; amount: number; paid: boolean }[]
   hostelName:    string
   hostelTagline?: string | null
   hostelAddress?: string | null
@@ -185,12 +186,17 @@ export interface InvoicePDFProps {
 /* ── Document ─────────────────────────────────────────────────────────── */
 
 export function InvoicePDF({
-  inv, occupant, room, categoryName, payments,
+  inv, occupant, room, categoryName, payments, charges = [],
   hostelName, hostelTagline, hostelAddress, hostelPhone, hostelEmail, logoUrl,
   tin, vatRegNumber, isVatRegistered,
 }: InvoicePDFProps) {
-  const balance         = Math.max(0, inv.final_amount - inv.paid_amount)
-  const badge           = BADGE[inv.payment_status] ?? { bg: '#F7FAFC', text: '#718096' }
+  const chargesAmount = charges.reduce((sum, charge) => sum + charge.amount, 0)
+  const paidCharges = charges.reduce((sum, charge) => sum + (charge.paid ? charge.amount : 0), 0)
+  const invoiceTotal = inv.final_amount + chargesAmount
+  const amountPaid = Math.min(inv.paid_amount, inv.final_amount) + paidCharges
+  const balance = Math.max(0, inv.final_amount - inv.paid_amount) + chargesAmount - paidCharges
+  const paymentStatus = balance === 0 ? 'paid' : amountPaid === 0 ? 'unpaid' : 'partial'
+  const badge           = BADGE[paymentStatus] ?? { bg: '#F7FAFC', text: '#718096' }
   const paidPayments    = payments.filter((p) => p.paid_at)
   const invoiceNumber   = inv.invoice_number ?? inv.booking_ref
   const hasTax          = inv.tax_amount > 0
@@ -231,7 +237,7 @@ export function InvoicePDF({
             <Text style={s.invoiceRef}>{invoiceNumber}</Text>
             <Text style={s.invoiceDate}>Issued: {dt(inv.created_at)}</Text>
             <View style={[s.badge, { backgroundColor: badge.bg }]}>
-              <Text style={[s.badgeText, { color: badge.text }]}>{inv.payment_status}</Text>
+              <Text style={[s.badgeText, { color: badge.text }]}>{paymentStatus}</Text>
             </View>
           </View>
         </View>
@@ -292,6 +298,17 @@ export function InvoicePDF({
               <Text style={[s.colAmt, { color: '#276749' }]}>−{ghs(inv.discount_amount)}</Text>
             </View>
           )}
+          {charges.map((charge) => (
+            <View key={charge.id} style={s.tableRow}>
+              <View style={s.colDesc}>
+                <Text>{charge.description}</Text>
+                <Text style={{ fontSize: 8, color: '#a0aec0', marginTop: 2 }}>
+                  {charge.quantity} × {ghs(charge.unit_price)}{charge.paid ? ' · paid' : ''}
+                </Text>
+              </View>
+              <Text style={s.colAmt}>{ghs(charge.amount)}</Text>
+            </View>
+          ))}
         </View>
 
         {/* ── Tax breakdown box (GRA-style) ── */}
@@ -316,7 +333,7 @@ export function InvoicePDF({
             </View>
             <View style={s.taxSeparator} />
             <View style={s.taxRow}>
-              <Text style={[s.taxLabel, { fontFamily: 'Helvetica-Bold', color: '#1a202c' }]}>Total</Text>
+              <Text style={[s.taxLabel, { fontFamily: 'Helvetica-Bold', color: '#1a202c' }]}>Accommodation total</Text>
               <Text style={[s.taxValue, { fontFamily: 'Helvetica-Bold' }]}>{ghs(inv.final_amount)}</Text>
             </View>
           </View>
@@ -324,7 +341,7 @@ export function InvoicePDF({
           /* No-tax simple total */
           <View style={{ marginTop: 12 }}>
             <View style={[s.totalRow, { borderTop: '1.5pt solid #1a202c', paddingTop: 6, marginTop: 6 }]}>
-              <Text style={s.grandLabel}>Total</Text>
+              <Text style={s.grandLabel}>Accommodation total</Text>
               <Text style={s.grandValue}>{ghs(inv.final_amount)}</Text>
             </View>
           </View>
@@ -332,9 +349,19 @@ export function InvoicePDF({
 
         {/* Paid / Balance */}
         <View style={{ marginTop: 6 }}>
+          {chargesAmount > 0 && (
+            <View style={s.totalRow}>
+              <Text style={s.totalLabel}>Additional charges</Text>
+              <Text style={s.totalValue}>{ghs(chargesAmount)}</Text>
+            </View>
+          )}
+          <View style={s.totalRow}>
+            <Text style={s.grandLabel}>Invoice total</Text>
+            <Text style={s.grandValue}>{ghs(invoiceTotal)}</Text>
+          </View>
           <View style={s.totalRow}>
             <Text style={[s.totalLabel, { color: '#276749' }]}>Amount paid</Text>
-            <Text style={[s.totalValue, { color: '#276749' }]}>{ghs(inv.paid_amount)}</Text>
+            <Text style={[s.totalValue, { color: '#276749' }]}>{ghs(amountPaid)}</Text>
           </View>
           {balance > 0 && (
             <View style={s.totalRow}>

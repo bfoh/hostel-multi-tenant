@@ -19,6 +19,10 @@ const INVOICE_QUERY = `
   ),
   booking_payments(
     id, amount, method, reference, status, paid_at
+  ),
+  booking_charges(
+    id, description, category, quantity, unit_price, amount,
+    payment_method, paid, notes, created_at, updated_at
   )
 `
 
@@ -35,10 +39,6 @@ export async function getInvoices(filter?: { payment_status?: string; search?: s
     .not('status', 'in', '(enquiry,cancelled)')
     .order('created_at', { ascending: false })
     .limit(200)
-
-  if (filter?.payment_status && filter.payment_status !== 'all') {
-    query = query.eq('payment_status', filter.payment_status as 'unpaid')
-  }
 
   const { data, error } = await query
   if (error) return [] as any[]

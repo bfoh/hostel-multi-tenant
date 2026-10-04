@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ChevronLeft, Download } from 'lucide-react'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getBookingRevenueReport } from '@/lib/data/booking-finance'
 
 export const metadata: Metadata = { title: 'Custom Report Builder' }
 
@@ -13,7 +14,7 @@ function formatGHS(pesewas: number) {
 // ── Report config ─────────────────────────────────────────────────────────
 
 const METRICS = [
-  { value: 'revenue',   label: 'Revenue (payments received)' },
+  { value: 'revenue',   label: 'Recognized booking revenue' },
   { value: 'bookings',  label: 'Bookings (by count)' },
   { value: 'occupancy', label: 'Occupancy (room-nights booked)' },
 ] as const
@@ -79,31 +80,7 @@ async function runReport(
   const supabase = createAdminClient()
 
   if (metric === 'revenue') {
-    const { data } = await supabase
-      .from('payments')
-      .select('amount, method, paid_at, bookings(room_categories(name))')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'completed')
-      .gte('paid_at', from + 'T00:00:00Z')
-      .lte('paid_at', to   + 'T23:59:59Z')
-      .order('paid_at')
-
-    const map = new Map<string, { count: number; amount: number }>()
-    for (const p of (data ?? []) as any[]) {
-      let label: string
-      if (groupBy === 'payment_method') label = p.method ?? 'Unknown'
-      else if (groupBy === 'room_category') {
-        const cat = p.bookings?.room_categories
-        label = cat?.name ?? 'Unknown'
-      } else {
-        label = truncDate(p.paid_at ?? p.created_at, groupBy)
-      }
-
-      const existing = map.get(label) ?? { count: 0, amount: 0 }
-      map.set(label, { count: existing.count + 1, amount: existing.amount + (p.amount ?? 0) })
-    }
-
-    return Array.from(map.entries()).map(([label, v]) => ({ label, ...v }))
+    return getBookingRevenueReport(tenantId, from, to, groupBy)
   }
 
   if (metric === 'bookings') {

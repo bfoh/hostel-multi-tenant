@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { calculateInvoiceFinancials } from '@/lib/data/booking-finance'
 
 function toCsv(rows: Record<string, unknown>[]): string {
   if (!rows.length) return ''
@@ -20,6 +21,20 @@ function toCsv(rows: Record<string, unknown>[]): string {
 
 const GHS = (p: number) => (p / 100).toFixed(2)
 
+async function fetchAllRows<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const pageSize = 1000
+  const rows: T[] = []
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await fetchPage(from, from + pageSize - 1)
+    if (error) throw new Error(`Export failed: ${error.message}`)
+    const page = data ?? []
+    rows.push(...page)
+    if (page.length < pageSize) return rows
+  }
+}
+
 export async function GET(req: NextRequest) {
   const h = await headers()
   const tenantId = h.get('x-tenant-id')
@@ -36,20 +51,21 @@ export async function GET(req: NextRequest) {
   let filename = `${entity}-export.csv`
 
   if (entity === 'bookings') {
-    const q = supabase
-      .from('bookings')
-      .select('booking_ref, status, source, check_in_date, check_out_date, semester, academic_year, rate_per_unit, rate_unit, total_amount, discount_amount, tax_amount, final_amount, paid_amount, payment_status, notes, created_at, occupants(first_name, last_name, phone, email, student_id, institution), rooms(room_number, block, floor, room_categories(name))')
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-
-    if (from) q.gte('created_at', from + 'T00:00:00Z')
-    if (to)   q.lte('created_at', to   + 'T23:59:59Z')
-
-    const { data } = await q
-    rows = (data ?? []).map((b) => {
+    const data = await fetchAllRows<any>((rangeFrom, rangeTo) => {
+      let q = supabase
+        .from('bookings')
+        .select('booking_ref, status, source, check_in_date, check_out_date, semester, academic_year, rate_per_unit, rate_unit, total_amount, discount_amount, tax_amount, final_amount, paid_amount, payment_status, notes, created_at, booking_charges(amount, paid), occupants(first_name, last_name, phone, email, student_id, institution), rooms(room_number, block, floor, room_categories(name))')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+      if (from) q = q.gte('created_at', from + 'T00:00:00Z')
+      if (to) q = q.lte('created_at', to + 'T23:59:59Z')
+      return q.range(rangeFrom, rangeTo)
+    })
+    rows = data.map((b) => {
       const occ = Array.isArray(b.occupants) ? b.occupants[0] : b.occupants
       const room = Array.isArray(b.rooms) ? b.rooms[0] : b.rooms
       const cat  = room ? (Array.isArray((room as any).room_categories) ? (room as any).room_categories[0] : (room as any).room_categories) : null
+      const financials = calculateInvoiceFinancials(b)
       return {
         booking_ref:       b.booking_ref,
         status:            b.status,
@@ -71,10 +87,13 @@ export async function GET(req: NextRequest) {
         total_ghs:         GHS(b.total_amount),
         discount_ghs:      GHS(b.discount_amount),
         tax_ghs:           GHS(b.tax_amount),
-        final_ghs:         GHS(b.final_amount),
-        paid_ghs:          GHS(b.paid_amount),
-        balance_ghs:       GHS(b.final_amount - b.paid_amount),
-        payment_status:    b.payment_status,
+        accommodation_ghs: GHS(financials.baseAmount),
+        folio_charges_ghs: GHS(financials.chargesAmount),
+        invoice_total_ghs: GHS(financials.invoiceTotal),
+        received_ghs:      GHS(financials.invoiceReceived),
+        balance_ghs:       GHS(financials.outstanding),
+        customer_credit_ghs: GHS(financials.customerCredit),
+        payment_status:    financials.paymentStatus,
         notes:             b.notes ?? '',
         created_at:        b.created_at,
       }
@@ -114,17 +133,17 @@ export async function GET(req: NextRequest) {
   }
 
   else if (entity === 'payments') {
-    const q = supabase
-      .from('booking_payments')
-      .select('amount, method, reference, status, paid_at, notes, created_at, bookings(booking_ref, occupants(first_name, last_name), rooms(room_number))')
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-
-    if (from) q.gte('created_at', from + 'T00:00:00Z')
-    if (to)   q.lte('created_at', to   + 'T23:59:59Z')
-
-    const { data } = await q
-    rows = (data ?? []).map((p) => {
+    const data = await fetchAllRows<any>((rangeFrom, rangeTo) => {
+      let q = supabase
+        .from('booking_payments')
+        .select('amount, method, reference, status, paid_at, notes, created_at, bookings(booking_ref, occupants(first_name, last_name), rooms(room_number))')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+      if (from) q = q.gte('created_at', from + 'T00:00:00Z')
+      if (to) q = q.lte('created_at', to + 'T23:59:59Z')
+      return q.range(rangeFrom, rangeTo)
+    })
+    rows = data.map((p) => {
       const b   = Array.isArray(p.bookings) ? p.bookings[0] : p.bookings
       const occ = b ? (Array.isArray((b as any).occupants) ? (b as any).occupants[0] : (b as any).occupants) : null
       const room = b ? (Array.isArray((b as any).rooms) ? (b as any).rooms[0] : (b as any).rooms) : null

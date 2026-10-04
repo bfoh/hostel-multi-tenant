@@ -312,48 +312,23 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
 
     const { data: existing } = await adminAny
       .from('payment_plan_installments')
-      .select('id, status, amount')
+      .select('id, status, amount, booking_payment_id')
       .eq('id', installmentId)
       .eq('tenant_id', tenantId)
       .maybeSingle()
 
-    if (!existing || existing.status === 'paid') return
+    if (!existing || (existing.status === 'paid' && existing.booking_payment_id)) return
 
-    const { data: updated } = await adminAny
-      .from('payment_plan_installments')
-      .update({
-        status:         'paid',
-        paid_at:        new Date().toISOString(),
-        payment_method: inferMethodFromChannel(event.data.channel),
-        reference,
-      })
-      .eq('id', installmentId)
-      .eq('tenant_id', tenantId)
-      .neq('status', 'paid')
-      .select('amount')
-      .single()
-
-    if (updated) {
-      const { data: bk } = await adminAny
-        .from('bookings')
-        .select('paid_amount, final_amount, status')
-        .eq('id', bookingId)
-        .single()
-      if (bk) {
-        const newPaid = (bk.paid_amount as number) + amountPesewas
-        const fullyPaid = newPaid >= bk.final_amount
-        const newPaymentStatus = fullyPaid ? 'paid'
-          : newPaid > 0 ? 'partial' : 'unpaid'
-        const patch: Record<string, unknown> = {
-          paid_amount:    newPaid,
-          payment_status: newPaymentStatus,
-        }
-        if (fullyPaid && bk.status === 'pending_payment') patch.status = 'confirmed'
-        await adminAny
-          .from('bookings')
-          .update(patch)
-          .eq('id', bookingId)
-      }
+    const { error: settleError } = await adminAny.rpc('settle_payment_plan_installment', {
+      p_tenant_id: tenantId,
+      p_installment_id: installmentId,
+      p_method: inferMethodFromChannel(event.data.channel),
+      p_reference: reference,
+      p_actor_id: null,
+      p_paid_at: new Date().toISOString(),
+    })
+    if (settleError) {
+      console.error('[paystack] installment settlement failed', settleError)
     }
     return
   }
@@ -462,28 +437,34 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
 
   if (!paymentId) return  // unknown charge — log only
 
-  const { data: payment } = await supabase
+  const { data: pendingPayment } = await supabase
     .from('booking_payments')
-    .update({
-      status:  'success',
-      paid_at: new Date().toISOString(),
-    })
+    .select('tenant_id')
     .eq('id', paymentId)
-    .eq('status', 'pending')
-    .select('id, booking_id, amount, tenant_id')
-    .single()
+    .maybeSingle()
 
-  if (payment) {
-    await supabase
-      .from('bookings')
-      .update({ updated_at: new Date().toISOString() } as any)
-      .eq('id', payment.booking_id)
+  if (!pendingPayment) return
+
+  const { data: settlement, error: settlementError } = await (supabase as any).rpc(
+    'finalize_pending_booking_payment',
+    {
+      p_tenant_id: pendingPayment.tenant_id,
+      p_payment_id: paymentId,
+      p_provider_reference: reference,
+      p_paid_at: new Date().toISOString(),
+    },
+  )
+
+  if (settlementError) throw new Error(`Could not finalize booking payment: ${settlementError.message}`)
+
+  if (settlement?.recorded) {
 
     const { notifyOnlinePayment } = await import('@/lib/payments/record-online-payment')
     notifyOnlinePayment(supabase, {
-      tenantId:  payment.tenant_id,
-      bookingId: payment.booking_id,
-      amount:    payment.amount,
+      tenantId:  settlement.tenant_id,
+      bookingId: settlement.booking_id,
+      amount:    settlement.amount,
+      requiresResolution: Boolean(settlement.requires_resolution),
     }).catch(() => {})
   }
 }

@@ -59,6 +59,7 @@ export async function GET(
         room:         room     ?? null,
         categoryName: (cat as any)?.name ?? 'Standard',
         payments,
+        charges: Array.isArray(inv.booking_charges) ? inv.booking_charges : [],
         hostelName,
         hostelTagline,
         hostelAddress,

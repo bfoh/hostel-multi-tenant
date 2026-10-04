@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerBusinessType } from '@/lib/auth/tenant'
 import { getAvailableRooms } from '@/lib/data/bookings'
@@ -111,8 +110,6 @@ export async function POST(
   const newOut = new Date(newCheckOut)
   const extraNights = Math.round((newOut.getTime() - oldOut.getTime()) / 86400000)
   const extraAmount = booking.rate_unit === 'night' ? booking.rate_per_unit * extraNights : 0
-  const newTotal = booking.total_amount + extraAmount
-
   // The client's own extraAmount preview is never trusted — validate the
   // submitted split against the amount computed just above instead.
   const payments = parsed.data.payments ?? []
@@ -121,53 +118,23 @@ export async function POST(
     return NextResponse.json({ error: 'The payment total exceeds the extension amount.' }, { status: 422 })
   }
 
-  let receivedBy: string | undefined
-  if (payments.length > 0) {
-    const authClient = await createClient()
-    const { data: { user } } = await authClient.auth.getUser()
-    receivedBy = user?.id
-  }
-
-  const { data: updated, error } = await supabase
-    .from('bookings')
-    .update({
-      check_out_date: newCheckOut,
-      total_amount:   newTotal,
-      ...(parsed.data.new_room_id && parsed.data.new_room_id !== booking.room_id
-        ? {
-            room_id: parsed.data.new_room_id,
-            room_assignment_source: 'stay_extension',
-            room_assignment_locked: true,
-            room_assigned_by: role.userId,
-            room_assigned_at: new Date().toISOString(),
-          }
-        : {}),
-    })
-    .eq('id', id)
-    .eq('tenant_id', tenantId)
-    .select()
-    .single()
+  const { data: updated, error } = await (supabase as any).rpc('extend_booking_stay_with_payments', {
+    p_tenant_id: tenantId,
+    p_booking_id: id,
+    p_new_check_out_date: newCheckOut,
+    p_new_room_id: parsed.data.new_room_id ?? null,
+    p_payments: payments,
+    p_actor_id: role.userId,
+  })
 
   if (error) {
     if (error.code === '23P01') {
       return NextResponse.json({ error: 'This room was just booked for those dates by someone else.' }, { status: 409 })
     }
+    if (['22003', '22023', '23514'].includes(error.code ?? '')) {
+      return NextResponse.json({ error: error.message }, { status: 422 })
+    }
     return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  if (payments.length > 0) {
-    await supabase.from('booking_payments').insert(
-      payments.map((p) => ({
-        tenant_id:   tenantId,
-        booking_id:  id,
-        amount:      p.amount,
-        method:      p.method,
-        status:      'success',
-        paid_at:     new Date().toISOString(),
-        received_by: receivedBy ?? null,
-        notes:       'Extension payment',
-      })),
-    )
   }
 
   // Guest-facing notification, non-blocking — must never break the

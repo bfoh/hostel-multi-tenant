@@ -92,6 +92,20 @@ const baseParams = {
 }
 
 describe('createBooking — payment collection', () => {
+  it('rejects an overpayment before creating the booking', async () => {
+    const { client, bookingInserts, paymentInserts } = fakeSupabase({ baseRate: 10000 })
+
+    const result = await createBooking(client, 'tenant-1', {
+      ...baseParams,
+      payments: [{ method: 'cash', amount: 10001 }],
+      receivedBy: 'staff-1',
+    })
+
+    expect(result).toMatchObject({ ok: false, status: 422 })
+    expect(bookingInserts).toHaveLength(0)
+    expect(paymentInserts).toHaveLength(0)
+  })
+
   it('auto-confirms the booking when payments fully cover the final amount', async () => {
     const { client, bookingUpdates, paymentInserts } = fakeSupabase({ baseRate: 10000 })
 

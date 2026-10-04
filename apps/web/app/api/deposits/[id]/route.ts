@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { z } from 'zod'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 const schema = z.object({
   status:        z.enum(['refunded','forfeited','partial_refund']),
@@ -19,6 +20,9 @@ export async function PATCH(
   const h = await headers()
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const role = await requireTenantRole(tenantId, ['owner', 'manager', 'accountant'])
+  if (role instanceof NextResponse) return role
 
   const supabase = await createTenantAdminClientFromHeaders()
 
@@ -46,6 +50,7 @@ export async function PATCH(
   const update: Record<string, unknown> = {
     status:       parsed.data.status,
     resolved_at:  new Date().toISOString(),
+    resolved_by:  role.userId,
     refund_reason: parsed.data.refund_reason,
     notes:        parsed.data.notes,
   }
@@ -73,6 +78,9 @@ export async function DELETE(
   const h = await headers()
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const role = await requireTenantRole(tenantId, ['owner', 'manager', 'accountant'])
+  if (role instanceof NextResponse) return role
 
   const supabase = await createTenantAdminClientFromHeaders()
 

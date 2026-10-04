@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS } from '@/lib/utils'
+import { calculateInvoiceFinancials } from '@/lib/data/booking-finance'
 
 export const metadata: Metadata = { title: 'Retention Analytics' }
 
@@ -14,6 +15,7 @@ async function getRetentionData(tenantId: string) {
     .from('bookings')
     .select(`
       id, occupant_id, final_amount, paid_amount,
+      booking_charges(amount, paid),
       check_in_date, check_out_date, status, created_at,
       occupants(id, first_name, last_name, phone, email, type, institution)
     `)
@@ -35,7 +37,10 @@ async function getRetentionData(tenantId: string) {
   // Build per-occupant stats
   const guestStats = Array.from(byOccupant.entries()).map(([, bks]) => {
     const occ = Array.isArray(bks[0].occupants) ? bks[0].occupants[0] : bks[0].occupants
-    const totalSpent = bks.reduce((s, b) => s + (b.paid_amount ?? 0), 0)
+    const totalSpent = bks.reduce(
+      (sum, booking) => sum + calculateInvoiceFinancials(booking).invoiceReceived,
+      0,
+    )
     const avgStayDays = bks.reduce((s, b) => {
       const cin  = new Date(b.check_in_date).getTime()
       const cout = new Date(b.check_out_date).getTime()

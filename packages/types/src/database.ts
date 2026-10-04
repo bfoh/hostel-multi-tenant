@@ -783,6 +783,16 @@ export type Database = {
           paid_at: string | null
           received_by: string | null
           notes: string | null
+          draft_file_path: string | null
+          draft_bank_name: string | null
+          draft_number: string | null
+          draft_deposit_date: string | null
+          draft_note: string | null
+          rejected_reason: string | null
+          rejected_by: string | null
+          rejected_at: string | null
+          approved_by: string | null
+          approved_at: string | null
           created_at: string
         }
         Insert: {
@@ -797,6 +807,16 @@ export type Database = {
           paid_at?: string | null
           received_by?: string | null
           notes?: string | null
+          draft_file_path?: string | null
+          draft_bank_name?: string | null
+          draft_number?: string | null
+          draft_deposit_date?: string | null
+          draft_note?: string | null
+          rejected_reason?: string | null
+          rejected_by?: string | null
+          rejected_at?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
         }
         Update: {
           amount?: number
@@ -807,6 +827,16 @@ export type Database = {
           paid_at?: string | null
           received_by?: string | null
           notes?: string | null
+          draft_file_path?: string | null
+          draft_bank_name?: string | null
+          draft_number?: string | null
+          draft_deposit_date?: string | null
+          draft_note?: string | null
+          rejected_reason?: string | null
+          rejected_by?: string | null
+          rejected_at?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
         }
         Relationships: [
           {
@@ -2408,6 +2438,7 @@ export type Database = {
           reference: string | null
           status: string
           notes: string | null
+          booking_payment_id: string | null
           created_at: string
         }
         Insert: {
@@ -2422,6 +2453,7 @@ export type Database = {
           reference?: string | null
           status?: string
           notes?: string | null
+          booking_payment_id?: string | null
         }
         Update: {
           installment_number?: number
@@ -2432,6 +2464,7 @@ export type Database = {
           reference?: string | null
           status?: string
           notes?: string | null
+          booking_payment_id?: string | null
         }
         Relationships: []
       }
@@ -2792,7 +2825,10 @@ export type Database = {
           refund_reason: string | null
           resolved_at: string | null
           notes: string | null
+          collected_by: string | null
+          resolved_by: string | null
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -2808,6 +2844,9 @@ export type Database = {
           refund_reason?: string | null
           resolved_at?: string | null
           notes?: string | null
+          collected_by?: string | null
+          resolved_by?: string | null
+          updated_at?: string
         }
         Update: {
           amount?: number
@@ -2819,6 +2858,9 @@ export type Database = {
           refund_reason?: string | null
           resolved_at?: string | null
           notes?: string | null
+          collected_by?: string | null
+          resolved_by?: string | null
+          updated_at?: string
         }
         Relationships: [
           {

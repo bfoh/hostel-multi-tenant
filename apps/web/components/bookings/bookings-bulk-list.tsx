@@ -150,11 +150,15 @@ export function BookingsBulkList({
             {canUpdate && (
               <button
                 disabled={isPending}
-                onClick={() => bulkAction('mark_paid')}
+                onClick={() => {
+                  if (confirm(`Record the outstanding balance for ${selected.size} booking(s) as cash received?`)) {
+                    bulkAction('mark_paid')
+                  }
+                }}
                 className="border-success/30 bg-success/5 text-success hover:bg-success/10 flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50"
               >
                 <CheckCheck className="h-3 w-3" />
-                Mark paid
+                Record cash paid
               </button>
             )}
             {canManage && (

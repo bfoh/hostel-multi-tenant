@@ -67,6 +67,16 @@ export async function createBooking(
   const category = Array.isArray(room.category) ? room.category[0] : room.category
   const baseRate = category?.base_rate ?? 0
   const categoryCapacity = category?.capacity ?? 1
+  const finalAmount = Math.max(0, baseRate - (params.discount_amount ?? 0))
+  const collectedAtBooking = (params.payments ?? []).reduce((sum, payment) => sum + payment.amount, 0)
+
+  if (collectedAtBooking > finalAmount) {
+    return {
+      ok: false,
+      status: 422,
+      error: `Payments cannot exceed the booking total (${formatGHS(finalAmount)}).`,
+    }
+  }
 
   // A hotel room is sold as one unit per stay regardless of how many guests
   // its category says it sleeps — mirrors the DB trigger in migration 130.
@@ -144,7 +154,6 @@ export async function createBooking(
     // regular "Record Payment" flow.
     if (!paymentsErr) {
       const paidAmount = params.payments.reduce((s, p) => s + p.amount, 0)
-      const finalAmount = Math.max(0, baseRate - (params.discount_amount ?? 0))
       if (paidAmount >= finalAmount) {
         status = 'confirmed'
         await supabase.from('bookings').update({ status }).eq('id', data.id)

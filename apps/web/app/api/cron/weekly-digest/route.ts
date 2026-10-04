@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { calculateInvoiceFinancials, getBookingRevenueBreakdown } from '@/lib/data/booking-finance'
 
 /**
  * POST /api/cron/weekly-digest
@@ -66,29 +67,18 @@ async function buildWeeklyDigest(tenantId: string, supabase: any): Promise<Weekl
   const twoWeeksAgo = new Date(now.getTime() - 14 * 86_400_000)
   const today = now.toISOString().slice(0, 10)
 
-  // This week's payments
-  const { data: thisWeek } = await supabase
-    .from('booking_payments')
-    .select('amount, method')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'success')
-    .gte('paid_at', weekAgo.toISOString())
-
-  const thisWeekRows = thisWeek ?? []
-  const weekRevenue = thisWeekRows.reduce((s: number, p: any) => s + p.amount, 0)
-  const cashTotal = thisWeekRows.filter((p: any) => p.method === 'cash').reduce((s: number, p: any) => s + p.amount, 0)
+  // Database aggregation includes room payments and paid folio charges and is
+  // not truncated by the REST API row cap.
+  const thisWeekRows = await getBookingRevenueBreakdown(tenantId, weekAgo, now)
+  const weekRevenue = thisWeekRows.reduce((sum, row) => sum + row.total_amount, 0)
+  const cashTotal = thisWeekRows
+    .filter((row) => row.method === 'cash')
+    .reduce((sum, row) => sum + row.total_amount, 0)
   const digitalTotal = weekRevenue - cashTotal
+  const paymentCount = thisWeekRows.reduce((sum, row) => sum + row.transaction_count, 0)
 
-  // Last week's payments
-  const { data: lastWeek } = await supabase
-    .from('booking_payments')
-    .select('amount')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'success')
-    .gte('paid_at', twoWeeksAgo.toISOString())
-    .lt('paid_at', weekAgo.toISOString())
-
-  const prevWeekRevenue = (lastWeek ?? []).reduce((s: number, p: any) => s + p.amount, 0)
+  const lastWeekRows = await getBookingRevenueBreakdown(tenantId, twoWeeksAgo, weekAgo)
+  const prevWeekRevenue = lastWeekRows.reduce((sum, row) => sum + row.total_amount, 0)
   const changePct = prevWeekRevenue > 0 ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue) * 100 : 0
 
   // Auxiliary revenue (revenue points)
@@ -115,14 +105,17 @@ async function buildWeeklyDigest(tenantId: string, supabase: any): Promise<Weekl
   // Overdue
   const { data: overdue } = await supabase
     .from('bookings')
-    .select('final_amount, paid_amount')
+    .select('final_amount, paid_amount, booking_charges(amount, paid)')
     .eq('tenant_id', tenantId)
     .in('payment_status', ['unpaid', 'partial'])
     .in('status', ['confirmed', 'checked_in'])
     .lt('check_in_date', today)
 
   const overdueRows = overdue ?? []
-  const overdueTotal = overdueRows.reduce((s: number, b: any) => s + Math.max(0, b.final_amount - b.paid_amount), 0)
+  const overdueBalances = overdueRows
+    .map((booking: any) => calculateInvoiceFinancials(booking).outstanding)
+    .filter((balance: number) => balance > 0)
+  const overdueTotal = overdueBalances.reduce((sum: number, balance: number) => sum + balance, 0)
 
   // New bookings
   const { count: newBookings } = await supabase
@@ -156,9 +149,9 @@ async function buildWeeklyDigest(tenantId: string, supabase: any): Promise<Weekl
 
   return {
     weekRevenue, prevWeekRevenue, changePct,
-    paymentCount: thisWeekRows.length, cashTotal, digitalTotal,
+    paymentCount, cashTotal, digitalTotal,
     auxRevenue, occupancyPct, overdueTotal,
-    overdueCount: overdueRows.length, newBookings: newBookings ?? 0,
+    overdueCount: overdueBalances.length, newBookings: newBookings ?? 0,
     anomalyCount, discrepancyCount,
   }
 }
@@ -173,7 +166,7 @@ function formatWeeklySms(hostelName: string, d: WeeklyDigest): string {
   const lines = [
     `📊 ${hostelName} — Weekly Report`,
     ``,
-    `💰 Room Revenue: ${fmtGHS(d.weekRevenue)} (${trend} vs prev week)`,
+    `💰 Booking receipts: ${fmtGHS(d.weekRevenue)} (${trend} vs prev week)`,
     `   💵 Cash: ${fmtGHS(d.cashTotal)} · 📱 Digital: ${fmtGHS(d.digitalTotal)}`,
   ]
 

@@ -133,7 +133,7 @@ export default async function ReportsPage({
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10">
               <TrendingUp className="h-4 w-4 text-brand" />
             </div>
-            <p className="text-xs text-text-tertiary">Revenue MTD</p>
+            <p className="text-xs text-text-tertiary">Recognized revenue MTD</p>
           </div>
           <p className="mt-3 font-mono text-xl font-bold text-text-primary">{formatGHS(ytd.mtdTotal)}</p>
           <p className="mt-0.5 text-xs text-text-secondary">YTD: {formatGHS(ytd.ytdTotal)}</p>
@@ -206,7 +206,7 @@ export default async function ReportsPage({
           <div className="rounded-xl border border-border bg-surface p-6">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="font-semibold text-text-primary">Revenue — Last 6 Months</h2>
+                <h2 className="font-semibold text-text-primary">Recognized Revenue — Last 6 Months</h2>
                 <p className="text-xs text-text-tertiary mt-0.5">Successful payments only</p>
               </div>
               <BarChart3 className="h-4 w-4 text-text-tertiary" />
@@ -374,24 +374,24 @@ export default async function ReportsPage({
           {/* Summary row */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-xl border border-border bg-surface p-4">
-              <p className="text-xs text-text-tertiary">This month</p>
+              <p className="text-xs text-text-tertiary">Recognized revenue this month</p>
               <p className="mt-1 font-mono text-xl font-bold text-text-primary">{formatGHS(ytd.mtdTotal)}</p>
             </div>
             <div className="rounded-xl border border-border bg-surface p-4">
-              <p className="text-xs text-text-tertiary">Year to date</p>
+              <p className="text-xs text-text-tertiary">Recognized revenue year to date</p>
               <p className="mt-1 font-mono text-xl font-bold text-success">{formatGHS(ytd.ytdTotal)}</p>
             </div>
             <div className="rounded-xl border border-border bg-surface p-4">
               <p className="text-xs text-text-tertiary">Total billed</p>
               <p className="mt-1 font-mono text-xl font-bold text-text-primary">{formatGHS(bookings.totalRevenue)}</p>
-              <p className="mt-0.5 text-xs text-text-secondary">All bookings combined</p>
+              <p className="mt-0.5 text-xs text-text-secondary">Active invoices, including folio charges</p>
             </div>
           </div>
 
           {/* Monthly revenue table */}
           <div className="rounded-xl border border-border bg-surface overflow-hidden">
             <div className="border-b border-border px-5 py-4">
-              <h2 className="font-semibold text-text-primary">Monthly Revenue (Last 6 Months)</h2>
+              <h2 className="font-semibold text-text-primary">Monthly Recognized Revenue (Last 6 Months)</h2>
             </div>
             <table className="w-full text-sm">
               <thead className="bg-surface-sunken">

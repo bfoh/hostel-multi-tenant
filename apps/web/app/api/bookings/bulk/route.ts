@@ -172,35 +172,52 @@ export async function POST(req: NextRequest) {
     const gate = await requireTenantRole(tenantId, UPDATE_ROLES)
     if (gate instanceof NextResponse) return gate
 
-    // Fetch each booking so we can sync paid_amount = final_amount and
-    // promote pending_payment → confirmed atomically per row.
+    // A paid booking must always have transaction evidence. Record the exact
+    // remaining balance through the canonical RPC instead of mutating the
+    // denormalised paid_amount field.
     const { data: rows, error: fetchErr } = await supabase
       .from('bookings')
-      .select('id, final_amount, status')
+      .select('id, final_amount, paid_amount, status')
       .in('id', ids)
       .eq('tenant_id', tenantId)
 
     if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 })
 
-    const updates = (rows ?? []).map((b) => {
-      const patch: Record<string, unknown> = {
-        payment_status: 'paid',
-        paid_amount: b.final_amount,
-      }
-      if (b.status === 'pending_payment') patch.status = 'confirmed'
+    const payable = (rows ?? []).filter((b) => b.final_amount > b.paid_amount)
+    const results = await Promise.allSettled(
+      payable.map((b) => (supabase as any).rpc('record_booking_payment', {
+        p_tenant_id: tenantId,
+        p_booking_id: b.id,
+        p_amount: b.final_amount - b.paid_amount,
+        p_method: 'cash',
+        p_reference: null,
+        p_notes: 'Bulk mark paid by staff',
+        p_actor_id: gate.userId,
+        p_allow_overpayment: false,
+      }).then((result: any) => {
+        if (result.error) throw new Error(result.error.message)
+        return result.data
+      })),
+    )
 
-      return supabase
-        .from('bookings')
-        .update(patch as any)
-        .eq('id', b.id)
-        .eq('tenant_id', tenantId)
-    })
+    const failures = results
+      .map((result, index) => ({ result, bookingId: payable[index]?.id }))
+      .filter((entry) => entry.result.status === 'rejected')
+      .map((entry) => ({
+        bookingId: entry.bookingId,
+        error: entry.result.status === 'rejected'
+          ? entry.result.reason instanceof Error
+            ? entry.result.reason.message
+            : String(entry.result.reason)
+          : '',
+      }))
 
-    const results = await Promise.all(updates)
-    const failed = results.find((r) => r.error)
-    if (failed?.error) return NextResponse.json({ error: failed.error.message }, { status: 500 })
-
-    return NextResponse.json({ ok: true, affected: rows?.length ?? 0 })
+    return NextResponse.json({
+      ok: failures.length === 0,
+      affected: payable.length - failures.length,
+      alreadyPaid: (rows?.length ?? 0) - payable.length,
+      failed: failures,
+    }, { status: failures.length > 0 ? 207 : 200 })
   }
 
   if (action === 'delete') {

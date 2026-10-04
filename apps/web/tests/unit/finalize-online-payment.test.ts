@@ -26,6 +26,43 @@ function fakeSupabase(opts: {
   let booking = { ...opts.booking }
 
   const client: any = {
+    async rpc(name: string, args: any) {
+      if (name !== 'finalize_online_booking_payment') throw new Error(`unexpected rpc ${name}`)
+      if (existingReferences.has(args.p_reference)) {
+        return { data: { recorded: false }, error: null }
+      }
+
+      inserted.push({
+        tenant_id: args.p_tenant_id,
+        booking_id: args.p_booking_id,
+        amount: args.p_amount,
+        method: args.p_method,
+        paystack_reference: args.p_reference,
+        status: 'success',
+        notes: args.p_notes,
+      })
+      existingReferences.add(args.p_reference)
+      booking = { ...booking, paid_amount: booking.paid_amount + args.p_amount }
+
+      if (booking.status === 'cancelled') {
+        exceptions.push({
+          tenant_id: args.p_tenant_id,
+          booking_id: args.p_booking_id,
+          paystack_reference: args.p_reference,
+          exception_type: 'late_payment_after_cancellation',
+          status: 'open',
+          amount: args.p_amount,
+        })
+        auditEntries.push({ action: 'payment.requires_resolution' })
+        return { data: { recorded: true, requires_resolution: true }, error: null }
+      }
+
+      if (booking.status === 'pending_payment' && booking.paid_amount >= booking.final_amount) {
+        bookingUpdates.push({ status: 'confirmed' })
+        booking = { ...booking, status: 'confirmed' }
+      }
+      return { data: { recorded: true, requires_resolution: false }, error: null }
+    },
     from(table: string) {
       if (table === 'bookings') {
         return {
@@ -166,17 +203,7 @@ describe('finalizeOnlineBookingPayment', () => {
 
   it('returns recorded: false for an unknown booking', async () => {
     const client: any = {
-      from() {
-        return {
-          select() {
-            return this
-          },
-          eq() {
-            return this
-          },
-          maybeSingle: async () => ({ data: null }),
-        }
-      },
+      rpc: async () => ({ data: { recorded: false, reason: 'booking_not_found' }, error: null }),
     }
 
     const result = await finalizeOnlineBookingPayment(client, {

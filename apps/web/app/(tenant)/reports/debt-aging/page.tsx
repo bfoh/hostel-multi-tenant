@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft, AlertTriangle, Clock } from 'lucide-react'
 import { getServerTenantId } from '@/lib/auth/tenant'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { formatGHS } from '@/lib/utils'
 import { notFound } from 'next/navigation'
+import { getBookingAgingRows } from '@/lib/data/booking-finance'
 
 export const metadata: Metadata = { title: 'Debt Aging Report' }
 
@@ -19,29 +19,31 @@ export default async function DebtAgingPage() {
   const tenantId = await getServerTenantId()
   if (!tenantId) notFound()
 
-  const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
+  const aging = await getBookingAgingRows(tenantId)
 
-  const { data } = await supabase
-    .from('bookings')
-    .select(`
-      id, booking_ref, check_in_date, check_out_date,
-      final_amount, paid_amount, payment_status,
-      occupant:occupants(first_name, last_name, phone, email, student_id),
-      room:rooms(room_number, block)
-    `)
-    .eq('tenant_id', tenantId)
-    .in('payment_status', ['unpaid', 'partial'])
-    .in('status', ['confirmed', 'checked_in'])
-    .lt('check_in_date', today)
-    .order('check_in_date', { ascending: true })
-
-  const rows = (data ?? []).map((b) => {
-    const occupant = Array.isArray(b.occupant) ? b.occupant[0] : b.occupant
-    const room     = Array.isArray(b.room)     ? b.room[0]     : b.room
-    const balance  = Math.max(0, b.final_amount - b.paid_amount)
+  const rows = aging.filter((b) => (
+    ['confirmed', 'checked_in'].includes(b.booking_status)
+    && b.check_in_date < today
+  )).map((b) => {
+    const occupant = b.occupant_id ? {
+      first_name: b.first_name,
+      last_name: b.last_name,
+      phone: b.phone,
+      email: b.email,
+      student_id: b.student_id,
+    } : null
+    const room = b.room_number ? { room_number: b.room_number, block: b.block } : null
     const daysOverdue = Math.floor((Date.now() - new Date(b.check_in_date).getTime()) / 86_400_000)
-    return { ...b, occupant, room, balance, daysOverdue }
+    return {
+      ...b,
+      final_amount: b.invoice_total,
+      paid_amount: b.invoice_received,
+      occupant,
+      room,
+      balance: b.outstanding,
+      daysOverdue,
+    }
   })
 
   // Bucket totals

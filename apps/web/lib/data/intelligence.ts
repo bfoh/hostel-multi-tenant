@@ -1,5 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import {
+  calculateInvoiceFinancials,
+  getBookingFinancialSummary,
+  getBookingRevenueBreakdown,
+} from '@/lib/data/booking-finance'
 
 /* ── Live KPI strip ───────────────────────────────────────────────── */
 
@@ -9,23 +14,14 @@ export async function getIntelligenceKpis() {
 
   const supabase = createAdminClient()
   const today    = new Date().toISOString().slice(0, 10)
-  const dayStart = `${today}T00:00:00.000Z`
+  const dayStart = new Date(`${today}T00:00:00.000Z`)
+  const dayEnd = new Date(dayStart)
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1)
 
-  const [rooms, todayPayments, overdue] = await Promise.all([
+  const [rooms, todayReceipts, financialSummary] = await Promise.all([
     supabase.from('rooms').select('status').eq('tenant_id', tenantId),
-    supabase
-      .from('booking_payments')
-      .select('amount')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'success')
-      .gte('paid_at', dayStart),
-    supabase
-      .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .in('payment_status', ['unpaid', 'partial'])
-      .lt('check_in_date', today)
-      .in('status', ['confirmed', 'checked_in']),
+    getBookingRevenueBreakdown(tenantId, dayStart, dayEnd),
+    getBookingFinancialSummary(tenantId),
   ])
 
   const allRooms  = rooms.data ?? []
@@ -33,7 +29,7 @@ export async function getIntelligenceKpis() {
   const occupied  = allRooms.filter((r) => r.status === 'occupied').length
   const available = allRooms.filter((r) => r.status === 'available').length
 
-  const todayRevenue = (todayPayments.data ?? []).reduce((s, p) => s + p.amount, 0)
+  const todayRevenue = todayReceipts.reduce((sum, row) => sum + row.total_amount, 0)
 
   return {
     total,
@@ -41,7 +37,7 @@ export async function getIntelligenceKpis() {
     available,
     occupancyPct: total > 0 ? Math.round((occupied / total) * 100) : 0,
     todayRevenue,
-    overdueCount: overdue.count ?? 0,
+    overdueCount: financialSummary.overdue_count,
   }
 }
 
@@ -94,15 +90,15 @@ export async function getAnomalyAlerts() {
       .from('bookings')
       .select(`
         id, booking_ref, check_in_date, final_amount, paid_amount,
+        booking_charges(amount, paid),
         occupant:occupants(first_name, last_name),
         room:rooms(room_number)
       `)
       .eq('tenant_id', tenantId)
-      .in('payment_status', ['unpaid', 'partial'])
       .lt('check_in_date', today)
       .in('status', ['confirmed', 'checked_in'])
       .order('check_in_date', { ascending: true })
-      .limit(10),
+      .limit(50),
 
     // Out-of-order rooms
     supabase
@@ -147,7 +143,8 @@ export async function getAnomalyAlerts() {
   for (const b of overdue.data ?? []) {
     const occ     = Array.isArray(b.occupant) ? b.occupant[0] : b.occupant
     const room    = Array.isArray(b.room)     ? b.room[0]     : b.room
-    const balance = Math.max(0, b.final_amount - b.paid_amount)
+    const balance = calculateInvoiceFinancials(b).outstanding
+    if (balance <= 0) continue
     const days    = Math.floor((Date.now() - new Date(b.check_in_date).getTime()) / 86_400_000)
     alerts.push({
       id:       `overdue-${b.id}`,
@@ -206,6 +203,7 @@ export async function getCashFlowForecast() {
     .select(`
       id, booking_ref, check_in_date, check_out_date,
       final_amount, paid_amount, payment_status, status,
+      booking_charges(amount, paid),
       occupant:occupants(first_name, last_name),
       room:rooms(room_number)
     `)
@@ -219,7 +217,15 @@ export async function getCashFlowForecast() {
   return (data ?? []).map((b) => {
     const occupant = Array.isArray(b.occupant) ? b.occupant[0] : b.occupant
     const room     = Array.isArray(b.room)     ? b.room[0]     : b.room
-    const balance  = Math.max(0, b.final_amount - b.paid_amount)
-    return { ...b, occupant, room, balance }
+    const financials = calculateInvoiceFinancials(b)
+    return {
+      ...b,
+      occupant,
+      room,
+      balance: financials.outstanding,
+      invoiceTotal: financials.invoiceTotal,
+      invoiceReceived: financials.invoiceReceived,
+      invoicePaymentStatus: financials.paymentStatus,
+    }
   })
 }

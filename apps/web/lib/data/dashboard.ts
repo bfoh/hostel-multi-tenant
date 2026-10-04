@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { getBookingRevenueBreakdown } from '@/lib/data/booking-finance'
 
 /**
  * Occupancy summary: total rooms, occupied rooms, pct.
@@ -31,31 +32,18 @@ export async function getRevenueStats() {
   const tenantId = await getServerTenantId()
   if (!tenantId) return { thisMonth: 0, lastMonth: 0, change: 0 }
 
-  const supabase = createAdminClient()
-
   const now = new Date()
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString()
+  const thisMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+  const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+  const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1))
 
-  const [thisMonthRes, lastMonthRes] = await Promise.all([
-    supabase
-      .from('booking_payments')
-      .select('amount')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'success')
-      .gte('paid_at', thisMonthStart),
-    supabase
-      .from('booking_payments')
-      .select('amount')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'success')
-      .gte('paid_at', lastMonthStart)
-      .lte('paid_at', lastMonthEnd),
+  const [thisMonthRows, lastMonthRows] = await Promise.all([
+    getBookingRevenueBreakdown(tenantId, thisMonthStart, nextMonthStart),
+    getBookingRevenueBreakdown(tenantId, lastMonthStart, thisMonthStart),
   ])
 
-  const thisMonth = (thisMonthRes.data ?? []).reduce((sum, p) => sum + p.amount, 0)
-  const lastMonth = (lastMonthRes.data ?? []).reduce((sum, p) => sum + p.amount, 0)
+  const thisMonth = thisMonthRows.reduce((sum, row) => sum + row.total_amount, 0)
+  const lastMonth = lastMonthRows.reduce((sum, row) => sum + row.total_amount, 0)
   const change = lastMonth > 0 ? ((thisMonth - lastMonth) / lastMonth) * 100 : 0
 
   return { thisMonth, lastMonth, change }
@@ -228,21 +216,12 @@ export async function getRevenueBreakdown() {
   const tenantId = await getServerTenantId()
   if (!tenantId) return { total: 0, cash: 0, digital: 0, cashPct: 0, digitalPct: 0 }
 
-  const supabase = createAdminClient()
-
   const now = new Date()
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-
-  const { data } = await supabase
-    .from('booking_payments')
-    .select('amount, method')
-    .eq('tenant_id', tenantId)
-    .eq('status', 'success')
-    .gte('paid_at', thisMonthStart)
-
-  const rows = data ?? []
-  const total   = rows.reduce((s, p) => s + p.amount, 0)
-  const cash    = rows.filter(p => p.method === 'cash').reduce((s, p) => s + p.amount, 0)
+  const thisMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+  const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+  const rows = await getBookingRevenueBreakdown(tenantId, thisMonthStart, nextMonthStart)
+  const total   = rows.reduce((s, row) => s + row.total_amount, 0)
+  const cash    = rows.filter(row => row.method === 'cash').reduce((s, row) => s + row.total_amount, 0)
   const digital = total - cash
 
   return {
