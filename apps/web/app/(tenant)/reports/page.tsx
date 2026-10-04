@@ -105,6 +105,7 @@ export default async function ReportsPage({
   ])
 
   const topMethod = methods[0]
+  const paymentMethodsTotal = methods.reduce((sum, method) => sum + method.amount, 0)
 
   const maxRevenue = Math.max(...revenue6m.map((m) => m.amount), 1)
   const today = new Date().toLocaleDateString('en-GH', {
@@ -285,6 +286,20 @@ export default async function ReportsPage({
                   ))}
                 </div>
               )}
+
+              <div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Total received
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-text-tertiary">
+                    All payment methods for this period
+                  </p>
+                </div>
+                <p className="font-mono text-lg font-bold text-brand">
+                  {formatGHS(paymentMethodsTotal)}
+                </p>
+              </div>
             </div>
 
             {/* Booking status breakdown */}
