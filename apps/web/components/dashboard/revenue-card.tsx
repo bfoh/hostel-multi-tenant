@@ -1,13 +1,43 @@
-import { DollarSign } from 'lucide-react'
+import { AlertTriangle, DollarSign } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatGHS } from '@/lib/utils'
 import { getRevenueStats, getRevenueBreakdown } from '@/lib/data/dashboard'
 
 export async function RevenueCard() {
-  const [{ thisMonth, change }, breakdown] = await Promise.all([
-    getRevenueStats(),
-    getRevenueBreakdown(),
-  ])
+  let revenue: Awaited<ReturnType<typeof getRevenueStats>>
+  let breakdown: Awaited<ReturnType<typeof getRevenueBreakdown>>
+
+  try {
+    ;[revenue, breakdown] = await Promise.all([
+      getRevenueStats(),
+      getRevenueBreakdown(),
+    ])
+  } catch (error) {
+    console.error('[dashboard] revenue card unavailable', error)
+
+    return (
+      <Card>
+        <CardContent className="pt-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm text-text-secondary">Revenue (Month)</p>
+              <p className="mt-2 text-sm font-semibold text-text-primary">
+                Temporarily unavailable
+              </p>
+              <p className="mt-1 text-xs text-text-tertiary">
+                Other dashboard information is still available.
+              </p>
+            </div>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning-subtle">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const { thisMonth, change } = revenue
   const up = change >= 0
 
   return (

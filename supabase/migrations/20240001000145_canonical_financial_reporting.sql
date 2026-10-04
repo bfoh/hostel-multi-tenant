@@ -1036,13 +1036,24 @@ grant execute on function get_cash_flow_by_source(uuid, date, date)
 -- but correct its financial portion after the legacy operational counters are
 -- computed. `revenue_rooms` now means recognized booking/folio revenue. Refundable damage
 -- deposits remain visible in `revenue_deposits` but are not counted as revenue.
-alter function compute_daily_report(uuid, date)
-  rename to compute_daily_report_before_financial_reconciliation;
+-- Some production databases received the compatibility copy during an
+-- earlier manual rollout even though migration 145 was not recorded. Avoid
+-- renaming over that existing function when the migration is replayed.
+do $$
+begin
+  if to_regprocedure(
+       'public.compute_daily_report_before_financial_reconciliation(uuid,date)'
+     ) is null then
+    alter function compute_daily_report(uuid, date)
+      rename to compute_daily_report_before_financial_reconciliation;
+  end if;
+end;
+$$;
 
 revoke all on function compute_daily_report_before_financial_reconciliation(uuid, date)
   from public, anon, authenticated, service_role;
 
-create function compute_daily_report(
+create or replace function compute_daily_report(
   p_tenant_id uuid,
   p_date      date default current_date
 )
