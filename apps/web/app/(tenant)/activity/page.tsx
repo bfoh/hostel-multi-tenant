@@ -6,6 +6,8 @@ import {
   ClipboardList,
 } from 'lucide-react'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
+import { applySearchTerms, DEFAULT_LIST_PAGE_SIZE, normalisePage } from '@/lib/data/listing'
+import { ListPagination } from '@/components/ui/list-pagination'
 
 export const metadata: Metadata = { title: 'Activity Log' }
 
@@ -69,28 +71,33 @@ const FILTERS = [
 export default async function ActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; actor?: string }>
+  searchParams: Promise<{ filter?: string; actor?: string; q?: string; page?: string }>
 }) {
-  const { filter = 'all', actor = '' } = await searchParams
+  const { filter = 'all', actor = '', q: rawSearch = '', page: pageParam } = await searchParams
+  const search = rawSearch || actor
   const supabase = await createTenantAdminClientFromHeaders()
 
   let query = supabase
     .from('audit_log')
-    .select('id, actor_name, actor_role, action, entity_type, entity_id, description, occurred_at')
+    .select('id, actor_name, actor_role, action, entity_type, entity_id, description, occurred_at', { count: 'exact' })
     .order('occurred_at', { ascending: false })
-    .limit(200)
 
   if (filter !== 'all') {
     query = query.like('action', `${filter}.%`)
   }
 
-  if (actor) {
-    query = query.ilike('actor_name', `%${actor}%`)
-  }
+  query = applySearchTerms(
+    query,
+    ['actor_name', 'actor_role', 'action', 'entity_type', 'description'],
+    search,
+  )
 
-  const { data: entries } = await query
+  const page = normalisePage(pageParam)
+  const offset = (page - 1) * DEFAULT_LIST_PAGE_SIZE
+  const { data: entries, count } = await query.range(offset, offset + DEFAULT_LIST_PAGE_SIZE - 1)
 
   const log = entries ?? []
+  const total = count ?? 0
 
   return (
     <div className="space-y-6">
@@ -107,7 +114,7 @@ export default async function ActivityPage({
         {FILTERS.map(f => (
           <Link
             key={f.value}
-            href={`/activity?filter=${f.value}${actor ? `&actor=${encodeURIComponent(actor)}` : ''}`}
+            href={`/activity?filter=${f.value}${search ? `&q=${encodeURIComponent(search)}` : ''}`}
             className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
               filter === f.value
                 ? 'bg-brand text-brand-fg'
@@ -122,9 +129,9 @@ export default async function ActivityPage({
           {filter !== 'all' && <input type="hidden" name="filter" value={filter} />}
           <input
             type="search"
-            name="actor"
-            defaultValue={actor}
-            placeholder="Filter by user…"
+          name="q"
+          defaultValue={search}
+          placeholder="Search user, action, or description…"
             className="rounded-md border border-border bg-surface px-3 py-1 text-sm text-text-primary placeholder:text-text-disabled focus:outline-none focus:ring-2 focus:ring-brand/25 focus:border-brand transition-colors"
           />
           <button
@@ -148,8 +155,9 @@ export default async function ActivityPage({
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-surface overflow-hidden">
-          <div className="divide-y divide-border">
+        <>
+          <div className="rounded-xl border border-border bg-surface overflow-hidden">
+            <div className="divide-y divide-border">
             {log.map(entry => {
               const cfg  = getConfig(entry.action)
               const Icon = cfg.icon
@@ -199,8 +207,10 @@ export default async function ActivityPage({
               {log.length} event{log.length !== 1 ? 's' : ''}
               {filter !== 'all' ? ` · filtered by ${filter}` : ''}
             </p>
+            </div>
           </div>
-        </div>
+          <ListPagination pathname="/activity" page={page} pageSize={DEFAULT_LIST_PAGE_SIZE} total={total} params={{ filter: filter === 'all' ? undefined : filter, q: search }} />
+        </>
       )}
     </div>
   )

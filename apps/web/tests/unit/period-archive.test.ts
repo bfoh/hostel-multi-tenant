@@ -5,7 +5,11 @@
  * these deterministic regardless of when the suite runs.
  */
 import { describe, expect, it } from 'vitest'
-import { getArchivePeriods, getArchivePeriod } from '@/lib/reports/period-archive'
+import {
+  getArchivePeriods,
+  getArchivePeriod,
+  getPeriodTimestampBounds,
+} from '@/lib/reports/period-archive'
 
 // A Monday, chosen so week-boundary math has an unambiguous expected answer.
 const REF = new Date('2026-09-28T12:00:00')
@@ -53,5 +57,28 @@ describe('getArchivePeriod', () => {
   it('clamps a negative idx up to 0', () => {
     const period = getArchivePeriod('week', -5, REF)
     expect(period.idx).toBe(0)
+  })
+})
+
+describe('getPeriodTimestampBounds', () => {
+  it('includes the entire last day of a month using an exclusive next-day bound', () => {
+    expect(getPeriodTimestampBounds({
+      idx: 0,
+      label: 'September 2026',
+      from: '2026-09-01',
+      to: '2026-09-30',
+    })).toEqual({
+      from: '2026-09-01T00:00:00.000Z',
+      to: '2026-10-01T00:00:00.000Z',
+    })
+  })
+
+  it('rolls year-end periods into the following year', () => {
+    expect(getPeriodTimestampBounds({
+      idx: 0,
+      label: '2026',
+      from: '2026-01-01',
+      to: '2026-12-31',
+    }).to).toBe('2027-01-01T00:00:00.000Z')
   })
 })

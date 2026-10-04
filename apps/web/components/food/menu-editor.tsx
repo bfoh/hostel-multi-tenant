@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Loader2, Search } from 'lucide-react'
 import { PhotoUpload } from './photo-upload'
 import { useBulkSelect, BulkActionBar } from '@/components/ui/bulk-select'
 
@@ -28,8 +28,21 @@ export function MenuEditor({ initialCategories, initialItems }: {
   const [busy, setBusy]   = useState<string | null>(null)
   const [newCat, setNewCat] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
-  const bulk = useBulkSelect(items.map((i) => i.id))
+  const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const categoryNames = new Map(cats.map(category => [category.id, category.name]))
+  const visibleItems = items.filter((item) => {
+    const haystack = [
+      item.name,
+      item.description,
+      item.category_id ? categoryNames.get(item.category_id) : '',
+      item.is_sold_out ? 'sold out' : '',
+      item.is_available ? 'available' : 'unavailable',
+    ].filter(Boolean).join(' ').toLowerCase()
+    return searchTerms.every(term => haystack.includes(term))
+  })
+  const bulk = useBulkSelect(visibleItems.map((i) => i.id))
 
   async function readError(res: Response): Promise<string> {
     try {
@@ -181,8 +194,19 @@ export function MenuEditor({ initialCategories, initialItems }: {
           )}
         </div>
         <NewItemForm cats={cats} nextSortOrder={items.length} onCreated={appendItem} onError={setError} />
+        <label className="relative mt-3 block">
+          <span className="sr-only">Search menu items</span>
+          <Search className="text-text-tertiary pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search item, category, description, or availability"
+            className="border-border bg-surface text-text-primary placeholder:text-text-disabled focus:border-brand w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm outline-none"
+          />
+        </label>
         <ul className="mt-3 divide-y divide-border">
-          {items.map(it => (
+          {visibleItems.map(it => (
             <li key={it.id} className="relative flex flex-col gap-3 py-3 md:grid md:grid-cols-12 md:items-center">
               {bulk.selectMode && (
                 <input
@@ -232,6 +256,11 @@ export function MenuEditor({ initialCategories, initialItems }: {
               </div>
             </li>
           ))}
+          {visibleItems.length === 0 && (
+            <li className="py-10 text-center text-sm text-text-tertiary">
+              {searchTerms.length > 0 ? 'No menu items match your search.' : 'No menu items yet.'}
+            </li>
+          )}
         </ul>
       </section>
     </div>

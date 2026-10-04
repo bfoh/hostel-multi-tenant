@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { FileText } from 'lucide-react'
-import { getInvoices } from '@/lib/data/invoices'
+import { FileText, Search } from 'lucide-react'
+import { getInvoicesPage } from '@/lib/data/invoices'
 import { calculateInvoiceFinancials, getBookingFinancialSummary } from '@/lib/data/booking-finance'
 import { formatGHS, formatDate } from '@/lib/utils'
+import { ListPagination } from '@/components/ui/list-pagination'
 
 export const metadata: Metadata = { title: 'Invoices' }
 
@@ -25,19 +26,17 @@ const PAYMENT_BADGE: Record<string, string> = {
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>
 }) {
-  const { status = 'all' } = await searchParams
+  const { status = 'all', q = '', page: pageParam } = await searchParams
   const headersList = await headers()
   const tenantName = headersList.get('x-tenant-name') ?? 'Your Property'
 
-  const [allInvoices, summary] = await Promise.all([
-    getInvoices(),
+  const [result, summary] = await Promise.all([
+    getInvoicesPage({ payment_status: status, search: q, page: Number.parseInt(pageParam ?? '1', 10) }),
     getBookingFinancialSummary(),
   ])
-  const invoices = status === 'all'
-    ? allInvoices
-    : allInvoices.filter((invoice) => calculateInvoiceFinancials(invoice).paymentStatus === status)
+  const { rows: invoices, total, page, pageSize } = result
 
   return (
     <div className="space-y-6">
@@ -48,6 +47,21 @@ export default async function InvoicesPage({
           <p className="mt-0.5 text-sm text-text-secondary">Billing records for {tenantName}</p>
         </div>
       </div>
+
+      <form method="get" className="flex max-w-lg gap-2">
+        {status !== 'all' && <input type="hidden" name="status" value={status} />}
+        <div className="relative flex-1">
+          <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search occupant, invoice, room, phone, or ID…"
+            className="border-border bg-surface text-text-primary placeholder:text-text-disabled focus:border-brand w-full rounded-md border py-2 pl-9 pr-3 text-sm focus:outline-none"
+          />
+        </div>
+        <button className="bg-brand text-brand-fg hover:bg-brand-hover rounded-md px-3 py-2 text-sm font-semibold">Search</button>
+      </form>
 
       {/* Summary bar */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 sm:gap-4">
@@ -69,7 +83,7 @@ export default async function InvoicesPage({
         {FILTERS.map((f) => (
           <Link
             key={f.value}
-            href={f.value === 'all' ? '/invoices' : `/invoices?status=${f.value}`}
+            href={`${f.value === 'all' ? '/invoices' : `/invoices?status=${f.value}`}${q ? `${f.value === 'all' ? '?' : '&'}q=${encodeURIComponent(q)}` : ''}`}
             className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
               status === f.value || (f.value === 'all' && status === 'all')
                 ? 'bg-brand text-brand-fg'
@@ -95,8 +109,9 @@ export default async function InvoicesPage({
           </Link>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
+        <>
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-sunken">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide">Invoice #</th>
@@ -160,8 +175,10 @@ export default async function InvoicesPage({
                 )
               })}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+          <ListPagination pathname="/invoices" page={page} pageSize={pageSize} total={total} params={{ status: status === 'all' ? undefined : status, q }} />
+        </>
       )}
     </div>
   )

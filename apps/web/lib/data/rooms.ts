@@ -99,31 +99,38 @@ export async function getRoomsWithCurrentBooking() {
   const supabase = createAdminClient()
   const today = new Date().toISOString().slice(0, 10)
 
-  const { data, error } = await supabase
-    .from('rooms')
-    .select(`
-      id,
-      room_number,
-      floor,
-      block,
-      status,
-      housekeeping_status,
-      category:room_categories(name, type, base_rate, rate_unit, capacity),
-      bookings(
+  const rooms: any[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('rooms')
+      .select(`
         id,
-        booking_ref,
+        room_number,
+        floor,
+        block,
         status,
-        check_in_date,
-        check_out_date,
-        payment_status,
-        final_amount,
-        occupant:occupants(first_name, last_name, phone)
-      )
-    `)
-    .eq('tenant_id', tenantId)
-    .order('room_number')
+        housekeeping_status,
+        category:room_categories(name, type, base_rate, rate_unit, capacity),
+        bookings(
+          id,
+          booking_ref,
+          status,
+          check_in_date,
+          check_out_date,
+          payment_status,
+          final_amount,
+          occupant:occupants(first_name, last_name, phone)
+        )
+      `)
+      .eq('tenant_id', tenantId)
+      .order('room_number')
+      .range(from, from + pageSize - 1)
 
-  if (error) return []
+    if (error) return []
+    rooms.push(...(data ?? []))
+    if ((data ?? []).length < pageSize) break
+  }
 
   const ACTIVE_BOOKING_STATUSES = new Set([
     'pending_payment',
@@ -135,19 +142,19 @@ export async function getRoomsWithCurrentBooking() {
   // Derive bed-level occupancy for each room. Effective status reflects
   // multi-occupancy: capacity-N rooms only flip to 'occupied' once all N beds
   // are filled. rooms.status is a manual override only (maintenance/blocked).
-  return (data ?? []).map((room) => {
+  return rooms.map((room) => {
     const bookings = Array.isArray(room.bookings) ? room.bookings : []
     const cat = Array.isArray(room.category) ? room.category[0] : room.category
     const capacity = (cat?.capacity as number | undefined) ?? 1
 
     const activeBookings = bookings.filter(
-      (b) =>
+      (b: any) =>
         ACTIVE_BOOKING_STATUSES.has(b.status as string) &&
         (b.check_out_date == null || b.check_out_date > today),
     )
 
     const inHouseBooking = activeBookings.find(
-      (b) =>
+      (b: any) =>
         b.check_in_date <= today &&
         ['confirmed', 'checked_in'].includes(b.status as string),
     )

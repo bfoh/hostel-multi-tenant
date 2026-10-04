@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Plus, HardHat, CalendarClock, Zap, List, LayoutGrid } from 'lucide-react'
+import { Plus, HardHat, CalendarClock, Zap, List, LayoutGrid, Search } from 'lucide-react'
 
-import { getMaintenanceRequests, getMaintenanceStats } from '@/lib/data/maintenance'
+import { getMaintenanceRequestsPage, getMaintenanceStats } from '@/lib/data/maintenance'
 import { MaintenanceList, type MaintenanceRow } from '@/components/maintenance/maintenance-list'
 import { MaintenanceKanban } from '@/components/maintenance/maintenance-kanban'
+import { ListPagination } from '@/components/ui/list-pagination'
 
 export const metadata: Metadata = { title: 'Maintenance' }
 
@@ -27,9 +28,9 @@ const PRIORITIES = [
 export default async function MaintenancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; priority?: string; view?: string }>
+  searchParams: Promise<{ status?: string; priority?: string; view?: string; q?: string; page?: string }>
 }) {
-  const { status, priority, view } = await searchParams
+  const { status, priority, view, q = '', page: pageParam } = await searchParams
   const activeStatus   = status   ?? 'all'
   const activePriority = priority ?? 'all'
   const activeView     = view === 'kanban' ? 'kanban' : 'list'
@@ -43,10 +44,16 @@ export default async function MaintenancePage({
     return qs ? `/maintenance?${qs}` : '/maintenance'
   }
 
-  const [requests, stats] = await Promise.all([
-    getMaintenanceRequests({ status: activeStatus, priority: activePriority }),
+  const [result, stats] = await Promise.all([
+    getMaintenanceRequestsPage({
+      status: activeStatus,
+      priority: activePriority,
+      search: q,
+      page: Number.parseInt(pageParam ?? '1', 10),
+    }),
     getMaintenanceStats(),
   ])
+  const { rows: requests, total, page, pageSize } = result
 
   return (
     <div className="space-y-6">
@@ -55,7 +62,7 @@ export default async function MaintenancePage({
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Maintenance</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
-            {requests.length} work order{requests.length !== 1 ? 's' : ''}
+            {total} work order{total !== 1 ? 's' : ''}
             {activeStatus !== 'all' ? ` · ${activeStatus.replace('_', ' ')}` : ''}
           </p>
         </div>
@@ -83,6 +90,25 @@ export default async function MaintenancePage({
           </Link>
         </div>
       </div>
+
+      <form method="get" className="flex max-w-lg gap-2">
+        {activeStatus !== 'all' && <input type="hidden" name="status" value={activeStatus} />}
+        {activePriority !== 'all' && <input type="hidden" name="priority" value={activePriority} />}
+        {activeView !== 'list' && <input type="hidden" name="view" value={activeView} />}
+        <div className="relative flex-1">
+          <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search reference, title, description, notes, or reporter…"
+            className="border-border bg-surface text-text-primary placeholder:text-text-disabled focus:border-brand w-full rounded-md border py-2 pl-9 pr-3 text-sm focus:outline-none"
+          />
+        </div>
+        <button className="bg-brand text-brand-fg hover:bg-brand-hover rounded-md px-3 py-2 text-sm font-semibold">
+          Search
+        </button>
+      </form>
 
       {/* ── KPI strip ────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
@@ -148,9 +174,15 @@ export default async function MaintenancePage({
           </Link>
         </div>
       ) : activeView === 'kanban' ? (
-        <MaintenanceKanban requests={requests.map(toMaintenanceRow)} />
+        <>
+          <MaintenanceKanban requests={requests.map(toMaintenanceRow)} />
+          <ListPagination pathname="/maintenance" page={page} pageSize={pageSize} total={total} params={{ status: activeStatus === 'all' ? undefined : activeStatus, priority: activePriority === 'all' ? undefined : activePriority, view: 'kanban', q }} />
+        </>
       ) : (
-        <MaintenanceList requests={requests.map(toMaintenanceRow)} />
+        <>
+          <MaintenanceList requests={requests.map(toMaintenanceRow)} />
+          <ListPagination pathname="/maintenance" page={page} pageSize={pageSize} total={total} params={{ status: activeStatus === 'all' ? undefined : activeStatus, priority: activePriority === 'all' ? undefined : activePriority, q }} />
+        </>
       )}
     </div>
   )
@@ -187,4 +219,3 @@ function KpiCard({ label, value, color }: { label: string; value: number; color:
     </div>
   )
 }
-

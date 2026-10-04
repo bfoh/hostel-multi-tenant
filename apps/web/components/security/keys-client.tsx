@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Key, Plus, Loader2, RotateCcw, AlertTriangle, Trash2 } from 'lucide-react'
+import { Key, Plus, Loader2, RotateCcw, AlertTriangle, Trash2, Search } from 'lucide-react'
 
 interface RoomKey {
   id: string
@@ -31,6 +31,7 @@ export function KeysClient({ initialKeys, rooms }: { initialKeys: RoomKey[]; roo
   const [filter, setFilter] = useState('all')
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError]   = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   // Add key form
   const [showAdd, setShowAdd]     = useState(false)
@@ -41,7 +42,23 @@ export function KeysClient({ initialKeys, rooms }: { initialKeys: RoomKey[]; roo
   const [adding, setAdding]       = useState(false)
   const [addError, setAddError]   = useState<string | null>(null)
 
-  const displayed = filter === 'all' ? keys : keys.filter((k) => k.status === filter)
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const displayed = keys.filter((key) => {
+    if (filter !== 'all' && key.status !== filter) return false
+    if (terms.length === 0) return true
+    const haystack = [
+      key.key_label,
+      key.key_type,
+      key.status,
+      key.rooms?.room_number,
+      key.rooms?.block,
+      key.bookings?.booking_ref,
+      key.occupants?.first_name,
+      key.occupants?.last_name,
+      key.notes,
+    ].filter(Boolean).join(' ').toLowerCase()
+    return terms.every((term) => haystack.includes(term))
+  })
 
   async function action(keyId: string, actionName: string) {
     setSaving(keyId); setError(null)
@@ -108,6 +125,16 @@ export function KeysClient({ initialKeys, rooms }: { initialKeys: RoomKey[]; roo
 
       {/* Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+          <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search key, room, booking, or occupant…"
+            className="border-border bg-surface w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+        </div>
         <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface-sunken p-1">
           {['all', 'available', 'issued', 'lost', 'damaged'].map((s) => (
             <button

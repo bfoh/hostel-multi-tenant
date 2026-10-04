@@ -16,6 +16,21 @@ async function buildQrDataUrl(url: string): Promise<string | null> {
   }
 }
 
+async function getAllMenuItems(admin: any, tenantId: string) {
+  const rows: any[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data } = await admin.from('menu_items')
+      .select('id, category_id, name, description, price_pesewas, photo_url, is_available, is_sold_out, publish_date, sort_order')
+      .eq('tenant_id', tenantId)
+      .order('sort_order')
+      .range(from, from + pageSize - 1)
+    rows.push(...(data ?? []))
+    if (!data || data.length < pageSize) break
+  }
+  return rows
+}
+
 export default async function FoodMenuPage() {
   const headersList = await headers()
   const tenantId = headersList.get('x-tenant-id')
@@ -25,7 +40,7 @@ export default async function FoodMenuPage() {
   const [
     { data: tenant },
     { data: cats },
-    { data: items },
+    items,
   ] = await Promise.all([
     admin.from('tenants')
       .select('slug, name, custom_domain, food_orders_enabled')
@@ -33,9 +48,7 @@ export default async function FoodMenuPage() {
     admin.from('menu_categories')
       .select('id, name, sort_order, is_active')
       .eq('tenant_id', tenantId).order('sort_order'),
-    admin.from('menu_items')
-      .select('id, category_id, name, description, price_pesewas, photo_url, is_available, is_sold_out, publish_date, sort_order')
-      .eq('tenant_id', tenantId).order('sort_order').limit(500),
+    getAllMenuItems(admin, tenantId),
   ])
 
   const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? ''

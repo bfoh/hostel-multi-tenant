@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   Store, Dumbbell, UtensilsCrossed, ShoppingCart, WashingMachine,
-  Printer, Car, Plus, ArrowUpRight, TrendingUp, Trophy,
+  Printer, Car, Plus, ArrowUpRight, TrendingUp, Trophy, Search,
 } from 'lucide-react'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { getRevenuePoints } from '@/lib/data/revenue-points'
@@ -48,11 +48,17 @@ const TYPE_LABEL: Record<string, string> = {
   other:      'Other',
 }
 
-export default async function RevenuePointsPage() {
+export default async function RevenuePointsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const tenantId = await getServerTenantId()
   if (!tenantId) notFound()
 
+  const { q = '' } = await searchParams
   const points = await getRevenuePoints(tenantId)
+  const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const visiblePoints = points.filter((point) => {
+    const haystack = [point.name, point.type, point.description].filter(Boolean).join(' ').toLowerCase()
+    return terms.every(term => haystack.includes(term))
+  })
 
   const todayTotal = points.reduce((s, p) => s + p.todaySales, 0)
   const monthTotal = points.reduce((s, p) => s + p.monthSales, 0)
@@ -105,10 +111,26 @@ export default async function RevenuePointsPage() {
         </div>
       </div>
 
+      <form action="/revenue-points" className="flex flex-col gap-2 sm:flex-row">
+        <label className="relative flex-1">
+          <span className="sr-only">Search revenue points</span>
+          <Search className="text-text-tertiary pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search revenue point, type, or description"
+            className="border-border bg-surface text-text-primary placeholder:text-text-disabled focus:border-brand w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm outline-none"
+          />
+        </label>
+        <button type="submit" className="bg-brand text-brand-fg hover:bg-brand-hover rounded-lg px-5 py-2.5 text-sm font-semibold">Search</button>
+        {q && <Link href="/revenue-points" className="text-text-secondary hover:text-text-primary self-center px-2 text-sm">Clear</Link>}
+      </form>
+
       {/* Revenue point cards grid */}
-      {points.length > 0 ? (
+      {visiblePoints.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {points.map((point) => {
+          {visiblePoints.map((point) => {
             const Icon = TYPE_ICON[point.type] ?? Store
             const color = TYPE_COLOR[point.type] ?? TYPE_COLOR.other
             return (
@@ -164,9 +186,9 @@ export default async function RevenuePointsPage() {
       ) : (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
           <Store className="h-8 w-8 text-text-disabled" />
-          <p className="font-medium text-text-primary">No revenue points yet</p>
+          <p className="font-medium text-text-primary">{terms.length > 0 ? 'No revenue points match your search' : 'No revenue points yet'}</p>
           <p className="text-sm text-text-secondary">
-            Add your first revenue point below — gym, cafeteria, mini-mart, laundry, etc.
+            {terms.length > 0 ? 'Try another name, type, or description.' : 'Add your first revenue point below — gym, cafeteria, mini-mart, laundry, etc.'}
           </p>
         </div>
       )}

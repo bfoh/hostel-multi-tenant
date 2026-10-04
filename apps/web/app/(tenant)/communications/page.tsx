@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
-import { MessageSquare, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { MessageSquare, CheckCircle2, XCircle, Clock, Search } from 'lucide-react'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { formatDate } from '@/lib/utils'
 import { BroadcastForm } from '@/components/communications/broadcast-form'
+import { ListPagination } from '@/components/ui/list-pagination'
+import { normalisePage, paginateRows } from '@/lib/data/listing'
 
 export const metadata: Metadata = { title: 'Communications' }
 
@@ -13,13 +15,32 @@ const STATUS_STYLES: Record<string, { icon: React.ReactNode; style: string }> = 
   failed:    { icon: <XCircle className="h-3.5 w-3.5" />,      style: 'text-danger' },
 }
 
-export default async function CommunicationsPage() {
+export default async function CommunicationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>
+}) {
+  const { q = '', page: pageParam } = await searchParams
   const supabase = await createTenantAdminClientFromHeaders()
-  const { data: blasts } = await supabase
-    .from('sms_blasts')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(50)
+  const allBlasts: any[] = []
+  const fetchSize = 1000
+  for (let from = 0; ; from += fetchSize) {
+    const { data } = await supabase
+      .from('sms_blasts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(from, from + fetchSize - 1)
+    allBlasts.push(...(data ?? []))
+    if ((data ?? []).length < fetchSize) break
+  }
+  const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const filtered = terms.length === 0 ? allBlasts : allBlasts.filter((blast) => {
+    const haystack = [blast.message, blast.status, blast.recipient_filter, blast.recipient_type]
+      .filter(Boolean).join(' ').toLowerCase()
+    return terms.every((term) => haystack.includes(term))
+  })
+  const paged = paginateRows(filtered, normalisePage(pageParam))
+  const blasts = paged.rows
 
   const hasSms   = !!process.env.ARKESEL_API_KEY
   const hasEmail = !!(process.env.BREVO_API_KEY ?? process.env.RESEND_API_KEY)
@@ -43,19 +64,33 @@ export default async function CommunicationsPage() {
       {/* ── Broadcast form ───────────────────────────────────────── */}
       <BroadcastForm hasSms={hasSms} hasEmail={hasEmail} hasPush={hasPush} />
 
+      <form method="get" className="flex max-w-lg gap-2">
+        <div className="relative flex-1">
+          <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search message, audience, or status…"
+            className="border-border bg-surface text-text-primary placeholder:text-text-disabled focus:border-brand w-full rounded-md border py-2 pl-9 pr-3 text-sm focus:outline-none"
+          />
+        </div>
+        <button className="bg-brand text-brand-fg hover:bg-brand-hover rounded-md px-3 py-2 text-sm font-semibold">Search</button>
+      </form>
+
       {/* ── Stats strip ──────────────────────────────────────────── */}
-      {blasts && blasts.length > 0 && (
+      {filtered.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Total broadcasts" value={blasts.length} />
-          <StatCard label="Messages sent" value={blasts.reduce((s, b) => s + (b.sent_count ?? 0), 0)} />
-          <StatCard label="Total recipients" value={blasts.reduce((s, b) => s + (b.recipient_count ?? b.sent_count ?? 0), 0)} />
+          <StatCard label="Total broadcasts" value={filtered.length} />
+          <StatCard label="Messages sent" value={filtered.reduce((s, b) => s + (b.sent_count ?? 0), 0)} />
+          <StatCard label="Total recipients" value={filtered.reduce((s, b) => s + (b.recipient_count ?? b.sent_count ?? 0), 0)} />
         </div>
       )}
 
       {/* ── Send history ─────────────────────────────────────────── */}
       <div>
         <h2 className="text-sm font-semibold text-text-primary mb-3">Send history</h2>
-        {!blasts || blasts.length === 0 ? (
+        {blasts.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
             <MessageSquare className="h-10 w-10 text-text-disabled" />
             <div>
@@ -91,6 +126,7 @@ export default async function CommunicationsPage() {
           </div>
         )}
       </div>
+      <ListPagination pathname="/communications" page={paged.page} pageSize={paged.pageSize} total={paged.total} params={{ q }} />
     </div>
   )
 }

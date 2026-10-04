@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { applySearchTerms, DEFAULT_LIST_PAGE_SIZE, normalisePage } from '@/lib/data/listing'
 
 export type LfStatus = 'unclaimed' | 'claimed' | 'disposed' | 'donated'
 
@@ -22,22 +23,28 @@ export interface LfItem {
 }
 
 export async function getLfItems(filters?: { status?: string; q?: string }): Promise<LfItem[]> {
+  return (await getLfItemsPage(filters)).rows
+}
+
+export async function getLfItemsPage(filters?: { status?: string; q?: string; page?: number }) {
   const tenantId = await getServerTenantId()
-  if (!tenantId) return []
+  if (!tenantId) return { rows: [] as LfItem[], total: 0, page: 1, pageSize: DEFAULT_LIST_PAGE_SIZE }
 
   const supabase = createAdminClient()
 
   let q = supabase
     .from('lost_found_items')
-    .select('*, occupant:occupants(first_name, last_name), room:rooms(room_number, block)')
+    .select('*, occupant:occupants(first_name, last_name), room:rooms(room_number, block)', { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('found_date', { ascending: false })
 
   if (filters?.status && filters.status !== 'all') q = q.eq('status', filters.status)
-  if (filters?.q) q = q.ilike('description', `%${filters.q}%`)
+  q = applySearchTerms(q, ['description', 'category', 'found_location', 'claimed_by', 'notes'], filters?.q)
 
-  const { data } = await q.limit(100)
-  return (data ?? []).map(normalise)
+  const page = normalisePage(filters?.page)
+  const offset = (page - 1) * DEFAULT_LIST_PAGE_SIZE
+  const { data, count } = await q.range(offset, offset + DEFAULT_LIST_PAGE_SIZE - 1)
+  return { rows: (data ?? []).map(normalise), total: count ?? 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
 }
 
 export async function getLfItemById(id: string): Promise<LfItem | null> {

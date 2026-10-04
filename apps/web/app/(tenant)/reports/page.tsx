@@ -17,7 +17,11 @@ import {
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { notFound } from 'next/navigation'
 import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from '@/lib/payments/methods'
-import { getArchivePeriods, type ArchiveMode } from '@/lib/reports/period-archive'
+import {
+  getArchivePeriods,
+  getPeriodTimestampBounds,
+  type ArchiveMode,
+} from '@/lib/reports/period-archive'
 import { PeriodArchivePicker } from '@/components/reports/period-archive-picker'
 
 export const metadata: Metadata = { title: 'Reports' }
@@ -91,14 +95,14 @@ export default async function ReportsPage({
   const pmPeriods = getArchivePeriods(archiveMode)
   const archiveIdx = Math.min(Math.max(parseInt(rawArchiveIdx ?? '0', 10) || 0, 0), pmPeriods.length - 1)
   const selectedPmPeriod = pmPeriods[archiveIdx]
-  const pmDateRange = { from: `${selectedPmPeriod.from}T00:00:00`, to: `${selectedPmPeriod.to}T23:59:59` }
+  const pmDateRange = getPeriodTimestampBounds(selectedPmPeriod)
 
   // Fetch all data in parallel
   const [ytd, revenue6m, methods, outstanding, occupancy, overdue, bookings] = await Promise.all([
     getYtdSummary(tenantId),
     getRevenueReport(tenantId, 6),
     getPaymentMethodBreakdown(tenantId, pmDateRange.from, pmDateRange.to),
-    getOutstandingBalance(tenantId, pmDateRange.from, pmDateRange.to),
+    getOutstandingBalance(tenantId, selectedPmPeriod.from, selectedPmPeriod.to),
     getOccupancyReport(tenantId),
     getOverdueRent(tenantId),
     getBookingSummary(tenantId),
@@ -270,7 +274,7 @@ export default async function ReportsPage({
                       <div className="mb-1 flex justify-between text-xs">
                         <span className="text-text-primary">
                           {METHOD_LABEL[m.method as keyof typeof METHOD_LABEL] ?? m.method}
-                          <span className="text-text-tertiary"> · {m.count} booking{m.count === 1 ? '' : 's'}</span>
+                          <span className="text-text-tertiary"> · {m.count} payment{m.count === 1 ? '' : 's'}</span>
                         </span>
                         <span className="font-mono text-text-secondary">
                           {formatGHS(m.amount)} · {m.pct}%
@@ -480,7 +484,7 @@ export default async function ReportsPage({
                 <thead className="bg-surface-sunken">
                   <tr>
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Method</th>
-                    <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wide text-text-tertiary">Bookings</th>
+                    <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wide text-text-tertiary">Payments</th>
                     <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Amount</th>
                     <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Share</th>
                     <th className="px-5 py-3 hidden md:table-cell" />

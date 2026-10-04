@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { Plus, CalendarCheck, LayoutGrid, Upload, Search } from 'lucide-react'
 
-import { getBookings } from '@/lib/data/bookings'
+import { getBookingsPage } from '@/lib/data/bookings'
 import { BookingsBulkList } from '@/components/bookings/bookings-bulk-list'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -26,10 +26,18 @@ const STATUSES = [
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; search?: string; from?: string; to?: string }>
+  searchParams: Promise<{ status?: string; search?: string; from?: string; to?: string; page?: string }>
 }) {
-  const { status, search, from, to } = await searchParams
-  const bookings = await getBookings({ status, search, from, to })
+  const { status, search, from, to, page: pageParam } = await searchParams
+  const requestedPage = Number.parseInt(pageParam ?? '1', 10)
+  const { bookings, total, page, pageSize } = await getBookingsPage({
+    status,
+    search,
+    from,
+    to,
+    page: Number.isFinite(requestedPage) ? requestedPage : 1,
+  })
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const activeStatus = status ?? 'all'
 
@@ -37,7 +45,7 @@ export default async function BookingsPage({
   // and vice versa (the filter form carries the active status as a hidden
   // field) — so switching one axis never silently drops the other.
   const buildHref = (overrides: Record<string, string | undefined>) => {
-    const merged: Record<string, string | undefined> = { status, search, from, to, ...overrides }
+    const merged: Record<string, string | undefined> = { status, search, from, to, page: pageParam, ...overrides }
     const params = new URLSearchParams()
     for (const [k, v] of Object.entries(merged)) {
       if (v) params.set(k, v)
@@ -137,7 +145,7 @@ export default async function BookingsPage({
         <div>
           <h1 className="text-text-primary text-2xl font-bold">Bookings</h1>
           <p className="text-text-secondary mt-0.5 text-sm">
-            {bookings.length} booking{bookings.length !== 1 ? 's' : ''}
+            {total} booking{total !== 1 ? 's' : ''}
             {activeStatus !== 'all' ? ` · ${activeStatus.replace('_', ' ')}` : ''}
             {search ? ` · matching "${search}"` : ''}
           </p>
@@ -188,7 +196,7 @@ export default async function BookingsPage({
         {STATUSES.map((s) => (
           <Link
             key={s.value}
-            href={buildHref({ status: s.value === 'all' ? undefined : s.value })}
+            href={buildHref({ status: s.value === 'all' ? undefined : s.value, page: undefined })}
             className={`shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               activeStatus === s.value
                 ? 'bg-brand text-brand-fg shadow-sm'
@@ -251,8 +259,8 @@ export default async function BookingsPage({
           <div>
             <p className="text-text-primary font-medium">No bookings found</p>
             <p className="text-text-secondary mt-0.5 text-sm">
-              {activeStatus !== 'all'
-                ? 'Try a different filter or create a new booking.'
+              {search || from || to || activeStatus !== 'all'
+                ? 'Try a different search or filter.'
                 : 'Create your first booking to get started.'}
             </p>
           </div>
@@ -267,7 +275,48 @@ export default async function BookingsPage({
           )}
         </div>
       ) : (
-        <BookingsBulkList bookings={rows} canManage={canManage} canUpdate={canUpdate} />
+        <>
+          <BookingsBulkList bookings={rows} canManage={canManage} canUpdate={canUpdate} />
+          {totalPages > 1 && (
+            <nav
+              aria-label="Bookings pagination"
+              className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-4"
+            >
+              <p className="text-text-secondary text-sm">
+                Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
+              </p>
+              <div className="flex items-center gap-2">
+                {page > 1 ? (
+                  <Link
+                    href={buildHref({ page: page === 2 ? undefined : String(page - 1) })}
+                    className="border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded-md border px-3 py-2 text-sm font-medium"
+                  >
+                    Previous
+                  </Link>
+                ) : (
+                  <span className="border-border text-text-disabled rounded-md border px-3 py-2 text-sm font-medium">
+                    Previous
+                  </span>
+                )}
+                <span className="text-text-secondary px-1 text-sm">
+                  Page {page} of {totalPages}
+                </span>
+                {page < totalPages ? (
+                  <Link
+                    href={buildHref({ page: String(page + 1) })}
+                    className="border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded-md border px-3 py-2 text-sm font-medium"
+                  >
+                    Next
+                  </Link>
+                ) : (
+                  <span className="border-border text-text-disabled rounded-md border px-3 py-2 text-sm font-medium">
+                    Next
+                  </span>
+                )}
+              </div>
+            </nav>
+          )}
+        </>
       )}
     </div>
   )

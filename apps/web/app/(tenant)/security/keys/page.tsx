@@ -8,16 +8,8 @@ export const metadata: Metadata = { title: 'Key Management' }
 export default async function KeysPage() {
   const supabase = await createTenantAdminClientFromHeaders()
 
-  const [{ data: keys }, { data: rooms }] = await Promise.all([
-    supabase
-      .from('room_keys')
-      .select(`
-        *,
-        rooms(room_number, block),
-        bookings(booking_ref),
-        occupants(first_name, last_name)
-      `)
-      .order('created_at', { ascending: false }),
+  const [keys, { data: rooms }] = await Promise.all([
+    getAllKeys(supabase),
     supabase
       .from('rooms')
       .select('id, room_number, block')
@@ -25,8 +17,8 @@ export default async function KeysPage() {
       .order('room_number'),
   ])
 
-  const issued  = (keys ?? []).filter((k) => k.status === 'issued').length
-  const lost    = (keys ?? []).filter((k) => k.status === 'lost').length
+  const issued  = keys.filter((k) => k.status === 'issued').length
+  const lost    = keys.filter((k) => k.status === 'lost').length
 
   return (
     <div className="space-y-6">
@@ -34,14 +26,34 @@ export default async function KeysPage() {
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Key Management</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
-            {issued} issued · {lost} lost · {(keys ?? []).filter((k) => k.status === 'available').length} available
+            {issued} issued · {lost} lost · {keys.filter((k) => k.status === 'available').length} available
           </p>
         </div>
         <Link href="/security" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
           ← Security
         </Link>
       </div>
-      <KeysClient initialKeys={(keys ?? []) as any} rooms={(rooms ?? []) as any} />
+      <KeysClient initialKeys={keys as any} rooms={(rooms ?? []) as any} />
     </div>
   )
+}
+
+async function getAllKeys(supabase: any) {
+  const rows: any[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data } = await supabase
+      .from('room_keys')
+      .select(`
+        *,
+        rooms(room_number, block),
+        bookings(booking_ref),
+        occupants(first_name, last_name)
+      `)
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1)
+    rows.push(...(data ?? []))
+    if ((data ?? []).length < pageSize) break
+  }
+  return rows
 }

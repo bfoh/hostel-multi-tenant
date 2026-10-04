@@ -15,6 +15,13 @@ export interface ArchivePeriod {
   to:    string
 }
 
+export interface PeriodTimestampBounds {
+  /** Inclusive UTC start of the first calendar day. */
+  from: string
+  /** Exclusive UTC start of the day after the final calendar day. */
+  to: string
+}
+
 const COUNTS: Record<ArchiveMode, number> = { week: 12, month: 12, year: 3 }
 
 // Formats the Date's LOCAL calendar date — toISOString() converts to UTC
@@ -72,4 +79,19 @@ export function getArchivePeriods(mode: ArchiveMode, now: Date = new Date()): Ar
 export function getArchivePeriod(mode: ArchiveMode, idx: number, now: Date = new Date()): ArchivePeriod {
   const periods = getArchivePeriods(mode, now)
   return periods[Math.min(Math.max(idx, 0), periods.length - 1)]
+}
+
+/**
+ * Converts inclusive date-only archive bounds into a half-open timestamp
+ * range. Using the next day's midnight avoids losing transactions posted on
+ * the final day when PostgreSQL compares date-based journal entries.
+ */
+export function getPeriodTimestampBounds(period: ArchivePeriod): PeriodTimestampBounds {
+  const [year, month, day] = period.to.split('-').map(Number)
+  const exclusiveEnd = new Date(Date.UTC(year, month - 1, day + 1))
+
+  return {
+    from: `${period.from}T00:00:00.000Z`,
+    to: exclusiveEnd.toISOString(),
+  }
 }

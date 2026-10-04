@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { OrderCard } from './order-card'
+import { Search } from 'lucide-react'
 
 interface OrderItem { id: string; name_snapshot: string; quantity: number; subtotal_pesewas: number }
 interface Order {
@@ -30,6 +31,7 @@ const COLUMNS: { key: string; label: string }[] = [
 
 export function OrderQueue({ tenantId, initialOrders }: { tenantId: string; initialOrders: Order[] }) {
   const [orders, setOrders] = useState<Order[]>(initialOrders)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     const sb = createClient()
@@ -58,11 +60,37 @@ export function OrderQueue({ tenantId, initialOrders }: { tenantId: string; init
     return () => { sb.removeChannel(ch) }
   }, [tenantId])
 
-  const visible = orders.filter(o => COLUMNS.some(c => c.key === o.status))
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const visible = orders.filter((order) => {
+    if (!COLUMNS.some((column) => column.key === order.status)) return false
+    if (terms.length === 0) return true
+    const haystack = [
+      order.order_ref,
+      order.payment_method,
+      order.notes,
+      order.table_label,
+      order.occupant?.first_name,
+      order.occupant?.last_name,
+      order.occupant?.phone,
+      ...order.food_order_items.map((item) => item.name_snapshot),
+    ].filter(Boolean).join(' ').toLowerCase()
+    return terms.every((term) => haystack.includes(term))
+  })
 
   return (
-    <div className="grid gap-3 lg:grid-cols-3">
-      {COLUMNS.map(col => {
+    <div className="space-y-3">
+      <div className="relative max-w-md">
+        <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search order, occupant, phone, table, or item…"
+          className="border-border bg-surface w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+        />
+      </div>
+      <div className="grid gap-3 lg:grid-cols-3">
+        {COLUMNS.map(col => {
         const colOrders = visible
           .filter(o => o.status === col.key)
           .sort((a, b) => a.placed_at.localeCompare(b.placed_at))
@@ -81,7 +109,8 @@ export function OrderQueue({ tenantId, initialOrders }: { tenantId: string; init
             </div>
           </section>
         )
-      })}
+        })}
+      </div>
     </div>
   )
 }

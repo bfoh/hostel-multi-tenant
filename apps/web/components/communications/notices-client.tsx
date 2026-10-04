@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Loader2, Pin, Trash2, AlertTriangle, Wrench, DollarSign, Calendar, Info } from 'lucide-react'
+import { Plus, Loader2, Pin, Trash2, AlertTriangle, Wrench, DollarSign, Calendar, Info, Search } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useBulkSelect, BulkActionBar } from '@/components/ui/bulk-select'
 
@@ -24,6 +24,7 @@ export function NoticesClient({ initialNotices }: { initialNotices: Notice[] }) 
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const [title, setTitle]       = useState('')
   const [body, setBody]         = useState('')
@@ -31,7 +32,13 @@ export function NoticesClient({ initialNotices }: { initialNotices: Notice[] }) 
   const [pinned, setPinned]     = useState(false)
   const [expiresAt, setExpiresAt] = useState('')
 
-  const bulk = useBulkSelect(notices.map((n) => n.id))
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const filteredNotices = notices.filter((notice) => {
+    if (terms.length === 0) return true
+    const haystack = [notice.title, notice.body, notice.category].join(' ').toLowerCase()
+    return terms.every((term) => haystack.includes(term))
+  })
+  const bulk = useBulkSelect(filteredNotices.map((n) => n.id))
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -81,7 +88,17 @@ export function NoticesClient({ initialNotices }: { initialNotices: Notice[] }) 
 
   return (
     <div className="space-y-4 max-w-3xl">
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="relative min-w-[220px] flex-1">
+          <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search notices…"
+            className="border-border bg-surface w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+        </div>
         {notices.length > 0 && (
           <BulkActionBar bulk={bulk} resource="notices" itemNoun="notice" />
         )}
@@ -153,11 +170,11 @@ export function NoticesClient({ initialNotices }: { initialNotices: Notice[] }) 
       )}
 
       {/* Notices list */}
-      {notices.length === 0 && !showForm && (
-        <p className="py-12 text-center text-sm text-text-tertiary">No notices posted yet</p>
+      {filteredNotices.length === 0 && !showForm && (
+        <p className="py-12 text-center text-sm text-text-tertiary">{search ? 'No notices match your search' : 'No notices posted yet'}</p>
       )}
       <div className="space-y-3">
-        {notices.map((n) => {
+        {filteredNotices.map((n) => {
           const cfg = CAT_CONFIG[n.category] ?? CAT_CONFIG.general
           const Icon = cfg.icon
           const isExpired = n.expires_at && new Date(n.expires_at) < new Date()

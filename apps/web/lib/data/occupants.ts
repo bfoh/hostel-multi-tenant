@@ -1,14 +1,15 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { headers } from 'next/headers'
+import { applySearchTerms, DEFAULT_LIST_PAGE_SIZE, normalisePage } from '@/lib/data/listing'
 
 async function getTenantId(): Promise<string | null> {
   const h = await headers()
   return h.get('x-tenant-id')
 }
 
-export async function getOccupants(search?: string) {
+export async function getOccupantsPage(search?: string, requestedPage = 1) {
   const tenantId = await getTenantId()
-  if (!tenantId) return []
+  if (!tenantId) return { rows: [], total: 0, page: 1, pageSize: DEFAULT_LIST_PAGE_SIZE }
 
   const supabase = createAdminClient()
 
@@ -19,19 +20,25 @@ export async function getOccupants(search?: string) {
       institution, student_id, programme, year_of_study, gender,
       photo_url, created_at,
       bookings(id, status, check_in_date, check_out_date, room:rooms(room_number))
-    `)
+    `, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
-  if (search) {
-    query = query.or(
-      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,phone.ilike.%${search}%,student_id.ilike.%${search}%`
-    )
-  }
+  query = applySearchTerms(
+    query,
+    ['first_name', 'last_name', 'other_names', 'phone', 'alternate_phone', 'email', 'student_id'],
+    search,
+  )
 
-  const { data, error } = await query.limit(50)
-  if (error) return []
-  return data ?? []
+  const page = normalisePage(requestedPage)
+  const offset = (page - 1) * DEFAULT_LIST_PAGE_SIZE
+  const { data, error, count } = await query.range(offset, offset + DEFAULT_LIST_PAGE_SIZE - 1)
+  if (error) return { rows: [], total: 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
+  return { rows: data ?? [], total: count ?? 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
+}
+
+export async function getOccupants(search?: string) {
+  return (await getOccupantsPage(search)).rows
 }
 
 export async function getOccupantById(id: string) {

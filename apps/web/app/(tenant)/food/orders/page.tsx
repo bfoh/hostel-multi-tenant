@@ -12,13 +12,19 @@ export default async function FoodOrdersPage() {
   if (!tenantId) redirect('/login')
 
   const admin = createAdminClient() as any
-  const { data: orders } = await admin
-    .from('food_orders')
-    .select('*, food_order_items(*), occupant:occupants(first_name, last_name, phone)')
-    .eq('tenant_id', tenantId)
-    .in('status', ['placed','preparing','ready'])
-    .order('placed_at', { ascending: true })
-    .limit(200)
+  const orders: any[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data } = await admin
+      .from('food_orders')
+      .select('*, food_order_items(*), occupant:occupants(first_name, last_name, phone)')
+      .eq('tenant_id', tenantId)
+      .in('status', ['placed','preparing','ready'])
+      .order('placed_at', { ascending: true })
+      .range(from, from + pageSize - 1)
+    orders.push(...(data ?? []))
+    if ((data ?? []).length < pageSize) break
+  }
 
   return (
     <div className="space-y-4">
@@ -26,7 +32,7 @@ export default async function FoodOrdersPage() {
         <h1 className="text-xl font-bold text-text-primary">Kitchen queue</h1>
         <p className="mt-0.5 text-sm text-text-secondary">Real-time. Advance orders left → right.</p>
       </header>
-      <OrderQueue tenantId={tenantId} initialOrders={orders ?? []} />
+      <OrderQueue tenantId={tenantId} initialOrders={orders} />
     </div>
   )
 }

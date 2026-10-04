@@ -45,11 +45,13 @@ export async function getRevenueReport(tenantId: string, months = 6) {
  * added) so the one existing caller that doesn't pass a range keeps
  * exactly today's behavior.
  */
-export async function getPaymentMethodBreakdown(tenantId: string, from?: string, to?: string) {
+export async function getPaymentMethodBreakdown(
+  tenantId: string,
+  from?: string,
+  toExclusive?: string,
+) {
   const start = from ?? monthStart(-11)
-  const end = to
-    ? new Date(new Date(to).getTime() + 1).toISOString()
-    : '9999-12-31T23:59:59.999Z'
+  const end = toExclusive ?? '9999-12-31T23:59:59.999Z'
   const receipts = await getBookingRevenueBreakdown(tenantId, start, end)
 
   const map: Record<string, { amount: number; count: number }> = {}

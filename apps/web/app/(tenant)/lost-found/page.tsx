@@ -1,21 +1,23 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Plus, Search, Package } from 'lucide-react'
-import { getLfItems, getLfStats } from '@/lib/data/lost-found'
+import { getLfItemsPage, getLfStats } from '@/lib/data/lost-found'
 import { LostFoundTable, type LfRow } from '@/components/lost-found/lost-found-table'
+import { ListPagination } from '@/components/ui/list-pagination'
 
 export const metadata: Metadata = { title: 'Lost & Found' }
 
 export default async function LostFoundPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>
 }) {
-  const { status = 'unclaimed', q } = await searchParams
-  const [items, stats] = await Promise.all([
-    getLfItems({ status, q }),
+  const { status = 'unclaimed', q, page: pageParam } = await searchParams
+  const [result, stats] = await Promise.all([
+    getLfItemsPage({ status, q, page: Number.parseInt(pageParam ?? '1', 10) }),
     getLfStats(),
   ])
+  const { rows: items, total, page, pageSize } = result
 
   return (
     <div className="space-y-6">
@@ -91,8 +93,9 @@ export default async function LostFoundPage({
           </Link>
         </div>
       ) : (
-        <LostFoundTable
-          items={items.map((item: any): LfRow => ({
+        <>
+          <LostFoundTable
+            items={items.map((item: any): LfRow => ({
             id:             item.id,
             description:    item.description,
             category:       item.category,
@@ -102,8 +105,16 @@ export default async function LostFoundPage({
             occupantName:   item.occupant
               ? `${item.occupant.first_name} ${item.occupant.last_name}`
               : null,
-          }))}
-        />
+            }))}
+          />
+          <ListPagination
+            pathname="/lost-found"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            params={{ status: status === 'unclaimed' ? undefined : status, q }}
+          />
+        </>
       )}
     </div>
   )

@@ -1,11 +1,80 @@
 import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { containsFilter } from '@/lib/data/listing'
 
-export async function getBookings(filter?: { status?: string; search?: string; from?: string; to?: string }) {
+const BOOKINGS_PAGE_SIZE = 100
+
+type BookingFilters = {
+  status?: string
+  search?: string
+  from?: string
+  to?: string
+  page?: number
+}
+
+function intersectIds(groups: string[][]) {
+  if (groups.length === 0) return []
+  return groups.slice(1).reduce((matches, group) => {
+    const allowed = new Set(group)
+    return matches.filter((id) => allowed.has(id))
+  }, groups[0])
+}
+
+async function findOccupantIds(
+  supabase: ReturnType<typeof createTenantAdminClient>,
+  search: string,
+) {
+  // Treat words as AND terms across all occupant fields. This means a search
+  // such as "Francis Otoo" matches first_name=Francis + last_name=Otoo,
+  // instead of requiring the whole phrase to exist in either column.
+  const terms = search.split(/\s+/).filter(Boolean)
+  const matchesByTerm = await Promise.all(
+    terms.map(async (term) => {
+      const filters = [
+        'first_name',
+        'last_name',
+        'other_names',
+        'phone',
+        'alternate_phone',
+        'email',
+        'student_id',
+        'national_id_number',
+      ].map((column) => containsFilter(column, term))
+      const { data, error } = await supabase.from('occupants').select('id').or(filters.join(','))
+      if (error) return []
+      return (data ?? []).map((occupant) => occupant.id)
+    }),
+  )
+
+  return intersectIds(matchesByTerm)
+}
+
+async function findRoomIds(
+  supabase: ReturnType<typeof createTenantAdminClient>,
+  search: string,
+) {
+  const roomSearch = search.replace(/^room\s+/i, '').trim()
+  if (!roomSearch) return []
+
+  const filters = ['room_number', 'block'].map((column) => containsFilter(column, roomSearch))
+  const { data, error } = await supabase.from('rooms').select('id').or(filters.join(','))
+  if (error) return []
+  return (data ?? []).map((room) => room.id)
+}
+
+export async function getBookingsPage(filter: BookingFilters = {}) {
   const tenantId = await getServerTenantId()
-  if (!tenantId) return []
+  if (!tenantId) {
+    return { bookings: [], total: 0, page: 1, pageSize: BOOKINGS_PAGE_SIZE }
+  }
 
   const supabase = createTenantAdminClient(tenantId)
+  const requestedPage = Number.isFinite(filter.page) ? Math.max(1, Math.floor(filter.page!)) : 1
+  const search = filter.search?.trim()
+
+  const [occupantIds, roomIds] = search
+    ? await Promise.all([findOccupantIds(supabase, search), findRoomIds(supabase, search)])
+    : [[], []]
 
   let query = supabase
     .from('bookings')
@@ -14,10 +83,9 @@ export async function getBookings(filter?: { status?: string; search?: string; f
       check_in_date, check_out_date, final_amount, paid_amount, created_at,
       occupant:occupants(id, first_name, last_name, phone, student_id, institution),
       room:rooms(id, room_number, block, category:room_categories(name))
-    `)
+    `, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
-    .limit(100)
 
   if (filter?.status && filter.status !== 'all') {
     // filter.status comes from URL search params (string); cast is safe as DB ignores invalid values
@@ -26,30 +94,41 @@ export async function getBookings(filter?: { status?: string; search?: string; f
   if (filter?.from) query = query.gte('check_in_date', filter.from)
   if (filter?.to)   query = query.lte('check_in_date', filter.to)
 
-  const { data, error } = await query
-  if (error) return []
-
-  let rows = data ?? []
-
-  // Free-text search spans joined occupant/room columns, which PostgREST
-  // can't OR-filter across in one query — done here instead, over the
-  // already-limited page rather than a separate unbounded query.
-  const q = filter?.search?.trim().toLowerCase()
-  if (q) {
-    rows = rows.filter((b) => {
-      const occ  = Array.isArray(b.occupant) ? b.occupant[0] : b.occupant
-      const room = Array.isArray(b.room) ? b.room[0] : b.room
-      return (
-        b.booking_ref?.toLowerCase().includes(q) ||
-        occ?.first_name?.toLowerCase().includes(q) ||
-        occ?.last_name?.toLowerCase().includes(q) ||
-        occ?.phone?.toLowerCase().includes(q) ||
-        room?.room_number?.toLowerCase().includes(q)
-      )
-    })
+  if (search) {
+    const filters = [containsFilter('booking_ref', search)]
+    if (occupantIds.length > 0) filters.push(`occupant_id.in.(${occupantIds.join(',')})`)
+    if (roomIds.length > 0) filters.push(`room_id.in.(${roomIds.join(',')})`)
+    query = query.or(filters.join(','))
   }
 
-  return rows
+  const offset = (requestedPage - 1) * BOOKINGS_PAGE_SIZE
+  let { data, error, count } = await query.range(offset, offset + BOOKINGS_PAGE_SIZE - 1)
+  if (error) {
+    return { bookings: [], total: 0, page: requestedPage, pageSize: BOOKINGS_PAGE_SIZE }
+  }
+
+  const total = count ?? 0
+  const lastPage = Math.max(1, Math.ceil(total / BOOKINGS_PAGE_SIZE))
+  const page = Math.min(requestedPage, lastPage)
+
+  // A stale/out-of-range page URL should still show the final real page.
+  if (requestedPage !== page && total > 0) {
+    const finalOffset = (page - 1) * BOOKINGS_PAGE_SIZE
+    const result = await query.range(finalOffset, finalOffset + BOOKINGS_PAGE_SIZE - 1)
+    if (!result.error) data = result.data
+  }
+
+  return {
+    bookings: data ?? [],
+    total,
+    page,
+    pageSize: BOOKINGS_PAGE_SIZE,
+  }
+}
+
+export async function getBookings(filter?: BookingFilters) {
+  const result = await getBookingsPage(filter)
+  return result.bookings
 }
 
 export async function getBookingById(id: string) {

@@ -1,15 +1,16 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { applySearchTerms, DEFAULT_LIST_PAGE_SIZE, normalisePage } from '@/lib/data/listing'
 
-export async function getMaintenanceRequests(filter?: { status?: string; priority?: string }) {
+export async function getMaintenanceRequestsPage(filter?: { status?: string; priority?: string; search?: string; page?: number }) {
   const tenantId = await getServerTenantId()
-  if (!tenantId) return []
+  if (!tenantId) return { rows: [], total: 0, page: 1, pageSize: DEFAULT_LIST_PAGE_SIZE }
 
   const supabase = createAdminClient()
 
   let query = supabase
     .from('maintenance_requests')
-    .select('*, room:rooms(room_number, block), contractor:contractors(name, phone)')
+    .select('*, room:rooms(room_number, block), contractor:contractors(name, phone)', { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
@@ -21,9 +22,21 @@ export async function getMaintenanceRequests(filter?: { status?: string; priorit
     query = query.eq('priority', filter.priority as 'low')
   }
 
-  const { data, error } = await query.limit(100)
-  if (error) return []
-  return data ?? []
+  query = applySearchTerms(
+    query,
+    ['ref_number', 'title', 'description', 'notes', 'source', 'reported_by'],
+    filter?.search,
+  )
+
+  const page = normalisePage(filter?.page)
+  const offset = (page - 1) * DEFAULT_LIST_PAGE_SIZE
+  const { data, error, count } = await query.range(offset, offset + DEFAULT_LIST_PAGE_SIZE - 1)
+  if (error) return { rows: [], total: 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
+  return { rows: data ?? [], total: count ?? 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
+}
+
+export async function getMaintenanceRequests(filter?: { status?: string; priority?: string; search?: string }) {
+  return (await getMaintenanceRequestsPage(filter)).rows
 }
 
 export async function getMaintenanceById(id: string) {

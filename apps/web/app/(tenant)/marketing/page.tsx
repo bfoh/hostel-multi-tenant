@@ -4,13 +4,24 @@ import { MarketingCampaignsClient } from '@/components/marketing/marketing-campa
 
 export const metadata: Metadata = { title: 'Marketing' }
 
+async function getAllCampaigns(supabase: Awaited<ReturnType<typeof createTenantAdminClientFromHeaders>>) {
+  const rows: any[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data } = await supabase
+      .from('marketing_campaigns')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1)
+    rows.push(...(data ?? []))
+    if (!data || data.length < pageSize) break
+  }
+  return rows
+}
+
 export default async function MarketingPage() {
   const supabase = await createTenantAdminClientFromHeaders()
-  const { data: campaigns } = await supabase
-    .from('marketing_campaigns')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const campaigns = await getAllCampaigns(supabase)
 
   return (
     <div className="space-y-6">
@@ -20,7 +31,7 @@ export default async function MarketingPage() {
           Bulk SMS/email campaigns to your occupants, and a QR code for your public listing
         </p>
       </div>
-      <MarketingCampaignsClient initialCampaigns={(campaigns ?? []) as any} />
+      <MarketingCampaignsClient initialCampaigns={campaigns as any} />
     </div>
   )
 }

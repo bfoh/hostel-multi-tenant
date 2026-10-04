@@ -1,15 +1,16 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { applySearchTerms, DEFAULT_LIST_PAGE_SIZE, normalisePage } from '@/lib/data/listing'
 
-export async function getVisitorLog(filter?: { date?: string }) {
+export async function getVisitorLogPage(filter?: { date?: string; search?: string; page?: number }) {
   const tenantId = await getServerTenantId()
-  if (!tenantId) return []
+  if (!tenantId) return { rows: [], total: 0, page: 1, pageSize: DEFAULT_LIST_PAGE_SIZE }
 
   const supabase = createAdminClient()
 
   let query = supabase
     .from('visitor_log')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('check_in_at', { ascending: false })
 
@@ -19,20 +20,27 @@ export async function getVisitorLog(filter?: { date?: string }) {
       .lte('check_in_at', `${filter.date}T23:59:59`)
   }
 
-  const { data, error } = await query.limit(100)
-  if (error) return []
-  return data ?? []
+  query = applySearchTerms(query, ['visitor_name', 'visitor_phone', 'host_name', 'room_number', 'vehicle_plate', 'notes'], filter?.search)
+  const page = normalisePage(filter?.page)
+  const offset = (page - 1) * DEFAULT_LIST_PAGE_SIZE
+  const { data, error, count } = await query.range(offset, offset + DEFAULT_LIST_PAGE_SIZE - 1)
+  if (error) return { rows: [], total: 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
+  return { rows: data ?? [], total: count ?? 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
 }
 
-export async function getIncidentReports(filter?: { severity?: string }) {
+export async function getVisitorLog(filter?: { date?: string; search?: string }) {
+  return (await getVisitorLogPage(filter)).rows
+}
+
+export async function getIncidentReportsPage(filter?: { severity?: string; search?: string; page?: number }) {
   const tenantId = await getServerTenantId()
-  if (!tenantId) return []
+  if (!tenantId) return { rows: [], total: 0, page: 1, pageSize: DEFAULT_LIST_PAGE_SIZE }
 
   const supabase = createAdminClient()
 
   let query = supabase
     .from('incident_reports')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('occurred_at', { ascending: false })
 
@@ -40,20 +48,31 @@ export async function getIncidentReports(filter?: { severity?: string }) {
     query = query.eq('severity', filter.severity as 'low')
   }
 
-  const { data, error } = await query.limit(100)
-  if (error) return []
-  return data ?? []
+  query = applySearchTerms(
+    query,
+    ['ref_number', 'title', 'description', 'location', 'involved_parties', 'action_taken', 'police_ref'],
+    filter?.search,
+  )
+  const page = normalisePage(filter?.page)
+  const offset = (page - 1) * DEFAULT_LIST_PAGE_SIZE
+  const { data, error, count } = await query.range(offset, offset + DEFAULT_LIST_PAGE_SIZE - 1)
+  if (error) return { rows: [], total: 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
+  return { rows: data ?? [], total: count ?? 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
 }
 
-export async function getLostFoundItems(filter?: { status?: string }) {
+export async function getIncidentReports(filter?: { severity?: string; search?: string }) {
+  return (await getIncidentReportsPage(filter)).rows
+}
+
+export async function getLostFoundItemsPage(filter?: { status?: string; search?: string; page?: number }) {
   const tenantId = await getServerTenantId()
-  if (!tenantId) return []
+  if (!tenantId) return { rows: [], total: 0, page: 1, pageSize: DEFAULT_LIST_PAGE_SIZE }
 
   const supabase = createAdminClient()
 
   let query = supabase
     .from('lost_found_items')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
@@ -61,9 +80,20 @@ export async function getLostFoundItems(filter?: { status?: string }) {
     query = query.eq('status', filter.status as 'unclaimed')
   }
 
-  const { data, error } = await query.limit(100)
-  if (error) return []
-  return data ?? []
+  query = applySearchTerms(
+    query,
+    ['item_name', 'description', 'owner_name', 'owner_phone', 'location_found', 'room_number'],
+    filter?.search,
+  )
+  const page = normalisePage(filter?.page)
+  const offset = (page - 1) * DEFAULT_LIST_PAGE_SIZE
+  const { data, error, count } = await query.range(offset, offset + DEFAULT_LIST_PAGE_SIZE - 1)
+  if (error) return { rows: [], total: 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
+  return { rows: data ?? [], total: count ?? 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
+}
+
+export async function getLostFoundItems(filter?: { status?: string; search?: string }) {
+  return (await getLostFoundItemsPage(filter)).rows
 }
 
 export async function getSecurityStats() {

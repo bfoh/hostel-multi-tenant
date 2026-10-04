@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Shield, Eye, AlertTriangle, Package, UserX, Key as KeyIcon } from 'lucide-react'
+import { Shield, Eye, AlertTriangle, Package, UserX, Key as KeyIcon, Search } from 'lucide-react'
 
-import { getVisitorLog, getIncidentReports, getLostFoundItems, getSecurityStats } from '@/lib/data/security'
+import { getVisitorLogPage, getIncidentReportsPage, getLostFoundItemsPage, getSecurityStats } from '@/lib/data/security'
 import { formatDate } from '@/lib/utils'
+import { ListPagination } from '@/components/ui/list-pagination'
 import { VisitorCheckIn } from '@/components/security/visitor-checkin'
 import { ReportIncidentButton } from '@/components/security/report-incident-button'
 import { LogLostFoundButton } from '@/components/security/log-lost-found-button'
@@ -27,16 +28,22 @@ const TABS = [
 export default async function SecurityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; q?: string; page?: string }>
 }) {
-  const { tab = 'visitors' } = await searchParams
+  const { tab = 'visitors', q = '', page: rawPage = '1' } = await searchParams
+  const page = Number.parseInt(rawPage, 10) || 1
+  const emptyPage = { rows: [], total: 0, page: 1, pageSize: 100 }
 
-  const [stats, visitors, incidents, lostFound] = await Promise.all([
+  const [stats, visitorPage, incidentPage, lostFoundPage] = await Promise.all([
     getSecurityStats(),
-    tab === 'visitors'  ? getVisitorLog() : Promise.resolve([]),
-    tab === 'incidents' ? getIncidentReports() : Promise.resolve([]),
-    tab === 'lostfound' ? getLostFoundItems() : Promise.resolve([]),
+    tab === 'visitors'  ? getVisitorLogPage({ search: q, page }) : Promise.resolve(emptyPage),
+    tab === 'incidents' ? getIncidentReportsPage({ search: q, page }) : Promise.resolve(emptyPage),
+    tab === 'lostfound' ? getLostFoundItemsPage({ search: q, page }) : Promise.resolve(emptyPage),
   ])
+  const visitors = visitorPage.rows
+  const incidents = incidentPage.rows
+  const lostFound = lostFoundPage.rows
+  const activePage = tab === 'incidents' ? incidentPage : tab === 'lostfound' ? lostFoundPage : visitorPage
 
   return (
     <div className="space-y-6">
@@ -84,13 +91,40 @@ export default async function SecurityPage({
         {TABS.map(t => (
           <Link
             key={t.id}
-            href={`/security?tab=${t.id}`}
+            href={`/security?tab=${t.id}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
             className={`flex-1 min-w-[92px] rounded-md px-3 py-1.5 text-center text-sm font-medium transition-colors ${tab === t.id ? 'bg-brand text-brand-fg shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-surface-raised'}`}
           >
             {t.label}
           </Link>
         ))}
       </div>
+
+      <form action="/security" className="flex flex-col gap-2 sm:flex-row">
+        <input type="hidden" name="tab" value={tab} />
+        <label className="relative flex-1">
+          <span className="sr-only">Search security records</span>
+          <Search className="text-text-tertiary pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder={tab === 'visitors'
+              ? 'Search visitor, phone, host, vehicle, notes, or room'
+              : tab === 'incidents'
+                ? 'Search reference, title, description, people, or location'
+                : 'Search item, owner, phone, location, or room'}
+            className="border-border bg-surface text-text-primary placeholder:text-text-disabled focus:border-brand w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm outline-none"
+          />
+        </label>
+        <button type="submit" className="bg-brand text-brand-fg hover:bg-brand-hover rounded-lg px-5 py-2.5 text-sm font-semibold">
+          Search
+        </button>
+        {q && (
+          <Link href={`/security?tab=${tab}`} className="text-text-secondary hover:text-text-primary self-center px-2 text-sm">
+            Clear
+          </Link>
+        )}
+      </form>
 
       {/* ── Visitors tab ─────────────────────────────────────────── */}
       {tab === 'visitors' && (
@@ -219,6 +253,14 @@ export default async function SecurityPage({
           </div>
         )
       )}
+
+      <ListPagination
+        pathname="/security"
+        page={activePage.page}
+        pageSize={activePage.pageSize}
+        total={activePage.total}
+        params={{ tab, q }}
+      />
     </div>
   )
 }

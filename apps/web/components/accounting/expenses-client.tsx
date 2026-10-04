@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Loader2, Trash2, TrendingDown } from 'lucide-react'
+import { Plus, Loader2, Trash2, TrendingDown, Search } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatGHS } from '@/lib/utils'
 import { useBulkSelect, BulkActionBar } from '@/components/ui/bulk-select'
@@ -49,6 +49,7 @@ export function ExpensesClient({
   const [filterCat, setFilterCat] = useState('all')
   const [filterFrom, setFilterFrom] = useState('')
   const [filterTo, setFilterTo]   = useState('')
+  const [search, setSearch]       = useState('')
 
   // Form state
   const [cat, setCat]       = useState('utilities')
@@ -124,8 +125,14 @@ export function ExpensesClient({
     if (filterCat !== 'all' && e.category !== filterCat) return false
     if (filterFrom && e.expense_date < filterFrom) return false
     if (filterTo   && e.expense_date > filterTo)   return false
+    const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+    if (terms.length > 0) {
+      const haystack = [e.description, e.vendor, e.category, e.reference, e.payment_method, e.notes]
+        .filter(Boolean).join(' ').toLowerCase()
+      if (!terms.every((term) => haystack.includes(term))) return false
+    }
     return true
-  }), [expenses, filterCat, filterFrom, filterTo])
+  }), [expenses, filterCat, filterFrom, filterTo, search])
 
   const totalFiltered = filtered.reduce((s, e) => s + e.amount, 0)
 
@@ -164,6 +171,19 @@ export function ExpensesClient({
 
       {/* Filters + Add */}
       <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-[220px] flex-1 sm:max-w-sm">
+          <label className="mb-1 block text-xs text-text-tertiary">Search</label>
+          <div className="relative">
+            <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Description, vendor, reference, method…"
+              className="border-border bg-surface w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+            />
+          </div>
+        </div>
         <div>
           <label className="mb-1 block text-xs text-text-tertiary">Category</label>
           <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)}

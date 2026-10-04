@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Clock, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
+import { Clock, AlertTriangle, ChevronDown, ChevronRight, Search } from 'lucide-react'
 import { DraftReviewPanel } from './draft-review-panel'
 
 interface PendingRow {
@@ -65,6 +65,7 @@ export function DraftQueue({ tenantId, initialPending, initialRecentlyProcessed 
   const [showProcessed, setShowProcessed] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [reconnecting, setReconnecting] = useState(false)
+  const [search, setSearch] = useState('')
   const supabaseRef = useRef(createClient())
 
   const refreshAll = useCallback(async () => {
@@ -127,6 +128,33 @@ export function DraftQueue({ tenantId, initialPending, initialRecentlyProcessed 
   }, [tenantId, refreshAll])
 
   const selected = pending.find(p => p.id === selectedId) ?? null
+  const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const matchesSearch = (values: Array<string | null | undefined>) => {
+    if (searchTerms.length === 0) return true
+    const haystack = values.filter(Boolean).join(' ').toLowerCase()
+    return searchTerms.every(term => haystack.includes(term))
+  }
+  const visiblePending = pending.filter(row => matchesSearch([
+    row.booking.booking_ref,
+    row.booking.occupant?.first_name,
+    row.booking.occupant?.last_name,
+    row.booking.occupant?.phone,
+    row.booking.room?.room_number,
+    row.booking.room?.block,
+    row.draft_number,
+    row.draft_bank_name,
+    row.draft_deposit_date,
+    row.draft_note,
+  ]))
+  const visibleProcessed = processed.filter(row => matchesSearch([
+    row.booking.booking_ref,
+    row.booking.occupant?.first_name,
+    row.booking.occupant?.last_name,
+    row.draft_number,
+    row.draft_bank_name,
+    row.status,
+    row.rejected_reason,
+  ]))
 
   return (
     <div className="relative">
@@ -136,12 +164,26 @@ export function DraftQueue({ tenantId, initialPending, initialRecentlyProcessed 
         </div>
       )}
 
-      <p className="mb-3 text-sm text-slate-600">
-        <span className="font-semibold text-slate-900">{pending.length}</span> pending · sorted oldest first
-      </p>
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-slate-600">
+          <span className="font-semibold text-slate-900">{visiblePending.length}</span>
+          {searchTerms.length > 0 ? ` of ${pending.length}` : ''} pending · sorted oldest first
+        </p>
+        <label className="relative w-full sm:max-w-sm">
+          <span className="sr-only">Search bank drafts</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search resident, booking, draft or bank"
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
+          />
+        </label>
+      </div>
 
-      {pending.length === 0 ? (
-        <EmptyState />
+      {visiblePending.length === 0 ? (
+        <EmptyState searching={searchTerms.length > 0} />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           <div className="grid grid-cols-[40px_1.6fr_1fr_1fr_1fr_1fr_1.2fr] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
@@ -154,7 +196,7 @@ export function DraftQueue({ tenantId, initialPending, initialRecentlyProcessed 
             <div>Submitted</div>
           </div>
 
-          {pending.map(row => {
+          {visiblePending.map(row => {
             const stale = isStale(row.created_at)
             const occ = row.booking.occupant
             const room = row.booking.room
@@ -194,15 +236,17 @@ export function DraftQueue({ tenantId, initialPending, initialRecentlyProcessed 
           className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-slate-50"
         >
           {showProcessed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          Recently processed (last 24h) · {processed.length}
+          Recently processed (last 24h) · {visibleProcessed.length}
         </button>
 
         {showProcessed && (
           <div className="mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            {processed.length === 0 && (
-              <p className="px-4 py-6 text-center text-sm text-slate-400">No drafts processed yet.</p>
+            {visibleProcessed.length === 0 && (
+              <p className="px-4 py-6 text-center text-sm text-slate-400">
+                {searchTerms.length > 0 ? 'No processed drafts match your search.' : 'No drafts processed yet.'}
+              </p>
             )}
-            {processed.map(p => (
+            {visibleProcessed.map(p => (
               <div key={p.id} className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm">
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${p.status === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
                   {p.status === 'success' ? 'Approved' : 'Rejected'}
@@ -233,12 +277,16 @@ export function DraftQueue({ tenantId, initialPending, initialRecentlyProcessed 
   )
 }
 
-function EmptyState() {
+function EmptyState({ searching = false }: { searching?: boolean }) {
   return (
     <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
       <Clock className="mx-auto h-8 w-8 text-slate-300" />
-      <p className="mt-2 text-sm font-medium text-slate-500">No pending drafts</p>
-      <p className="mt-1 text-xs text-slate-400">New uploads will appear here automatically.</p>
+      <p className="mt-2 text-sm font-medium text-slate-500">
+        {searching ? 'No pending drafts match your search' : 'No pending drafts'}
+      </p>
+      <p className="mt-1 text-xs text-slate-400">
+        {searching ? 'Try a resident name, booking reference, draft number, or bank.' : 'New uploads will appear here automatically.'}
+      </p>
     </div>
   )
 }

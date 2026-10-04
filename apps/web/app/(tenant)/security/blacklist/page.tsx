@@ -7,10 +7,17 @@ export const metadata: Metadata = { title: 'Blacklist' }
 
 export default async function BlacklistPage() {
   const supabase = await createTenantAdminClientFromHeaders()
-  const { data: entries } = await supabase
-    .from('occupant_blacklist')
-    .select('*, occupants(first_name, last_name, phone, email, photo_url)')
-    .order('created_at', { ascending: false })
+  const entries: any[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data } = await supabase
+      .from('occupant_blacklist')
+      .select('*, occupants(first_name, last_name, phone, email, photo_url)')
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1)
+    entries.push(...(data ?? []))
+    if ((data ?? []).length < pageSize) break
+  }
 
   return (
     <div className="space-y-6">
@@ -18,14 +25,14 @@ export default async function BlacklistPage() {
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Blacklist</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
-            Flagged and banned occupants — {entries?.filter((e) => e.is_active).length ?? 0} active
+            Flagged and banned occupants — {entries.filter((e) => e.is_active).length} active
           </p>
         </div>
         <Link href="/security" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
           ← Security
         </Link>
       </div>
-      <BlacklistClient initialEntries={(entries ?? []) as any} />
+      <BlacklistClient initialEntries={entries as any} />
     </div>
   )
 }

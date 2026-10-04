@@ -10,15 +10,8 @@ export default async function ExpensesPage() {
   const tenantId = await getServerTenantId()
   const supabase = createAdminClient()
 
-  const [{ data: expenses }, fxRates] = await Promise.all([
-    tenantId
-      ? supabase
-          .from('expenses')
-          .select('*')
-          .eq('tenant_id', tenantId)
-          .order('expense_date', { ascending: false })
-          .limit(200)
-      : Promise.resolve({ data: [] as any[] }),
+  const [expenses, fxRates] = await Promise.all([
+    tenantId ? getAllExpenses(supabase, tenantId) : Promise.resolve([] as any[]),
     getLatestFxRates(),
   ])
 
@@ -29,9 +22,25 @@ export default async function ExpensesPage() {
         <p className="mt-1 text-sm text-text-secondary">Track operational costs by category — auto-posts to journal on save</p>
       </div>
       <ExpensesClient
-        initialExpenses={(expenses ?? []) as any}
+        initialExpenses={expenses as any}
         fxRates={fxRates.map((r) => ({ code: r.currency_code, rate: r.rate_to_base, asOf: r.as_of_date }))}
       />
     </div>
   )
+}
+
+async function getAllExpenses(supabase: ReturnType<typeof createAdminClient>, tenantId: string) {
+  const rows: any[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('expense_date', { ascending: false })
+      .range(from, from + pageSize - 1)
+    rows.push(...(data ?? []))
+    if ((data ?? []).length < pageSize) break
+  }
+  return rows
 }

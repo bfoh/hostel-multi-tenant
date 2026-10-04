@@ -2,22 +2,24 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Plus, Users, Search, Upload } from 'lucide-react'
 
-import { getOccupants } from '@/lib/data/occupants'
+import { getOccupantsPage } from '@/lib/data/occupants'
 import { OccupantsTable, type OccupantRow } from '@/components/occupants/occupants-table'
 import { getServerBusinessType } from '@/lib/auth/tenant'
+import { ListPagination } from '@/components/ui/list-pagination'
 
 export const metadata: Metadata = { title: 'Occupants' }
 
 export default async function OccupantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; page?: string }>
 }) {
-  const { q } = await searchParams
-  const [occupants, isHotel] = await Promise.all([
-    getOccupants(q),
+  const { q, page: pageParam } = await searchParams
+  const [result, isHotel] = await Promise.all([
+    getOccupantsPage(q, Number.parseInt(pageParam ?? '1', 10)),
     getServerBusinessType().then((t) => t === 'hotel'),
   ])
+  const { rows: occupants, total, page, pageSize } = result
 
   return (
     <div className="space-y-6">
@@ -26,7 +28,7 @@ export default async function OccupantsPage({
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Occupants</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
-            {occupants.length} resident{occupants.length !== 1 ? 's' : ''} found
+            {total} resident{total !== 1 ? 's' : ''} found
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -90,9 +92,10 @@ export default async function OccupantsPage({
           )}
         </div>
       ) : (
-        <OccupantsTable
-          isHotel={isHotel}
-          occupants={occupants.map((o): OccupantRow => {
+        <>
+          <OccupantsTable
+            isHotel={isHotel}
+            occupants={occupants.map((o): OccupantRow => {
             // Pick the most relevant booking with a room:
             // checked_in > confirmed > pending_payment, prefer one that
             // covers today, then latest check_in_date.
@@ -127,8 +130,16 @@ export default async function OccupantsPage({
               status:      o.status,
               roomLabel:   room ? `Room ${room.room_number}` : null,
             }
-          })}
-        />
+            })}
+          />
+          <ListPagination
+            pathname="/occupants"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            params={{ q }}
+          />
+        </>
       )}
     </div>
   )

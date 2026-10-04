@@ -5,6 +5,8 @@ import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { formatGHS, formatDate } from '@/lib/utils'
 import { ReversePaymentButton } from '@/components/bookings/reverse-payment-button'
 import { getBookingFinancialSummary } from '@/lib/data/booking-finance'
+import { ListPagination } from '@/components/ui/list-pagination'
+import { normalisePage, paginateRows } from '@/lib/data/listing'
 
 export const metadata: Metadata = { title: 'Payments' }
 
@@ -33,30 +35,29 @@ const FILTERS = [
   { value: 'reversed', label: 'Reversed' },
 ]
 
-async function getPayments(status: string, search: string, tenantId: string) {
-  if (!tenantId) return []
+async function getPayments(status: string, search: string, requestedPage: number, tenantId: string) {
+  if (!tenantId) return { rows: [] as any[], total: 0, page: 1, pageSize: 100, duplicateCount: 0 }
   const supabase = createTenantAdminClient(tenantId)
-
-  let query = supabase
-    .from('booking_payments')
-    .select(`
-      id, amount, method, reference, status, paid_at, notes, created_at,
-      booking:bookings(
-        id, booking_ref,
-        occupant:occupants(first_name, last_name, phone, student_id)
-      )
-    `)
-    .order('created_at', { ascending: false })
-    .limit(200)
-
-  if (status !== 'all') {
-    query = query.eq('status', status)
+  const rows: any[] = []
+  const fetchSize = 1000
+  for (let from = 0; ; from += fetchSize) {
+    let query = supabase
+      .from('booking_payments')
+      .select(`
+        id, amount, method, reference, status, paid_at, notes, created_at,
+        booking:bookings(
+          id, booking_ref,
+          occupant:occupants(first_name, last_name, phone, student_id)
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .range(from, from + fetchSize - 1)
+    if (status !== 'all') query = query.eq('status', status)
+    const { data, error } = await query
+    if (error) return { rows: [] as any[], total: 0, page: 1, pageSize: 100, duplicateCount: 0 }
+    rows.push(...(data ?? []))
+    if ((data ?? []).length < fetchSize) break
   }
-
-  const { data, error } = await query
-  if (error) return []
-
-  const rows = data ?? []
 
   // Flag likely-duplicate manual entries: same booking + amount + method,
   // both successful, recorded on the same calendar day — the exact shape
@@ -82,39 +83,46 @@ async function getPayments(status: string, search: string, tenantId: string) {
   }
   const flagged = rows.map((p) => ({ ...p, possibleDuplicate: duplicateIds.has(p.id) }))
 
-  if (search) {
-    const q = search.toLowerCase()
-    return flagged.filter((p) => {
+  const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const filtered = searchTerms.length > 0
+    ? flagged.filter((p) => {
       const booking = Array.isArray(p.booking) ? p.booking[0] : p.booking
       const occupant = Array.isArray(booking?.occupant) ? booking?.occupant[0] : booking?.occupant
-      return (
-        booking?.booking_ref?.toLowerCase().includes(q) ||
-        occupant?.first_name?.toLowerCase().includes(q) ||
-        occupant?.last_name?.toLowerCase().includes(q) ||
-        occupant?.student_id?.toLowerCase().includes(q) ||
-        p.reference?.toLowerCase().includes(q)
-      )
+      const haystack = [
+        booking?.booking_ref,
+        occupant?.first_name,
+        occupant?.last_name,
+        occupant?.phone,
+        occupant?.student_id,
+        p.reference,
+        p.method,
+        p.notes,
+      ].filter(Boolean).join(' ').toLowerCase()
+      return searchTerms.every((term) => haystack.includes(term))
     })
-  }
+    : flagged
 
-  return flagged
+  return {
+    ...paginateRows(filtered, normalisePage(requestedPage)),
+    duplicateCount: filtered.filter((payment) => payment.possibleDuplicate).length,
+  }
 }
 
 export default async function PaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>
 }) {
-  const { status = 'all', q = '' } = await searchParams
+  const { status = 'all', q = '', page: pageParam } = await searchParams
   const headersList = await headers()
   const tenantId = headersList.get('x-tenant-id') ?? ''
   const callerRole = headersList.get('x-tenant-role')
   const canManage = callerRole === 'owner' || callerRole === 'manager'
-  const [payments, summary] = await Promise.all([
-    getPayments(status, q, tenantId),
+  const [result, summary] = await Promise.all([
+    getPayments(status, q, Number.parseInt(pageParam ?? '1', 10), tenantId),
     getBookingFinancialSummary(tenantId),
   ])
-  const duplicateCount = payments.filter((p) => p.possibleDuplicate).length
+  const { rows: payments, total, page, pageSize, duplicateCount } = result
 
   return (
     <div className="space-y-6">
@@ -352,6 +360,7 @@ export default async function PaymentsPage({
             </p>
           </div>
         </div>
+          <ListPagination pathname="/payments" page={page} pageSize={pageSize} total={total} params={{ status: status === 'all' ? undefined : status, q }} />
         </>
       )}
     </div>

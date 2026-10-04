@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Loader2, Send, Trash2, MessageSquare, Mail, Users, CheckCircle2, XCircle, QrCode, Download } from 'lucide-react'
+import { Plus, Loader2, Send, Trash2, MessageSquare, Mail, Users, CheckCircle2, XCircle, QrCode, Download, Search } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CAMPAIGN_AUDIENCE_LABEL, type CampaignAudience, type CampaignChannel } from '@/lib/marketing/audience'
 
@@ -31,12 +31,25 @@ export function MarketingCampaignsClient({ initialCampaigns }: { initialCampaign
   const [sendingId, setSendingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError]         = useState<string | null>(null)
+  const [search, setSearch]       = useState('')
 
   const [name, setName]         = useState('')
   const [channel, setChannel]   = useState<CampaignChannel>('sms')
   const [subject, setSubject]   = useState('')
   const [body, setBody]         = useState('')
   const [audience, setAudience] = useState<CampaignAudience>('all_occupants')
+  const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const visibleCampaigns = campaigns.filter((campaign) => {
+    const haystack = [
+      campaign.name,
+      campaign.subject,
+      campaign.body,
+      campaign.channel,
+      campaign.status,
+      CAMPAIGN_AUDIENCE_LABEL[campaign.audience],
+    ].filter(Boolean).join(' ').toLowerCase()
+    return searchTerms.every(term => haystack.includes(term))
+  })
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -131,6 +144,18 @@ export function MarketingCampaignsClient({ initialCampaigns }: { initialCampaign
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
+      <label className="relative block">
+        <span className="sr-only">Search campaigns</span>
+        <Search className="text-text-tertiary pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search campaign, message, channel, audience, or status"
+          className="border-border bg-surface text-text-primary placeholder:text-text-disabled focus:border-brand w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm outline-none"
+        />
+      </label>
+
       {showForm && (
         <Card>
           <CardHeader><CardTitle>New campaign</CardTitle></CardHeader>
@@ -222,11 +247,13 @@ export function MarketingCampaignsClient({ initialCampaigns }: { initialCampaign
         </Card>
       )}
 
-      {campaigns.length === 0 && !showForm ? (
-        <p className="py-12 text-center text-sm text-text-tertiary">No campaigns yet</p>
+      {visibleCampaigns.length === 0 && !showForm ? (
+        <p className="py-12 text-center text-sm text-text-tertiary">
+          {searchTerms.length > 0 ? 'No campaigns match your search.' : 'No campaigns yet'}
+        </p>
       ) : (
         <div className="space-y-2">
-          {campaigns.map((c) => (
+          {visibleCampaigns.map((c) => (
             <div key={c.id} className="rounded-xl border border-border bg-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">

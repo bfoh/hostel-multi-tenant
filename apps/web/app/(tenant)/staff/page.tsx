@@ -2,11 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Plus, UserCog, Search, Users, UserCheck, Clock, TrendingUp, CalendarClock, Mail, CheckCircle2 } from 'lucide-react'
 
-import { getStaff } from '@/lib/data/staff'
+import { getStaffPage, getStaffStats } from '@/lib/data/staff'
 import { formatGHS } from '@/lib/utils'
 import { initials } from '@/lib/utils'
 import { InviteStaffButton } from '@/components/staff/invite-staff-button'
 import { DeleteStaffButton } from '@/components/staff/delete-staff-button'
+import { ListPagination } from '@/components/ui/list-pagination'
 
 export const metadata: Metadata = { title: 'Staff' }
 
@@ -20,14 +21,16 @@ const EMPLOYMENT_STYLES: Record<string, string> = {
 export default async function StaffPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; page?: string }>
 }) {
-  const { q } = await searchParams
-  const staff = await getStaff(q)
+  const { q, page: pageParam } = await searchParams
+  const [result, stats] = await Promise.all([
+    getStaffPage(q, Number.parseInt(pageParam ?? '1', 10)),
+    getStaffStats(),
+  ])
+  const { rows: staff, total: filteredTotal, page, pageSize } = result
 
-  const total  = staff.length
-  const active = staff.filter(s => s.is_active).length
-  const fullTime = staff.filter(s => s.employment_type === 'full_time').length
+  const { total, active, fullTime } = stats
 
   return (
     <div className="space-y-6">
@@ -36,7 +39,7 @@ export default async function StaffPage({
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Staff</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
-            {total} team member{total !== 1 ? 's' : ''}
+            {q ? `${filteredTotal} matching` : total} team member{(q ? filteredTotal : total) !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -243,6 +246,13 @@ export default async function StaffPage({
             </tbody>
           </table>
         </div>
+          <ListPagination
+            pathname="/staff"
+            page={page}
+            pageSize={pageSize}
+            total={filteredTotal}
+            params={{ q }}
+          />
         </>
       )}
 

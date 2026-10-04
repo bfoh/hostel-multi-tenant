@@ -2,9 +2,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Plus, QrCode, Package, AlertTriangle, Trash2, Wrench } from 'lucide-react'
 
-import { getAssets, getAssetSummary } from '@/lib/data/assets'
+import { getAssetsPage, getAssetSummary } from '@/lib/data/assets'
 import { formatGHS } from '@/lib/utils'
 import { AssetsTable, type AssetRow } from '@/components/assets/assets-table'
+import { ListPagination } from '@/components/ui/list-pagination'
 
 export const metadata: Metadata = { title: 'Asset Register' }
 
@@ -27,14 +28,15 @@ const CATEGORIES = ['all', 'furniture', 'appliance', 'electronics', 'fixture', '
 export default async function AssetsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; category?: string; q?: string }>
+  searchParams: Promise<{ status?: string; category?: string; q?: string; page?: string }>
 }) {
-  const { status = 'all', category = 'all', q } = await searchParams
+  const { status = 'all', category = 'all', q, page: pageParam } = await searchParams
 
-  const [assets, summary] = await Promise.all([
-    getAssets({ status, category, search: q }),
+  const [result, summary] = await Promise.all([
+    getAssetsPage({ status, category, search: q, page: Number.parseInt(pageParam ?? '1', 10) }),
     getAssetSummary(),
   ])
+  const { rows: assets, total, page, pageSize } = result
 
   return (
     <div className="space-y-6">
@@ -118,8 +120,9 @@ export default async function AssetsPage({
           </Link>
         </div>
       ) : (
-        <AssetsTable
-          assets={assets.map((asset: any): AssetRow => ({
+        <>
+          <AssetsTable
+            assets={assets.map((asset: any): AssetRow => ({
             id:             asset.id,
             name:           asset.name,
             brand:          asset.brand ?? null,
@@ -132,8 +135,16 @@ export default async function AssetsPage({
               : (asset.location_note ?? '—'),
             purchase_price: asset.purchase_price ?? null,
             qr_code:        asset.qr_code,
-          }))}
-        />
+            }))}
+          />
+          <ListPagination
+            pathname="/assets"
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            params={{ status: status === 'all' ? undefined : status, category: category === 'all' ? undefined : category, q }}
+          />
+        </>
       )}
     </div>
   )

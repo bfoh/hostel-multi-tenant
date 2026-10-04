@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { applySearchTerms, DEFAULT_LIST_PAGE_SIZE, normalisePage } from '@/lib/data/listing'
 
 export type AssetStatus    = 'active' | 'maintenance' | 'disposed' | 'lost'
 export type AssetCondition = 'excellent' | 'good' | 'fair' | 'poor'
@@ -33,8 +34,18 @@ export async function getAssets(filters?: {
   room_id?:  string
   search?:   string
 }): Promise<Asset[]> {
+  return (await getAssetsPage(filters)).rows
+}
+
+export async function getAssetsPage(filters?: {
+  status?: string
+  category?: string
+  room_id?: string
+  search?: string
+  page?: number
+}) {
   const tenantId = await getServerTenantId()
-  if (!tenantId) return []
+  if (!tenantId) return { rows: [] as Asset[], total: 0, page: 1, pageSize: DEFAULT_LIST_PAGE_SIZE }
 
   const supabase = createAdminClient()
 
@@ -45,20 +56,27 @@ export async function getAssets(filters?: {
       qr_code, room_id, location_note, purchase_date, purchase_price,
       supplier, warranty_expiry, status, condition, notes, created_at, updated_at,
       room:rooms(room_number, block)
-    `)
+    `, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('name', { ascending: true })
 
   if (filters?.status   && filters.status !== 'all')   q = q.eq('status',   filters.status)
   if (filters?.category && filters.category !== 'all') q = q.eq('category', filters.category)
   if (filters?.room_id)  q = q.eq('room_id', filters.room_id)
-  if (filters?.search)   q = q.ilike('name', `%${filters.search}%`)
+  q = applySearchTerms(
+    q,
+    ['name', 'category', 'description', 'brand', 'model', 'serial_number', 'qr_code', 'location_note', 'supplier'],
+    filters?.search,
+  )
 
-  const { data } = await q
-  return ((data ?? []) as any[]).map((a) => ({
+  const page = normalisePage(filters?.page)
+  const offset = (page - 1) * DEFAULT_LIST_PAGE_SIZE
+  const { data, count } = await q.range(offset, offset + DEFAULT_LIST_PAGE_SIZE - 1)
+  const rows = ((data ?? []) as any[]).map((a) => ({
     ...a,
     room: Array.isArray(a.room) ? (a.room[0] ?? null) : (a.room ?? null),
   })) as Asset[]
+  return { rows, total: count ?? 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
 }
 
 export async function getAssetByQr(qrCode: string): Promise<Asset | null> {

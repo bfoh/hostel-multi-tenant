@@ -4,6 +4,9 @@ import { headers } from 'next/headers'
 import { createTenantAdminClient } from '@/lib/supabase/tenant-admin'
 import { RoomHKCard } from '@/components/housekeeping/room-hk-card'
 import { HkTaskRow } from '@/components/housekeeping/hk-task-row'
+import { Search } from 'lucide-react'
+import { applySearchTerms, DEFAULT_LIST_PAGE_SIZE, normalisePage } from '@/lib/data/listing'
+import { ListPagination } from '@/components/ui/list-pagination'
 
 export const metadata: Metadata = { title: 'Housekeeping' }
 
@@ -24,8 +27,8 @@ const PRIORITY_STYLE: Record<string, string> = {
   low:    'text-text-tertiary',
 }
 
-async function getRooms(filter: string, tenantId: string) {
-  if (!tenantId) return []
+async function getRooms(filter: string, search: string, requestedPage: number, tenantId: string) {
+  if (!tenantId) return { rows: [], total: 0, page: 1, pageSize: DEFAULT_LIST_PAGE_SIZE }
   const supabase = createTenantAdminClient(tenantId)
 
   let query = supabase
@@ -34,15 +37,18 @@ async function getRooms(filter: string, tenantId: string) {
       id, room_number, block, floor, status, housekeeping_status,
       last_cleaned_at, last_inspected_at,
       category:room_categories(name)
-    `)
+    `, { count: 'exact' })
     .order('room_number')
 
   if (filter !== 'all') {
     query = query.eq('housekeeping_status', filter as HKStatus)
   }
 
-  const { data } = await query
-  return data ?? []
+  query = applySearchTerms(query, ['room_number', 'block'], search)
+  const page = normalisePage(requestedPage)
+  const offset = (page - 1) * DEFAULT_LIST_PAGE_SIZE
+  const { data, count } = await query.range(offset, offset + DEFAULT_LIST_PAGE_SIZE - 1)
+  return { rows: data ?? [], total: count ?? 0, page, pageSize: DEFAULT_LIST_PAGE_SIZE }
 }
 
 async function getPendingTasks(tenantId: string) {
@@ -65,17 +71,18 @@ async function getPendingTasks(tenantId: string) {
 export default async function HousekeepingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>
 }) {
-  const { status = 'all' } = await searchParams
+  const { status = 'all', q = '', page: pageParam } = await searchParams
 
   const headersList = await headers()
   const tenantId    = headersList.get('x-tenant-id') ?? ''
 
-  const [rooms, tasks] = await Promise.all([
-    getRooms(status, tenantId),
+  const [roomResult, tasks] = await Promise.all([
+    getRooms(status, q, Number.parseInt(pageParam ?? '1', 10), tenantId),
     getPendingTasks(tenantId),
   ])
+  const { rows: rooms, total: roomTotal, page, pageSize } = roomResult
 
   // Counts for summary bar (always fetch all for counts)
   const supabase = createTenantAdminClient(tenantId)
@@ -97,6 +104,21 @@ export default async function HousekeepingPage({
         <h1 className="text-2xl font-bold text-text-primary">Housekeeping</h1>
         <p className="mt-0.5 text-sm text-text-secondary">Track and update room cleaning status</p>
       </div>
+
+      <form method="get" className="flex max-w-md gap-2">
+        {status !== 'all' && <input type="hidden" name="status" value={status} />}
+        <div className="relative flex-1">
+          <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search room or block…"
+            className="border-border bg-surface text-text-primary placeholder:text-text-disabled focus:border-brand w-full rounded-md border py-2 pl-9 pr-3 text-sm focus:outline-none"
+          />
+        </div>
+        <button className="bg-brand text-brand-fg hover:bg-brand-hover rounded-md px-3 py-2 text-sm font-semibold">Search</button>
+      </form>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -179,11 +201,14 @@ export default async function HousekeepingPage({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {rooms.map((room) => (
-            <RoomHKCard key={room.id} room={room as any} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {rooms.map((room) => (
+              <RoomHKCard key={room.id} room={room as any} />
+            ))}
+          </div>
+          <ListPagination pathname="/housekeeping" page={page} pageSize={pageSize} total={roomTotal} params={{ status: status === 'all' ? undefined : status, q }} />
+        </>
       )}
     </div>
   )

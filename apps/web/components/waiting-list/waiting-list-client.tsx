@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Check, Bell, Loader2, Users, CalendarClock, Globe, Mail, Phone, MessageSquare } from 'lucide-react'
+import { Plus, Trash2, Check, Bell, Loader2, Users, CalendarClock, Globe, Mail, Phone, MessageSquare, Search } from 'lucide-react'
 import { useBulkSelect, BulkActionBar } from '@/components/ui/bulk-select'
 
 interface Category { id: string; name: string }
@@ -59,6 +59,7 @@ export function WaitingListClient({
   const [actingId, setActingId] = useState<string | null>(null)
   const [error, setError]     = useState<string | null>(null)
   const [sourceFilter, setSourceFilter] = useState<string>(initialSource)
+  const [search, setSearch] = useState('')
 
   const sourceCounts = useMemo(() => {
     const c: Record<string, number> = { all: entries.length, website: 0, manual: 0, whatsapp: 0, referral: 0 }
@@ -66,10 +67,26 @@ export function WaitingListClient({
     return c
   }, [entries])
 
-  const visibleEntries = useMemo(
-    () => sourceFilter === 'all' ? entries : entries.filter((e) => e.source === sourceFilter),
-    [entries, sourceFilter],
-  )
+  const visibleEntries = useMemo(() => {
+    const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+    return entries.filter((entry) => {
+      if (sourceFilter !== 'all' && entry.source !== sourceFilter) return false
+      if (terms.length === 0) return true
+      const haystack = [
+        entry.contact_name,
+        entry.contact_phone,
+        entry.contact_email,
+        entry.notes,
+        entry.message,
+        entry.room_categories?.name,
+        entry.occupants?.first_name,
+        entry.occupants?.last_name,
+        entry.occupants?.phone,
+        entry.occupants?.email,
+      ].filter(Boolean).join(' ').toLowerCase()
+      return terms.every((term) => haystack.includes(term))
+    })
+  }, [entries, sourceFilter, search])
 
   const bulk = useBulkSelect(visibleEntries.map((e) => e.id))
 
@@ -216,7 +233,17 @@ export function WaitingListClient({
       )}
 
       {/* Source filter chips */}
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+          <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search name, phone, email, category…"
+            className="border-border bg-surface w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+        </div>
         {(['all', 'website', 'manual', 'whatsapp', 'referral'] as const).map((s) => {
           const count = sourceCounts[s] ?? 0
           const active = sourceFilter === s

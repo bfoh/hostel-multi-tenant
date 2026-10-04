@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ShieldX, ShieldOff, Trash2, Loader2, AlertTriangle, UserX } from 'lucide-react'
+import { ShieldX, ShieldOff, Trash2, Loader2, AlertTriangle, UserX, Search } from 'lucide-react'
 import { initials } from '@/lib/utils'
 
 interface BlacklistEntry {
@@ -27,6 +27,7 @@ export function BlacklistClient({ initialEntries }: { initialEntries: BlacklistE
   const [saving, setSaving]   = useState<string | null>(null)
   const [error, setError]     = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [search, setSearch] = useState('')
 
   // New entry form
   const [phone, setPhone]       = useState('')
@@ -36,7 +37,21 @@ export function BlacklistClient({ initialEntries }: { initialEntries: BlacklistE
   const [adding, setAdding]     = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const displayed = showAll ? entries : entries.filter((e) => e.is_active)
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const displayed = entries.filter((entry) => {
+    if (!showAll && !entry.is_active) return false
+    if (terms.length === 0) return true
+    const haystack = [
+      entry.phone,
+      entry.reason,
+      entry.severity,
+      entry.occupants?.first_name,
+      entry.occupants?.last_name,
+      entry.occupants?.phone,
+      entry.occupants?.email,
+    ].filter(Boolean).join(' ').toLowerCase()
+    return terms.every((term) => haystack.includes(term))
+  })
 
   async function lift(id: string) {
     setSaving(id); setError(null)
@@ -96,7 +111,17 @@ export function BlacklistClient({ initialEntries }: { initialEntries: BlacklistE
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+          <Search className="text-text-disabled pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search name, phone, reason, or severity…"
+            className="border-border bg-surface w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+        </div>
         <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
           <input
             type="checkbox"
