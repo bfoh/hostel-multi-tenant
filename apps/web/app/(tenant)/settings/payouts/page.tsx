@@ -73,7 +73,7 @@ export default async function PayoutsPage() {
           <li>You keep 100% of each guest payment. Paystack deducts only its own processing fee (~1.95% + GHS 0.50 cap).</li>
           <li>MoMo (MTN, Vodafone, AirtelTigo), card, and bank transfer all route to this account.</li>
           <li>Paystack settles T+1 to your Ghana bank for GHS transactions.</li>
-          <li>The GH Hostels SaaS subscription is billed separately on your owner account.</li>
+          <li>The Beddilo subscription is billed separately on your owner account.</li>
         </ul>
       </div>
     </div>

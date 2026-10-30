@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="rounded bg-red-600 px-2 py-0.5 text-xs font-bold uppercase tracking-wide">
             Super Admin
           </span>
-          <span className="text-sm font-semibold text-white/80">GH Hostels Platform</span>
+          <span className="text-sm font-semibold text-white/80">Beddilo Platform</span>
         </div>
         <div className="flex items-center gap-4 text-sm text-white/50">
           <span>{user.email}</span>

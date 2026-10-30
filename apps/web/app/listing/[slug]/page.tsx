@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const result = await getListing(slug)
   if (!result) return { title: 'Property Not Found' }
   return {
-    title: `${result.tenant.name} — Aya`,
+    title: `${result.tenant.name} — Beddilo`,
     description: result.tenant.tagline ?? `Book a room at ${result.tenant.name} in ${result.tenant.address_city ?? 'Ghana'}.`,
   }
 }
@@ -94,19 +94,18 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
 
   return (
     <div className="relative min-h-screen" style={{ background: MP.bg }}>
-      <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg-light" aria-hidden="true" />
 
       <MarketplaceNav />
 
       {/* ── Breadcrumb ──────────────────────────────────────────── */}
       <div className="mx-auto max-w-6xl px-4 py-3 text-[13px] sm:px-6" style={{ color: MP.textSecondary }}>
-        <Link href="/" className="hover:underline" style={{ color: MP.green }}>Home</Link>
+        <Link href="/" className="hover:underline" style={{ color: MP.primary }}>Home</Link>
         <span className="mx-1.5">›</span>
-        <Link href="/browse" className="hover:underline" style={{ color: MP.green }}>{isHotel ? 'Hotels' : 'Hostels'}</Link>
+        <Link href="/browse" className="hover:underline" style={{ color: MP.primary }}>{isHotel ? 'Hotels' : 'Hostels'}</Link>
         {tenant.address_region && (
           <>
             <span className="mx-1.5">›</span>
-            <Link href={`/browse?region=${encodeURIComponent(tenant.address_region)}`} className="hover:underline" style={{ color: MP.green }}>
+            <Link href={`/browse?region=${encodeURIComponent(tenant.address_region)}`} className="hover:underline" style={{ color: MP.primary }}>
               {tenant.address_region}
             </Link>
           </>
@@ -122,7 +121,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
             <h1 className="text-[26px] font-bold" style={{ color: MP.ink }}>{cms.hero_heading || tenant.name}</h1>
             {location && (
               <p className="mt-1 flex items-center gap-1.5 text-sm" style={{ color: MP.textSecondary }}>
-                <MapPin className="h-4 w-4" style={{ color: MP.green }} />
+                <MapPin className="h-4 w-4" style={{ color: MP.primary }} />
                 {location}
               </p>
             )}
@@ -133,7 +132,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
               <a
                 href={bookUrl}
                 className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
-                style={{ background: MP.green }}
+                style={{ background: MP.primary }}
               >
                 Reserve
               </a>
@@ -142,7 +141,18 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
         </div>
 
         {/* ── Gallery ───────────────────────────────────────────── */}
-        {gallery.length > 0 ? (
+        {gallery.length === 1 ? (
+          // A lone photo spans the full width rather than leaving the
+          // thumbnail half of the grid below empty.
+          <div className="mp-reveal mt-5 overflow-hidden rounded-xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={gallery[0]}
+              alt={tenant.name}
+              className="aspect-[4/3] w-full object-cover transition-transform duration-500 hover:scale-105 motion-reduce:transition-none sm:aspect-[16/7]"
+            />
+          </div>
+        ) : gallery.length > 0 ? (
           <div className="mp-reveal mt-5 grid grid-cols-2 gap-2 overflow-hidden rounded-xl sm:grid-cols-4 sm:grid-rows-2">
             <div className="col-span-2 row-span-2 overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -165,7 +175,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
           </div>
         ) : (
           <div className="mt-5 flex aspect-[16/7] w-full items-center justify-center rounded-xl" style={{ background: MP.surfaceSoft }}>
-            <BedDouble className="h-10 w-10" style={{ color: MP.goldDeep, opacity: 0.4 }} />
+            <BedDouble className="h-10 w-10" style={{ color: MP.accentText, opacity: 0.4 }} />
           </div>
         )}
 
@@ -174,7 +184,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
           <div className="min-w-0 flex-1 space-y-10">
             {/* Tabs (in-page anchors) */}
             <div className="flex gap-6 text-[14px] font-medium" style={{ borderBottom: `1px solid ${MP.border}`, color: MP.textSecondary }}>
-              <a href="#overview" className="pb-3 transition-opacity" style={{ borderBottom: `2px solid ${MP.green}`, color: MP.green }}>Overview</a>
+              <a href="#overview" className="pb-3 transition-opacity" style={{ borderBottom: `2px solid ${MP.primary}`, color: MP.primary }}>Overview</a>
               <a href="#rooms" className="pb-3 transition-opacity hover:opacity-70">Rooms &amp; Prices</a>
               {facilities.length > 0 && <a href="#facilities" className="pb-3 transition-opacity hover:opacity-70">Facilities</a>}
             </div>
@@ -215,14 +225,14 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                         <img src={c.image_urls[0]} alt={c.name} className="h-32 w-full shrink-0 rounded-lg object-cover sm:h-20 sm:w-28" />
                       ) : (
                         <div className="flex h-32 w-full shrink-0 items-center justify-center rounded-lg sm:h-20 sm:w-28" style={{ background: MP.surfaceSoft }}>
-                          <BedDouble className="h-6 w-6" style={{ color: MP.goldDeep, opacity: 0.4 }} />
+                          <BedDouble className="h-6 w-6" style={{ color: MP.accentText, opacity: 0.4 }} />
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-[15px] font-semibold" style={{ color: MP.ink }}>{c.name}</p>
                         {c.description && <p className="mt-0.5 text-[13px]" style={{ color: MP.textSecondary }}>{c.description}</p>}
                         {c.amenities && c.amenities.length > 0 && (
-                          <p className="mt-1 text-[12px]" style={{ color: MP.textSecondary, opacity: 0.8 }}>{c.amenities.slice(0, 5).join(' · ')}</p>
+                          <p className="mt-1 text-[12px]" style={{ color: MP.textSecondary }}>{c.amenities.slice(0, 5).join(' · ')}</p>
                         )}
                       </div>
                       <div className="shrink-0 text-right">
@@ -248,7 +258,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                         className="mp-reveal flex items-center gap-2 text-[13px]"
                         style={{ color: MP.ink, animationDelay: `${Math.min(i, 9) * 30}ms` }}
                       >
-                        <Icon className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
+                        <Icon className="h-4 w-4 shrink-0" style={{ color: MP.accentText }} />
                         {f}
                       </div>
                     )
@@ -276,7 +286,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                             <Star
                               key={s}
                               className="h-3.5 w-3.5"
-                              style={{ color: MP.goldDeep, fill: s < t.overall_rating ? MP.goldDeep : 'transparent' }}
+                              style={{ color: MP.accentText, fill: s < t.overall_rating ? MP.accentText : 'transparent' }}
                             />
                           ))}
                         </div>

@@ -161,7 +161,7 @@ export default async function BillingPage() {
       <div>
         <h1 className="text-2xl font-bold text-text-primary">Billing</h1>
         <p className="mt-0.5 text-sm text-text-secondary">
-          Your GH Hostels platform subscription. This is separate from the payout account that
+          Your Beddilo platform subscription. This is separate from the payout account that
           receives guest payments — configure that under Settings → Payouts.
         </p>
       </div>

@@ -793,7 +793,7 @@ export function OccupantPortal({ tenant, payStatus, initialRef, initialPhone, in
       </main>
 
       <footer className="py-8 text-center text-xs text-gray-400 border-t border-gray-100 mt-8">
-        {tenant.name} · Powered by <span className="font-semibold">GH Hostels</span>
+        {tenant.name} · Powered by <span className="font-semibold">Beddilo</span>
       </footer>
     </div>
   )

@@ -87,19 +87,19 @@ export async function POST(request: NextRequest) {
   await sendEmail({
     to:          email,
     subject:     `Confirm your ${hostelName} account`,
-    senderName:  'GH Hostels',
+    senderName:  'Beddilo',
     html: `
       <div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;">
-        <h2 style="font-size:22px;font-weight:700;color:#111827;margin:0 0 8px;">Confirm your email</h2>
-        <p style="font-size:14px;color:#6b7280;margin:0 0 24px;">
-          Click the button below to activate your <strong>${hostelName}</strong> account on GH Hostels.
+        <h2 style="font-size:22px;font-weight:700;color:#173B42;margin:0 0 8px;">Confirm your email</h2>
+        <p style="font-size:14px;color:#52646A;margin:0 0 24px;">
+          Click the button below to activate your <strong>${hostelName}</strong> account on Beddilo.
           The link expires in 24 hours.
         </p>
         <a href="${confirmUrl}"
-           style="display:inline-block;padding:12px 28px;background:#D4A24C;color:#0A3729;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+           style="display:inline-block;padding:12px 28px;background:#F2B95A;color:#173B42;text-decoration:none;border-radius:999px;font-size:14px;font-weight:600;">
           Confirm my account
         </a>
-        <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;word-break:break-all;">
+        <p style="margin:20px 0 0;font-size:12px;color:#52646A;word-break:break-all;">
           Or copy this link into your browser:<br/>${confirmUrl}
         </p>
       </div>

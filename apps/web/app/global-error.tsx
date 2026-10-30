@@ -22,8 +22,8 @@ export default function GlobalError({
           padding: '64px 24px',
           minHeight: '100vh',
           fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
-          background: '#0a0a0a',
-          color: '#f5e9d2',
+          background: '#0B1F23',
+          color: '#F7F2E9',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -33,18 +33,18 @@ export default function GlobalError({
           <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 12 }}>
             Something went wrong
           </h1>
-          <p style={{ fontSize: 14, opacity: 0.7, marginBottom: 24 }}>
+          <p style={{ fontSize: 14, opacity: 0.78, marginBottom: 24 }}>
             We&apos;ve been notified and are looking into it. Try again in a moment.
           </p>
           <button
             onClick={() => reset()}
             style={{
               padding: '10px 22px',
-              borderRadius: 8,
-              border: '1px solid #D4A24C',
-              background: '#D4A24C',
-              color: '#0a0a0a',
-              fontWeight: 600,
+              borderRadius: 999,
+              border: '1px solid #F2B95A',
+              background: '#F2B95A',
+              color: '#173B42',
+              fontWeight: 700,
               cursor: 'pointer',
             }}
           >

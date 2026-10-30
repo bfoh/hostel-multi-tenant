@@ -39,7 +39,7 @@ export async function MinimalDashboardView({ tenantName }: { tenantName: string 
               {tenantName}&apos;s trial has ended
             </h1>
             <p className="mt-1 text-sm text-text-secondary">
-              Your hostel stays listed on the GH Hostels marketplace and guests can still
+              Your hostel stays listed on the Beddilo marketplace and guests can still
               find and book it. Subscribe to unlock the full management dashboard again —
               staff, occupants, maintenance, accounting, and more.
             </p>

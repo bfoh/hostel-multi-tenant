@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     if (tenant.contact_phone) {
       if (criticals.length > 0 || warnings.length > 0) {
         const lines = [
-          `⚠️ GH Hostels Alert — ${tenant.name}`,
+          `⚠️ Beddilo Alert — ${tenant.name}`,
           ...criticals.map(a => `🔴 ${a.message}`),
           ...warnings.map(a  => `🟡 ${a.message}`),
           'Log in to view details.',

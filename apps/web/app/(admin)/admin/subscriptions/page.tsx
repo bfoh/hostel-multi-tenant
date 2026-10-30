@@ -63,7 +63,7 @@ export default async function AdminSubscriptionsPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">Platform Subscriptions</h1>
         <p className="mt-1 text-sm text-white/50">
-          All hostel tenant subscriptions to the GH Hostels platform (Flow A).
+          All hostel tenant subscriptions to the Beddilo platform (Flow A).
         </p>
       </div>
 

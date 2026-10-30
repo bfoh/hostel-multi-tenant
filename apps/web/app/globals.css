@@ -2,8 +2,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin,latin-ext');
 
 /* ═══════════════════════════════════════════════════════════════
-   ADINKRA DESIGN SYSTEM — Global CSS
-   GH Hostels — Hostel Management System
+   BEDDILO DESIGN SYSTEM — Global CSS
+   Beddilo — A World of Stays
+   Public surfaces use the fixed --bd-* palette; operational
+   dashboards use the tenant-overridable --color-* semantic tokens.
    ═══════════════════════════════════════════════════════════════ */
 
 @tailwind base;
@@ -90,37 +92,79 @@
     --primitive-neutral-900: 30  5%  10%;   /* #1A1A18 */
     --primitive-neutral-950: 0   0%  6%;    /* #0F0F0E */
 
-    /* ── PLATFORM LANDING PALETTE (Ghanaian premium) ──
-       Fixed colors used ONLY on the public marketing surfaces
-       (landing, book, portal, visit). Never tenant-overridable. */
-    --platform-forest:        #0F4C3A;  /* deep forest green */
-    --platform-forest-deep:   #0A3729;  /* darker forest */
-    --platform-forest-mid:    #1B6E54;  /* mid forest highlight */
-    --platform-gold:          #D4A24C;  /* warm gold */
-    --platform-gold-soft:     #F5C26B;  /* light gold highlight */
-    --platform-gold-deep:     #B8842E;  /* deep gold shadow */
-    --platform-ivory:         #F5E9D2;  /* warm ivory */
-    --platform-ivory-soft:    #FBF4E6;  /* lighter ivory */
-    --platform-ink:           #0A0A08;  /* near black */
-    --platform-ink-soft:      #14140F;  /* soft ink */
-    --platform-clay:          #C97E4E;  /* terracotta accent (sparing) */
+    /* ── BEDDILO PLATFORM PALETTE ──────────────────────────────
+       Fixed brand colors for the public marketplace, owner marketing
+       and auth surfaces. Never tenant-overridable — tenant theming goes
+       through --color-brand below. Stored as RGB channels so Tailwind's
+       `bd-*` colors support opacity modifiers (bg-bd-teal/90).
+       Contrast notes (WCAG 2.1):
+         teal on ivory ≈ 11:1 · teal on amber ≈ 7:1 (amber buttons use
+         teal text, never white) · coral and amber are too light for
+         text on ivory — use the *-700 shades for text. */
+    --bd-teal:        23  59  66;   /* #173B42 Deep Teal — primary */
+    --bd-teal-50:    239 245 245;   /* #EFF5F5 */
+    --bd-teal-100:   220 232 233;   /* #DCE8E9 */
+    --bd-teal-200:   189 211 213;   /* #BDD3D5 */
+    --bd-teal-300:   141 178 183;   /* #8DB2B7 */
+    --bd-teal-400:    94 143 150;   /* #5E8F96 */
+    --bd-teal-500:    61 114 122;   /* #3D727A */
+    --bd-teal-600:    42  90  97;   /* #2A5A61 */
+    --bd-teal-700:    30  73  80;   /* #1E4950 */
+    --bd-teal-900:    16  44  49;   /* #102C31 */
+    --bd-teal-950:    11  31  35;   /* #0B1F23 */
+
+    --bd-ivory:      247 242 233;   /* #F7F2E9 Warm Ivory — canvas */
+    --bd-ivory-50:   252 250 246;   /* #FCFAF6 */
+    --bd-ivory-200:  239 231 216;   /* #EFE7D8 */
+    --bd-ivory-300:  228 217 197;   /* #E4D9C5 */
+
+    --bd-amber:      242 185  90;   /* #F2B95A Sunny Amber — accent/CTA */
+    --bd-amber-100:  252 239 214;   /* #FCEFD6 */
+    --bd-amber-300:  247 208 143;   /* #F7D08F */
+    --bd-amber-600:  227 162  63;   /* #E3A23F — hover */
+    --bd-amber-700:  138  90  16;   /* #8A5A10 — text on light */
+
+    --bd-coral:      234 128 107;   /* #EA806B Muted Coral — warmth */
+    --bd-coral-100:  251 227 221;   /* #FBE3DD */
+    --bd-coral-300:  244 160 143;   /* #F4A08F — error text on teal */
+    --bd-coral-700:  168  69  47;   /* #A8452F — text on light */
+
+    --bd-slate:       82 100 106;   /* #52646A — secondary text (≈5.6:1 on ivory) */
+    --bd-success:     31 122  85;   /* #1F7A55 */
+    --bd-danger:     180  35  24;   /* #B42318 */
+
+    /* Legacy aliases — older public pages and utilities below read
+       these names; they now resolve to the Beddilo palette. */
+    --platform-forest:        #173B42;
+    --platform-forest-deep:   #102C31;
+    --platform-forest-mid:    #2A5A61;
+    --platform-gold:          #F2B95A;
+    --platform-gold-soft:     #F7D08F;
+    --platform-gold-deep:     #E3A23F;
+    --platform-ivory:         #F7F2E9;
+    --platform-ivory-soft:    #FCFAF6;
+    --platform-ink:           #0B1F23;
+    --platform-ink-soft:      #102C31;
+    --platform-clay:          #EA806B;
   }
 
   /* ── SEMANTIC TOKENS — LIGHT MODE ──────────────────────────── */
   :root {
-    /* Brand (Volta Blue — tenant can override these) */
-    --color-brand:              var(--primitive-volta-700);
-    --color-brand-hover:        var(--primitive-volta-800);
-    --color-brand-active:       var(--primitive-volta-900);
-    --color-brand-subtle:       var(--primitive-volta-50);
-    --color-brand-subtle-hover: var(--primitive-volta-100);
+    /* Brand (Beddilo Deep Teal default — a tenant's primary_color
+       overrides these at runtime, see app/layout.tsx) */
+    --color-brand:              190 48% 17%;  /* #173B42 */
+    --color-brand-hover:        190 50% 13%;
+    --color-brand-active:       190 52% 10%;
+    --color-brand-subtle:       185 24% 95%;
+    --color-brand-subtle-hover: 185 20% 89%;
     --color-brand-fg:           0 0% 100%;
 
-    /* Accent (Kente Gold — tenant can override) */
-    --color-accent:             var(--primitive-gold-500);
-    --color-accent-hover:       var(--primitive-gold-600);
-    --color-accent-subtle:      var(--primitive-gold-50);
-    --color-accent-fg:          0 0% 100%;
+    /* Accent (Beddilo Sunny Amber — tenant can override). Amber is too
+       light for white text, so its foreground is Deep Teal. */
+    --color-accent:             38 85% 65%;   /* #F2B95A */
+    --color-accent-hover:       36 75% 57%;
+    --color-accent-subtle:      39 87% 91%;
+    --color-accent-fg:          190 48% 17%;
 
     /* Status (FIXED — do not override per tenant) */
     --color-success:            var(--primitive-green-700);
@@ -154,7 +198,7 @@
     /* Text */
     --color-text-primary:       var(--primitive-neutral-800);
     --color-text-secondary:     var(--primitive-neutral-600);
-    --color-text-tertiary:      var(--primitive-neutral-500);
+    --color-text-tertiary:      35 3% 44%;   /* neutral-500 (48%) was 4.2:1 on white; 44% clears WCAG AA 4.5:1 */
     --color-text-disabled:      var(--primitive-neutral-400);
     --color-text-inverse:       0 0% 100%;
 
@@ -162,7 +206,7 @@
     --color-sidebar-bg:         var(--primitive-neutral-950);
     --color-sidebar-text:       var(--primitive-neutral-400);
     --color-sidebar-text-active: 0 0% 100%;
-    --color-sidebar-item-active: var(--primitive-volta-700);
+    --color-sidebar-item-active: 190 48% 17%;
     --color-sidebar-item-hover:  0 0% 12%;
 
     /* Easing functions */
@@ -185,7 +229,7 @@
 
     --color-text-primary:       30 10% 92%;
     --color-text-secondary:     30 6%  62%;
-    --color-text-tertiary:      30 4%  44%;
+    --color-text-tertiary:      30 4%  54%;  /* 44% was ~3.5:1 on the dark surface; 54% clears AA */
     --color-text-disabled:      30 4%  35%;
 
     /* Status: slightly lighter/desaturated in dark mode */
@@ -194,11 +238,12 @@
     --color-warning:            33  75% 52%;
     --color-info:               204 55% 52%;
 
-    /* Brand and accent shift slightly lighter in dark mode */
-    --color-brand:              var(--primitive-volta-500);
-    --color-brand-subtle:       207 58% 14%;
-    --color-accent:             var(--primitive-gold-400);
-    --color-accent-subtle:      38 93% 12%;
+    /* Brand and accent shift lighter in dark mode so they stay legible
+       on dark surfaces (Deep Teal itself is too close to the canvas) */
+    --color-brand:              187 32% 48%;
+    --color-brand-subtle:       190 40% 14%;
+    --color-accent:             38 85% 65%;
+    --color-accent-subtle:      38 60% 14%;
 
     /* Sidebar stays identical in dark mode — already dark */
   }
@@ -320,6 +365,29 @@
   }
   .mp-no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Beddilo hero backdrop — Deep Teal with soft amber/coral light, used
+     instead of stock photography (we only show real owner-uploaded
+     photos, and never pass a generic image off as a listing). */
+  .bd-hero-backdrop {
+    background:
+      radial-gradient(60% 80% at 85% 0%, rgb(var(--bd-amber) / 0.22), transparent 60%),
+      radial-gradient(50% 70% at 0% 100%, rgb(var(--bd-coral) / 0.20), transparent 65%),
+      linear-gradient(165deg, rgb(var(--bd-teal-700)) 0%, rgb(var(--bd-teal)) 45%, rgb(var(--bd-teal-950)) 100%);
+  }
+
+  /* Keyboard focus ring for Beddilo public surfaces — the global
+     brand-tinted ring is too faint on ivory and on teal. */
+  .bd-focus:focus-visible {
+    outline: 2px solid rgb(var(--bd-teal));
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+  .bd-focus-on-dark:focus-visible {
+    outline: 2px solid rgb(var(--bd-amber));
+    outline-offset: 2px;
+    box-shadow: none;
   }
 
   /* Sidebar transition */
@@ -480,7 +548,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   PLATFORM LANDING — Premium Ghanaian motion + decor utilities
+   PLATFORM SURFACES — Beddilo motion + decor utilities
    Used only on public marketing surfaces (.platform-* scope)
    ═══════════════════════════════════════════════════════════════ */
 @layer utilities {
@@ -568,10 +636,22 @@
   }
   .platform-mesh {
     background:
-      radial-gradient(circle at var(--p1, 20% 30%), rgba(212, 162, 76, 0.18), transparent 45%),
-      radial-gradient(circle at var(--p2, 80% 20%), rgba(27, 110, 84, 0.28), transparent 50%),
-      radial-gradient(circle at var(--p3, 60% 80%), rgba(245, 194, 107, 0.10), transparent 40%),
-      radial-gradient(circle at var(--p4, 30% 70%), rgba(15, 76, 58, 0.45), transparent 60%);
+      radial-gradient(circle at var(--p1, 20% 30%), rgba(242, 185, 90, 0.18), transparent 45%),
+      radial-gradient(circle at var(--p2, 80% 20%), rgba(42, 90, 97, 0.28), transparent 50%),
+      radial-gradient(circle at var(--p3, 60% 80%), rgba(247, 208, 143, 0.10), transparent 40%),
+      radial-gradient(circle at var(--p4, 30% 70%), rgba(23, 59, 66, 0.45), transparent 60%);
+    background-size: 200% 200%, 220% 220%, 180% 180%, 240% 240%;
+    background-repeat: no-repeat;
+    animation: platform-mesh-drift 22s ease-in-out infinite;
+  }
+  /* Same drifting mesh tuned for Warm Ivory surfaces — the dark-surface
+     alphas above turn into a muddy grey wash on a light page. */
+  .platform-mesh-light {
+    background:
+      radial-gradient(circle at var(--p1, 20% 30%), rgba(242, 185, 90, 0.20), transparent 45%),
+      radial-gradient(circle at var(--p2, 80% 20%), rgba(234, 128, 107, 0.12), transparent 50%),
+      radial-gradient(circle at var(--p3, 60% 80%), rgba(247, 208, 143, 0.14), transparent 40%),
+      radial-gradient(circle at var(--p4, 30% 70%), rgba(23, 59, 66, 0.06), transparent 60%);
     background-size: 200% 200%, 220% 220%, 180% 180%, 240% 240%;
     background-repeat: no-repeat;
     animation: platform-mesh-drift 22s ease-in-out infinite;
@@ -582,16 +662,16 @@
     background-image:
       repeating-linear-gradient(
         90deg,
-        rgba(212, 162, 76, 0.0) 0px,
-        rgba(212, 162, 76, 0.0) 12px,
-        rgba(212, 162, 76, 0.65) 12px,
-        rgba(212, 162, 76, 0.65) 14px,
-        rgba(245, 233, 210, 0.4) 14px,
-        rgba(245, 233, 210, 0.4) 28px,
-        rgba(27, 110, 84, 0.7) 28px,
-        rgba(27, 110, 84, 0.7) 30px,
-        rgba(212, 162, 76, 0.0) 30px,
-        rgba(212, 162, 76, 0.0) 44px
+        rgba(242, 185, 90, 0.0) 0px,
+        rgba(242, 185, 90, 0.0) 12px,
+        rgba(242, 185, 90, 0.65) 12px,
+        rgba(242, 185, 90, 0.65) 14px,
+        rgba(247, 242, 233, 0.4) 14px,
+        rgba(247, 242, 233, 0.4) 28px,
+        rgba(42, 90, 97, 0.7) 28px,
+        rgba(42, 90, 97, 0.7) 30px,
+        rgba(242, 185, 90, 0.0) 30px,
+        rgba(242, 185, 90, 0.0) 44px
       );
   }
 
@@ -649,7 +729,7 @@
     inset: 0;
     background: radial-gradient(
       120px circle at var(--mx, 50%) var(--my, 50%),
-      rgba(245, 194, 107, 0.45),
+      rgba(247, 208, 143, 0.45),
       transparent 60%
     );
     opacity: 0;
@@ -659,8 +739,8 @@
   .platform-cta:hover {
     transform: translateY(-2px);
     box-shadow:
-      0 18px 38px -12px rgba(15, 76, 58, 0.55),
-      0 0 0 1px rgba(245, 194, 107, 0.6) inset;
+      0 18px 38px -12px rgba(23, 59, 66, 0.55),
+      0 0 0 1px rgba(247, 208, 143, 0.6) inset;
   }
   .platform-cta:hover::before { opacity: 1; }
 
@@ -684,7 +764,7 @@
     padding: 1px;
     background: radial-gradient(
       280px circle at var(--mx, 50%) var(--my, 50%),
-      rgba(212, 162, 76, 0.55),
+      rgba(242, 185, 90, 0.55),
       transparent 50%
     );
     -webkit-mask:
@@ -752,8 +832,8 @@
       135deg,
       transparent 0,
       transparent 6px,
-      rgba(212, 162, 76, 0.18) 6px,
-      rgba(212, 162, 76, 0.18) 7px,
+      rgba(242, 185, 90, 0.18) 6px,
+      rgba(242, 185, 90, 0.18) 7px,
       transparent 7px,
       transparent 14px
     );
@@ -762,6 +842,7 @@
   /* ── Honor reduced-motion: kill non-essential animations ── */
   @media (prefers-reduced-motion: reduce) {
     .platform-mesh,
+    .platform-mesh-light,
     .platform-marquee,
     .platform-shimmer-text,
     .platform-float,

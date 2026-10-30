@@ -80,7 +80,6 @@ const PLAN_DEFS: PlanDef[] = [
       'Staff payroll (GRA tax engine)',
       'Full double-entry accounting',
       'Portfolio view',
-      'Priority support',
     ],
   },
   {
@@ -107,7 +106,6 @@ const PLAN_DEFS: PlanDef[] = [
       'Staff payroll (GRA tax engine)',
       'Full double-entry accounting',
       'Portfolio view',
-      'Priority support',
     ],
   },
 ]

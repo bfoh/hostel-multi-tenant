@@ -80,7 +80,7 @@ export function ListingSettingsForm({
       <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-text-primary">List on the GH Hostels marketplace</p>
+            <p className="text-sm font-semibold text-text-primary">List on the Beddilo marketplace</p>
             <p className="mt-0.5 text-xs text-text-secondary">
               Prospective guests can find and book your rooms directly, free — even after your trial ends.
             </p>

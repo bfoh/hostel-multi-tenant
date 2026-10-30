@@ -122,7 +122,7 @@ export function LeaseDocument({ booking, tenant }: Props) {
         </View>
 
         <View style={styles.footer}>
-          <Text>Generated on {today} · {booking.booking_ref} · {tenant?.name ?? 'GH Hostels'}</Text>
+          <Text>Generated on {today} · {booking.booking_ref} · {tenant?.name ?? 'Beddilo'}</Text>
         </View>
       </Page>
     </Document>

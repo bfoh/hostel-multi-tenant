@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { AlertTriangle, Mail } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Account Suspended — GH Hostels',
+  title: 'Account Suspended — Beddilo',
 }
 
 export default function MaintenancePage() {
@@ -21,7 +21,7 @@ export default function MaintenancePage() {
 
         {/* Body */}
         <p className="mt-3 text-sm text-text-secondary leading-relaxed max-w-sm mx-auto">
-          This hostel&apos;s account has been temporarily suspended.
+          This property&apos;s account has been temporarily suspended.
           If you&apos;re the owner, this is usually because your trial has
           ended or there&apos;s an outstanding balance.
         </p>
@@ -40,7 +40,7 @@ export default function MaintenancePage() {
             href="/"
             className="inline-flex w-full items-center justify-center rounded-xl border border-border bg-surface px-5 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
           >
-            Go to GH Hostels
+            Go to Beddilo
           </a>
         </div>
 

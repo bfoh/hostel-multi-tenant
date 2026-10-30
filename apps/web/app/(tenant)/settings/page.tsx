@@ -332,7 +332,7 @@ export default async function SettingsPage({
                 <div>
                   <h2 className="text-base font-semibold text-text-primary">Public Listing</h2>
                   <p className="mt-0.5 text-sm text-text-secondary">
-                    Control how your {nounSingular} appears on the GH Hostels marketplace, whether it accepts
+                    Control how your {nounSingular} appears on the Beddilo marketplace, whether it accepts
                     online bookings right now, and how guests pay.
                   </p>
                 </div>
@@ -537,7 +537,7 @@ export default async function SettingsPage({
                 <div>
                   <h2 className="text-base font-semibold text-text-primary">Billing</h2>
                   <p className="mt-0.5 text-sm text-text-secondary">
-                    Your GH Hostels platform subscription. This is separate from the payout account that
+                    Your Beddilo platform subscription. This is separate from the payout account that
                     receives guest payments — configure that under Settings → Payouts.
                   </p>
                 </div>

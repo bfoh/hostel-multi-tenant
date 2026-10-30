@@ -6,18 +6,21 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { GraduationCap, Loader2 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 import { PasswordInput } from '@/components/ui/password-input'
-
-const HAIR = 'rgba(245,233,210,0.18)'
-const IVORY = '#F5E9D2'
-const IVORY_MUTED = 'rgba(245,233,210,0.6)'
-const IVORY_DIM = 'rgba(245,233,210,0.4)'
-const GOLD = '#D4A24C'
-const GOLD_SOFT = '#F5C26B'
-const GOLD_DEEP = '#B8842E'
-const FOREST_DEEP = '#0A3729'
+import {
+  AuthAlert,
+  AuthDivider,
+  AuthHeading,
+  FieldError,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+  authPrimaryButtonClass,
+  fieldA11y,
+} from '@/components/auth/auth-ui'
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -25,10 +28,6 @@ const schema = z.object({
 })
 
 type FormValues = z.infer<typeof schema>
-
-const inputClass =
-  `w-full rounded-xl border bg-[rgba(245,233,210,0.03)] px-4 py-3 text-[14px] text-[#F5E9D2] placeholder:text-[rgba(245,233,210,0.35)] transition-all duration-200 focus:outline-none focus:border-[#D4A24C]/60 focus:bg-[rgba(212,162,76,0.05)]`
-const inputBorder = { borderColor: HAIR }
 
 export default function LoginPage() {
   const router = useRouter()
@@ -108,31 +107,15 @@ export default function LoginPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2 text-center">
-        <h1
-          className="text-[26px] font-normal tracking-[-0.5px]"
-          style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
-        >
-          Welcome back
-        </h1>
-        <p className="text-[14px]" style={{ color: IVORY_MUTED }}>
-          Sign in to your hostel dashboard
-        </p>
-      </div>
+      <AuthHeading title="Welcome back" subtitle="Sign in to your dashboard or resident portal." />
 
       {resetSuccess && (
-        <div
-          className="rounded-xl px-4 py-3 text-[13px]"
-          style={{ border: `1px solid ${GOLD}40`, background: `${GOLD}14`, color: GOLD_SOFT }}
-        >
-          Password updated successfully. Sign in with your new password.
-        </div>
+        <AuthAlert tone="success">Password updated successfully. Sign in with your new password.</AuthAlert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-        <div className="space-y-1.5">
-          <label htmlFor="email" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <div>
+          <label htmlFor="email" className={`${authLabelClass} mb-1.5`}>
             Email
           </label>
           <input
@@ -141,54 +124,43 @@ export default function LoginPage() {
             autoComplete="email"
             autoFocus
             {...register('email')}
-            className={inputClass}
-            style={inputBorder}
-            placeholder="kwame@example.com"
+            {...fieldA11y('email', !!errors.email)}
+            className={authInputClass}
+            placeholder="you@example.com"
           />
-          {errors.email && (
-            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.email.message}</p>
-          )}
+          <FieldError id="email" message={errors.email?.message} />
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label htmlFor="password" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
+        <div>
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <label htmlFor="password" className={authLabelClass}>
               Password
             </label>
-            <Link
-              href="/forgot-password"
-              className="text-[12px] font-medium transition-colors hover:opacity-80"
-              style={{ color: GOLD }}
-            >
-              Forgot your password?
+            <Link href="/forgot-password" className={`${authLinkClass} text-[13px]`}>
+              Forgot password?
             </Link>
           </div>
           <PasswordInput
             id="password"
             autoComplete="current-password"
             {...register('password')}
-            className={inputClass}
-            style={inputBorder}
-            placeholder="••••••••"
+            {...fieldA11y('password', !!errors.password)}
+            className={authInputClass}
+            placeholder="Your password"
             tone="dark"
           />
-          {errors.password && (
-            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.password.message}</p>
-          )}
+          <FieldError id="password" message={errors.password?.message} />
         </div>
 
         {serverError && (
-          <div
-            className="space-y-1.5 rounded-xl px-4 py-3 text-[13px] text-[#ff8a8a]"
-            style={{ border: '1px solid rgba(255,107,107,0.3)', background: 'rgba(255,107,107,0.08)' }}
-          >
+          <AuthAlert>
             <p>{serverError}</p>
             {emailNotConfirmed && (
               <button
                 type="button"
                 onClick={resendConfirmation}
                 disabled={resendState !== 'idle'}
-                className="text-[12px] font-semibold underline underline-offset-2 disabled:opacity-60"
+                className="bd-focus-on-dark mt-1.5 rounded text-[13px] font-semibold underline underline-offset-2 disabled:opacity-70"
               >
                 {resendState === 'sending'
                   ? 'Sending…'
@@ -197,76 +169,34 @@ export default function LoginPage() {
                   : 'Resend confirmation email'}
               </button>
             )}
-          </div>
+          </AuthAlert>
         )}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-full px-4 py-3 text-[14px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-          style={{
-            background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
-            color: FOREST_DEEP,
-            boxShadow: '0 10px 28px -10px rgba(212,162,76,0.55)',
-          }}
-        >
-          {isSubmitting ? 'Signing in…' : 'Log In'}
+        <button type="submit" disabled={isSubmitting} className={authPrimaryButtonClass}>
+          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          {isSubmitting ? 'Signing in…' : 'Log in'}
         </button>
       </form>
 
-      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full" style={{ borderTop: `1px solid ${HAIR}` }} />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="px-3 text-[12px]" style={{ background: '#0A0A08', color: IVORY_DIM }}>
-            or
-          </span>
-        </div>
-      </div>
+      <AuthDivider />
 
-      <p className="text-center text-[13px]" style={{ color: IVORY_MUTED }}>
+      <p className="text-center text-[14px] text-bd-ivory/75">
         Don&apos;t have an account?{' '}
-        <Link
-          href="/signup"
-          className="font-semibold transition-colors hover:opacity-80"
-          style={{ color: GOLD }}
-        >
+        <Link href="/signup" className={authLinkClass}>
           Sign up
         </Link>
       </p>
 
       {/* Resident hint */}
-      <div
-        className="space-y-1.5 rounded-xl px-4 py-4"
-        style={{ border: `1px solid ${HAIR}`, background: 'rgba(245,233,210,0.02)' }}
-      >
-        <div className="flex items-center gap-2">
-          <div
-            className="flex h-5 w-5 items-center justify-center rounded-md"
-            style={{ background: `${GOLD}22`, border: `1px solid ${GOLD}33` }}
-          >
-            <svg
-              className="h-3 w-3"
-              style={{ color: GOLD }}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-              <path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" />
-            </svg>
-          </div>
-          <p className="text-[13px] font-medium" style={{ color: IVORY }}>
-            Student or resident?
-          </p>
+      <div className="rounded-2xl border border-bd-ivory/15 bg-bd-ivory/[0.04] px-4 py-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-bd-amber/15 text-bd-amber">
+            <GraduationCap className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <p className="text-[14px] font-semibold text-bd-ivory">Student or resident?</p>
         </div>
-        <p className="pl-7 text-[12px] leading-relaxed" style={{ color: IVORY_DIM }}>
-          Use this same page to sign in. Your credentials were sent by your hostel management &mdash;
+        <p className="mt-1.5 pl-[38px] text-[13px] leading-relaxed text-bd-ivory/75">
+          Use this same page to sign in with the details your property manager sent you &mdash;
           you&apos;ll be taken to your portal automatically.
         </p>
       </div>

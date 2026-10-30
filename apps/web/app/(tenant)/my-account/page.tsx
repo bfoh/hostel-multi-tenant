@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { User, Briefcase, Clock, Shield } from 'lucide-react'
 import Link from 'next/link'
 
-export const metadata: Metadata = { title: 'My Account · GH Hostels' }
+export const metadata: Metadata = { title: 'My Account · Beddilo' }
 
 function date(d: string) {
   return new Intl.DateTimeFormat('en-GH', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d))
@@ -155,7 +155,7 @@ export default async function MyAccountPage() {
         </button>
       </form>
 
-      <p className="pb-2 text-center text-xs text-slate-400">GH Hostels · {tenantName}</p>
+      <p className="pb-2 text-center text-xs text-slate-400">Beddilo · {tenantName}</p>
     </div>
   )
 }

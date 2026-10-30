@@ -16,6 +16,7 @@ export function ListingSortSelect({ current }: { current: string }) {
     <select
       value={current}
       onChange={(e) => onChange(e.target.value)}
+      aria-label="Sort listings"
       className="rounded-md border border-neutral-300 px-2 py-1 text-[13px] text-neutral-900"
     >
       <option value="name">Name</option>

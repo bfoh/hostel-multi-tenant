@@ -20,6 +20,7 @@ import { initials } from '@/lib/utils'
 import { SidebarDraftBadge } from '@/components/payments/sidebar-draft-badge'
 import { SidebarEnquiryBadge } from '@/components/waiting-list/sidebar-enquiry-badge'
 import { UnreadBadge } from '@/components/messages/unread-badge'
+import { BeddiloMark } from '@/components/brand/beddilo-logo'
 
 // ── Role helpers ─────────────────────────────────────────────────────────────
 
@@ -186,7 +187,7 @@ export function AppSidebar({
         {!collapsed && (
           <button
             onClick={() => setCollapsed(true)}
-            className="ml-auto rounded-md p-1 text-[#464a4d] hover:text-[#a1a4a5] hover:bg-[rgba(255,255,255,0.06)] transition-all duration-200"
+            className="ml-auto rounded-md p-1 text-[#80868a] hover:text-[#a1a4a5] hover:bg-[rgba(255,255,255,0.06)] transition-all duration-200"
             aria-label="Collapse sidebar"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -200,7 +201,7 @@ export function AppSidebar({
         {/* Operations — all roles */}
         <section>
           {!collapsed && (
-            <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#464a4d]">
+            <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#80868a]">
               Operations
             </p>
           )}
@@ -216,7 +217,7 @@ export function AppSidebar({
         {canSeeDrafts && (
           <section>
             {!collapsed && (
-              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#464a4d]">
+              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#80868a]">
                 Finance
               </p>
             )}
@@ -233,7 +234,7 @@ export function AppSidebar({
         {isAdmin ? (
           <section>
             {!collapsed && (
-              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#464a4d]">
+              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#80868a]">
                 Admin
               </p>
             )}
@@ -249,12 +250,12 @@ export function AppSidebar({
         ) : (
           !collapsed && (
             <section>
-              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#464a4d]">
+              <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-[0.1em] text-[#80868a]">
                 Admin
               </p>
               <div className="flex items-center gap-2.5 rounded-md px-2 py-2 opacity-40 cursor-not-allowed select-none">
-                <Lock className="h-4 w-4 shrink-0 text-[#464a4d]" />
-                <span className="text-xs text-[#464a4d]">Admin access only</span>
+                <Lock className="h-4 w-4 shrink-0 text-[#80868a]" />
+                <span className="text-xs text-[#80868a]">Admin access only</span>
               </div>
             </section>
           )
@@ -286,7 +287,7 @@ export function AppSidebar({
           {!collapsed && (
             <div className="min-w-0 flex-1 overflow-hidden">
               <p className="truncate text-xs font-medium text-[#f0f0f0]">{user.email}</p>
-              <p className="truncate text-[10px] text-[#464a4d] capitalize">{tenantRole}</p>
+              <p className="truncate text-[10px] text-[#80868a] capitalize">{tenantRole}</p>
             </div>
           )}
         </Link>
@@ -295,7 +296,7 @@ export function AppSidebar({
         {collapsed && (
           <button
             onClick={() => setCollapsed(false)}
-            className="mt-1 flex w-full items-center justify-center rounded-md p-1 text-[#464a4d] hover:text-[#a1a4a5] hover:bg-[rgba(255,255,255,0.06)] transition-all duration-200"
+            className="mt-1 flex w-full items-center justify-center rounded-md p-1 text-[#80868a] hover:text-[#a1a4a5] hover:bg-[rgba(255,255,255,0.06)] transition-all duration-200"
             aria-label="Expand sidebar"
           >
             <ChevronRight className="h-4 w-4" />
@@ -352,14 +353,8 @@ function NavLink({ item, pathname, collapsed }: { item: NavItem; pathname: strin
 }
 
 // ── BuildingIcon ──────────────────────────────────────────────────────────────
+// Platform fallback when a tenant has neither a logo nor a name yet.
 
 function BuildingIcon() {
-  return (
-    <svg viewBox="0 0 64 64" fill="none" className="h-5 w-5">
-      <path d="M14 38 Q14 18 32 14 Q50 18 50 38" stroke="#D4A24C" strokeWidth="3" strokeLinecap="round" fill="none"/>
-      <path d="M22 42 Q22 26 32 22 Q42 26 42 42" stroke="#F5E9D2" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.85"/>
-      <rect x="22" y="42" width="20" height="2.5" rx="1.25" fill="#D4A24C"/>
-      <path d="M32 28 L33.4 32 L37.6 32 L34.2 34.6 L35.5 38.6 L32 36.2 L28.5 38.6 L29.8 34.6 L26.4 32 L30.6 32 Z" fill="#F5E9D2"/>
-    </svg>
-  )
+  return <BeddiloMark tone="ivory" title="" className="h-8 w-8" />
 }

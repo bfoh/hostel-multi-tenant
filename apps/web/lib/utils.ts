@@ -14,6 +14,23 @@ export function formatGHS(pesewas: number): string {
   }).format(pesewas / 100)
 }
 
+/** Like formatGHS, but drops ".00" on whole-cedi amounts for price tags:
+ *  "GH₵4,500" / "GH₵4,500.50". */
+export function formatGHSPrice(pesewas: number): string {
+  const digits = pesewas % 100 === 0 ? 0 : 2
+  return new Intl.NumberFormat('en-GH', {
+    style: 'currency',
+    currency: 'GHS',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(pesewas / 100)
+}
+
+/** Display label for a room_categories.rate_unit: "night" → "per night". */
+export function rateUnitLabel(unit: string | null | undefined): string {
+  return unit ? `per ${unit}` : ''
+}
+
 /** Format a date to Ghana locale: "Mon, 08 Apr 2024" */
 export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat('en-GH', {

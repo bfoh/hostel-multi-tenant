@@ -19,7 +19,7 @@ const fontSans = Inter({
 const fontDisplay = Plus_Jakarta_Sans({
   subsets: ['latin', 'latin-ext'],
   variable: '--font-display',
-  weight: ['500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700', '800'],
   display: 'swap',
 })
 
@@ -40,20 +40,22 @@ export async function generateMetadata(): Promise<Metadata> {
   const tenantLogo   = headersList.get('x-tenant-logo')
   const tenantFavicon = headersList.get('x-tenant-favicon')
 
-  const brand = tenantName?.trim() || 'GH Hostels'
+  const brand = tenantName?.trim() || 'Beddilo'
   // Prefer an explicit favicon; fall back to the tenant's logo (browsers
   // gracefully downscale PNG/SVG for the tab icon); otherwise platform SVG.
   const iconHref = tenantFavicon || tenantLogo || '/icons/icon.svg'
-  const appleIconHref = tenantLogo || tenantFavicon || '/icons/icon.svg'
+  const appleIconHref = tenantLogo || tenantFavicon || '/icons/apple-touch-icon.png'
 
   return {
     title: {
       default: brand,
       template: `%s — ${brand}`,
     },
-    description: tenantName ? `${brand} — hostel management dashboard.` : 'Modern hostel management for Ghana.',
+    description: tenantName
+      ? `${brand} — property management dashboard.`
+      : 'Beddilo — a world of stays. Find hotels, student hostels and apartments, and manage your property in one place.',
     applicationName: brand,
-    keywords: ['hostel management', 'student accommodation', 'Ghana', 'HMS'],
+    keywords: ['accommodation booking', 'hotels', 'student hostels', 'apartments', 'property management'],
     robots: { index: false, follow: false }, // default no-index; tenant pages opt-in
     manifest: '/manifest.webmanifest',
     appleWebApp: {
@@ -71,7 +73,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: light)', color: '#F7F2E9' },
     { media: '(prefers-color-scheme: dark)', color: '#0F0F0E' },
   ],
   width: 'device-width',

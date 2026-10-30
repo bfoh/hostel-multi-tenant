@@ -22,10 +22,10 @@ export async function AuxRevenueCard() {
   return (
     <Card>
       <CardContent className="pt-5">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-sm text-text-secondary">Auxiliary Revenue</p>
-            <p className="mt-1 currency-amount font-display text-3xl font-bold text-text-primary">
+            <p className="mt-1 currency-amount font-display text-2xl 2xl:text-3xl font-bold text-text-primary">
               {formatGHS(summary.thisMonth)}
             </p>
             {summary.thisMonth > 0 && summary.change !== 0 ? (
@@ -36,7 +36,7 @@ export async function AuxRevenueCard() {
               <p className="mt-1 text-xs text-text-tertiary">Gym, cafeteria, laundry, etc.</p>
             )}
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/10">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10">
             <Store className="h-5 w-5 text-brand" />
           </div>
         </div>

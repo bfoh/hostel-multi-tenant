@@ -1,4 +1,4 @@
-// GH Hostels Service Worker — push notifications + offline caching
+// Beddilo Service Worker — push notifications + offline caching
 
 const CACHE_NAME = 'ahms-v1'
 
@@ -57,11 +57,11 @@ self.addEventListener('push', (event) => {
   let data = {}
   try { data = event.data.json() } catch { data = { title: 'Alert', body: event.data.text() } }
 
-  const title   = data.title ?? 'GH Hostels'
+  const title   = data.title ?? 'Beddilo'
   const options = {
     body:  data.body  ?? '',
-    icon:  '/icons/icon.svg',
-    badge: '/icons/icon.svg',
+    icon:  '/icons/icon-192.png',
+    badge: '/icons/badge-96.png',
     tag:   data.tag   ?? 'ahms-alert',
     data:  { url: data.url ?? '/' },
     requireInteraction: true,

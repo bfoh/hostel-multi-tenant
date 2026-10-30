@@ -20,8 +20,8 @@ export const PasswordInput = forwardRef<HTMLInputElement, Props>(
 
     const defaultBtn =
       tone === 'dark'
-        ? 'text-[#a1a4a5] hover:text-white'
-        : 'text-text-secondary hover:text-text-primary'
+        ? 'text-bd-ivory/70 hover:text-bd-ivory focus-visible:ring-bd-amber'
+        : 'text-text-secondary hover:text-text-primary focus-visible:ring-brand'
 
     return (
       <div className="relative">
@@ -32,14 +32,16 @@ export const PasswordInput = forwardRef<HTMLInputElement, Props>(
           style={style}
           {...rest}
         />
+        {/* Focusable so keyboard and screen-reader users can reveal what
+            they typed; sits after the input in tab order. */}
         <button
           type="button"
-          tabIndex={-1}
           onClick={() => setShow(s => !s)}
           aria-label={show ? 'Hide password' : 'Show password'}
+          aria-controls={rest.id}
           className={
             buttonClassName ??
-            `absolute inset-y-0 right-3 flex items-center transition-colors ${defaultBtn}`
+            `absolute inset-y-1 right-1 flex w-10 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 ${defaultBtn}`
           }
         >
           <Icon className="h-4 w-4" aria-hidden="true" />

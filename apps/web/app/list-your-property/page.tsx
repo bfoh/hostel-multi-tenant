@@ -3,12 +3,11 @@ import Link from 'next/link'
 import { BedDouble, Building2, Home, ArrowRight } from 'lucide-react'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
-import { MP } from '@/lib/marketplace-theme'
 import { bareRootDomain, verticalRootDomain } from '@/lib/tenant/host-classification'
 
 export const metadata: Metadata = {
-  title: 'List Your Property — Aya',
-  description: 'List your hostel, hotel, or apartment on Aya and get discovered by guests across Ghana.',
+  title: 'List Your Property — Beddilo',
+  description: 'List your hostel, hotel or apartment on Beddilo. Bring your property to more guests with a simpler way to manage and grow your accommodation business.',
 }
 
 /**
@@ -38,6 +37,7 @@ export default function ListYourPropertyPage() {
       label: 'Hostels',
       description: 'Student and shared-room accommodation near campuses.',
       icon: BedDouble,
+      tone: 'bg-bd-amber-100 text-bd-amber-700',
       href: hostelHref,
       enabled: true,
     },
@@ -46,6 +46,7 @@ export default function ListYourPropertyPage() {
       label: 'Hotels',
       description: 'Full-service hotels, guesthouses, and lodges.',
       icon: Building2,
+      tone: 'bg-bd-teal-100 text-bd-teal',
       href: hotelHref,
       enabled: true,
     },
@@ -54,6 +55,7 @@ export default function ListYourPropertyPage() {
       label: 'Apartments',
       description: 'Serviced apartments and short-let units.',
       icon: Home,
+      tone: 'bg-bd-coral-100 text-bd-coral-700',
       // Apartments share the hotel vertical (same business_type='hotel'
       // tenant record and management dashboard) rather than being a
       // distinct third vertical — so this points at the exact same page
@@ -64,79 +66,81 @@ export default function ListYourPropertyPage() {
   ] as const
 
   return (
-    <div className="relative min-h-screen" style={{ background: MP.bg }}>
-      <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg-light" aria-hidden="true" />
-
+    <div className="relative min-h-screen bg-bd-ivory text-bd-teal">
       <MarketplaceNav />
 
-      <div className="mx-auto max-w-4xl px-5 pb-24 pt-16 text-center sm:px-6 sm:pt-24">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: MP.goldDeep }}>
-          For property owners
-        </p>
-        <h1
-          className="mx-auto mt-3 max-w-xl text-[32px] font-normal leading-[1.1] tracking-[-0.02em] sm:text-[44px]"
-          style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: MP.ink }}
-        >
-          List your property with Aya
-        </h1>
-        <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed" style={{ color: MP.textSecondary }}>
-          What would you like to list? Choose one to get started.
-        </p>
+      <section className="relative overflow-hidden">
+        <div className="bd-hero-backdrop absolute inset-0" aria-hidden="true" />
+        <div className="relative mx-auto max-w-3xl px-5 pb-32 pt-14 text-center sm:px-6 sm:pb-36 sm:pt-20">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.28em] text-bd-amber">
+            For property owners
+          </p>
+          <h1 className="mx-auto mt-4 max-w-2xl font-display text-[34px] font-bold leading-[1.08] tracking-[-0.025em] text-bd-ivory sm:text-[48px]">
+            List your property with Beddilo
+          </h1>
+          <p className="mx-auto mt-4 max-w-lg text-[16px] leading-relaxed text-bd-ivory/80 sm:text-[17px]">
+            Bring your property to more guests with a simpler way to manage and grow your accommodation business.
+          </p>
+          <h2 id="property-type-heading" className="mt-8 text-[15px] font-semibold text-bd-ivory">
+            What would you like to list? <span className="font-normal text-bd-ivory/75">Choose one to get started.</span>
+          </h2>
+        </div>
+      </section>
 
-        <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-3">
+      <div className="relative z-10 mx-auto -mt-20 max-w-4xl px-5 pb-20 sm:-mt-24 sm:px-6 sm:pb-28">
+        <ul aria-labelledby="property-type-heading" className="grid gap-4 sm:grid-cols-3">
           {OPTIONS.map((opt) => {
             const Icon = opt.icon
             const card = (
               <div
-                className={`group flex h-full flex-col items-center gap-3 rounded-2xl p-6 text-center transition-all duration-200 ${
-                  opt.enabled ? 'hover:-translate-y-0.5 hover:shadow-lg' : ''
+                className={`flex h-full flex-col items-start gap-4 rounded-3xl border border-bd-teal/10 bg-white p-6 text-left shadow-[0_24px_48px_-32px_rgba(11,31,35,0.5)] transition-all duration-200 sm:p-7 ${
+                  opt.enabled ? 'group-hover:-translate-y-1 group-hover:border-bd-teal/25 group-hover:shadow-[0_28px_56px_-28px_rgba(11,31,35,0.45)] motion-reduce:group-hover:translate-y-0' : ''
                 }`}
-                style={{ background: MP.surface, border: `1px solid ${MP.border}` }}
               >
-                <span
-                  className="flex h-14 w-14 items-center justify-center rounded-full"
-                  style={{ background: MP.surfaceSoft }}
-                >
-                  <Icon className="h-6 w-6" style={{ color: opt.enabled ? MP.green : MP.textSecondary }} />
+                <span className={`flex h-14 w-14 items-center justify-center rounded-2xl ${opt.tone}`}>
+                  <Icon className="h-7 w-7" strokeWidth={1.8} aria-hidden="true" />
                 </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-[16px] font-bold" style={{ color: MP.ink }}>{opt.label}</span>
-                  {!opt.enabled && (
-                    <span
-                      className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
-                      style={{ background: MP.surfaceSoft, color: MP.goldDeep }}
-                    >
-                      Soon
-                    </span>
-                  )}
+                <div>
+                  <span className="flex items-center gap-2">
+                    <span className="font-display text-[19px] font-bold text-bd-teal">{opt.label}</span>
+                    {!opt.enabled && (
+                      <span className="rounded-full bg-bd-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-bd-amber-700">
+                        Soon
+                      </span>
+                    )}
+                  </span>
+                  <p className="mt-1.5 text-[14px] leading-relaxed text-bd-slate">{opt.description}</p>
                 </div>
-                <p className="text-[13px] leading-relaxed" style={{ color: MP.textSecondary }}>{opt.description}</p>
                 {opt.enabled && (
-                  <span
-                    className="mt-1 inline-flex items-center gap-1.5 text-[13px] font-semibold transition-transform duration-200 group-hover:translate-x-0.5"
-                    style={{ color: MP.green }}
-                  >
-                    Get started <ArrowRight className="h-3.5 w-3.5" />
+                  <span className="mt-auto inline-flex items-center gap-2 rounded-full bg-bd-teal px-4 py-2.5 text-[14px] font-semibold text-bd-ivory transition-colors group-hover:bg-bd-teal-900">
+                    Get started
+                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
                   </span>
                 )}
               </div>
             )
 
-            return opt.enabled && opt.href ? (
-              <Link key={opt.key} href={opt.href} className="block h-full">
-                {card}
-              </Link>
-            ) : (
-              <div key={opt.key} className="h-full cursor-default opacity-70">
-                {card}
-              </div>
+            return (
+              <li key={opt.key}>
+                {opt.enabled && opt.href ? (
+                  <Link
+                    href={opt.href}
+                    aria-label={`List ${opt.label.toLowerCase()} — get started`}
+                    className="bd-focus group block h-full rounded-3xl"
+                  >
+                    {card}
+                  </Link>
+                ) : (
+                  <div className="h-full cursor-default opacity-70">{card}</div>
+                )}
+              </li>
             )
           })}
-        </div>
+        </ul>
 
-        <p className="mt-10 text-[13px]" style={{ color: MP.textSecondary }}>
+        <p className="mt-10 text-center text-[14px] text-bd-slate">
           Already have an account?{' '}
-          <Link href="/login" className="font-semibold hover:underline" style={{ color: MP.green }}>
+          <Link href="/login" className="bd-focus rounded-sm font-semibold text-bd-teal underline underline-offset-4 hover:text-bd-teal-600">
             Sign in
           </Link>
         </p>

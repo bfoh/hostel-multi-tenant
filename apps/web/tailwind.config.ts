@@ -1,9 +1,12 @@
 import type { Config } from 'tailwindcss'
 import animatePlugin from 'tailwindcss-animate'
 
-// Adinkra Design System — Tailwind Configuration
-// All color values are HSL components fed from CSS variables.
-// This allows tenant themes to override colors without touching this file.
+// Beddilo Design System — Tailwind Configuration
+// All color values are fed from CSS variables (see app/globals.css).
+// `brand`/`accent` are tenant-overridable; `bd` is the fixed Beddilo
+// platform palette for public marketplace, owner marketing and auth pages.
+
+const bd = (name: string) => `rgb(var(--bd-${name}) / <alpha-value>)`
 
 const config: Config = {
   darkMode: ['class'],
@@ -100,6 +103,45 @@ const config: Config = {
         },
         // Background
         background: 'hsl(var(--color-bg))',
+        // Beddilo platform palette — fixed, never overridden by a tenant
+        bd: {
+          teal: {
+            DEFAULT: bd('teal'),
+            50: bd('teal-50'),
+            100: bd('teal-100'),
+            200: bd('teal-200'),
+            300: bd('teal-300'),
+            400: bd('teal-400'),
+            500: bd('teal-500'),
+            600: bd('teal-600'),
+            700: bd('teal-700'),
+            800: bd('teal'),
+            900: bd('teal-900'),
+            950: bd('teal-950'),
+          },
+          ivory: {
+            DEFAULT: bd('ivory'),
+            50: bd('ivory-50'),
+            200: bd('ivory-200'),
+            300: bd('ivory-300'),
+          },
+          amber: {
+            DEFAULT: bd('amber'),
+            100: bd('amber-100'),
+            300: bd('amber-300'),
+            600: bd('amber-600'),
+            700: bd('amber-700'),
+          },
+          coral: {
+            DEFAULT: bd('coral'),
+            100: bd('coral-100'),
+            300: bd('coral-300'),
+            700: bd('coral-700'),
+          },
+          slate: bd('slate'),
+          success: bd('success'),
+          danger: bd('danger'),
+        },
       },
 
       // ── FONTS ───────────────────────────────────────────────────

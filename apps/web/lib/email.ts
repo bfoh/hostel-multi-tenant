@@ -660,7 +660,7 @@ export function trialWarningHtml(opts: {
       Your trial ends in ${daysLeft} ${dayWord}
     </p>
     <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">
-      Hi${ownerName ? ` ${ownerName}` : ''}, your <strong>${hostelName}</strong> free trial on GH Hostels expires on
+      Hi${ownerName ? ` ${ownerName}` : ''}, your <strong>${hostelName}</strong> free trial on Beddilo expires on
       <strong>${trialEndsAt}</strong>. Pick a plan now to keep bookings, payments, and reports running without interruption.
     </p>
     <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:24px;">
@@ -691,7 +691,7 @@ export function trialExpiredHtml(opts: {
   const content = `
     <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Your trial has ended</p>
     <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">
-      Hi${ownerName ? ` ${ownerName}` : ''}, your <strong>${hostelName}</strong> trial on GH Hostels ended today. Your account is paused until you pick a plan.
+      Hi${ownerName ? ` ${ownerName}` : ''}, your <strong>${hostelName}</strong> trial on Beddilo ended today. Your account is paused until you pick a plan.
     </p>
     <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:24px;">
       <p style="margin:0;font-size:13px;color:#92400e;">
@@ -770,7 +770,7 @@ export function newTenantLeadHtml(opts: {
     }
   `
 
-  return baseTemplate('GH Hostels — Ops', '#0A3729', content, null)
+  return baseTemplate('Beddilo — Ops', '#173B42', content, null)
 }
 
 /* ── Password reset email ───────────────────────────────────────────────── */

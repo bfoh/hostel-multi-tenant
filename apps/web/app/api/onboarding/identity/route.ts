@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     sendEmail({
       to:         OPS_EMAIL,
       subject:    `New signup: ${d.name}`,
-      senderName: 'GH Hostels Signups',
+      senderName: 'Beddilo Signups',
       replyTo:    ownerEmail,
       html: newTenantLeadHtml({
         hostelName:    d.name,

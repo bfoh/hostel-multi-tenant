@@ -1,22 +1,18 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
-import Image from 'next/image'
 import Link from 'next/link'
 
-export const metadata: Metadata = { title: 'Sign in — GH-HOSTELS' }
+import { BeddiloWordmark } from '@/components/brand/beddilo-logo'
 
-const HAIR = 'rgba(245, 233, 210, 0.10)'
-const HAIR_STRONG = 'rgba(245, 233, 210, 0.18)'
-const INK = '#0A0A08'
-const IVORY = '#F5E9D2'
-const FOREST_MID = '#1B6E54'
-const GOLD = '#D4A24C'
-const GOLD_SOFT = '#F5C26B'
+export const metadata: Metadata = { title: 'Sign in — Beddilo' }
+
+const TEAL_SOFT = '#2A5A61'
+const AMBER = '#F2B95A'
 
 /**
- * Auth layout — Ghanaian premium palette.
- * Full-screen ink with forest+gold ambient. Tenant-branded variant: brand-color
- * accents on top of the same dark canvas.
+ * Auth layout — Beddilo deep-teal canvas with ivory type and amber accents.
+ * Tenant-branded variant: the tenant's own logo/name, and their brand color
+ * for the ambient glow, on top of the same dark canvas.
  */
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const headersList  = await headers()
@@ -25,48 +21,41 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const tenantColor  = headersList.get('x-tenant-color')
   const isTenantPage = !!tenantName
 
-  const accentA = isTenantPage && tenantColor ? tenantColor : FOREST_MID
-  const accentB = isTenantPage && tenantColor ? tenantColor : GOLD
+  const accentA = isTenantPage && tenantColor ? tenantColor : TEAL_SOFT
+  const accentB = isTenantPage && tenantColor ? tenantColor : AMBER
 
   return (
     <div
-      className="relative flex min-h-[100dvh] items-center justify-center overflow-x-hidden px-4 selection:bg-[#D4A24C]/40"
+      className="relative flex min-h-[100dvh] items-center justify-center overflow-x-hidden bg-bd-teal-950 px-4 text-bd-ivory selection:bg-bd-amber/40"
       style={{
-        background: INK,
-        color: IVORY,
         // max() so this still gives the original 3rem breathing room on a
         // regular browser (env() resolves to 0 there) while clearing the
         // notch/status bar and home indicator inside the native app, where
         // viewport-fit=cover (see app/layout.tsx) makes env() non-zero.
-        paddingTop: 'max(3rem, calc(env(safe-area-inset-top) + 1rem))',
+        paddingTop: 'max(4rem, calc(env(safe-area-inset-top) + 3rem))',
         paddingBottom: 'max(3rem, calc(env(safe-area-inset-bottom) + 1rem))',
       }}
     >
-      {/* ── Ambient mesh background ───────────────────────────────── */}
+      {/* ── Ambient background ────────────────────────────────────── */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div
-          className="absolute -left-32 -top-32 h-[560px] w-[560px] rounded-full opacity-[0.20] blur-[140px]"
+          className="absolute -left-32 -top-32 h-[560px] w-[560px] rounded-full opacity-[0.45] blur-[140px]"
           style={{ background: accentA }}
         />
         <div
-          className="absolute -bottom-40 -right-40 h-[640px] w-[640px] rounded-full opacity-[0.16] blur-[160px]"
-          style={{ background: accentB }}
-        />
-        <div
-          className="absolute left-1/2 top-1/2 h-[320px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.10] blur-[120px]"
+          className="absolute -bottom-40 -right-40 h-[640px] w-[640px] rounded-full opacity-[0.14] blur-[160px]"
           style={{ background: accentB }}
         />
       </div>
 
       {/* ── Back link ─────────────────────────────────────────────── */}
       <div
-        className="absolute left-6 z-20"
-        style={{ top: 'max(1.5rem, calc(env(safe-area-inset-top) + 0.75rem))' }}
+        className="absolute left-4 z-20 sm:left-6"
+        style={{ top: 'max(1.25rem, calc(env(safe-area-inset-top) + 0.75rem))' }}
       >
         <Link
           href="/"
-          className="flex items-center gap-1.5 text-[13px] font-medium transition-colors"
-          style={{ color: 'rgba(245,233,210,0.55)' }}
+          className="bd-focus-on-dark flex items-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-medium text-bd-ivory/75 transition-colors hover:text-bd-ivory"
         >
           <svg
             className="h-3.5 w-3.5"
@@ -76,6 +65,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
+            aria-hidden="true"
           >
             <path d="M10 12L6 8l4-4" />
           </svg>
@@ -84,18 +74,18 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       </div>
 
       {/* ── Auth card ─────────────────────────────────────────────── */}
-      <div className="relative z-10 w-full max-w-[420px]">
+      <div className="relative z-10 w-full max-w-[440px]">
         {/* Logo / Identity */}
-        <div className="mb-8 flex flex-col items-center">
+        <div className="mb-7 flex flex-col items-center">
           {isTenantPage && tenantLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={tenantLogo}
               alt={tenantName}
-              className="mb-4 h-11 w-auto max-w-[160px] object-contain"
+              className="h-11 w-auto max-w-[160px] object-contain"
             />
           ) : isTenantPage ? (
-            <div className="mb-4 flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5">
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-xl"
                 style={{ background: `linear-gradient(135deg, ${accentA}, ${accentB})` }}
@@ -104,59 +94,27 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
                   {tenantName.substring(0, 1).toUpperCase()}
                 </span>
               </div>
-              <span
-                className="text-[15px] font-bold tracking-[0.16em]"
-                style={{ color: IVORY, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
-              >
-                {tenantName}
-              </span>
+              <span className="font-display text-[16px] font-bold text-bd-ivory">{tenantName}</span>
             </div>
           ) : (
-            <Link href="/" className="mb-4 flex items-center gap-2.5 group">
-              <Image
-                src="/logo-mark.svg"
-                alt="GH-HOSTELS"
-                width={40}
-                height={40}
-                className="h-10 w-10 transition-transform duration-500 group-hover:rotate-[6deg]"
-                priority
-              />
-              <span
-                className="text-[15px] font-bold tracking-[0.16em]"
-                style={{ color: IVORY, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
-              >
-                GH-HOSTELS
-              </span>
+            <Link href="/" aria-label="Beddilo home" className="bd-focus-on-dark rounded-lg p-1 text-bd-ivory">
+              <BeddiloWordmark className="h-9 w-auto" title="" />
             </Link>
           )}
         </div>
 
         {/* Card */}
-        <div
-          className="rounded-2xl p-8"
-          style={{
-            border: `1px solid ${HAIR_STRONG}`,
-            background:
-              'linear-gradient(180deg, rgba(245,233,210,0.03) 0%, rgba(245,233,210,0.005) 100%)',
-            boxShadow: `0 30px 80px -30px rgba(15,76,58,0.55), 0 0 80px -20px ${GOLD_SOFT}14`,
-          }}
-        >
+        <div className="rounded-3xl border border-bd-ivory/15 bg-bd-teal/70 p-6 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)] backdrop-blur-sm sm:p-8">
           {children}
         </div>
 
         {/* Footer */}
-        <p
-          className="mt-8 text-center text-[11px]"
-          style={{ color: 'rgba(245,233,210,0.4)' }}
-        >
+        <p className="mt-8 text-center text-[12px] text-bd-ivory/60">
           {isTenantPage
-            ? `© ${new Date().getFullYear()} ${tenantName}. Powered by GH-HOSTELS.`
-            : `© ${new Date().getFullYear()} GH-HOSTELS · Made in Accra, Ghana`}
+            ? `© ${new Date().getFullYear()} ${tenantName} · Powered by Beddilo`
+            : `© ${new Date().getFullYear()} Beddilo · A world of stays`}
         </p>
       </div>
-
-      {/* Silence unused-var noise for stable HAIR token */}
-      <span className="hidden" data-hair={HAIR} />
     </div>
   )
 }

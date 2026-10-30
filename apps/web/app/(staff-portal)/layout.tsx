@@ -9,7 +9,7 @@ export default async function StaffPortalLayout({ children }: { children: React.
   if (!user) redirect('/login')
 
   const headersList = await headers()
-  const tenantName  = headersList.get('x-tenant-name') ?? 'GH Hostels'
+  const tenantName  = headersList.get('x-tenant-name') ?? 'Beddilo'
   const tenantLogo  = headersList.get('x-tenant-logo')
   const tenantColor = headersList.get('x-tenant-color') ?? '#2563EB'
 

@@ -16,8 +16,8 @@ const GHANA_REGIONS = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Find a Hostel — Aya',
-  description: 'Search and book student hostels near your campus in Ghana — real-time availability, no middleman.',
+  title: 'Find a Stay — Beddilo',
+  description: 'Search hotels, student hostels and apartments — real-time availability, booked directly with the property.',
 }
 
 function buildQuery(sp: Record<string, string | undefined>, overrides: Record<string, string | undefined>) {
@@ -64,7 +64,6 @@ export default async function BrowseDirectoryPage({
 
   return (
     <div className="relative min-h-screen" style={{ background: MP.bg }}>
-      <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg-light" aria-hidden="true" />
 
       <MarketplaceNav />
 
@@ -74,7 +73,7 @@ export default async function BrowseDirectoryPage({
           <form action="/browse" method="get" className="flex flex-col gap-2 rounded-xl bg-white p-2 shadow-sm sm:flex-row" style={{ border: `1px solid ${MP.border}` }}>
             {sp.type && <input type="hidden" name="type" value={sp.type} />}
             <div className="flex flex-1 items-center gap-2 border-b border-neutral-100 px-3 py-2.5 sm:border-b-0 sm:border-r">
-              <Search className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
+              <Search className="h-4 w-4 shrink-0" style={{ color: MP.accentText }} />
               <input
                 name="q"
                 defaultValue={sp.q ?? ''}
@@ -88,7 +87,7 @@ export default async function BrowseDirectoryPage({
               />
             </div>
             <div className="flex flex-1 items-center gap-2 border-b border-neutral-100 px-3 py-2.5 sm:border-b-0 sm:border-r">
-              <MapPin className="h-4 w-4 shrink-0" style={{ color: MP.goldDeep }} />
+              <MapPin className="h-4 w-4 shrink-0" style={{ color: MP.accentText }} />
               <input
                 name="city"
                 defaultValue={sp.city ?? ''}
@@ -99,6 +98,7 @@ export default async function BrowseDirectoryPage({
             </div>
             <select
               name="region" defaultValue={sp.region ?? ''}
+              aria-label="Region"
               className="cursor-pointer rounded-md border bg-white px-3 py-2.5 text-sm sm:w-44"
               style={{ color: MP.ink, borderColor: MP.border }}
             >
@@ -108,7 +108,7 @@ export default async function BrowseDirectoryPage({
             <button
               type="submit"
               className="cursor-pointer rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
-              style={{ background: MP.green }}
+              style={{ background: MP.primary }}
             >
               Search
             </button>
@@ -118,11 +118,11 @@ export default async function BrowseDirectoryPage({
 
       {/* ── Breadcrumb ─────────────────────────────────────────── */}
       <div className="mx-auto max-w-6xl px-4 py-3 text-[13px] sm:px-6" style={{ color: MP.textSecondary }}>
-        <Link href="/" className="hover:underline" style={{ color: MP.green }}>Home</Link>
+        <Link href="/" className="underline underline-offset-2" style={{ color: MP.primary }}>Home</Link>
         <span className="mx-1.5">›</span>
         {sp.region ? (
           <>
-            <Link href="/browse" className="hover:underline" style={{ color: MP.green }}>
+            <Link href="/browse" className="underline underline-offset-2" style={{ color: MP.primary }}>
               {nounPlural}
             </Link>
             <span className="mx-1.5">›</span>
@@ -146,7 +146,7 @@ export default async function BrowseDirectoryPage({
               {sp.region && <input type="hidden" name="region" value={sp.region} />}
 
               <div>
-                <p className="text-[13px] font-semibold" style={{ color: MP.ink }}>Your budget (per stay)</p>
+                <p className="text-[13px] font-semibold" style={{ color: MP.ink }}>Starting price (GH₵)</p>
                 {allResults.length > 0 && (
                   <p className="mt-0.5 text-[12px]" style={{ color: MP.textSecondary }}>
                     GH₵{priceBounds.lo.toFixed(0)} – GH₵{priceBounds.hi.toFixed(0)}
@@ -154,18 +154,18 @@ export default async function BrowseDirectoryPage({
                 )}
                 <div className="mt-2 flex items-center gap-2">
                   <input
-                    name="min" type="number" defaultValue={sp.min ?? ''} placeholder="Min"
+                    name="min" type="number" defaultValue={sp.min ?? ''} placeholder="Min" aria-label="Minimum starting price in GH₵"
                     className="w-full rounded-md border px-2.5 py-1.5 text-[13px] outline-none"
                     style={{ borderColor: MP.border, color: MP.ink }}
                   />
                   <span style={{ color: MP.textSecondary }}>–</span>
                   <input
-                    name="max" type="number" defaultValue={sp.max ?? ''} placeholder="Max"
+                    name="max" type="number" defaultValue={sp.max ?? ''} placeholder="Max" aria-label="Maximum starting price in GH₵"
                     className="w-full rounded-md border px-2.5 py-1.5 text-[13px] outline-none"
                     style={{ borderColor: MP.border, color: MP.ink }}
                   />
                 </div>
-                <button type="submit" className="mt-2 text-[12px] font-semibold hover:underline" style={{ color: MP.green }}>
+                <button type="submit" className="mt-2 text-[12px] font-semibold hover:underline" style={{ color: MP.primary }}>
                   Apply
                 </button>
               </div>
@@ -181,7 +181,7 @@ export default async function BrowseDirectoryPage({
                     <Link
                       href={`/browse?${buildQuery(sp, { region: sp.region === r ? undefined : r, page: undefined })}`}
                       className="text-[13px] transition-colors hover:underline"
-                      style={{ color: sp.region === r ? MP.green : MP.textSecondary, fontWeight: sp.region === r ? 600 : 400 }}
+                      style={{ color: sp.region === r ? MP.primary : MP.textSecondary, fontWeight: sp.region === r ? 600 : 400 }}
                     >
                       {r}
                     </Link>
@@ -208,14 +208,14 @@ export default async function BrowseDirectoryPage({
                 <Link
                   href={`/browse?${buildQuery(sp, { view: 'list' })}`}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] transition-colors duration-150"
-                  style={view === 'list' ? { background: MP.green, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
+                  style={view === 'list' ? { background: MP.primary, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
                 >
                   <ListIcon className="h-3.5 w-3.5" /> List
                 </Link>
                 <Link
                   href={`/browse?${buildQuery(sp, { view: 'grid' })}`}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] transition-colors duration-150"
-                  style={view === 'grid' ? { background: MP.green, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
+                  style={view === 'grid' ? { background: MP.primary, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" /> Grid
                 </Link>
@@ -226,10 +226,10 @@ export default async function BrowseDirectoryPage({
           {hostels.length === 0 ? (
             <div className="mt-8 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-white py-20 text-center" style={{ borderColor: MP.borderStrong }}>
               <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: MP.surfaceSoft }}>
-                <SearchX className="h-5 w-5" style={{ color: MP.goldDeep }} />
+                <SearchX className="h-5 w-5" style={{ color: MP.accentText }} />
               </span>
               <p className="font-medium" style={{ color: MP.ink }}>No {nounSingular}s found</p>
-              <p className="max-w-xs text-sm" style={{ color: MP.textSecondary }}>Try a different search or check back soon — new {nounSingular}s list every week.</p>
+              <p className="max-w-xs text-sm" style={{ color: MP.textSecondary }}>Try a different search or check back soon.</p>
             </div>
           ) : view === 'grid' ? (
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -257,7 +257,7 @@ export default async function BrowseDirectoryPage({
                   href={`/browse?${buildQuery(sp, { page: String(p) })}`}
                   className="rounded-md px-3 py-1.5 text-sm transition-colors duration-150"
                   style={p === page
-                    ? { background: MP.green, color: '#fff' }
+                    ? { background: MP.primary, color: '#fff' }
                     : { border: `1px solid ${MP.border}`, color: MP.textSecondary }}
                 >
                   {p}
@@ -268,7 +268,7 @@ export default async function BrowseDirectoryPage({
 
           <div className="mt-10 flex items-center justify-center gap-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
             Run {businessType === 'apartment' ? 'an' : 'a'} {nounSingular}?
-            <Link href="/list-your-property" className="font-semibold hover:underline" style={{ color: MP.green }}>
+            <Link href="/list-your-property" className="font-semibold hover:underline" style={{ color: MP.primary }}>
               List yours free <ChevronRight className="inline h-3 w-3" />
             </Link>
           </div>

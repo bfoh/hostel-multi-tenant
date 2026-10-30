@@ -32,11 +32,14 @@ function createFakeQuery(rows: unknown[]) {
 }
 
 const queries: { chain: any; calls: RecordedCall[] }[] = []
+/** Rows the next fake query resolves with (reset to [] after each use). */
+let nextRows: unknown[] = []
 
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
     from: () => {
-      const q = createFakeQuery([])
+      const q = createFakeQuery(nextRows)
+      nextRows = []
       queries.push(q)
       return q.chain
     },
@@ -103,5 +106,36 @@ describe('searchListings', () => {
     expect(calls).toContainEqual({ op: 'ilike', args: ['address_city', '%Accra%'] })
     expect(calls).toContainEqual({ op: 'eq', args: ['address_region', 'Greater Accra'] })
     expect(calls).toContainEqual({ op: 'ilike', args: ['name', '%Alisa%'] })
+  })
+
+  it("reports the billing unit of the cheapest room type alongside from_rate", async () => {
+    const tenant = {
+      slug: 'acacia', name: 'Acacia', tagline: null, logo_url: null, hero_image_url: null,
+      primary_color: null, address_city: 'Accra', address_region: 'Greater Accra',
+      business_type: 'hostel', created_at: '2026-01-01',
+    }
+    nextRows = [
+      {
+        ...tenant, id: 't1',
+        room_categories: [
+          { base_rate: 450000, rate_unit: 'semester', is_active: true, image_urls: [], sort_order: 0 },
+          { base_rate: 25000, rate_unit: 'night', is_active: true, image_urls: [], sort_order: 1 },
+        ],
+      },
+      {
+        ...tenant, id: 't2', slug: 'baobab', name: 'Baobab',
+        room_categories: [
+          { base_rate: 300000, rate_unit: 'semester', is_active: true, image_urls: [], sort_order: 0 },
+        ],
+      },
+    ]
+
+    const { listings } = await searchListings({ businessType: 'hostel' })
+    const bySlug = Object.fromEntries(listings.map((l) => [l.slug, l]))
+
+    expect(bySlug.acacia.from_rate).toBe(25000)
+    expect(bySlug.acacia.from_rate_unit).toBe('night')
+    expect(bySlug.baobab.from_rate).toBe(300000)
+    expect(bySlug.baobab.from_rate_unit).toBe('semester')
   })
 })

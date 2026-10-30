@@ -35,7 +35,7 @@ export function ShareButton({ title, className }: { title: string; className?: s
       type="button"
       onClick={handleShare}
       className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-neutral-50 ${className ?? ''}`}
-      style={{ border: `1px solid ${MP.border}`, color: copied ? MP.green : MP.textSecondary }}
+      style={{ border: `1px solid ${MP.border}`, color: copied ? MP.primary : MP.textSecondary }}
       aria-label={copied ? 'Link copied' : 'Share this hostel'}
       title={copied ? 'Link copied' : 'Share'}
     >

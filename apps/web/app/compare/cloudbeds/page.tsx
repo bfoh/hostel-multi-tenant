@@ -6,15 +6,15 @@ const SITE_URL = 'https://gh-hostels.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Cloudbeds Alternative for Ghana — Aya vs Cloudbeds',
+  title: 'Cloudbeds Alternative for Ghana — Beddilo vs Cloudbeds',
   description:
-    'Looking for a Cloudbeds alternative for your Ghanaian hostel or hotel? Aya is built in Ghana with native Paystack MoMo, GRA-compliant accounting, SSNIT/PAYE payroll, and pricing in cedis. Side-by-side comparison.',
+    'Looking for a Cloudbeds alternative for your Ghanaian hostel or hotel? Beddilo is built in Ghana with native Paystack MoMo, GRA-compliant accounting, SSNIT/PAYE payroll, and pricing in cedis. See what Beddilo includes.',
   keywords: [
     'cloudbeds alternative ghana',
     'cloudbeds alternative africa',
     'hostel management software ghana',
     'hotel management software ghana',
-    'cloudbeds vs aya',
+    'cloudbeds vs beddilo',
     'hostel software ghana cloudbeds',
     'paystack hostel software',
     'gra accounting hostel',
@@ -24,149 +24,129 @@ export const metadata: Metadata = {
     type: 'article',
     locale: 'en_GH',
     url: `${SITE_URL}/compare/cloudbeds`,
-    siteName: 'Aya',
-    title: 'Aya vs Cloudbeds — built for Ghana',
+    siteName: 'Beddilo',
+    title: 'Beddilo vs Cloudbeds — built for Ghana',
     description:
-      'Native Paystack MoMo, GRA-compliant accounting, SSNIT payroll, cedis pricing. See the feature-by-feature comparison.',
+      'Native Paystack MoMo, GRA-compliant accounting, SSNIT payroll, cedis pricing. See what Beddilo includes.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Aya vs Cloudbeds — built for Ghana',
+    title: 'Beddilo vs Cloudbeds — built for Ghana',
     description:
       'Native MoMo, GRA accounting, cedis pricing — the Cloudbeds alternative for Ghanaian hostels and hotels.',
   },
   robots: { index: true, follow: true },
 }
 
+// Beddilo's column only: we haven't verified Cloudbeds' current features or
+// pricing, so this page makes no claims about them.
 const ROWS: CompareRow[] = [
   {
     capability: 'Native Mobile Money (MTN, Vodafone, AirtelTigo)',
-    competitor: false,
     gh: true,
     detail: 'Paystack-powered — auto-reconciled to bookings and ledger.',
   },
   {
     capability: 'GRA-compliant accounting (VAT/NHIL/GETFund)',
-    competitor: false,
     gh: true,
     detail: 'Double-entry ledger built around the GRA filing checklist.',
   },
   {
     capability: 'SSNIT + PAYE payroll',
-    competitor: 'addon',
     gh: true,
     detail: 'Ghana tax engine, payslip generation, SSNIT export ready.',
   },
   {
     capability: 'Pricing in Ghana cedis',
-    competitor: false,
     gh: true,
-    detail: 'From GH₵ 800/month. No FX swings. No card-only billing.',
+    detail: 'Hostel plans from GH₵ 800/month, billed in cedis.',
   },
   {
     capability: 'Bank draft / deposit slip workflow',
-    competitor: false,
     gh: true,
     detail: 'Residents upload drafts; owner/accountant verifies in a queue.',
   },
   {
     capability: 'AI assistant in Twi + English',
-    competitor: false,
     gh: true,
     detail: 'Ask "How many rooms are free this weekend?" in plain language.',
   },
   {
     capability: 'Custom domain + tenant branding',
-    competitor: 'partial',
     gh: true,
     detail: 'app.yourhostel.com with your logo & colors. SSL handled.',
   },
   {
     capability: 'Multi-property portfolio view',
-    competitor: true,
     gh: true,
   },
   {
     capability: 'Front-desk kiosk / walk-in mode',
-    competitor: 'partial',
     gh: true,
   },
   {
     capability: 'Occupant self-service portal',
-    competitor: 'partial',
     gh: true,
     detail: 'Balance view, draft upload, maintenance requests, receipts.',
   },
   {
     capability: 'Built-in maintenance & housekeeping',
-    competitor: 'partial',
     gh: true,
   },
   {
-    capability: 'WhatsApp + local language support',
-    competitor: false,
+    capability: 'CSV import for rooms, occupants and bookings',
     gh: true,
-    detail: 'Accra office. WhatsApp on every paid plan.',
-  },
-  {
-    capability: 'Onboarding included',
-    competitor: 'addon',
-    gh: true,
-    detail: 'Growth plan gets a guided onboarding call at no extra cost.',
+    detail: 'Bring existing records across yourself, at your own pace.',
   },
 ]
 
 const REASONS = [
   {
     title: 'Native MoMo, not a workaround',
-    body: 'Cloudbeds expects card or bank rails. In Ghana, 80%+ of rent moves on MTN MoMo and Vodafone Cash. We integrate Paystack natively and reconcile every payment to the booking and ledger.',
+    body: 'In Ghana, rent often moves on mobile money. Beddilo takes MoMo and card through Paystack and matches every payment to the booking and the ledger.',
   },
   {
     title: 'GRA tax engine built in',
-    body: 'VAT, NHIL, GETFund, COVID-19 levy — handled in the chart of accounts. Trial balance and P&L exports match the GRA filing format, not a US tax model.',
+    body: 'VAT, NHIL, GETFund, COVID-19 levy — handled in the chart of accounts, with trial balance and P&L exports laid out for GRA filing.',
   },
   {
     title: 'SSNIT + PAYE payroll, no add-on',
-    body: 'Cloudbeds payroll is a third-party connector. Ours is built in — calculate SSNIT Tier 1/2/3, PAYE bands, and generate payslips from a single screen.',
+    body: 'Payroll is part of Beddilo: calculate SSNIT Tier 1/2/3 and PAYE bands, and generate payslips from a single screen.',
   },
   {
-    title: 'Cedis pricing, no FX shock',
-    body: 'You pay GH₵ 800–1,000/month. No USD-to-GHS conversion bills that triple in a year. We price for the market we serve.',
-  },
-  {
-    title: 'Local support, in Accra',
-    body: 'Email, WhatsApp, and phone support from a team that lives in Ghana. We pick up. We speak Twi when it helps.',
+    title: 'Cedis pricing',
+    body: 'Hostel plans are GH₵ 800 or GH₵ 1,000 a month, billed in cedis. We price for the market we serve.',
   },
   {
     title: 'Built for how Ghana actually books',
-    body: 'Cloudbeds optimises for a generic global model. We optimise for how stays actually run here — MoMo rent, GRA tax codes, SSNIT payroll — whether you run a campus hostel or a city hotel.',
+    body: 'Beddilo is built around how stays run here — MoMo rent, GRA tax codes, SSNIT payroll — whether you run a campus hostel or a city hotel.',
   },
 ]
 
 const FAQS = [
   {
-    q: 'Is Aya really an alternative to Cloudbeds?',
-    a: 'Yes — for hostels and hotels operating in Ghana and West Africa. Cloudbeds is a strong global tool, but it was designed for markets with card-dominant rails. If your property collects MoMo rent, files GRA taxes, and runs payroll for staff under SSNIT, Aya gives you those workflows native and in your currency.',
+    q: 'Is Beddilo really an alternative to Cloudbeds?',
+    a: 'Beddilo is built for hostels and hotels operating in Ghana. If your property collects MoMo rent, files GRA taxes, and runs payroll for staff under SSNIT, those workflows are built in and priced in cedis. Check Cloudbeds’ current features and pricing with Cloudbeds directly — this page only describes Beddilo.',
   },
   {
-    q: 'Can I migrate from Cloudbeds to Aya?',
-    a: 'Yes. Export your rooms, occupants, bookings, and payment history from Cloudbeds. We import them for you during onboarding on the Growth plan — typically completed in one afternoon for a 100-room property.',
+    q: 'Can I move my data from Cloudbeds to Beddilo?',
+    a: 'If you can export your rooms, guests and bookings to CSV, you can bring them in with Beddilo’s import tools for rooms, occupants and bookings. Importing into Beddilo doesn’t change anything in your Cloudbeds account.',
   },
   {
-    q: 'How does pricing compare?',
-    a: 'Cloudbeds bills in USD with per-room pricing that scales aggressively past 50 rooms. Aya is fixed GHS pricing: GH₵ 800/month up to 50 rooms (Starter) and GH₵ 1,000/month unlimited (Growth). No per-occupant fees.',
+    q: 'What does Beddilo cost?',
+    a: 'Hostel plans are a fixed monthly price in cedis: GH₵ 800/month for up to 50 rooms (Starter) and GH₵ 1,000/month with unlimited rooms (Growth). No per-occupant fees. Quarterly, 6-month and yearly billing are discounted.',
   },
   {
-    q: 'Does Cloudbeds support Paystack?',
-    a: 'Cloudbeds integrates with Stripe and a small set of regional processors. There is no native Paystack or MTN MoMo integration as of writing. You can manually reconcile MoMo payments, but they do not flow into the booking or accounting layer automatically.',
+    q: 'Which payment methods does Beddilo take?',
+    a: 'Guests can pay online with MTN MoMo, Vodafone Cash, AirtelTigo Money or card through Paystack. Staff can also record offline payments such as cash against a booking, and residents can upload bank drafts for verification.',
   },
   {
-    q: 'Will I lose features by switching?',
-    a: 'Most Ghana-based properties use a small slice of Cloudbeds (rate plans, channel manager, basic reporting). Aya covers all of that except one thing: if you rely on multi-currency channel-manager listings across global OTAs (Booking.com, Expedia, Airbnb) for international tourists, we recommend keeping Cloudbeds for that specific need. For everything else, we cover the full operating system.',
+    q: 'Is there anything Beddilo doesn’t do?',
+    a: 'Beddilo doesn’t include a channel manager for global OTAs such as Booking.com, Expedia or Airbnb. If you rely on those listings for international guests, keep a tool that handles them.',
   },
   {
-    q: 'Is my data safe during migration?',
-    a: 'Yes. Each tenant is fully isolated with Postgres row-level security. Encryption at rest and in transit. Daily off-site backups. Cloudbeds export is read-only — your existing system stays untouched until you switch over.',
+    q: 'Is my data safe when I switch?',
+    a: 'Each tenant is fully isolated with Postgres row-level security, and everything travels over encrypted HTTPS connections. Importing into Beddilo doesn’t change your Cloudbeds data.',
   },
 ]
 
@@ -184,36 +164,36 @@ export default function CloudbedsComparePage() {
   return (
     <CompareShell
       competitorName="Cloudbeds"
-      competitorTagline="Side-by-side capabilities for hostels operating in Ghana and West Africa."
+      competitorTagline="For hostels and hotels operating in Ghana."
+      tableHeading="What Beddilo includes"
       pageEyebrow="The Ghanaian alternative"
       pageHeadline={
         <>
           A Cloudbeds alternative,
           <span
-            className="block italic"
-            style={{ color: 'rgba(245,233,210,0.55)' }}
+            className="block"
+            style={{ color: 'rgba(247,242,233,0.72)' }}
           >
             built in Ghana.
           </span>
         </>
       }
-      pageSub="Cloudbeds is a powerful global PMS. But it was designed for markets where Stripe and Visa do the heavy lifting. In Ghana, rent moves on MoMo, taxes go to GRA, and staff payroll runs through SSNIT. Aya was built around those realities — for hostels and hotels alike."
+      pageSub="Cloudbeds is a well-known global PMS. In Ghana, rent moves on MoMo, taxes go to GRA, and staff payroll runs through SSNIT. Beddilo was built around those realities — for hostels and hotels alike."
       intro={
         <>
           <p>
             If you run a hostel or hotel anywhere from Legon to Cape Coast, you&apos;ve probably
             looked at <strong>Cloudbeds</strong>, <strong>Hostfully</strong>, or{' '}
-            <strong>Mews</strong> at some point. They&apos;re excellent products — for the markets
-            they were designed for. The problem starts when you try to bend a Western property
-            management system around{' '}
+            <strong>Mews</strong> at some point. Whichever system you choose, the question is how
+            well it handles{' '}
             <strong>
               MTN Mobile Money, GRA tax codes, and SSNIT payroll deductions
             </strong>
             .
           </p>
           <p>
-            We built <strong>Aya</strong> because we kept seeing the same patterns at every
-            Ghanaian property we worked with:
+            <strong>Beddilo</strong> is built for the problems that show up when those don&apos;t
+            fit:
           </p>
           <ul>
             <li>MoMo screenshots living in WhatsApp groups, hand-matched to receipts each week.</li>
@@ -228,11 +208,10 @@ export default function CloudbedsComparePage() {
             <li>Front desks bottlenecked behind paper receipt books.</li>
           </ul>
           <p>
-            None of that is the owner&apos;s fault. It&apos;s a product gap. This page is a
-            no-spin look at where <strong>Aya</strong> diverges from Cloudbeds — and where
-            Cloudbeds is still the better choice (a property relying on global OTA channel-manager
-            listings — Booking.com, Expedia, Airbnb — for international tourists should stay with
-            Cloudbeds for that specific need).
+            This page describes what <strong>Beddilo</strong> includes; check Cloudbeds&apos;
+            current features and pricing with Cloudbeds directly. Beddilo has no channel manager
+            for global OTAs (Booking.com, Expedia, Airbnb), so a property that depends on those
+            listings for international tourists should keep a tool that handles them.
           </p>
         </>
       }
@@ -241,8 +220,8 @@ export default function CloudbedsComparePage() {
       faqs={FAQS}
       bottomLine={
         <>
-          Try Aya.
-          <span className="block italic platform-shimmer-text">
+          Try Beddilo.
+          <span className="block platform-shimmer-text">
             Keep Cloudbeds if you still need it.
           </span>
         </>

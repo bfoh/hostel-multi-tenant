@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   BedDouble, Shield, Check, ArrowRight,
   Building2, CreditCard, Users, Globe, Gift,
-  ChevronDown, BarChart3, Bot, ChevronRight, Star,
+  ChevronDown, BarChart3, Bot,
   PhoneCall, FileSpreadsheet, Wrench, ClipboardList, MapPin,
 } from 'lucide-react'
 
@@ -14,22 +14,25 @@ import { PricingPlans, type Plan } from '@/components/public/pricing-plans'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { MP } from '@/lib/marketplace-theme'
+import { BeddiloMark } from '@/components/brand/beddilo-logo'
 
 /* ──────────────────────────────────────────────────────────────────────────────
-   GH HOSTELS — Hostel management SaaS pitch, for hostel owners/operators.
+   BEDDILO FOR OWNERS — Property management SaaS pitch for hostel and
+   hotel owners/operators.
    Split out from the consumer-facing marketplace homepage (app/page.tsx) so
    guests land on a search-first experience and owners get a dedicated,
    linkable advertising page for the management system.
-   Forest green · Warm gold · Ivory · Adinkra-inspired motion
+   Restrained Beddilo palette for a business audience: Deep Teal type and
+   actions on Warm Ivory, Sunny Amber only as an accent.
    ────────────────────────────────────────────────────────────────────────── */
 
 const SITE_URL = 'https://gh-hostels.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'GH Hostels for Owners — Hostel Management Software for Ghana',
+  title: 'Beddilo for Owners — Hostel & Hotel Management Software',
   description:
-    'The complete hostel management platform for Ghanaian student hostels. Bookings, Paystack MoMo payments, GRA-compliant accounting, payroll, occupant portal — built for hostels in Accra, Kumasi, Cape Coast, Legon, KNUST, UCC and beyond.',
+    'The complete property management platform from Beddilo for hostels and hotels. Bookings, Paystack MoMo payments, GRA-compliant accounting, payroll, occupant portal — built for hostels in Accra, Kumasi, Cape Coast, Legon, KNUST, UCC and beyond.',
   keywords: [
     'hostel management software Ghana',
     'student hostel booking system',
@@ -52,16 +55,16 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_GH',
     url: `${SITE_URL}/for-owners`,
-    siteName: 'GH Hostels',
-    title: 'GH Hostels — Smarter hostel management for Ghana',
+    siteName: 'Beddilo',
+    title: 'Beddilo for Owners — Smarter property management',
     description:
-      'All-in-one hostel management built in Ghana, for Ghana. Bookings, MoMo payments, GRA-compliant accounting, payroll, occupant portal — one elegant platform.',
+      'All-in-one hostel and hotel management. Bookings, MoMo payments, GRA-compliant accounting, payroll, occupant portal — one elegant platform.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'GH Hostels — Smarter hostel management for Ghana',
+    title: 'Beddilo for Owners — Smarter property management',
     description:
-      'Bookings, MoMo, GRA accounting, payroll — one platform built for Ghanaian hostels.',
+      'Bookings, MoMo, GRA accounting, payroll — one platform for hostels and hotels.',
   },
   robots: {
     index: true,
@@ -83,10 +86,10 @@ export const metadata: Metadata = {
    "dark text" (was light-on-dark, now dark-on-light), and "page background"
    (was dark ink, now light cream) respectively. ─────────────────────── */
 const FOREST_DEEP = MP.ink
-const FOREST_MID = MP.greenDeep
-const GOLD = MP.gold
-const GOLD_SOFT = MP.goldSoft
-const GOLD_DEEP = MP.goldDeep
+const FOREST_MID = MP.primary
+const GOLD = MP.accent
+const GOLD_SOFT = MP.accentSoft
+const GOLD_DEEP = MP.accentText
 const IVORY = MP.ink
 const INK = MP.bg
 
@@ -102,55 +105,55 @@ const HOSTEL_FEATURES: Feature[] = [
     icon: BedDouble,
     title: 'Room & booking engine',
     desc: 'Gantt calendar, drag-to-extend stays, split payments, walk-in kiosk mode. From single rooms to 500-bed dormitories.',
-    accent: GOLD,
+    accent: MP.accentText,
   },
   {
     icon: CreditCard,
     title: 'MoMo & card payments',
     desc: 'Native Paystack integration. Accept MTN, Vodafone, AirtelTigo MoMo, cards, bank transfers — auto-reconciled to the ledger.',
-    accent: GOLD_SOFT,
+    accent: MP.coralText,
   },
   {
     icon: BarChart3,
     title: 'GRA-compliant accounting',
     desc: 'Double-entry ledger, chart of accounts, trial balance, P&L, VAT/NHIL/GETFund support. Audit-ready from day one.',
-    accent: FOREST_MID,
+    accent: MP.primary,
   },
   {
     icon: Users,
     title: 'Staff payroll & shifts',
     desc: 'QR clock-in, shift scheduling, SSNIT / PAYE / Tier-2 deductions, automated payslip generation. SSNIT-ready exports.',
-    accent: GOLD,
+    accent: MP.accentText,
   },
   {
     icon: Globe,
     title: 'Your brand, your domain',
     desc: 'Custom domain (app.yourhostel.com), your logo, your colours. Occupant and staff portals that feel like your own product.',
-    accent: GOLD_SOFT,
+    accent: MP.coralText,
   },
   {
     icon: Bot,
     title: 'AI assistant in Twi & English',
     desc: '"How many rooms are free this weekend?" — Ask in plain English or Twi and get instant answers from your data.',
-    accent: FOREST_MID,
+    accent: MP.primary,
   },
   {
     icon: Wrench,
     title: 'Maintenance & housekeeping',
     desc: 'Work orders, preventive schedules, meter readings, photo evidence, housekeeping task board — track every issue to close.',
-    accent: GOLD,
+    accent: MP.accentText,
   },
   {
     icon: ClipboardList,
     title: 'Occupant portal',
     desc: 'Residents see balance, upload deposit drafts, submit maintenance requests, view receipts. Less queue at the front desk.',
-    accent: GOLD_SOFT,
+    accent: MP.coralText,
   },
   {
     icon: Shield,
     title: 'Row-level security',
-    desc: 'Every tenant fully isolated at the database level. Encryption at rest & in transit. Hosted on Supabase + Vercel.',
-    accent: FOREST_MID,
+    desc: 'Every tenant fully isolated at the database level. Encrypted HTTPS connections. Hosted on Supabase + Vercel.',
+    accent: MP.primary,
   },
 ]
 
@@ -159,55 +162,55 @@ const HOTEL_FEATURES: Feature[] = [
     icon: BedDouble,
     title: 'Reservations & front desk',
     desc: 'Calendar view, walk-in check-in, split payments, room holds. From boutique guesthouses to full-service hotels.',
-    accent: GOLD,
+    accent: MP.accentText,
   },
   {
     icon: CreditCard,
     title: 'MoMo & card payments',
     desc: 'Native Paystack integration. Accept MTN, Vodafone, AirtelTigo MoMo, cards, bank transfers — auto-reconciled to the ledger.',
-    accent: GOLD_SOFT,
+    accent: MP.coralText,
   },
   {
     icon: BarChart3,
     title: 'GRA-compliant accounting',
     desc: 'Double-entry ledger, chart of accounts, trial balance, P&L, VAT/NHIL/GETFund support. Audit-ready from day one.',
-    accent: FOREST_MID,
+    accent: MP.primary,
   },
   {
     icon: Users,
     title: 'Staff payroll & shifts',
     desc: 'QR clock-in, shift scheduling, SSNIT / PAYE / Tier-2 deductions, automated payslip generation. SSNIT-ready exports.',
-    accent: GOLD,
+    accent: MP.accentText,
   },
   {
     icon: Globe,
     title: 'Your brand, your domain',
     desc: 'Custom domain (app.yourhotel.com), your logo, your colours. Guest and staff portals that feel like your own product.',
-    accent: GOLD_SOFT,
+    accent: MP.coralText,
   },
   {
     icon: Bot,
     title: 'AI assistant in Twi & English',
     desc: '"How many rooms are free this weekend?" — Ask in plain English or Twi and get instant answers from your data.',
-    accent: FOREST_MID,
+    accent: MP.primary,
   },
   {
     icon: Wrench,
     title: 'Maintenance & housekeeping',
     desc: 'Work orders, preventive schedules, meter readings, photo evidence, housekeeping task board — track every issue to close.',
-    accent: GOLD,
+    accent: MP.accentText,
   },
   {
     icon: ClipboardList,
     title: 'Guest self-service portal',
     desc: 'Guests see their balance, view receipts, and submit requests from their phone. Less queue at the front desk.',
-    accent: GOLD_SOFT,
+    accent: MP.coralText,
   },
   {
     icon: Shield,
     title: 'Row-level security',
-    desc: 'Every tenant fully isolated at the database level. Encryption at rest & in transit. Hosted on Supabase + Vercel.',
-    accent: FOREST_MID,
+    desc: 'Every tenant fully isolated at the database level. Encrypted HTTPS connections. Hosted on Supabase + Vercel.',
+    accent: MP.primary,
   },
 ]
 
@@ -246,7 +249,7 @@ const HOSTEL_PLANS: Plan[] = [
       'Staff payroll (SSNIT/PAYE)',
       'Full double-entry accounting',
       'Multi-property portfolio view',
-      'WhatsApp + priority support',
+      'Email support',
     ],
     cta: 'Subscribe',
     highlight: true,
@@ -281,7 +284,7 @@ const HOTEL_PLANS: Plan[] = [
       'Staff payroll (SSNIT/PAYE)',
       'Full double-entry accounting',
       'Multi-property portfolio view',
-      'WhatsApp + priority support',
+      'Email support',
     ],
     cta: 'Subscribe',
     highlight: true,
@@ -309,7 +312,7 @@ const HOSTEL_FAQS: Faq[] = [
   },
   {
     q: 'How is my data secured?',
-    a: 'All data is encrypted at rest and in transit. Each hostel is fully isolated using Postgres row-level security. Hosted on Supabase + Vercel with daily backups and audit logging.',
+    a: 'Each hostel is fully isolated using Postgres row-level security, data travels over encrypted HTTPS connections, and changes are recorded in an audit log. Hosted on Supabase + Vercel.',
   },
   {
     q: 'Can I manage multiple hostels?',
@@ -317,15 +320,15 @@ const HOSTEL_FAQS: Faq[] = [
   },
   {
     q: 'Will it work in Accra, Kumasi, Cape Coast, Tamale?',
-    a: 'Yes. GH Hostels is built in Ghana, for Ghana. Hostels around University of Ghana (Legon), KNUST, UCC, UEW, UDS, UMaT, Ashesi, GIMPA, Central University and private hostels nationwide are supported.',
+    a: 'Yes. Beddilo supports hostels across Ghana, with MoMo, GRA and SSNIT built in. Hostels around University of Ghana (Legon), KNUST, UCC, UEW, UDS, UMaT, Ashesi, GIMPA, Central University and private hostels nationwide are supported.',
   },
   {
     q: 'What happens when my trial ends?',
-    a: "Your account stays accessible and your data is preserved. You just pick a plan to continue. We will never delete your data without your explicit consent.",
+    a: "Your account switches to a limited mode: your public listing stays up, you can still view bookings and edit room prices, and everything else unlocks when you pick a plan. Your data isn't removed when the trial ends.",
   },
   {
-    q: 'Do you offer onboarding help?',
-    a: 'Yes. Growth customers get a guided onboarding call and priority support. We help you import existing room and occupant data.',
+    q: 'Can I import my existing data?',
+    a: 'Yes. Beddilo has self-serve CSV import for rooms, occupants and bookings, so you can bring existing records across yourself and check a preview before anything is saved.',
   },
 ]
 
@@ -348,7 +351,7 @@ const HOTEL_FAQS: Faq[] = [
   },
   {
     q: 'How is my data secured?',
-    a: 'All data is encrypted at rest and in transit. Each hotel is fully isolated using Postgres row-level security. Hosted on Supabase + Vercel with daily backups and audit logging.',
+    a: 'Each hotel is fully isolated using Postgres row-level security, data travels over encrypted HTTPS connections, and changes are recorded in an audit log. Hosted on Supabase + Vercel.',
   },
   {
     q: 'Can I manage multiple hotels?',
@@ -356,15 +359,15 @@ const HOTEL_FAQS: Faq[] = [
   },
   {
     q: 'Is this built for hotels, or adapted from a hostel product?',
-    a: "It's the same platform hundreds of Ghanaian hostels already run on, with hotel-appropriate defaults — nightly billing, guest terminology, no academic fields cluttering your guest records.",
+    a: "It's the same platform as our hostel product, with hotel-appropriate defaults — nightly billing, guest terminology, no academic fields cluttering your guest records.",
   },
   {
     q: 'What happens when my trial ends?',
-    a: "Your account stays accessible and your data is preserved. You just pick a plan to continue. We will never delete your data without your explicit consent.",
+    a: "Your account switches to a limited mode: your public listing stays up, you can still view bookings and edit room prices, and everything else unlocks when you pick a plan. Your data isn't removed when the trial ends.",
   },
   {
-    q: 'Do you offer onboarding help?',
-    a: 'Yes. Growth customers get a guided onboarding call and priority support. We help you import existing room and guest data.',
+    q: 'Can I import my existing data?',
+    a: 'Yes. Beddilo has self-serve CSV import for rooms, guests and bookings, so you can bring existing records across yourself and check a preview before anything is saved.',
   },
 ]
 
@@ -408,7 +411,6 @@ const HOSTEL_COMPARISON: Array<{ label: string; spreadsheet: CompareValue; tradi
   { label: 'Occupant self-service',     spreadsheet: false, traditional: false, gh: true },
   { label: 'Payroll w/ SSNIT/PAYE',     spreadsheet: 'manual', traditional: 'manual', gh: true },
   { label: 'Multi-property portfolio',  spreadsheet: false, traditional: false, gh: true },
-  { label: 'Daily off-site backups',    spreadsheet: false, traditional: false, gh: true },
   { label: 'Works on phone',            spreadsheet: false, traditional: false, gh: true },
 ]
 
@@ -420,33 +422,7 @@ const HOTEL_COMPARISON: Array<{ label: string; spreadsheet: CompareValue; tradit
   { label: 'Guest self-service',          spreadsheet: false, traditional: false, gh: true },
   { label: 'Payroll w/ SSNIT/PAYE',       spreadsheet: 'manual', traditional: 'manual', gh: true },
   { label: 'Multi-property portfolio',    spreadsheet: false, traditional: false, gh: true },
-  { label: 'Daily off-site backups',      spreadsheet: false, traditional: false, gh: true },
   { label: 'Works on phone',              spreadsheet: false, traditional: false, gh: true },
-]
-
-/**
- * Hostel-only — omitted entirely for hotels rather than inventing quotes for
- * a vertical with zero live tenants (see the page's top-of-file note).
- */
-const HOSTEL_TESTIMONIALS = [
-  {
-    quote: 'Switched from Excel and the front desk queue disappeared overnight. Residents check their balance on their phones now.',
-    name: 'Akua Boateng',
-    role: 'Manager, hostel near KNUST',
-    rating: 5,
-  },
-  {
-    quote: 'The MoMo reconciliation alone saves my accountant a full day every week. The GRA filing is no longer a nightmare.',
-    name: 'Kwame Asare',
-    role: 'Owner, Legon hostel portfolio',
-    rating: 5,
-  },
-  {
-    quote: 'We onboarded 320 residents in three days. The occupant portal made check-in feel like a real product.',
-    name: 'Linda Mensah',
-    role: 'GM, Cape Coast hostel',
-    rating: 5,
-  },
 ]
 
 /* ── JSON-LD ──────────────────────────────────────────────────── */
@@ -454,10 +430,11 @@ const HOSTEL_TESTIMONIALS = [
 const orgLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'GH Hostels',
+  name: 'Beddilo',
+  slogan: 'A world of stays',
   url: SITE_URL,
-  logo: `${SITE_URL}/icons/icon.svg`,
-  description: 'Modern hostel management software for Ghana and West Africa.',
+  logo: `${SITE_URL}/icons/icon-512.png`,
+  description: 'Accommodation marketplace and property management software for hostels and hotels.',
   foundingLocation: { '@type': 'Place', name: 'Accra, Ghana' },
   areaServed: { '@type': 'Country', name: 'Ghana' },
   sameAs: [
@@ -476,13 +453,13 @@ const orgLd = {
 const softwareLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'GH Hostels',
+  name: 'Beddilo',
   applicationCategory: 'BusinessApplication',
-  applicationSubCategory: 'Hostel Management Software',
+  applicationSubCategory: 'Property Management Software',
   operatingSystem: 'Web (Cloud)',
   url: SITE_URL,
   description:
-    'All-in-one hostel management: bookings, MoMo payments, GRA accounting, payroll, occupant portal.',
+    'All-in-one hostel and hotel management: bookings, MoMo payments, GRA accounting, payroll, guest and occupant portals.',
   offers: HOSTEL_PLANS.map((p) => ({
     '@type': 'Offer',
     name: `${p.name} plan`,
@@ -490,12 +467,6 @@ const softwareLd = {
     priceCurrency: 'GHS',
     description: p.desc,
   })),
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.9',
-    reviewCount: '127',
-    bestRating: '5',
-  },
 }
 
 const faqLd = {
@@ -539,7 +510,6 @@ export default async function ForOwnersPage({
     >
       {/* Adinkra symbol collage — same fixed wallpaper texture as the
           marketplace homepage, for visual continuity between the two */}
-      <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg-light" aria-hidden="true" />
 
       {/* Hydrate motion + glow + counters */}
       <PlatformFX />
@@ -554,7 +524,7 @@ export default async function ForOwnersPage({
       {/* ── FOR HOSTEL OWNERS — management-system pitch ─────────── */}
       <section id="for-owners" className="relative overflow-hidden">
         {/* Animated mesh gradient backdrop */}
-        <div className="pointer-events-none absolute inset-0 platform-mesh" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 platform-mesh-light" aria-hidden="true" />
 
         {/* Floating ambient gold orb */}
         <div
@@ -564,7 +534,7 @@ export default async function ForOwnersPage({
         />
         <div
           className="pointer-events-none absolute -left-20 top-1/2 h-[360px] w-[360px] rounded-full platform-float"
-          style={{ background: `radial-gradient(circle, ${FOREST_MID}33, transparent 65%)`, filter: 'blur(60px)' }}
+          style={{ background: `radial-gradient(circle, ${MP.coral}24, transparent 65%)`, filter: 'blur(60px)' }}
           aria-hidden="true"
         />
 
@@ -590,17 +560,15 @@ export default async function ForOwnersPage({
               />
               <span className="relative h-1.5 w-1.5 rounded-full" style={{ background: GOLD_SOFT }} />
             </span>
-            Built in Ghana · Trusted across West Africa
-            <ChevronRight className="h-3 w-3" />
+            Bookings · Payments · Accounting<span className="hidden sm:inline"> · Payroll</span>
           </div>
 
           {/* Hero headline */}
           <h1
-            className="mx-auto max-w-5xl text-[40px] font-normal leading-[1.04] tracking-[-1.2px] sm:text-[58px] md:text-[80px] lg:text-[104px]"
+            className="mx-auto max-w-5xl font-display text-[40px] font-bold leading-[1.04] sm:text-[58px] md:text-[76px] lg:text-[92px]"
             style={{
-              fontFamily: 'Georgia, "Times New Roman", serif',
               color: IVORY,
-              letterSpacing: '-0.04em',
+              letterSpacing: '-0.035em',
             }}
           >
             {heroWords.map((w, i) => (
@@ -613,33 +581,34 @@ export default async function ForOwnersPage({
               </span>
             ))}
             <span
-              className="platform-word block platform-shimmer-text"
+              className="platform-word block"
               style={{ animationDelay: `${120 + heroWords.length * 90}ms` }}
             >
-              Every cedi tracked.
+              <span className="bg-[linear-gradient(transparent_62%,rgb(var(--bd-amber)/0.75)_62%,rgb(var(--bd-amber)/0.75)_92%,transparent_92%)] px-1">
+                Every cedi tracked.
+              </span>
             </span>
             <span
-              className="platform-word mt-4 block text-[52%] italic"
+              className="platform-word mt-5 block text-[40%] font-semibold"
               style={{
                 animationDelay: `${120 + (heroWords.length + 1) * 90}ms`,
-                color: 'rgba(20,35,29, 0.55)',
-                fontFamily: 'Georgia, serif',
+                color: MP.textSecondary,
                 letterSpacing: '-0.02em',
               }}
             >
-              The {nounSingular} operating system for Ghana.
+              The operating system for your {nounSingular}.
             </span>
           </h1>
 
           <p
             className="mx-auto mt-8 max-w-[600px] text-[15px] leading-relaxed sm:mt-10 sm:text-[17px]"
-            style={{ color: 'rgba(20,35,29, 0.65)' }}
+            style={{ color: MP.textSecondary }}
             data-platform-reveal
             data-platform-reveal-delay="450"
           >
             One dashboard for bookings, Mobile Money, GRA-compliant accounting,
-            SSNIT payroll and the {guestNoun} portal. Built in Accra, trusted by
-            {' '}{isHotel ? 'hotels across Ghana' : 'hostels from Legon to Tamale'}.
+            SSNIT payroll and the {guestNoun} portal — built around how {nounPlural}{' '}
+            in Ghana actually get paid, taxed and staffed.
           </p>
 
           {/* CTA buttons */}
@@ -650,20 +619,14 @@ export default async function ForOwnersPage({
           >
             <Link
               href={signupHref}
-              data-platform-magnetic
-              className="platform-cta group inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-semibold sm:w-auto"
-              style={{
-                background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
-                color: FOREST_DEEP,
-                boxShadow: '0 12px 32px -10px rgba(212,162,76,0.55)',
-              }}
+              className="bd-focus group inline-flex w-full items-center justify-center gap-2 rounded-full bg-bd-teal px-8 py-4 text-[15px] font-semibold text-bd-ivory shadow-[0_14px_30px_-14px_rgba(11,31,35,0.6)] transition-colors hover:bg-bd-teal-900 sm:w-auto"
             >
               Start 30-day free trial
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <a
               href="#features"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-medium transition-colors duration-300 hover:bg-[#14231D]/5 sm:w-auto"
+              className="bd-focus inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[15px] font-medium transition-colors duration-300 hover:bg-bd-teal/5 sm:w-auto"
               style={{ border: `1px solid ${HAIR_STRONG}`, color: IVORY }}
             >
               See how it works
@@ -671,8 +634,8 @@ export default async function ForOwnersPage({
           </div>
 
           <p
-            className="mt-5 text-[12px]"
-            style={{ color: 'rgba(20,35,29, 0.38)' }}
+            className="mt-5 text-[13px]"
+            style={{ color: MP.textSecondary }}
             data-platform-reveal
             data-platform-reveal-delay="750"
           >
@@ -697,30 +660,30 @@ export default async function ForOwnersPage({
               className="overflow-hidden rounded-2xl shadow-2xl"
               style={{
                 border: `1px solid ${HAIR_STRONG}`,
-                boxShadow: '0 40px 80px -30px rgba(20,35,29,0.18), 0 20px 40px -15px rgba(27,110,84,0.12)',
+                boxShadow: '0 40px 80px -30px rgba(23,59,66,0.18), 0 20px 40px -15px rgba(42,90,97,0.12)',
               }}
             >
               <div
                 className="flex items-center gap-2 px-4 py-3"
-                style={{ borderBottom: `1px solid ${HAIR}`, background: 'rgba(20,35,29,0.04)' }}
+                style={{ borderBottom: `1px solid ${HAIR}`, background: 'rgba(23,59,66,0.04)' }}
               >
                 <div className="flex gap-1.5">
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(20,35,29,0.12)' }} />
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(20,35,29,0.12)' }} />
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(20,35,29,0.12)' }} />
+                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(23,59,66,0.12)' }} />
+                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(23,59,66,0.12)' }} />
+                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(23,59,66,0.12)' }} />
                 </div>
                 <div
                   className="ml-4 flex-1 rounded-md py-1 px-3 text-center text-[10px]"
-                  style={{ background: 'rgba(20,35,29,0.04)', color: 'rgba(20,35,29,0.45)' }}
+                  style={{ background: 'rgba(23,59,66,0.04)', color: MP.textSecondary }}
                 >
-                  {isHotel ? 'app.yourhotel.com/dashboard' : 'app.abremponghostel.com/dashboard'}
+                  {isHotel ? 'app.yourhotel.com/dashboard' : 'app.yourhostel.com/dashboard'}
                 </div>
               </div>
               <Image
-                src="/dashboard-hero.jpg"
-                alt={`Dashboard preview — the same platform runs both hostels and hotels`}
-                width={1024}
-                height={1024}
+                src="/owner-dashboard.jpg"
+                alt="Beddilo owner dashboard showing occupancy, monthly revenue, pending bookings and recent bookings, with sample data"
+                width={1920}
+                height={1200}
                 className="h-auto w-full"
                 priority
                 sizes="(max-width: 1024px) 100vw, 1024px"
@@ -734,69 +697,13 @@ export default async function ForOwnersPage({
         </div>
       </section>
 
-      {/* ── TRUST BAR with animated counters ────────────────────── */}
-      <section
-        style={{
-          borderTop: `1px solid ${HAIR}`,
-          borderBottom: `1px solid ${HAIR}`,
-          background: 'rgba(15, 76, 58, 0.12)',
-        }}
-      >
-        <div
-          className={`mx-auto grid max-w-6xl divide-y ${isHotel ? 'grid-cols-2 md:divide-x md:divide-y-0' : 'grid-cols-2 md:grid-cols-4 md:divide-x md:divide-y-0'}`}
-          style={{ borderColor: HAIR }}
-        >
-          {/* Hotels: no customer-count/volume stats yet — those would be
-              fabricated for a vertical with zero live tenants. Only the
-              platform-level claims (uptime, coverage) apply honestly to
-              both verticals since it's the same infrastructure. */}
-          {(isHotel
-            ? [
-                { value: 99.9, prefix: '', suffix: '%', decimals: 1, label: 'Uptime guarantee' },
-                { value: 16, prefix: '', suffix: ' regions', label: 'Across Ghana' },
-              ]
-            : [
-                { value: 500, prefix: '', suffix: '+', label: 'Hostels managed' },
-                { value: 2,   prefix: 'GH₵ ', suffix: 'M+', label: 'Processed monthly' },
-                { value: 99.9, prefix: '', suffix: '%', decimals: 1, label: 'Uptime guarantee' },
-                { value: 16, prefix: '', suffix: ' regions', label: 'Across Ghana' },
-              ]
-          ).map((s, i) => (
-            <div
-              key={s.label}
-              className="px-4 py-7 text-center sm:px-6 sm:py-10"
-              style={{ borderColor: HAIR }}
-              data-platform-reveal
-              data-platform-reveal-delay={String(i * 80)}
-            >
-              <p
-                className="platform-counter text-[26px] font-semibold tracking-tight sm:text-[36px]"
-                style={{ color: IVORY, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
-                data-platform-counter={s.value}
-                data-platform-prefix={s.prefix}
-                data-platform-suffix={s.suffix}
-                data-platform-decimals={String(s.decimals ?? 0)}
-              >
-                {s.prefix}0{s.suffix}
-              </p>
-              <p
-                className="mt-2 text-[11px] uppercase tracking-[0.16em] sm:text-[12px]"
-                style={{ color: 'rgba(20,35,29,0.5)' }}
-              >
-                {s.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ── MARQUEE — institutions for hostels, destinations for hotels ── */}
       <section className="py-14 sm:py-18" style={{ borderBottom: `1px solid ${HAIR}` }}>
         <p
           className="mb-7 text-center text-[11px] font-medium uppercase tracking-[0.24em]"
-          style={{ color: 'rgba(20,35,29,0.45)' }}
+          style={{ color: MP.textSecondary }}
         >
-          {isHotel ? 'Built for hotels across these destinations' : 'Powering hostels serving these institutions'}
+          {isHotel ? 'Built for hotels across these destinations' : 'Built for hostels near campuses like these'}
         </p>
         <div className="platform-marquee-mask overflow-hidden">
           <div className="platform-marquee">
@@ -806,7 +713,7 @@ export default async function ForOwnersPage({
                 <span
                   key={`${u}-${i}`}
                   className="mx-6 inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-[14px] font-medium sm:text-[15px]"
-                  style={{ color: 'rgba(20,35,29,0.62)' }}
+                  style={{ color: MP.textSecondary }}
                 >
                   <MarqueeIcon className="h-3.5 w-3.5" style={{ color: GOLD }} />
                   {u}
@@ -826,19 +733,19 @@ export default async function ForOwnersPage({
               Features
             </p>
             <h2
-              className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[42px] md:text-[64px]"
-              style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
+              className="mt-5 text-[32px] font-display font-bold leading-[1.1] tracking-[-0.03em] sm:text-[42px] md:text-[64px]"
+              style={{ color: IVORY }}
             >
               Everything your {nounSingular} needs,
-              <span className="block italic" style={{ color: 'rgba(20,35,29,0.55)' }}>
+              <span className="block" style={{ color: MP.textSecondary }}>
                 elegantly unified.
               </span>
             </h2>
             <p
               className="mx-auto mt-6 max-w-[460px] text-[14px] sm:text-[16px]"
-              style={{ color: 'rgba(20,35,29,0.55)' }}
+              style={{ color: MP.textSecondary }}
             >
-              One login. No spreadsheets. No third-party patchwork. Just a system that works — built in Ghana, for Ghana.
+              One login. No spreadsheets. No third-party patchwork. Just a system that works, with Ghana&apos;s payment rails and tax rules built in.
             </p>
           </div>
 
@@ -852,7 +759,7 @@ export default async function ForOwnersPage({
                   style={{
                     border: `1px solid ${HAIR_STRONG}`,
                     background:
-                      'linear-gradient(180deg, rgba(20,35,29,0.025) 0%, rgba(20,35,29,0.005) 100%)',
+                      'linear-gradient(180deg, rgba(23,59,66,0.025) 0%, rgba(23,59,66,0.005) 100%)',
                   }}
                   data-platform-reveal
                   data-platform-reveal-delay={String(i * 60)}
@@ -868,13 +775,13 @@ export default async function ForOwnersPage({
                   </div>
                   <h3
                     className="mt-6 text-[16px] font-semibold tracking-tight sm:text-[17px]"
-                    style={{ color: IVORY, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
+                    style={{ color: IVORY, }}
                   >
                     {f.title}
                   </h3>
                   <p
                     className="mt-2.5 text-[14px] leading-relaxed"
-                    style={{ color: 'rgba(20,35,29,0.58)' }}
+                    style={{ color: MP.textSecondary }}
                   >
                     {f.desc}
                   </p>
@@ -893,17 +800,23 @@ export default async function ForOwnersPage({
               Why switch
             </p>
             <h2
-              className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[42px] md:text-[58px]"
-              style={{ fontFamily: 'Georgia, serif', color: IVORY }}
+              className="mt-5 text-[32px] font-display font-bold leading-[1.1] tracking-[-0.03em] sm:text-[42px] md:text-[58px]"
+              style={{ color: IVORY }}
             >
               Stop bleeding hours.
-              <span className="block italic" style={{ color: 'rgba(20,35,29,0.55)' }}>
+              <span className="block" style={{ color: MP.textSecondary }}>
                 Spreadsheets weren&apos;t built for {nounPlural}.
               </span>
             </h2>
           </div>
 
-          <div className="mt-14 -mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0" data-platform-reveal>
+          <div
+            className="bd-focus-on-dark mt-14 -mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0"
+            data-platform-reveal
+            tabIndex={0}
+            role="region"
+            aria-label="Comparison with spreadsheets"
+          >
           <div
             className="min-w-[560px] overflow-hidden rounded-2xl"
             style={{ border: `1px solid ${HAIR_STRONG}` }}
@@ -911,8 +824,8 @@ export default async function ForOwnersPage({
             <div
               className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-1 px-5 py-4 text-[12px] font-medium uppercase tracking-[0.14em]"
               style={{
-                background: 'rgba(20,35,29,0.04)',
-                color: 'rgba(20,35,29,0.55)',
+                background: 'rgba(23,59,66,0.04)',
+                color: MP.textSecondary,
                 borderBottom: `1px solid ${HAIR}`,
               }}
             >
@@ -924,8 +837,8 @@ export default async function ForOwnersPage({
                 <Building2 className="h-3.5 w-3.5" /> Legacy
               </div>
               <div className="text-center inline-flex items-center justify-center gap-1.5" style={{ color: GOLD_DEEP }}>
-                <Image src="/logo-mark.svg" alt="" width={14} height={14} className="h-3.5 w-3.5" />
-                GH Hostels
+                <BeddiloMark className="h-4 w-4" title="" />
+                Beddilo
               </div>
             </div>
 
@@ -934,12 +847,12 @@ export default async function ForOwnersPage({
                 key={row.label}
                 className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-1 px-5 py-3.5 text-[14px]"
                 style={{
-                  background: i % 2 ? 'rgba(20,35,29,0.015)' : 'transparent',
+                  background: i % 2 ? 'rgba(23,59,66,0.015)' : 'transparent',
                   color: IVORY,
                   borderBottom: i === COMPARISON.length - 1 ? 'none' : `1px solid ${HAIR}`,
                 }}
               >
-                <div style={{ color: 'rgba(20,35,29,0.78)' }}>{row.label}</div>
+                <div style={{ color: 'rgba(23,59,66,0.78)' }}>{row.label}</div>
                 <ComparisonCell value={row.spreadsheet} />
                 <ComparisonCell value={row.traditional} />
                 <ComparisonCell value={row.gh} highlight />
@@ -950,73 +863,6 @@ export default async function ForOwnersPage({
         </div>
       </section>
 
-      {/* ── TESTIMONIALS — hostel-only, see HOSTEL_TESTIMONIALS note ── */}
-      {!isHotel && (
-        <section
-          className="py-20 sm:py-28"
-          style={{ borderTop: `1px solid ${HAIR}`, background: 'rgba(15,76,58,0.10)' }}
-        >
-          <div className="mx-auto max-w-6xl px-6">
-            <div className="text-center" data-platform-reveal>
-              <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
-                Loved by hostel owners
-              </p>
-              <h2
-                className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[42px] md:text-[58px]"
-                style={{ fontFamily: 'Georgia, serif', color: IVORY }}
-              >
-                The team that
-                <span className="italic" style={{ color: 'rgba(20,35,29,0.55)' }}> sleeps at night.</span>
-              </h2>
-            </div>
-
-            <div className="mt-14 grid gap-5 md:grid-cols-3">
-              {HOSTEL_TESTIMONIALS.map((t, i) => (
-                <figure
-                  key={i}
-                  className="platform-glow-card flex flex-col rounded-2xl p-7"
-                  style={{
-                    border: `1px solid ${HAIR_STRONG}`,
-                    background:
-                      'linear-gradient(180deg, rgba(20,35,29,0.03) 0%, rgba(20,35,29,0.005) 100%)',
-                  }}
-                  data-platform-reveal
-                  data-platform-reveal-delay={String(i * 80)}
-                >
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: t.rating }).map((_, idx) => (
-                      <Star key={idx} className="h-4 w-4 fill-current" style={{ color: GOLD }} />
-                    ))}
-                  </div>
-                  <blockquote
-                    className="mt-5 flex-1 text-[15px] leading-relaxed"
-                    style={{ color: 'rgba(20,35,29,0.85)' }}
-                  >
-                    &ldquo;{t.quote}&rdquo;
-                  </blockquote>
-                  <figcaption className="mt-6 flex items-center gap-3 pt-5" style={{ borderTop: `1px solid ${HAIR}` }}>
-                    <div
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-semibold"
-                      style={{ background: `${GOLD}22`, color: GOLD_SOFT, border: `1px solid ${GOLD}33` }}
-                    >
-                      {t.name.split(' ').map((n) => n[0]).join('')}
-                    </div>
-                    <div>
-                      <p className="text-[13.5px] font-semibold" style={{ color: IVORY }}>
-                        {t.name}
-                      </p>
-                      <p className="text-[12px]" style={{ color: 'rgba(20,35,29,0.5)' }}>
-                        {t.role}
-                      </p>
-                    </div>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ── PRICING ─────────────────────────────────────────────── */}
       <section id="pricing" className="py-20 sm:py-28" style={{ borderTop: `1px solid ${HAIR}` }}>
         <div className="mx-auto max-w-6xl px-6">
@@ -1025,14 +871,14 @@ export default async function ForOwnersPage({
               Pricing
             </p>
             <h2
-              className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[42px] md:text-[58px]"
-              style={{ fontFamily: 'Georgia, serif', color: IVORY }}
+              className="mt-5 text-[32px] font-display font-bold leading-[1.1] tracking-[-0.03em] sm:text-[42px] md:text-[58px]"
+              style={{ color: IVORY }}
             >
               Simple, transparent, in cedis.
             </h2>
             <p
               className="mx-auto mt-5 max-w-[440px] text-[14px] sm:text-[16px]"
-              style={{ color: 'rgba(20,35,29,0.55)' }}
+              style={{ color: MP.textSecondary }}
             >
               Start free. Pick a plan when you&apos;re ready. No hidden charges, no per-occupant fees.
             </p>
@@ -1042,7 +888,7 @@ export default async function ForOwnersPage({
 
           <div
             className="mx-auto mt-12 flex max-w-2xl flex-col items-center justify-between gap-4 rounded-2xl p-6 sm:flex-row"
-            style={{ border: `1px solid ${HAIR_STRONG}`, background: 'rgba(15,76,58,0.20)' }}
+            style={{ border: `1px solid ${HAIR_STRONG}`, background: MP.surface }}
             data-platform-reveal
           >
             <div className="flex items-center gap-3">
@@ -1051,18 +897,14 @@ export default async function ForOwnersPage({
                 <p className="text-[14px] font-semibold" style={{ color: IVORY }}>
                   Not ready to commit?
                 </p>
-                <p className="text-[13px]" style={{ color: 'rgba(20,35,29,0.5)' }}>
+                <p className="text-[13px]" style={{ color: MP.textSecondary }}>
                   Start a 30-day free trial. All Growth features, no card required.
                 </p>
               </div>
             </div>
             <Link
               href={signupHref}
-              className="platform-cta w-full shrink-0 rounded-full px-5 py-2.5 text-center text-[13px] font-semibold sm:w-auto"
-              style={{
-                background: `linear-gradient(135deg, ${GOLD_SOFT}, ${GOLD_DEEP})`,
-                color: FOREST_DEEP,
-              }}
+              className="bd-focus w-full shrink-0 rounded-full bg-bd-teal px-5 py-2.5 text-center text-[14px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900 sm:w-auto"
             >
               Start free trial <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
             </Link>
@@ -1078,8 +920,8 @@ export default async function ForOwnersPage({
               FAQ
             </p>
             <h2
-              className="mt-5 text-[32px] font-normal leading-[1.1] tracking-[-0.04em] sm:text-[40px] md:text-[52px]"
-              style={{ fontFamily: 'Georgia, serif', color: IVORY }}
+              className="mt-5 text-[32px] font-display font-bold leading-[1.1] tracking-[-0.03em] sm:text-[40px] md:text-[52px]"
+              style={{ color: IVORY }}
             >
               Questions, answered.
             </h2>
@@ -1101,12 +943,12 @@ export default async function ForOwnersPage({
                   {faq.q}
                   <ChevronDown
                     className="h-4 w-4 shrink-0 transition-transform duration-300 group-open:rotate-180"
-                    style={{ color: GOLD }}
+                    style={{ color: MP.primary }}
                   />
                 </summary>
                 <p
                   className="platform-acc-body mt-3 pr-8 text-[14.5px] leading-relaxed"
-                  style={{ color: 'rgba(20,35,29,0.62)' }}
+                  style={{ color: MP.textSecondary }}
                 >
                   {faq.a}
                 </p>
@@ -1116,46 +958,33 @@ export default async function ForOwnersPage({
         </div>
       </section>
 
-      {/* ── FINAL CTA ───────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden py-20 sm:py-32"
-        style={{
-          borderTop: `1px solid ${HAIR}`,
-          background:
-            'radial-gradient(ellipse at 50% 50%, rgba(15,76,58,0.55) 0%, transparent 70%)',
-        }}
-      >
+      {/* ── FINAL CTA — Deep Teal band, the one place the amber shimmer
+           headline and amber CTA sit on a dark ground ─────────────── */}
+      <section className="relative overflow-hidden bg-bd-teal py-20 text-bd-ivory sm:py-28">
         <div
-          className="pointer-events-none absolute inset-0 platform-mesh opacity-60"
+          className="pointer-events-none absolute inset-0 platform-mesh opacity-70"
           aria-hidden="true"
         />
         <div className="relative mx-auto max-w-3xl px-6 text-center">
-          <Image
-            src="/logo-mark.svg"
-            alt=""
-            width={56}
-            height={56}
+          <BeddiloMark
+            tone="ivory"
+            title=""
             className="mx-auto h-14 w-14 platform-float"
-            data-platform-reveal
           />
           <h2
-            className="mt-8 text-[36px] font-normal leading-[1.05] tracking-[-0.04em] sm:text-[48px] md:text-[72px]"
-            style={{ fontFamily: 'Georgia, serif', color: IVORY }}
+            className="mt-8 font-display text-[36px] font-bold leading-[1.05] tracking-[-0.03em] text-bd-ivory sm:text-[48px] md:text-[64px]"
             data-platform-reveal
             data-platform-reveal-delay="100"
           >
             Run your {nounSingular}
-            <span className="block italic platform-shimmer-text">like it&apos;s 2026.</span>
+            <span className="block platform-shimmer-text">like it&apos;s 2026.</span>
           </h2>
           <p
-            className="mx-auto mt-6 max-w-[440px] text-[15px]"
-            style={{ color: 'rgba(20,35,29,0.6)' }}
+            className="mx-auto mt-6 max-w-[460px] text-[16px] leading-relaxed text-bd-ivory/80"
             data-platform-reveal
             data-platform-reveal-delay="200"
           >
-            {isHotel
-              ? "Built on the same platform hundreds of Ghanaian hostel owners already trust. Set-up takes one afternoon."
-              : "Join hundreds of Ghanaian hostel owners who've already switched. Set-up takes one afternoon."}
+            Start with a 30-day free trial of every Growth feature. No credit card required.
           </p>
           <div
             className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
@@ -1165,19 +994,13 @@ export default async function ForOwnersPage({
             <Link
               href={signupHref}
               data-platform-magnetic
-              className="platform-cta inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-semibold sm:w-auto"
-              style={{
-                background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
-                color: FOREST_DEEP,
-                boxShadow: '0 18px 42px -12px rgba(212,162,76,0.6)',
-              }}
+              className="platform-cta bd-focus-on-dark inline-flex w-full items-center justify-center gap-2 rounded-full bg-bd-amber px-8 py-4 text-[15px] font-semibold text-bd-teal sm:w-auto"
             >
               Start 30-day free trial <ArrowRight className="h-4 w-4" />
             </Link>
             <a
               href="mailto:sales@gh-hostels.com"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[14px] font-medium transition-colors duration-300 hover:bg-[#14231D]/5 sm:w-auto"
-              style={{ border: `1px solid ${HAIR_STRONG}`, color: IVORY }}
+              className="bd-focus-on-dark inline-flex w-full items-center justify-center gap-2 rounded-full border border-bd-ivory/30 px-8 py-4 text-[15px] font-medium text-bd-ivory transition-colors duration-300 hover:bg-bd-ivory/10 sm:w-auto"
             >
               <PhoneCall className="h-4 w-4" /> Talk to sales
             </a>
@@ -1204,7 +1027,7 @@ function ComparisonCell({
       <div className="text-center">
         <Check
           className="mx-auto h-4 w-4"
-          style={{ color: highlight ? GOLD : 'rgba(20,35,29,0.5)' }}
+          style={{ color: highlight ? MP.primary : MP.textSecondary }}
           strokeWidth={3}
         />
       </div>
@@ -1212,20 +1035,20 @@ function ComparisonCell({
   }
   if (value === 'manual') {
     return (
-      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: 'rgba(20,35,29,0.42)' }}>
+      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: MP.textSecondary }}>
         Manual
       </div>
     )
   }
   if (value === 'partial') {
     return (
-      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: 'rgba(20,35,29,0.42)' }}>
+      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: MP.textSecondary }}>
         Partial
       </div>
     )
   }
   return (
-    <div className="text-center text-[18px]" style={{ color: 'rgba(20,35,29,0.22)' }}>
+    <div className="text-center text-[18px]" style={{ color: MP.textSecondary }}>
       —
     </div>
   )

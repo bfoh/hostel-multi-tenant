@@ -6,9 +6,9 @@ const SITE_URL = 'https://gh-hostels.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Replace Your Hostel Spreadsheet — GH Hostels vs Excel',
+  title: 'Replace Your Hostel Spreadsheet — Beddilo vs Excel',
   description:
-    'Stop running your hostel from Excel. GH Hostels replaces the room sheet, the MoMo log, the receipt book, the payroll workbook, and the maintenance log — in one Ghanaian platform.',
+    'Stop running your hostel from Excel. Beddilo replaces the room sheet, the MoMo log, the receipt book, the payroll workbook, and the maintenance log — in one Ghanaian platform.',
   keywords: [
     'replace excel hostel',
     'hostel spreadsheet alternative',
@@ -23,8 +23,8 @@ export const metadata: Metadata = {
     type: 'article',
     locale: 'en_GH',
     url: `${SITE_URL}/compare/spreadsheet`,
-    siteName: 'GH Hostels',
-    title: 'Replace your hostel spreadsheet with GH Hostels',
+    siteName: 'Beddilo',
+    title: 'Replace your hostel spreadsheet with Beddilo',
     description:
       'The room sheet, the MoMo log, the receipt book, the payroll workbook — one platform replaces them all.',
   },
@@ -89,7 +89,7 @@ const ROWS: CompareRow[] = [
     gh: true,
   },
   {
-    capability: 'Daily off-site encrypted backups',
+    capability: 'Records live in the cloud, not on one laptop',
     competitor: false,
     gh: true,
     detail: 'No more "the laptop crashed and the rent sheet went with it."',
@@ -124,50 +124,50 @@ const REASONS = [
   },
   {
     title: 'One source of truth, finally',
-    body: 'Most hostels run on 4–6 spreadsheets: rooms, occupants, payments, maintenance, payroll, complaints. None of them agree. GH Hostels collapses all of it into one consistent data model.',
+    body: 'Most hostels run on 4–6 spreadsheets: rooms, occupants, payments, maintenance, payroll, complaints. None of them agree. Beddilo collapses all of it into one consistent data model.',
   },
   {
     title: 'Auditable forever',
-    body: 'Every booking change, every payment, every refund — logged with who did it and when. A spreadsheet shows the current state. GH Hostels shows the full history.',
+    body: 'Every booking change, every payment, every refund — logged with who did it and when. A spreadsheet shows the current state. Beddilo shows the full history.',
   },
   {
-    title: 'Recover from disasters',
-    body: 'Encrypted daily backups, hosted on Supabase + Vercel. No more "the cleaning lady deleted a tab" or "the laptop got stolen". Your data is safe.',
+    title: 'Not tied to one machine',
+    body: 'Records are hosted on Supabase + Vercel, so a lost laptop or a deleted tab doesn’t take your rent book with it. Every change is logged with who made it.',
   },
   {
     title: 'Front desk runs without you',
-    body: 'When the front desk is in Excel, every check-in needs the senior manager. With GH Hostels, the work is in the system — your staff just runs the playbook.',
+    body: 'When the front desk is in Excel, every check-in needs the senior manager. With Beddilo, the work is in the system — your staff just runs the playbook.',
   },
   {
     title: 'Scales to multiple properties',
-    body: 'Spreadsheets break the moment you open a second hostel. GH Hostels gives you a portfolio dashboard from day one — occupancy, revenue, KPIs across every property.',
+    body: 'Spreadsheets break the moment you open a second hostel. Beddilo gives you a portfolio dashboard from day one — occupancy, revenue, KPIs across every property.',
   },
 ]
 
 const FAQS = [
   {
     q: 'Honestly, can’t I just keep using Excel?',
-    a: 'For very small hostels (under 20 rooms, family-run, one location), Excel is fine until growth makes it painful. The moment you accept MoMo, hire a second staff member, or open a second property, the spreadsheet starts losing data and consuming hours. We’ve seen the same story dozens of times — the migration usually pays for itself in 4–6 weeks.',
+    a: 'For very small hostels (under 20 rooms, family-run, one location), Excel is fine until growth makes it painful. The moment you accept MoMo, hire a second staff member, or open a second property, the spreadsheet starts losing data and consuming hours.',
   },
   {
     q: 'How long does migration from Excel take?',
-    a: 'Typical 100-room hostel: one afternoon. You send us your existing room list, occupant directory, and current balances. We import them, you verify, and you’re live by the next morning. Growth customers get guided onboarding included.',
+    a: 'It depends on how tidy your sheets are. Beddilo has CSV import tools for rooms, occupants and bookings: save each sheet as CSV in the expected column layout, check the preview, and import. You can do it yourself, a sheet at a time.',
   },
   {
     q: 'What if I want to keep a copy of the data in Excel?',
-    a: 'Every report in GH Hostels exports to Excel, CSV, and PDF. Trial balance, P&L, occupant directory, payment history — all exportable. You can keep doing whatever Excel ritual you like; we just stop being the source of truth.',
+    a: 'Every report in Beddilo exports to Excel, CSV, and PDF. Trial balance, P&L, occupant directory, payment history — all exportable. You can keep doing whatever Excel ritual you like; we just stop being the source of truth.',
   },
   {
     q: 'Will my staff need training?',
-    a: 'Most front-desk workflows take 20 minutes to learn. Accounting/payroll modules need a couple of hours with the bursar. We do a guided onboarding session for Growth customers and provide WhatsApp support whenever you need it.',
+    a: 'Some, mostly for accounting and payroll. Each staff member gets a role — receptionist, housekeeper, accountant and so on — that shows only the screens they need, which keeps day-to-day front-desk work simple.',
   },
   {
     q: 'Is it really cheaper than running Excel?',
-    a: 'Excel is "free" only on the licence. The real cost is in admin hours, missed payments, GRA fines, payroll mistakes, and the lost revenue from rooms that sit empty because nobody updated the sheet. Most hostels recover the GH₵ 800–1,000/month subscription within the first month.',
+    a: 'Excel is "free" only on the licence. The real cost is in admin hours, missed payments, GRA fines, payroll mistakes, and the lost revenue from rooms that sit empty because nobody updated the sheet. Whether that outweighs the GH₵ 800–1,000/month subscription depends on your property.',
   },
   {
     q: 'Will my data stay in Ghana?',
-    a: 'Data is hosted on managed cloud infrastructure with daily backups. Each tenant is fully isolated using Postgres row-level security. Contact us if you need a specific data-residency arrangement.',
+    a: 'Not necessarily. Beddilo runs on managed cloud providers (Supabase for the database, Vercel for the app), and some services, such as the AI assistant and error monitoring, process data outside Ghana. Each tenant is fully isolated using Postgres row-level security. Contact us if you need a specific data-residency arrangement.',
   },
 ]
 
@@ -191,8 +191,8 @@ export default function SpreadsheetComparePage() {
         <>
           Your hostel deserves better
           <span
-            className="block italic"
-            style={{ color: 'rgba(245,233,210,0.55)' }}
+            className="block"
+            style={{ color: 'rgba(247,242,233,0.72)' }}
           >
             than tab 4 of &ldquo;rooms_final_v3.xlsx&rdquo;.
           </span>
@@ -225,7 +225,7 @@ export default function SpreadsheetComparePage() {
             operation runs on a tool designed for a single accountant&apos;s desk in 1985.
           </p>
           <p>
-            <strong>GH Hostels</strong> is what a spreadsheet would look like if it had been
+            <strong>Beddilo</strong> is what a spreadsheet would look like if it had been
             designed for a Ghanaian hostel in 2026 — with MoMo, GRA, SSNIT, and occupants who
             expect to see their balance on a phone.
           </p>
@@ -237,7 +237,7 @@ export default function SpreadsheetComparePage() {
       bottomLine={
         <>
           Close the spreadsheet.
-          <span className="block italic platform-shimmer-text">Open something better.</span>
+          <span className="block platform-shimmer-text">Open something better.</span>
         </>
       }
       jsonLd={jsonLd}

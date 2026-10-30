@@ -79,7 +79,7 @@ export function InvoiceDocument({ booking, tenant }: Props) {
     : '#1d4ed8'
 
   return (
-    <Document title={`Invoice ${booking.booking_ref}`} author={tenant?.name ?? 'GH Hostels'}>
+    <Document title={`Invoice ${booking.booking_ref}`} author={tenant?.name ?? 'Beddilo'}>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>

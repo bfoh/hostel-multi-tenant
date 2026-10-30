@@ -5,8 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { BedDouble, Building2, Home, Compass, Landmark, Search, MapPin, Sparkles } from 'lucide-react'
 
-import { MP } from '@/lib/marketplace-theme'
-
 /**
  * Expedia/Booking-style vertical-tabbed hero search. Hostels, hotels, and
  * apartments are live verticals — the search card was staged for all five
@@ -36,10 +34,12 @@ export const SEARCH_BUSINESS_TYPE: Partial<Record<TabKey, 'hostel' | 'hotel' | '
   apartments: 'apartment',
 }
 
-const SEARCH_PLACEHOLDER: Partial<Record<TabKey, string>> = {
-  hostels: 'Hostel name or campus — Legon, KNUST, UCC…',
-  hotels: 'Hotel or guesthouse name',
-  apartments: 'Apartment or short-let name',
+/** Label + placeholder for the name field (?q=, matched against the
+ *  property name) on each live tab. */
+const NAME_FIELD: Partial<Record<TabKey, { label: string; placeholder: string }>> = {
+  hostels: { label: 'Hostel or campus', placeholder: 'e.g. Legon, KNUST, UCC' },
+  hotels: { label: 'Hotel or guesthouse', placeholder: 'Search by name' },
+  apartments: { label: 'Apartment or short-let', placeholder: 'Search by name' },
 }
 
 /**
@@ -47,11 +47,34 @@ const SEARCH_PLACEHOLDER: Partial<Record<TabKey, string>> = {
  * campus names; hotels and apartments get Ghana destination names instead
  * (matching the destinations marquee on the hotel /for-owners page) since
  * "Legon"/"KNUST" as a hotel search suggestion would make no sense.
+ *
+ * Each chip fills the same field a visitor would type it into: campuses go
+ * to the name/campus field (?q=, matched against the property name) and
+ * towns to the destination field (?city=, matched against address_city) —
+ * a town sent as ?q= only finds properties with the town in their name.
  */
-const QUICK_LINKS: Partial<Record<TabKey, string[]>> = {
-  hostels: ['Legon', 'KNUST', 'UCC', 'Cape Coast', 'Kumasi'],
-  hotels: ['Accra', 'Kumasi', 'Cape Coast', 'Elmina', 'Aburi'],
-  apartments: ['Accra', 'Kumasi', 'Cape Coast', 'Elmina', 'Aburi'],
+type QuickLink = { label: string; field: 'q' | 'city' }
+
+const DESTINATIONS: QuickLink[] = ['Accra', 'Kumasi', 'Cape Coast', 'Elmina', 'Aburi']
+  .map((label) => ({ label, field: 'city' as const }))
+
+const QUICK_LINKS: Partial<Record<TabKey, QuickLink[]>> = {
+  hostels: [
+    { label: 'Legon', field: 'q' },
+    { label: 'KNUST', field: 'q' },
+    { label: 'UCC', field: 'q' },
+    { label: 'Cape Coast', field: 'city' },
+    { label: 'Kumasi', field: 'city' },
+  ],
+  hotels: DESTINATIONS,
+  apartments: DESTINATIONS,
+}
+
+/** /browse URL for a quick-search chip. Hostel is /browse's default type. */
+export function quickSearchHref(link: QuickLink, type?: 'hostel' | 'hotel' | 'apartment'): string {
+  const params = new URLSearchParams({ [link.field]: link.label })
+  if (type && type !== 'hostel') params.set('type', type)
+  return `/browse?${params.toString()}`
 }
 
 export function HeroSearch({ initialTab }: { initialTab?: TabKey } = {}) {
@@ -97,21 +120,26 @@ export function HeroSearch({ initialTab }: { initialTab?: TabKey } = {}) {
 
   const quickLinks = QUICK_LINKS[active]
   const quickLinksType = SEARCH_BUSINESS_TYPE[active]
+  const nameField = NAME_FIELD[active]
 
   return (
     <>
-    <div className="mp-reveal mx-auto rounded-[22px] bg-white p-4 shadow-2xl sm:p-6" style={{ animationDelay: '180ms' }}>
+    <div
+      className="mp-reveal mx-auto rounded-[28px] border border-bd-teal/10 bg-white p-3 shadow-[0_30px_60px_-30px_rgba(11,31,35,0.45)] sm:p-5"
+      style={{ animationDelay: '180ms' }}
+    >
       <div className="relative">
         {showLeftFade && (
           <div
-            className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-10 rounded-l-xl"
-            style={{ background: 'linear-gradient(to right, white, rgba(255,255,255,0))' }}
+            className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-10 rounded-l-xl bg-gradient-to-r from-white to-white/0"
             aria-hidden="true"
           />
         )}
         <div
           ref={scrollRef}
-          className={`mp-no-scrollbar flex items-center gap-1 overflow-x-auto pb-3 sm:gap-3 ${hasOverflow ? '' : 'sm:justify-center'}`}
+          role="group"
+          aria-label="Type of stay"
+          className={`mp-no-scrollbar flex items-center gap-1.5 overflow-x-auto p-0.5 sm:gap-2 ${hasOverflow ? '' : 'sm:justify-center'}`}
         >
           {TABS.map((tab) => {
             const Icon = tab.icon
@@ -121,24 +149,24 @@ export function HeroSearch({ initialTab }: { initialTab?: TabKey } = {}) {
                 key={tab.key}
                 type="button"
                 onClick={() => selectTab(tab.key, tab.enabled)}
-                aria-current={isActive}
-                className="relative flex shrink-0 flex-col items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-[13px] font-medium transition-colors sm:px-5 sm:text-[14px]"
-                style={{ color: isActive ? MP.greenDeep : MP.textSecondary }}
+                aria-pressed={isActive}
+                className={[
+                  'bd-focus inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2.5 text-[14px] font-semibold transition-colors',
+                  isActive
+                    ? 'bg-bd-teal text-bd-ivory shadow-sm'
+                    : 'text-bd-slate hover:bg-bd-teal/5 hover:text-bd-teal',
+                ].join(' ')}
               >
-                <Icon className="h-[26px] w-[26px]" strokeWidth={isActive ? 2 : 1.6} style={{ color: isActive ? MP.green : MP.textSecondary }} />
-                <span className="flex items-center gap-1.5">
-                  {tab.label}
-                  {!tab.enabled && (
-                    <span
-                      className="rounded-full px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-wide"
-                      style={{ background: MP.surfaceSoft, color: MP.goldDeep }}
-                    >
-                      Soon
-                    </span>
-                  )}
-                </span>
-                {isActive && (
-                  <span className="absolute -bottom-1 left-4 right-4 h-[3px] rounded-full" style={{ background: MP.green }} />
+                <Icon className={`h-[18px] w-[18px] ${isActive ? 'text-bd-amber' : ''}`} strokeWidth={isActive ? 2.2 : 1.8} aria-hidden="true" />
+                {tab.label}
+                {!tab.enabled && (
+                  <span
+                    className={`rounded-full px-1.5 py-[1px] text-[10px] font-bold uppercase tracking-wide ${
+                      isActive ? 'bg-bd-amber text-bd-teal' : 'bg-bd-amber-100 text-bd-amber-700'
+                    }`}
+                  >
+                    Soon
+                  </span>
                 )}
               </button>
             )
@@ -146,60 +174,72 @@ export function HeroSearch({ initialTab }: { initialTab?: TabKey } = {}) {
         </div>
         {showRightFade && (
           <div
-            className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-10 rounded-r-xl"
-            style={{ background: 'linear-gradient(to left, white, rgba(255,255,255,0))' }}
+            className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-10 rounded-r-xl bg-gradient-to-l from-white to-white/0"
             aria-hidden="true"
           />
         )}
       </div>
 
-      <div className="h-px" style={{ background: MP.border }} />
-
       {activeTab.enabled ? (
-        <form action="/browse" method="get" className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center">
+        <form
+          action="/browse"
+          method="get"
+          role="search"
+          aria-label={`Search ${activeTab.label.toLowerCase()}`}
+          className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-[1.25fr_1fr_auto] sm:gap-3"
+        >
           <input type="hidden" name="type" value={SEARCH_BUSINESS_TYPE[active] ?? 'hostel'} />
-          <div className="flex flex-1 items-center gap-3 rounded-2xl px-5 py-4" style={{ background: MP.surfaceSoft }}>
-            <Search className="h-5 w-5 shrink-0" style={{ color: MP.goldDeep }} />
-            <input
-              name="q"
-              placeholder={SEARCH_PLACEHOLDER[active] ?? 'Search by name'}
-              className="w-full bg-transparent text-[15px] outline-none placeholder:text-neutral-400"
-              style={{ color: MP.ink }}
-            />
-          </div>
-          <div className="flex items-center gap-3 rounded-2xl px-5 py-4 sm:w-52" style={{ background: MP.surfaceSoft }}>
-            <MapPin className="h-5 w-5 shrink-0" style={{ color: MP.goldDeep }} />
-            <input
-              name="city"
-              placeholder="City"
-              className="w-full bg-transparent text-[15px] outline-none placeholder:text-neutral-400"
-              style={{ color: MP.ink }}
-            />
-          </div>
+          <label className="group/field flex cursor-text items-center gap-3 rounded-2xl border border-bd-teal/15 bg-bd-ivory-50 px-4 py-2.5 transition-colors focus-within:border-bd-teal focus-within:bg-white focus-within:ring-2 focus-within:ring-bd-teal/15 hover:border-bd-teal/30">
+            <Search className="h-5 w-5 shrink-0 text-bd-teal/70" aria-hidden="true" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-bd-slate">
+                {nameField?.label ?? 'Property name'}
+              </span>
+              <input
+                name="q"
+                placeholder={nameField?.placeholder ?? 'Search by name'}
+                className="w-full bg-transparent text-[15px] text-bd-teal outline-none placeholder:text-bd-slate/70"
+              />
+            </span>
+          </label>
+          <label className="flex cursor-text items-center gap-3 rounded-2xl border border-bd-teal/15 bg-bd-ivory-50 px-4 py-2.5 transition-colors focus-within:border-bd-teal focus-within:bg-white focus-within:ring-2 focus-within:ring-bd-teal/15 hover:border-bd-teal/30">
+            <MapPin className="h-5 w-5 shrink-0 text-bd-teal/70" aria-hidden="true" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-bd-slate">Destination</span>
+              <input
+                name="city"
+                placeholder="City or town"
+                autoComplete="address-level2"
+                className="w-full bg-transparent text-[15px] text-bd-teal outline-none placeholder:text-bd-slate/70"
+              />
+            </span>
+          </label>
           <button
             type="submit"
-            className="shrink-0 rounded-2xl px-9 py-4 text-[15px] font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
-            style={{ background: MP.green }}
+            className="bd-focus inline-flex min-h-[56px] shrink-0 items-center justify-center gap-2 rounded-2xl bg-bd-amber px-8 text-[16px] font-bold text-bd-teal shadow-[0_10px_24px_-12px_rgba(227,162,63,0.9)] transition-all duration-200 hover:bg-bd-amber-600 active:scale-[0.98] motion-reduce:active:scale-100"
           >
+            <Search className="h-5 w-5" strokeWidth={2.4} aria-hidden="true" />
             Search
           </button>
         </form>
       ) : (
-        <div className="flex flex-col items-center gap-4 py-8 text-center sm:flex-row sm:justify-between sm:gap-4 sm:py-7 sm:text-left">
-          <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: MP.surfaceSoft }}>
-              <Sparkles className="h-5 w-5" style={{ color: MP.goldDeep }} />
+        <div
+          className="mt-3 flex flex-col items-center gap-4 rounded-2xl bg-bd-ivory-50 px-4 py-7 text-center sm:mt-4 sm:flex-row sm:justify-between sm:gap-4 sm:px-6 sm:text-left"
+          role="status"
+        >
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-bd-amber-100">
+              <Sparkles className="h-5 w-5 text-bd-amber-700" aria-hidden="true" />
             </span>
             <div>
-              <p className="text-base font-semibold" style={{ color: MP.ink }}>{activeTab.label} is on the way</p>
-              <p className="text-[14px]" style={{ color: MP.textSecondary }}>We're expanding beyond hostels — check back soon.</p>
+              <p className="font-display text-base font-semibold text-bd-teal">{activeTab.label} is coming soon</p>
+              <p className="text-[14px] text-bd-slate">We&apos;re focused on places to stay for now — check back soon.</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => selectTab('hostels', true)}
-            className="shrink-0 rounded-2xl px-6 py-3 text-[15px] font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
-            style={{ background: MP.green }}
+            className="bd-focus shrink-0 rounded-full bg-bd-teal px-6 py-3 text-[15px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900"
           >
             Browse hostels
           </button>
@@ -209,18 +249,18 @@ export function HeroSearch({ initialTab }: { initialTab?: TabKey } = {}) {
 
     {quickLinks && (
       <div
-        className="mp-reveal relative z-0 mx-auto mt-7 flex flex-wrap items-center justify-center gap-2"
+        className="mp-reveal relative z-0 mx-auto mt-6 flex flex-wrap items-center justify-center gap-2"
         style={{ animationDelay: '220ms' }}
       >
-        <span className="text-[12px] font-medium" style={{ color: MP.textSecondary }}>Popular:</span>
-        {quickLinks.map((place) => (
+        <span className="mr-1 text-[13px] font-medium text-bd-slate">Popular:</span>
+        {quickLinks.map((link) => (
           <Link
-            key={place}
-            href={`/browse?q=${encodeURIComponent(place)}${quickLinksType === 'hotel' ? '&type=hotel' : ''}`}
-            className="rounded-full px-3 py-1 text-[12px] font-medium transition-colors hover:bg-[#2F7D57] hover:text-white"
-            style={{ border: `1px solid ${MP.border}`, background: MP.surface, color: MP.greenDeep }}
+            key={link.label}
+            href={quickSearchHref(link, quickLinksType)}
+            className="bd-focus inline-flex items-center gap-1.5 rounded-full border border-bd-teal/15 bg-white px-3.5 py-1.5 text-[13px] font-medium text-bd-teal transition-colors hover:border-bd-teal hover:bg-bd-teal hover:text-bd-ivory"
           >
-            {place}
+            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+            {link.label}
           </Link>
         ))}
       </div>

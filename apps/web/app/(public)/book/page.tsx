@@ -355,7 +355,7 @@ export default async function PublicBookingPage() {
         <footer className="mt-12 border-t border-gray-100 bg-white py-8">
           <div className="mx-auto max-w-5xl px-4 text-center text-xs text-gray-400">
             <p>
-              {tenant.name} · Powered by <span className="font-semibold">GH Hostels</span>
+              {tenant.name} · Powered by <span className="font-semibold">Beddilo</span>
             </p>
             {tenant.contact_phone && (
               <p className="mt-1">

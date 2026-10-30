@@ -58,7 +58,7 @@ export default async function ListingSettingsPage() {
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Public Listing</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Control how your {nounSingular} appears on the GH Hostels marketplace, and how guests pay.
+            Control how your {nounSingular} appears on the Beddilo marketplace, and how guests pay.
           </p>
         </div>
       </div>

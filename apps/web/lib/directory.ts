@@ -22,6 +22,10 @@ export interface DirectoryListing {
   address_region: string | null
   business_type:  BusinessType
   from_rate:      number
+  /** Billing unit of the room type that sets from_rate (room_categories.
+   *  rate_unit: 'night' | 'week' | 'month' | 'semester') — so a card never
+   *  implies a semester-priced hostel bed is a nightly rate. */
+  from_rate_unit: string
   category_count: number
   /** The tenant's own owner-uploaded property photo (tenants.hero_image_url)
    *  when set, else the first photo found across its active room
@@ -72,7 +76,7 @@ export async function searchListings(
   // regional directory, without needing a materialized view.
   let query = supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, hero_image_url, primary_color, address_city, address_region, business_type, created_at, room_categories!inner(base_rate, is_active, image_urls, sort_order)')
+    .select('id, slug, name, tagline, logo_url, hero_image_url, primary_color, address_city, address_region, business_type, created_at, room_categories!inner(base_rate, rate_unit, is_active, image_urls, sort_order)')
     .eq('listed_publicly', true)
     .in('status', ['trial', 'active', 'trial_expired'])
     .eq('room_categories.is_active', true)
@@ -103,8 +107,12 @@ export async function searchListings(
 
     const existing = byTenant.get(row.id)
     const minRate = Math.min(...activeRates)
+    const minRateUnit: string = categories.find((c: any) => c.base_rate === minRate)?.rate_unit ?? 'semester'
     if (existing) {
-      existing.from_rate = Math.min(existing.from_rate, minRate)
+      if (minRate < existing.from_rate) {
+        existing.from_rate = minRate
+        existing.from_rate_unit = minRateUnit
+      }
       existing.category_count += activeRates.length
       if (!existing.hero_image_url && firstPhoto) existing.hero_image_url = firstPhoto
     } else {
@@ -112,7 +120,7 @@ export async function searchListings(
         slug: row.slug, name: row.name, tagline: row.tagline, logo_url: row.logo_url,
         primary_color: row.primary_color, address_city: row.address_city, address_region: row.address_region,
         business_type: row.business_type,
-        from_rate: minRate, category_count: activeRates.length,
+        from_rate: minRate, from_rate_unit: minRateUnit, category_count: activeRates.length,
         hero_image_url: row.hero_image_url ?? firstPhoto,
         created_at: row.created_at,
       })

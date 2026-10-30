@@ -6,9 +6,8 @@ import { Check, ArrowRight } from 'lucide-react'
 import { MP } from '@/lib/marketplace-theme'
 
 const FOREST_DEEP = MP.ink
-const GOLD = MP.gold
-const GOLD_SOFT = MP.goldSoft
-const GOLD_DEEP = MP.goldDeep
+const GOLD = MP.accent
+const GOLD_DEEP = MP.accentText
 const INK_TEXT = MP.ink
 const HAIR_STRONG = MP.borderStrong
 
@@ -56,7 +55,7 @@ export function PricingPlans({ plans, isHotel }: { plans: Plan[]; isHotel?: bool
       {/* Billing-period toggle */}
       <div className="mt-12 flex justify-center" data-platform-reveal>
         <div
-          className="inline-flex flex-wrap justify-center gap-1 rounded-full bg-white p-1"
+          className="grid w-full max-w-sm grid-cols-2 gap-1 rounded-2xl bg-white p-1 sm:inline-flex sm:w-auto sm:max-w-none sm:rounded-full"
           style={{ border: `1px solid ${HAIR_STRONG}` }}
           role="tablist"
           aria-label="Billing period"
@@ -70,13 +69,10 @@ export function PricingPlans({ plans, isHotel }: { plans: Plan[]; isHotel?: bool
                 role="tab"
                 aria-selected={active}
                 onClick={() => setPeriodId(p.id)}
-                className="relative rounded-full px-4 py-2 text-[13px] font-semibold transition-all"
+                className="bd-focus relative rounded-xl px-4 py-2 text-[13px] font-semibold transition-all sm:rounded-full"
                 style={
                   active
-                    ? {
-                        background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
-                        color: FOREST_DEEP,
-                      }
+                    ? { background: MP.primary, color: '#F7F2E9' }
                     : { color: MP.textSecondary }
                 }
               >
@@ -84,7 +80,7 @@ export function PricingPlans({ plans, isHotel }: { plans: Plan[]; isHotel?: bool
                 {p.discount > 0 && (
                   <span
                     className="ml-1.5 text-[10px] font-bold"
-                    style={{ color: active ? FOREST_DEEP : GOLD_DEEP }}
+                    style={{ color: active ? GOLD : GOLD_DEEP }}
                   >
                     −{Math.round(p.discount * 100)}%
                   </span>
@@ -109,7 +105,7 @@ export function PricingPlans({ plans, isHotel }: { plans: Plan[]; isHotel?: bool
               style={{
                 border: `1px solid ${plan.highlight ? GOLD : HAIR_STRONG}`,
                 background: plan.highlight
-                  ? `linear-gradient(180deg, rgba(212,162,76,0.10) 0%, rgba(255,255,255,1) 60%)`
+                  ? `linear-gradient(180deg, rgba(242,185,90,0.14) 0%, rgba(255,255,255,1) 60%)`
                   : '#FFFFFF',
                 boxShadow: plan.highlight ? `0 30px 60px -30px ${GOLD}44` : undefined,
               }}
@@ -119,10 +115,7 @@ export function PricingPlans({ plans, isHotel }: { plans: Plan[]; isHotel?: bool
               {plan.highlight && (
                 <span
                   className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
-                  style={{
-                    background: `linear-gradient(135deg, ${GOLD_SOFT}, ${GOLD_DEEP})`,
-                    color: FOREST_DEEP,
-                  }}
+                  style={{ background: GOLD, color: FOREST_DEEP }}
                 >
                   Most popular
                 </span>
@@ -173,9 +166,9 @@ export function PricingPlans({ plans, isHotel }: { plans: Plan[]; isHotel?: bool
                 style={
                   plan.highlight
                     ? {
-                        background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
-                        color: FOREST_DEEP,
-                        boxShadow: '0 10px 28px -10px rgba(212,162,76,0.55)',
+                        background: MP.primary,
+                        color: '#F7F2E9',
+                        boxShadow: '0 12px 28px -12px rgba(11,31,35,0.55)',
                       }
                     : {
                         border: `1px solid ${HAIR_STRONG}`,

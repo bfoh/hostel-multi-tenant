@@ -9,15 +9,18 @@ import { z } from 'zod'
 import { CheckCircle2, XCircle, Loader2, BadgeCheck } from 'lucide-react'
 
 import { PasswordInput } from '@/components/ui/password-input'
-
-const HAIR = 'rgba(245,233,210,0.18)'
-const IVORY = '#F5E9D2'
-const IVORY_MUTED = 'rgba(245,233,210,0.6)'
-const IVORY_DIM = 'rgba(245,233,210,0.4)'
-const GOLD = '#D4A24C'
-const GOLD_SOFT = '#F5C26B'
-const GOLD_DEEP = '#B8842E'
-const FOREST_DEEP = '#0A3729'
+import {
+  AuthAlert,
+  AuthDivider,
+  AuthHeading,
+  AuthStatusIcon,
+  FieldError,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+  authPrimaryButtonClass,
+  fieldA11y,
+} from '@/components/auth/auth-ui'
 
 const VALID_PLANS = ['starter', 'growth', 'hotel_starter', 'hotel_growth', 'trial'] as const
 type SelectedPlan = typeof VALID_PLANS[number]
@@ -54,10 +57,6 @@ const schema = z
   })
 
 type FormValues = z.infer<typeof schema>
-
-const inputClass =
-  `w-full rounded-xl border bg-[rgba(245,233,210,0.03)] px-4 py-3 text-[14px] text-[#F5E9D2] placeholder:text-[rgba(245,233,210,0.35)] transition-all duration-200 focus:outline-none focus:border-[#D4A24C]/60 focus:bg-[rgba(212,162,76,0.05)]`
-const inputBorder = { borderColor: HAIR }
 
 function toSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
@@ -143,31 +142,17 @@ export default function SignupPage() {
   /* ── Success state ────────────────────────────────────────────── */
   if (success) {
     return (
-      <div className="space-y-5 text-center">
-        <div
-          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
-          style={{ background: 'rgba(212,162,76,0.10)', border: `1px solid ${GOLD}40` }}
-        >
-          <svg className="h-7 w-7" style={{ color: GOLD }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="space-y-5 text-center" role="status">
+        <AuthStatusIcon>
+          <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-        </div>
-        <div className="space-y-2">
-          <h2
-            className="text-[20px] font-normal tracking-[-0.5px]"
-            style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
-          >
-            Check your email
-          </h2>
-          <p className="text-[13px] leading-relaxed max-w-[300px] mx-auto" style={{ color: IVORY_MUTED }}>
-            We&apos;ve sent a confirmation link. Click it to activate your account and start setting up your {nounSingular}.
-          </p>
-        </div>
-        <Link
-          href="/login"
-          className="inline-block text-[13px] font-semibold transition-colors hover:opacity-80"
-          style={{ color: GOLD }}
-        >
+        </AuthStatusIcon>
+        <AuthHeading
+          title="Check your email"
+          subtitle={<>We&apos;ve sent a confirmation link. Click it to activate your account and start setting up your {nounSingular}.</>}
+        />
+        <Link href="/login" className={`${authLinkClass} inline-block text-[14px]`}>
           ← Back to sign in
         </Link>
       </div>
@@ -179,31 +164,23 @@ export default function SignupPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="space-y-2 text-center">
-        <h1
-          className="text-[26px] font-normal tracking-[-0.5px]"
-          style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: IVORY }}
-        >
-          {selectedPlan === 'trial' || !selectedPlan ? 'Start your free trial' : 'Create your account'}
-        </h1>
-        <p className="text-[14px]" style={{ color: IVORY_MUTED }}>
-          Set up your {nounSingular} in minutes. {selectedPlan === 'trial' || !selectedPlan ? 'No credit card required.' : 'You\u2019ll subscribe after email confirmation.'}
-        </p>
+      <div className="space-y-3 text-center">
+        <AuthHeading
+          title={selectedPlan === 'trial' || !selectedPlan ? 'Start your free trial' : 'Create your account'}
+          subtitle={<>Set up your {nounSingular} in minutes. {selectedPlan === 'trial' || !selectedPlan ? 'No credit card required.' : 'You\u2019ll subscribe after email confirmation.'}</>}
+        />
         {selectedPlan && (
-          <div
-            className="mx-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold"
-            style={{ border: `1px solid ${GOLD}40`, background: `${GOLD}14`, color: GOLD_SOFT }}
-          >
-            <BadgeCheck className="h-3 w-3" />
+          <div className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-bd-amber/40 bg-bd-amber/10 px-3 py-1 text-[12px] font-semibold text-bd-amber-300">
+            <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
             {PLAN_LABEL[selectedPlan]}
           </div>
         )}
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         {/* Hostel name */}
-        <div className="space-y-1.5">
-          <label htmlFor="hostelName" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
+        <div>
+          <label htmlFor="hostelName" className={`${authLabelClass} mb-1.5`}>
             {nounCapitalized} name
           </label>
           <input
@@ -212,39 +189,44 @@ export default function SignupPage() {
             autoComplete="organization"
             autoFocus
             {...register('hostelName')}
-            className={inputClass}
-            style={inputBorder}
+            {...fieldA11y('hostelName', !!errors.hostelName)}
+            className={authInputClass}
             placeholder={isHotel ? 'Grand Plaza Hotel' : 'Acacia Hostel'}
           />
-          {errors.hostelName && (
-            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.hostelName.message}</p>
-          )}
+          <FieldError id="hostelName" message={errors.hostelName?.message} />
 
           {/* Slug preview */}
           {slugPreview.length >= 2 && (
             <div
-              className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-[12px]"
-              style={{ border: `1px solid ${HAIR}`, background: 'rgba(245,233,210,0.02)' }}
+              className="mt-2 flex items-center gap-1.5 rounded-xl border border-bd-ivory/15 bg-bd-ivory/[0.04] px-4 py-2.5 text-[13px]"
+              aria-live="polite"
             >
-              <span style={{ color: IVORY_DIM }}>Your URL:</span>
-              <span className="font-mono font-medium" style={{ color: IVORY_MUTED }}>
+              <span className="shrink-0 text-bd-ivory/65">Your URL:</span>
+              <span className="min-w-0 truncate font-mono font-medium text-bd-ivory/90">
                 {slugPreview}.{appDomain}
               </span>
-              {slugStatus === 'checking' && <Loader2 className="ml-auto h-3 w-3 animate-spin" style={{ color: IVORY_DIM }} />}
-              {slugStatus === 'available' && <CheckCircle2 className="ml-auto h-3.5 w-3.5" style={{ color: GOLD }} />}
+              {slugStatus === 'checking' && (
+                <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-bd-ivory/65" aria-label="Checking availability" />
+              )}
+              {slugStatus === 'available' && (
+                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-medium text-bd-amber">
+                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  available
+                </span>
+              )}
               {slugStatus === 'taken' && (
-                <>
-                  <XCircle className="ml-auto h-3.5 w-3.5 text-[#ff6b6b]" />
-                  <span className="text-[#ff6b6b] font-medium">taken</span>
-                </>
+                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-medium text-bd-coral-300">
+                  <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                  taken
+                </span>
               )}
             </div>
           )}
         </div>
 
         {/* Email */}
-        <div className="space-y-1.5">
-          <label htmlFor="email" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
+        <div>
+          <label htmlFor="email" className={`${authLabelClass} mb-1.5`}>
             Email
           </label>
           <input
@@ -252,92 +234,78 @@ export default function SignupPage() {
             type="email"
             autoComplete="email"
             {...register('email')}
-            className={inputClass}
-            style={inputBorder}
+            {...fieldA11y('email', !!errors.email)}
+            className={authInputClass}
             placeholder={isHotel ? 'kwame@grandplazahotel.com' : 'kwame@acaciahostel.com'}
           />
-          {errors.email && (
-            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.email.message}</p>
-          )}
+          <FieldError id="email" message={errors.email?.message} />
         </div>
 
         {/* Password */}
-        <div className="space-y-1.5">
-          <label htmlFor="password" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
+        <div>
+          <label htmlFor="password" className={`${authLabelClass} mb-1.5`}>
             Password
           </label>
           <PasswordInput
             id="password"
             autoComplete="new-password"
             {...register('password')}
-            className={inputClass}
-            style={inputBorder}
-            placeholder="Min. 8 characters, one uppercase, one number"
+            aria-invalid={!!errors.password || undefined}
+            aria-describedby={errors.password ? 'password-error' : 'password-hint'}
+            className={authInputClass}
+            placeholder="Create a password"
             tone="dark"
           />
-          {errors.password && (
-            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.password.message}</p>
+          {errors.password ? (
+            <FieldError id="password" message={errors.password.message} />
+          ) : (
+            <p id="password-hint" className="mt-1.5 text-[13px] text-bd-ivory/65">
+              At least 8 characters, with one uppercase letter and one number.
+            </p>
           )}
         </div>
 
         {/* Confirm password */}
-        <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="text-[13px] font-medium" style={{ color: IVORY_MUTED }}>
+        <div>
+          <label htmlFor="confirmPassword" className={`${authLabelClass} mb-1.5`}>
             Confirm password
           </label>
           <PasswordInput
             id="confirmPassword"
             autoComplete="new-password"
             {...register('confirmPassword')}
-            className={inputClass}
-            style={inputBorder}
-            placeholder="••••••••"
+            {...fieldA11y('confirmPassword', !!errors.confirmPassword)}
+            className={authInputClass}
+            placeholder="Re-enter your password"
             tone="dark"
           />
-          {errors.confirmPassword && (
-            <p className="mt-1 text-[12px] text-[#ff6b6b]">{errors.confirmPassword.message}</p>
-          )}
+          <FieldError id="confirmPassword" message={errors.confirmPassword?.message} />
         </div>
 
-        {serverError && (
-          <div
-            className="rounded-xl px-4 py-3 text-[13px] text-[#ff8a8a]"
-            style={{ border: '1px solid rgba(255,107,107,0.3)', background: 'rgba(255,107,107,0.08)' }}
-          >
-            {serverError}
-          </div>
-        )}
+        {serverError && <AuthAlert>{serverError}</AuthAlert>}
 
         <button
           type="submit"
           disabled={isSubmitting || slugStatus === 'taken'}
-          className="w-full rounded-full px-4 py-3 text-[14px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-          style={{
-            background: `linear-gradient(135deg, ${GOLD_SOFT} 0%, ${GOLD} 50%, ${GOLD_DEEP} 100%)`,
-            color: FOREST_DEEP,
-            boxShadow: '0 10px 28px -10px rgba(212,162,76,0.55)',
-          }}
+          className={authPrimaryButtonClass}
         >
+          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           {isSubmitting ? 'Creating account\u2026' : 'Create account'}
         </button>
 
-        <p className="text-center text-[11px]" style={{ color: IVORY_DIM }}>
+        <p className="text-center text-[12px] leading-relaxed text-bd-ivory/65">
           By signing up you agree to our{' '}
-          <a href="#" className="underline underline-offset-2 transition-colors hover:opacity-80" style={{ color: IVORY }}>Terms</a>
+          <Link href="/terms" className="bd-focus-on-dark rounded text-bd-ivory underline underline-offset-2 hover:text-bd-amber">Terms</Link>
           {' '}and{' '}
-          <a href="#" className="underline underline-offset-2 transition-colors hover:opacity-80" style={{ color: IVORY }}>Privacy Policy</a>.
+          <Link href="/privacy" className="bd-focus-on-dark rounded text-bd-ivory underline underline-offset-2 hover:text-bd-amber">Privacy Policy</Link>.
         </p>
       </form>
 
-      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center"><div className="w-full" style={{ borderTop: `1px solid ${HAIR}` }} /></div>
-        <div className="relative flex justify-center"><span className="px-3 text-[12px]" style={{ background: '#0A0A08', color: IVORY_DIM }}>or</span></div>
-      </div>
+      <AuthDivider />
 
-      <p className="text-center text-[13px]" style={{ color: IVORY_MUTED }}>
+      <p className="text-center text-[14px] text-bd-ivory/75">
         Already have an account?{' '}
-        <Link href="/login" className="font-semibold transition-colors hover:opacity-80" style={{ color: GOLD }}>
+        <Link href="/login" className={authLinkClass}>
           Sign in
         </Link>
       </p>

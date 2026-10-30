@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ShieldCheck, Zap, HandCoins } from 'lucide-react'
+import { ArrowRight, BedDouble, Building2, Home, HandCoins, CalendarCheck, KeyRound, Tag } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
@@ -11,32 +11,31 @@ import { searchListings, type MarketplaceVertical } from '@/lib/directory'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { HeroSearch, type TabKey } from '@/components/marketplace/hero-search'
-import { MP } from '@/lib/marketplace-theme'
 
 /* ──────────────────────────────────────────────────────────────────────────────
-   AYA — Marketplace homepage (hostels + hotels)
-   Light mode · Forest green · Warm gold · Adinkra-inspired background
-   Domain still gh-hostels.com pending the DNS/domain cutover to aya.com —
-   see NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED in lib/tenant/host-classification.ts.
+   BEDDILO — Marketplace homepage (hostels, hotels, apartments)
+   Deep Teal hero · Warm Ivory canvas · Sunny Amber actions · Muted Coral warmth
+   Served on gh-hostels.com — the brand changed, the domain did not (see
+   NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED in lib/tenant/host-classification.ts).
    ────────────────────────────────────────────────────────────────────────── */
 
 const SITE_URL = 'https://gh-hostels.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Aya — Find & Book Hostels and Hotels in Ghana',
+  title: 'Beddilo — Find your stay. Feel at home.',
   description:
-    'Search real-time availability and book hostels and hotels across Ghana — Legon, KNUST, UCC, and beyond. No middleman. Run a property? List yours free.',
+    'Discover hotels, student hostels, apartments and beautiful getaways — all in one place. See real-time availability and book directly with the property.',
   keywords: [
+    'accommodation booking',
+    'book hotels',
+    'student hostels',
+    'apartments and short-lets',
     'student hostel booking Ghana',
-    'hostel near me Ghana',
     'Legon hostels',
     'KNUST hostels',
     'UCC hostels',
-    'book student accommodation Ghana',
     'hotel booking Ghana',
-    'hostel management software Ghana',
-    'Ghana hospitality SaaS',
   ],
   alternates: {
     canonical: SITE_URL,
@@ -45,16 +44,16 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_GH',
     url: SITE_URL,
-    siteName: 'Aya',
-    title: 'Aya — Find & Book Hostels and Hotels in Ghana',
+    siteName: 'Beddilo',
+    title: 'Beddilo — Find your stay. Feel at home.',
     description:
-      'Search real-time availability and book hostels and hotels across Ghana. No middleman.',
+      'Discover hotels, student hostels, apartments and beautiful getaways — all in one place.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Aya — Find & Book Hostels and Hotels in Ghana',
+    title: 'Beddilo — Find your stay. Feel at home.',
     description:
-      'Search real-time availability and book hostels and hotels across Ghana.',
+      'Discover hotels, student hostels, apartments and beautiful getaways — all in one place.',
   },
   robots: {
     index: true,
@@ -67,16 +66,17 @@ export const metadata: Metadata = {
       'max-video-preview': -1,
     },
   },
-  category: 'business',
+  category: 'travel',
 }
 
 const orgLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Aya',
+  name: 'Beddilo',
+  slogan: 'A world of stays',
   url: SITE_URL,
-  logo: `${SITE_URL}/icons/icon.svg`,
-  description: 'Search and book hostels and hotels across Ghana, and management software for property owners.',
+  logo: `${SITE_URL}/icons/icon-512.png`,
+  description: 'Find and book hotels, student hostels and apartments — and software for the people who run them.',
   foundingLocation: { '@type': 'Place', name: 'Accra, Ghana' },
   areaServed: { '@type': 'Country', name: 'Ghana' },
   sameAs: [
@@ -88,7 +88,7 @@ const orgLd = {
     email: 'support@gh-hostels.com',
     contactType: 'customer support',
     areaServed: 'GH',
-    availableLanguage: ['English', 'Twi'],
+    availableLanguage: ['English'],
   },
 }
 
@@ -97,6 +97,62 @@ const TAB_LABEL: Partial<Record<TabKey, string>> = {
   hotels: 'Hotels',
   apartments: 'Apartments',
 }
+
+const STAY_TYPES = [
+  {
+    title: 'Student hostels',
+    body: 'Rooms near campus, priced by the semester or by the night.',
+    href: '/browse?type=hostel',
+    icon: BedDouble,
+    tone: 'bg-bd-amber-100 text-bd-amber-700',
+  },
+  {
+    title: 'Hotels & guesthouses',
+    body: 'From a weekend away to a business trip.',
+    href: '/browse?type=hotel',
+    icon: Building2,
+    tone: 'bg-bd-teal-100 text-bd-teal',
+  },
+  {
+    title: 'Apartments & short-lets',
+    body: 'Space to spread out for longer stays.',
+    href: '/browse?type=apartment',
+    icon: Home,
+    tone: 'bg-bd-coral-100 text-bd-coral-700',
+  },
+] as const
+
+/* Every claim here is backed by how the platform actually works: guest
+   payments settle to the property's own Paystack subaccount with no
+   platform commission (lib/paystack.ts), availability is read from the
+   property's own booking system, and each listing belongs to the tenant
+   that runs it. No verification, security or price guarantees. */
+const BENEFITS = [
+  {
+    icon: HandCoins,
+    title: 'Book directly',
+    body: 'You pay the property itself. Beddilo adds no booking commission to your rate.',
+    tone: 'bg-bd-amber-100 text-bd-amber-700',
+  },
+  {
+    icon: CalendarCheck,
+    title: 'Real-time availability',
+    body: 'Room availability comes straight from each property’s own booking system.',
+    tone: 'bg-bd-teal-100 text-bd-teal',
+  },
+  {
+    icon: KeyRound,
+    title: 'Listed by the property',
+    body: 'Every listing is managed by the people who run the property, not a reseller.',
+    tone: 'bg-bd-teal-100 text-bd-teal',
+  },
+  {
+    icon: Tag,
+    title: 'Clear pricing',
+    body: 'Prices show how they’re billed — per night, per month or per semester.',
+    tone: 'bg-bd-coral-100 text-bd-coral-700',
+  },
+] as const
 
 export default async function LandingPage({
   searchParams,
@@ -131,122 +187,202 @@ export default async function LandingPage({
   const { listings: featuredHostels } = await searchListings({ businessType: featuredBusinessType, limit: 6, sort: 'newest' })
 
   return (
-    <div className="relative min-h-screen antialiased" style={{ background: MP.bg }}>
-      <div className="pointer-events-none fixed inset-0 -z-10 platform-adinkra-bg-light" aria-hidden="true" />
-
+    <div className="relative min-h-screen bg-bd-ivory text-bd-teal antialiased">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
       <AuthErrorRedirect />
 
       <MarketplaceNav />
 
-      {/* ── HERO — immersive band + floating search card. Inspired by the
-           classic "photo hero + floating search card" travel-site pattern,
-           adapted to our own green/gold + Adinkra graphic language instead
-           of stock photography we don't have (using someone else's hostel
-           photo — or a generic stock one — as our own brand hero would be
-           dishonest either way). ────────────────────────────────────── */}
-      <section className="relative">
-        <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-          <div
-            className="absolute inset-0"
-            style={{ background: `linear-gradient(160deg, ${MP.greenDeep} 0%, ${MP.green} 60%, ${MP.goldDeep} 145%)` }}
-          />
-          <div className="mp-hero-adinkra absolute inset-0" />
-        </div>
+      {/* ── HERO — Deep Teal band + floating search card. Brand colour and
+           an arch motif (the doorway inside the "b") instead of stock
+           photography: we only ever show real owner-uploaded photos. ─── */}
+      <section className="relative overflow-hidden">
+        <div className="bd-hero-backdrop absolute inset-0" aria-hidden="true" />
+        <HeroArches />
 
-        <div className="relative mx-auto max-w-3xl px-5 pb-40 pt-20 text-center sm:px-6 sm:pb-60 sm:pt-28">
-          <h1
-            className="mp-reveal mx-auto max-w-2xl text-[36px] font-normal leading-[1.08] tracking-[-0.03em] text-white sm:text-[52px] md:text-[60px]"
-            style={{ fontFamily: 'Georgia, "Times New Roman", serif', animationDelay: '60ms' }}
+        <div className="relative mx-auto max-w-4xl px-5 pb-36 pt-14 text-center sm:px-6 sm:pb-44 sm:pt-24">
+          <p
+            className="mp-reveal text-[12px] font-semibold uppercase tracking-[0.32em] text-bd-amber"
+            style={{ animationDelay: '40ms' }}
           >
-            Find your next stay.
+            A world of stays
+          </p>
+          <h1
+            className="mp-reveal mx-auto mt-4 max-w-3xl font-display text-[40px] font-bold leading-[1.04] tracking-[-0.025em] text-bd-ivory sm:text-[58px] md:text-[68px]"
+            style={{ animationDelay: '80ms' }}
+          >
+            Find your stay.{' '}
+            <span className="block text-bd-amber">Feel at home.</span>
           </h1>
           <p
-            className="mp-reveal mx-auto mt-5 max-w-xl text-[15px] leading-relaxed sm:text-[17px]"
-            style={{ color: 'rgba(255,255,255,0.8)', animationDelay: '120ms' }}
+            className="mp-reveal mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-bd-ivory/80 sm:text-[18px]"
+            style={{ animationDelay: '140ms' }}
           >
-            Search real-time availability across hostels and hotels in Ghana — book directly, no middleman.
+            Discover hotels, student hostels, apartments and beautiful getaways—all in one place.
           </p>
         </div>
       </section>
 
       {/* Floating search card — straddles the hero/page boundary */}
-      <div className="relative z-10 mx-auto -mt-28 max-w-4xl px-5 sm:-mt-32 sm:px-6">
+      <div className="relative z-10 mx-auto -mt-28 max-w-4xl px-4 sm:-mt-32 sm:px-6">
         <HeroSearch initialTab={tab} />
       </div>
 
-      <div className="mx-auto max-w-5xl px-5 pb-4 pt-10 sm:px-6">
-        {featuredHostels.length > 0 ? (
-          <>
-            <h2
-              className="mp-reveal mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.08em]"
-              style={{ color: MP.textSecondary, animationDelay: '240ms' }}
-            >
-              Featured {tabLabel}
+      {/* ── FEATURED — real listings for the selected tab ─────────── */}
+      <section aria-labelledby="featured-heading" className="mx-auto max-w-6xl px-5 pt-14 sm:px-6 sm:pt-20">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-bd-coral-700">Newly listed</p>
+            <h2 id="featured-heading" className="mt-1.5 font-display text-[26px] font-bold tracking-[-0.02em] text-bd-teal sm:text-[32px]">
+              Featured {tabLabel.toLowerCase()}
             </h2>
-            <div className="mx-auto grid max-w-4xl gap-4 text-left sm:grid-cols-3">
-              {featuredHostels.slice(0, 3).map((h, i) => (
-                <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${280 + i * 70}ms` }}>
-                  <ListingCard listing={h} />
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div
-            className="mp-reveal mx-auto max-w-md rounded-2xl p-8 text-center"
-            style={{ background: MP.surfaceSoft, border: `1px solid ${MP.border}`, animationDelay: '280ms' }}
-          >
-            <p className="text-sm font-medium" style={{ color: MP.ink }}>New {tabLabel.toLowerCase()} listings are on the way</p>
-            <p className="mt-1 text-[13px]" style={{ color: MP.textSecondary }}>
-              Run a {tab === 'hostels' ? 'hostel near a campus' : tabLabel.toLowerCase().slice(0, -1)}? Be the first to list.
-            </p>
           </div>
-        )}
-
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center text-[13px]" style={{ color: MP.textSecondary }}>
-          <Link href={`/browse?type=${featuredBusinessType}`} className="font-medium hover:underline">Browse all {tabLabel.toLowerCase()} →</Link>
-          <span aria-hidden="true">·</span>
-          <Link href="/list-your-property" className="font-medium hover:underline">
-            Run a property? List yours free →
+          <Link
+            href={`/browse?type=${featuredBusinessType}`}
+            className="bd-focus group inline-flex items-center gap-1.5 rounded-full text-[14px] font-semibold text-bd-teal underline-offset-4 hover:underline"
+          >
+            Browse all {tabLabel.toLowerCase()}
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
           </Link>
         </div>
-      </div>
 
-      {/* ── TRUST STRIP — editorial 3-column, thin dividers ─────── */}
-      <section className="mx-auto max-w-5xl px-5 py-16 sm:px-6 sm:py-20">
+        {featuredHostels.length > 0 ? (
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
+            {featuredHostels.slice(0, 3).map((h, i) => (
+              <div key={h.slug} className="mp-reveal min-w-0" style={{ animationDelay: `${280 + i * 70}ms` }}>
+                <ListingCard listing={h} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mp-reveal mt-6 rounded-3xl border border-dashed border-bd-teal/20 bg-white/60 px-6 py-10 text-center" style={{ animationDelay: '280ms' }}>
+            <p className="font-display text-[17px] font-semibold text-bd-teal">New {tabLabel.toLowerCase()} listings are on the way</p>
+            <p className="mt-1 text-[14px] text-bd-slate">
+              Run a {tab === 'hostels' ? 'hostel near a campus' : tabLabel.toLowerCase().slice(0, -1)}? Be the first to list.
+            </p>
+            <Link
+              href="/list-your-property"
+              className="bd-focus mt-5 inline-flex items-center gap-2 rounded-full bg-bd-teal px-5 py-2.5 text-[14px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900"
+            >
+              List your property <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        )}
+      </section>
+
+      {/* ── STAY TYPES — every live vertical, one tap away ───────── */}
+      <section aria-labelledby="stay-types-heading" className="mx-auto max-w-6xl px-5 pt-16 sm:px-6 sm:pt-24">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-bd-amber-700">For every journey</p>
+        <h2 id="stay-types-heading" className="mt-1.5 font-display text-[26px] font-bold tracking-[-0.02em] text-bd-teal sm:text-[32px]">
+          Browse by type of stay
+        </h2>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          {STAY_TYPES.map((s) => (
+            <Link
+              key={s.title}
+              href={s.href}
+              className="bd-focus group flex items-start gap-4 rounded-2xl border border-bd-teal/10 bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-bd-teal/20 hover:shadow-[0_16px_32px_-18px_rgba(23,59,66,0.3)] motion-reduce:hover:translate-y-0"
+            >
+              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${s.tone}`}>
+                <s.icon className="h-6 w-6" strokeWidth={1.8} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between gap-2 font-display text-[16px] font-semibold text-bd-teal">
+                  {s.title}
+                  <ArrowRight className="h-4 w-4 shrink-0 text-bd-teal/50 transition-transform group-hover:translate-x-0.5 group-hover:text-bd-teal" aria-hidden="true" />
+                </span>
+                <span className="mt-1 block text-[14px] leading-relaxed text-bd-slate">{s.body}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ── BENEFITS — inclusive, and only what the platform actually does ── */}
+      <section aria-labelledby="benefits-heading" className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-xl text-center">
-          <h2
-            className="mp-reveal text-[26px] font-normal leading-tight tracking-[-0.02em] sm:text-[32px]"
-            style={{ fontFamily: 'Georgia, "Times New Roman", serif', color: MP.ink }}
-          >
-            Booking made honest
+          <h2 id="benefits-heading" className="font-display text-[26px] font-bold tracking-[-0.02em] text-bd-teal sm:text-[32px]">
+            Booking, made simple
           </h2>
-          <p className="mp-reveal mt-3 text-[14px] leading-relaxed sm:text-[15px]" style={{ color: MP.textSecondary, animationDelay: '60ms' }}>
-            No agents, no inflated rates, no guesswork — just your campus hostel, direct.
+          <p className="mt-3 text-[15px] leading-relaxed text-bd-slate sm:text-[16px]">
+            Straightforward stays, booked directly with the people who run them.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-6">
-          {[
-            { icon: HandCoins,   title: 'Book direct, no middleman', body: 'Pay your hostel, not an agent — no hidden commission baked into your rate.' },
-            { icon: Zap,         title: 'Real-time availability',    body: 'Room counts come straight from each hostel’s own booking system.' },
-            { icon: ShieldCheck, title: 'Run by real hostel owners', body: 'Every listing is managed by the hostel itself, not a reseller.' },
-          ].map((item, i) => (
-            <div
+        <ul className="mt-10 grid gap-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:gap-0">
+          {BENEFITS.map((item, i) => (
+            <li
               key={item.title}
-              className="mp-reveal px-1 text-center sm:border-l sm:px-6 sm:text-left first:sm:border-l-0"
-              style={{ borderColor: MP.border, animationDelay: `${120 + i * 80}ms` }}
+              className="mp-reveal flex flex-col items-center px-2 text-center lg:border-l lg:border-bd-teal/10 lg:px-6 lg:first:border-l-0"
+              style={{ animationDelay: `${120 + i * 80}ms` }}
             >
-              <item.icon className="mx-auto h-6 w-6 sm:mx-0" style={{ color: MP.goldDeep }} strokeWidth={1.5} />
-              <p className="mt-4 text-[14px] font-semibold" style={{ color: MP.ink }}>{item.title}</p>
-              <p className="mt-1.5 text-[13px] leading-relaxed" style={{ color: MP.textSecondary }}>{item.body}</p>
-            </div>
+              <span className={`flex h-14 w-14 items-center justify-center rounded-full ${item.tone}`}>
+                <item.icon className="h-6 w-6" strokeWidth={1.8} aria-hidden="true" />
+              </span>
+              <h3 className="mt-4 font-display text-[15px] font-semibold text-bd-teal">{item.title}</h3>
+              <p className="mt-1.5 max-w-[260px] text-[14px] leading-relaxed text-bd-slate">{item.body}</p>
+            </li>
           ))}
+        </ul>
+      </section>
+
+      {/* ── OWNER CTA — routes into the existing onboarding flow ─── */}
+      <section className="mx-auto max-w-6xl px-5 pb-16 sm:px-6 sm:pb-24">
+        <div className="relative overflow-hidden rounded-[28px] bg-bd-teal px-6 py-10 text-center sm:px-12 sm:py-14 md:text-left">
+          <div
+            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-bd-amber/20 blur-3xl"
+            aria-hidden="true"
+          />
+          <div className="relative flex flex-col items-center gap-8 md:flex-row md:justify-between">
+            <div className="max-w-xl">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-bd-amber">For property owners</p>
+              <h2 className="mt-2 font-display text-[26px] font-bold tracking-[-0.02em] text-bd-ivory sm:text-[32px]">
+                List your property with Beddilo
+              </h2>
+              <p className="mt-3 text-[15px] leading-relaxed text-bd-ivory/80 sm:text-[16px]">
+                Bring your property to more guests with a simpler way to manage and grow your accommodation business.
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row md:shrink-0 md:flex-col lg:flex-row">
+              <Link
+                href="/list-your-property"
+                className="bd-focus-on-dark inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-bd-amber px-6 py-3.5 text-[15px] font-semibold text-bd-teal transition-colors hover:bg-bd-amber-600"
+              >
+                List your property <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <Link
+                href="/for-owners"
+                className="bd-focus-on-dark inline-flex items-center justify-center whitespace-nowrap rounded-full border border-bd-ivory/30 px-6 py-3.5 text-[15px] font-medium text-bd-ivory transition-colors hover:bg-bd-ivory/10"
+              >
+                See the management system
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
       <MarketplaceFooter />
     </div>
+  )
+}
+
+/** Decorative arched doorways — the counter shape of the "b" in the
+ *  Beddilo mark — drifting off the hero's edges. */
+function HeroArches() {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      viewBox="0 0 1200 600"
+      preserveAspectRatio="xMidYMid slice"
+      fill="none"
+      aria-hidden="true"
+    >
+      <g stroke="rgb(247 242 233 / 0.07)" strokeWidth="2">
+        <path d="M-60 640V300a170 170 0 0 1 340 0v340" />
+        <path d="M-10 640V320a120 120 0 0 1 240 0v320" />
+        <path d="M940 640V250a190 190 0 0 1 380 0v390" />
+        <path d="M995 640V275a135 135 0 0 1 270 0v365" />
+      </g>
+    </svg>
   )
 }
