@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { resolveTenant, resolveTenantBySlug } from '@/lib/tenant/resolve'
 import { classifyHost, tenantHost, type BusinessType } from '@/lib/tenant/host-classification'
+import { isUnderPath } from '@/lib/path-prefix'
 
 const BYPASS_PATHS = [
   '/widget',
@@ -20,6 +21,10 @@ const BYPASS_PATHS = [
 const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/privacy', '/terms', '/browse', '/listing', '/for-owners', '/list-your-property', '/offline', '/api/public', '/api/widget', '/api/mobile/role', '/api/mobile/tenant-theme']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']
 const PORTAL_PATHS  = ['/staff-portal', '/occupant-portal']
+// Reachable by a signed-in user who is not a member of the request's tenant:
+// sign-out and account flows (set-password, OTP, invite acceptance), and the
+// super-admin console, whose pages and APIs check platform_admins themselves.
+const MEMBERSHIP_EXEMPT_PATHS = ['/api/auth', '/auth', '/admin', '/api/admin']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -45,7 +50,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const isNoAuth = NO_AUTH_PATHS.some((p) => pathname.startsWith(p))
+  // Whole-segment match: a bare startsWith() made the dashboard's /bookings
+  // and /visitors public via '/book' and '/visit'.
+  const isNoAuth = NO_AUTH_PATHS.some((p) => isUnderPath(pathname, p))
   const tenant   = await resolveTenant(hostname)
 
   if (!tenant && !isAppDomain(hostname)) {
@@ -274,12 +281,14 @@ export async function middleware(request: NextRequest) {
   if (claims?.portal_role)  reqHeaders.set('x-portal-role',  claims.portal_role)
   if (claims?.occupant_id) reqHeaders.set('x-occupant-id',  claims.occupant_id)
 
-  // Always fetch role fresh from DB — JWT claims are stale after role changes
+  // Always fetch role fresh from DB — JWT claims are stale after role changes.
+  // No fallback to the JWT's tenant_role: on a subdomain that role belongs to
+  // the user's own tenant, not the one in x-tenant-id.
   const resolvedTenantIdForRole = reqHeaders.get('x-tenant-id')
+  let memberRole: string | null | undefined = null
   if (user && resolvedTenantIdForRole) {
-    const freshRole = await fetchRoleForUser(user.id, resolvedTenantIdForRole)
-    if (freshRole) reqHeaders.set('x-tenant-role', freshRole)
-    else if (claims?.tenant_role) reqHeaders.set('x-tenant-role', claims.tenant_role)
+    memberRole = await fetchRoleForUser(user.id, resolvedTenantIdForRole)
+    if (memberRole) reqHeaders.set('x-tenant-role', memberRole)
   }
 
   // ── Impersonation override ─────────────────────────────────────────────────
@@ -309,6 +318,34 @@ export async function middleware(request: NextRequest) {
       }
       reqHeaders.set('x-tenant-role',         'owner')
       reqHeaders.set('x-admin-impersonating', 'true')
+    }
+  }
+
+  // ── Tenant membership guard ────────────────────────────────────────────────
+  // x-tenant-id comes from the hostname (subdomain or custom domain) or the
+  // user's JWT claims; neither proves the signed-in user belongs to that
+  // tenant. Dashboard pages read tenant data with the service-role client
+  // keyed on that header, so without this check any signed-in account —
+  // another property's owner or staff, a resident, or a brand-new signup —
+  // could open a tenant's subdomain and read its dashboard. Residents keep
+  // their portal (and its /api/occupant routes); everyone else needs an
+  // active tenant_members row or a verified impersonation (set just above).
+  const guardedTenantId = reqHeaders.get('x-tenant-id')
+  if (
+    user && guardedTenantId && !memberRole &&
+    reqHeaders.get('x-admin-impersonating') !== 'true' &&
+    !MEMBERSHIP_EXEMPT_PATHS.some((p) => isUnderPath(pathname, p))
+  ) {
+    const isApi = pathname.startsWith('/api/')
+    const occupant = memberRole === undefined ? undefined : await checkIsOccupantOfTenant(user.id, guardedTenantId)
+    if (memberRole === undefined || occupant === undefined) {
+      return isApi
+        ? NextResponse.json({ error: 'Could not verify access — try again.' }, { status: 503 })
+        : new NextResponse('Could not verify your access. Please try again.', { status: 503 })
+    }
+    if (!occupant) return denyTenantAccess(isApi)
+    if (!isPortalPath && !isApi && pathname !== '/') {
+      return NextResponse.redirect(new URL('/occupant-portal', request.url))
     }
   }
 
@@ -580,19 +617,54 @@ async function fetchBrandingForTenant(tenantId: string): Promise<TenantBranding 
   } catch { return null }
 }
 
-async function fetchRoleForUser(userId: string, tenantId: string): Promise<string | null> {
+/** Active role in the tenant; null when not a member, undefined when the
+ *  lookup itself failed (the membership guard fails closed on both). */
+async function fetchRoleForUser(userId: string, tenantId: string): Promise<string | null | undefined> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  const url = `${supabaseUrl}/rest/v1/tenant_members?user_id=eq.${userId}&tenant_id=eq.${tenantId}&is_active=eq.true&select=role&limit=1`
+  const url = `${supabaseUrl}/rest/v1/tenant_members?user_id=eq.${encodeURIComponent(userId)}&tenant_id=eq.${encodeURIComponent(tenantId)}&is_active=eq.true&select=role&limit=1`
   try {
     const res = await fetch(url, {
       headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
       cache: 'no-store',
     })
-    if (!res.ok) return null
+    if (!res.ok) return undefined
     const rows = await res.json()
     return rows?.[0]?.role ?? null
-  } catch { return null }
+  } catch { return undefined }
+}
+
+/** Whether the user is a resident (occupants row) of this specific tenant;
+ *  undefined when the lookup failed. */
+async function checkIsOccupantOfTenant(userId: string, tenantId: string): Promise<boolean | undefined> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const url = `${supabaseUrl}/rest/v1/occupants?user_id=eq.${encodeURIComponent(userId)}&tenant_id=eq.${encodeURIComponent(tenantId)}&select=id&limit=1`
+  try {
+    const res = await fetch(url, {
+      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
+      cache: 'no-store',
+    })
+    if (!res.ok) return undefined
+    const rows = await res.json()
+    return Array.isArray(rows) && rows.length > 0
+  } catch { return undefined }
+}
+
+/** 403 for a signed-in user with no role in this tenant. The page offers
+ *  sign-out (POST /api/auth/signout is exempt from the guard) rather than a
+ *  redirect to /login, which would bounce a signed-in user straight back. */
+function denyTenantAccess(isApi: boolean): NextResponse {
+  if (isApi) return NextResponse.json({ error: 'You do not have access to this property.' }, { status: 403 })
+  return new NextResponse(
+    '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>No access</title></head>' +
+    '<body style="font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 1rem;color:#173B42">' +
+    '<h1 style="font-size:1.4rem">You don\'t have access to this property</h1>' +
+    '<p>The account you are signed in with is not a member of this property\'s team.</p>' +
+    '<form method="post" action="/api/auth/signout"><button type="submit" style="font:inherit;padding:.6rem 1.1rem;border-radius:999px;border:0;background:#173B42;color:#F7F2E9;cursor:pointer">Sign out and use another account</button></form>' +
+    '</body></html>',
+    { status: 403, headers: { 'content-type': 'text/html; charset=utf-8' } },
+  )
 }
 
 export const config = {

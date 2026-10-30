@@ -44,10 +44,12 @@ export async function POST(request: NextRequest) {
 
   const supabaseAuth = await createClient()
   const { data: { user } } = await supabaseAuth.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+
+  const admin = createAdminClient()
 
   let tenantId = await getServerTenantId() ?? parsed.data.tenantId ?? null
-  if (!tenantId && user) {
-    const admin = createAdminClient()
+  if (!tenantId) {
     const { data: m } = await admin
       .from('tenant_members')
       .select('tenant_id')
@@ -60,7 +62,18 @@ export async function POST(request: NextRequest) {
 
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
-  const admin = createAdminClient()
+  // The tenant id can come from the request body, so membership is the real
+  // authorization gate for the service-role writes below (same check as
+  // /api/onboarding/logo).
+  const { data: membership } = await admin
+    .from('tenant_members')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .maybeSingle()
+  if (!membership) return NextResponse.json({ error: 'Not a member of this tenant' }, { status: 403 })
+
   const d = parsed.data
 
   // Slug uniqueness — wizard already polls /check-slug but defend against races
