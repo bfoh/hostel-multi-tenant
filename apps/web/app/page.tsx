@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AuthErrorRedirect } from '@/components/auth/auth-error-redirect'
 import { ListingCard } from '@/components/public/listing-card'
 import { searchListings, type MarketplaceVertical } from '@/lib/directory'
+import { photosFirst } from '@/lib/listing-display'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { HeroSearch, type TabKey } from '@/components/marketplace/hero-search'
@@ -184,7 +185,13 @@ export default async function LandingPage({
     tab === 'hotels' ? 'hotel' : tab === 'apartments' ? 'apartment' : 'hostel'
   const tabLabel = TAB_LABEL[tab] ?? 'Hostels'
 
-  const { listings: featuredHostels } = await searchListings({ businessType: featuredBusinessType, limit: 6, sort: 'newest' })
+  // Every listing in the vertical (a regional directory — small): the newest
+  // with real photos lead the featured row, the rest still fill it, and
+  // their towns become the destination field's suggestions.
+  const { listings } = await searchListings({ businessType: featuredBusinessType, limit: 200, sort: 'newest' })
+  const featured = photosFirst(listings).slice(0, 6)
+  const destinations = Array.from(new Set(listings.map((l) => l.address_city?.trim()).filter((c): c is string => !!c)))
+    .sort((a, b) => a.localeCompare(b))
 
   return (
     <div className="relative min-h-screen bg-bd-ivory text-bd-teal antialiased">
@@ -200,7 +207,7 @@ export default async function LandingPage({
         <div className="bd-hero-backdrop absolute inset-0" aria-hidden="true" />
         <HeroArches />
 
-        <div className="relative mx-auto max-w-4xl px-5 pb-36 pt-14 text-center sm:px-6 sm:pb-44 sm:pt-24">
+        <div className="relative mx-auto max-w-4xl px-5 pb-28 pt-9 text-center sm:px-6 sm:pb-44 sm:pt-24">
           <p
             className="mp-reveal text-[12px] font-semibold uppercase tracking-[0.32em] text-bd-amber"
             style={{ animationDelay: '40ms' }}
@@ -208,14 +215,14 @@ export default async function LandingPage({
             A world of stays
           </p>
           <h1
-            className="mp-reveal mx-auto mt-4 max-w-3xl font-display text-[40px] font-bold leading-[1.04] tracking-[-0.025em] text-bd-ivory sm:text-[58px] md:text-[68px]"
+            className="mp-reveal mx-auto mt-3 max-w-3xl font-display text-[34px] font-bold leading-[1.05] tracking-[-0.025em] text-bd-ivory min-[375px]:text-[38px] sm:mt-4 sm:text-[58px] md:text-[68px]"
             style={{ animationDelay: '80ms' }}
           >
             Find your stay.{' '}
             <span className="block text-bd-amber">Feel at home.</span>
           </h1>
           <p
-            className="mp-reveal mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-bd-ivory/80 sm:text-[18px]"
+            className="mp-reveal mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-bd-ivory/80 sm:mt-5 sm:max-w-xl sm:text-[18px]"
             style={{ animationDelay: '140ms' }}
           >
             Discover hotels, student hostels, apartments and beautiful getaways—all in one place.
@@ -224,12 +231,12 @@ export default async function LandingPage({
       </section>
 
       {/* Floating search card — straddles the hero/page boundary */}
-      <div className="relative z-10 mx-auto -mt-28 max-w-4xl px-4 sm:-mt-32 sm:px-6">
-        <HeroSearch initialTab={tab} />
+      <div className="relative z-10 mx-auto -mt-20 max-w-4xl px-4 sm:-mt-32 sm:px-6">
+        <HeroSearch initialTab={tab} destinations={destinations} />
       </div>
 
       {/* ── FEATURED — real listings for the selected tab ─────────── */}
-      <section aria-labelledby="featured-heading" className="mx-auto max-w-6xl px-5 pt-14 sm:px-6 sm:pt-20">
+      <section aria-labelledby="featured-heading" className="mx-auto max-w-6xl px-5 pt-10 sm:px-6 sm:pt-20">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-bd-coral-700">Newly listed</p>
@@ -246,14 +253,20 @@ export default async function LandingPage({
           </Link>
         </div>
 
-        {featuredHostels.length > 0 ? (
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
-            {featuredHostels.slice(0, 3).map((h, i) => (
-              <div key={h.slug} className="mp-reveal min-w-0" style={{ animationDelay: `${280 + i * 70}ms` }}>
+        {featured.length > 0 ? (
+          // Phones: a swipeable row with the next card peeking in, instead
+          // of a long stack. Wider screens: a grid.
+          <ul className="mp-no-scrollbar -mx-5 mt-5 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 sm:mx-0 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 md:grid-cols-3">
+            {featured.map((h, i) => (
+              <li
+                key={h.slug}
+                className="mp-reveal w-[80%] max-w-[300px] shrink-0 snap-start sm:w-auto sm:max-w-none"
+                style={{ animationDelay: `${280 + Math.min(i, 5) * 70}ms` }}
+              >
                 <ListingCard listing={h} />
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         ) : (
           <div className="mp-reveal mt-6 rounded-3xl border border-dashed border-bd-teal/20 bg-white/60 px-6 py-10 text-center" style={{ animationDelay: '280ms' }}>
             <p className="font-display text-[17px] font-semibold text-bd-teal">New {tabLabel.toLowerCase()} listings are on the way</p>
@@ -271,19 +284,19 @@ export default async function LandingPage({
       </section>
 
       {/* ── STAY TYPES — every live vertical, one tap away ───────── */}
-      <section aria-labelledby="stay-types-heading" className="mx-auto max-w-6xl px-5 pt-16 sm:px-6 sm:pt-24">
+      <section aria-labelledby="stay-types-heading" className="mx-auto max-w-6xl px-5 pt-12 sm:px-6 sm:pt-24">
         <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-bd-amber-700">For every journey</p>
         <h2 id="stay-types-heading" className="mt-1.5 font-display text-[26px] font-bold tracking-[-0.02em] text-bd-teal sm:text-[32px]">
           Browse by type of stay
         </h2>
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-3 sm:gap-4">
           {STAY_TYPES.map((s) => (
             <Link
               key={s.title}
               href={s.href}
-              className="bd-focus group flex items-start gap-4 rounded-2xl border border-bd-teal/10 bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-bd-teal/20 hover:shadow-[0_16px_32px_-18px_rgba(23,59,66,0.3)] motion-reduce:hover:translate-y-0"
+              className="bd-focus group flex items-start gap-4 rounded-2xl border border-bd-teal/10 bg-white p-4 transition-[border-color,box-shadow] duration-200 hover:border-bd-teal/25 hover:shadow-[0_14px_28px_-18px_rgba(23,59,66,0.35)] sm:p-5"
             >
-              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${s.tone}`}>
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${s.tone} sm:h-12 sm:w-12 sm:rounded-2xl`}>
                 <s.icon className="h-6 w-6" strokeWidth={1.8} aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
@@ -299,7 +312,7 @@ export default async function LandingPage({
       </section>
 
       {/* ── BENEFITS — inclusive, and only what the platform actually does ── */}
-      <section aria-labelledby="benefits-heading" className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-24">
+      <section aria-labelledby="benefits-heading" className="mx-auto max-w-6xl px-5 py-12 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-xl text-center">
           <h2 id="benefits-heading" className="font-display text-[26px] font-bold tracking-[-0.02em] text-bd-teal sm:text-[32px]">
             Booking, made simple
@@ -309,26 +322,26 @@ export default async function LandingPage({
           </p>
         </div>
 
-        <ul className="mt-10 grid gap-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:gap-0">
+        <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-7 sm:mt-10 sm:gap-6 lg:grid-cols-4 lg:gap-0">
           {BENEFITS.map((item, i) => (
             <li
               key={item.title}
-              className="mp-reveal flex flex-col items-center px-2 text-center lg:border-l lg:border-bd-teal/10 lg:px-6 lg:first:border-l-0"
+              className="mp-reveal flex flex-col items-center text-center sm:px-2 lg:border-l lg:border-bd-teal/10 lg:px-6 lg:first:border-l-0"
               style={{ animationDelay: `${120 + i * 80}ms` }}
             >
-              <span className={`flex h-14 w-14 items-center justify-center rounded-full ${item.tone}`}>
+              <span className={`flex h-12 w-12 items-center justify-center rounded-full ${item.tone} sm:h-14 sm:w-14`}>
                 <item.icon className="h-6 w-6" strokeWidth={1.8} aria-hidden="true" />
               </span>
-              <h3 className="mt-4 font-display text-[15px] font-semibold text-bd-teal">{item.title}</h3>
-              <p className="mt-1.5 max-w-[260px] text-[14px] leading-relaxed text-bd-slate">{item.body}</p>
+              <h3 className="mt-3 font-display text-[15px] font-semibold text-bd-teal sm:mt-4">{item.title}</h3>
+              <p className="mt-1 max-w-[260px] text-[13px] leading-relaxed text-bd-slate sm:mt-1.5 sm:text-[14px]">{item.body}</p>
             </li>
           ))}
         </ul>
       </section>
 
       {/* ── OWNER CTA — routes into the existing onboarding flow ─── */}
-      <section className="mx-auto max-w-6xl px-5 pb-16 sm:px-6 sm:pb-24">
-        <div className="relative overflow-hidden rounded-[28px] bg-bd-teal px-6 py-10 text-center sm:px-12 sm:py-14 md:text-left">
+      <section className="mx-auto max-w-6xl px-5 pb-12 sm:px-6 sm:pb-24">
+        <div className="relative overflow-hidden rounded-[24px] bg-bd-teal px-5 py-8 text-center sm:rounded-[28px] sm:px-12 sm:py-14 md:text-left">
           <div
             className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-bd-amber/20 blur-3xl"
             aria-hidden="true"

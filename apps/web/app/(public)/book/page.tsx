@@ -166,7 +166,12 @@ const RATE_LABEL: Record<string, string> = {
   semester: '/ semester',
 }
 
-export default async function PublicBookingPage() {
+export default async function PublicBookingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ room?: string }>
+}) {
+  const { room } = await searchParams
   const tenant = await getTenantFromRequest()
   if (!tenant) notFound()
 
@@ -317,6 +322,7 @@ export default async function PublicBookingPage() {
             ) : (
               <BookingFlow
                 categories={categories}
+                initialCategoryId={room ?? null}
                 tenant={{
                   id: tenant.id,
                   name: tenant.name,

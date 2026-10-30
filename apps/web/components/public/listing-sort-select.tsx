@@ -9,6 +9,7 @@ export function ListingSortSelect({ current }: { current: string }) {
   function onChange(value: string) {
     const params = new URLSearchParams(searchParams.toString())
     params.set('sort', value)
+    params.delete('page')
     router.push(`/browse?${params.toString()}`)
   }
 
@@ -17,7 +18,7 @@ export function ListingSortSelect({ current }: { current: string }) {
       value={current}
       onChange={(e) => onChange(e.target.value)}
       aria-label="Sort listings"
-      className="rounded-md border border-neutral-300 px-2 py-1 text-[13px] text-neutral-900"
+      className="bd-focus min-h-[40px] cursor-pointer rounded-xl border border-bd-teal/15 bg-white px-3 text-[16px] text-bd-teal sm:text-[14px]"
     >
       <option value="name">Name</option>
       <option value="price_asc">Price: low to high</option>

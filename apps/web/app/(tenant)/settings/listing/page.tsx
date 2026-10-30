@@ -5,6 +5,7 @@ import { ChevronLeft, Store } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import { ListingSettingsForm } from '@/components/settings/listing-settings-form'
+import { ListingPhotosCard } from '@/components/settings/listing-photos-card'
 
 export const metadata: Metadata = { title: 'Public Listing' }
 
@@ -30,13 +31,13 @@ export default async function ListingSettingsPage() {
   const admin = createAdminClient()
   const { data: tenant } = await admin
     .from('tenants')
-    .select('slug, listed_publicly, online_booking_enabled, booking_payment_mode, address_city, address_region, paystack_subaccount_code')
+    .select('slug, listed_publicly, online_booking_enabled, booking_payment_mode, address_city, address_region, paystack_subaccount_code, hero_image_url')
     .eq('id', tenantId ?? '')
     .single()
 
   const { data: categories } = await admin
     .from('room_categories')
-    .select('id, name, base_rate, rate_unit')
+    .select('id, name, base_rate, rate_unit, image_urls')
     .eq('tenant_id', tenantId ?? '')
     .eq('is_active', true)
     .order('sort_order')
@@ -73,6 +74,11 @@ export default async function ListingSettingsPage() {
         hasPayoutAccount={!!tenant?.paystack_subaccount_code}
         categories={categories ?? []}
         isHotel={isHotel}
+      />
+
+      <ListingPhotosCard
+        hasPropertyPhoto={!!tenant?.hero_image_url}
+        categories={(categories ?? []).map((c) => ({ id: c.id, name: c.name, photoCount: c.image_urls?.length ?? 0 }))}
       />
     </div>
   )

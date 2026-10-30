@@ -1,24 +1,29 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { BedDouble, Building2 } from 'lucide-react'
+import { ImageOff } from 'lucide-react'
+import { listingInitials } from '@/lib/listing-display'
 
 /**
- * Listing hero photo with a branded fallback. Only ever shows the
- * property's own uploaded photo (see DirectoryListing.hero_image_url) —
- * when there isn't one, or it fails to load, we show a neutral
- * placeholder rather than substituting a stock image.
+ * Listing photo with a fallback. Only ever shows the property's own
+ * uploaded photo (see DirectoryListing.hero_image_url) — never a stock
+ * image. Callers that know there is no photo render <NoPhotoTile> in a
+ * compact slot instead; this component's own fallback only covers a photo
+ * URL that fails to load, so the box it already occupies isn't left blank.
  */
 export function ListingPhoto({
   src,
   alt,
-  businessType,
+  name,
   className = '',
+  sizes,
 }: {
-  src: string | null
+  src: string
   alt: string
-  businessType: string
+  /** Property name, for the initials shown if the photo fails to load. */
+  name: string
   className?: string
+  sizes?: string
 }) {
   const [failed, setFailed] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -30,14 +35,13 @@ export function ListingPhoto({
     if (img && img.complete && img.naturalWidth === 0) setFailed(true)
   }, [src])
 
-  if (!src || failed) {
-    const Icon = businessType === 'hostel' ? BedDouble : Building2
+  if (failed) {
     return (
-      <div
-        className={`flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-bd-teal-50 to-bd-ivory-200 ${className}`}
-      >
-        <Icon className="h-9 w-9 text-bd-teal/35" strokeWidth={1.5} aria-hidden="true" />
-        <span className="text-[12px] font-medium text-bd-slate">No photos yet</span>
+      <div className={`flex h-full w-full flex-col items-center justify-center gap-1.5 bg-bd-ivory-200 ${className}`}>
+        <span className="font-display text-[22px] font-bold text-bd-teal/45" aria-hidden="true">{listingInitials(name)}</span>
+        <span className="flex items-center gap-1 text-[12px] font-medium text-bd-slate">
+          <ImageOff className="h-3.5 w-3.5" aria-hidden="true" /> Photo unavailable
+        </span>
       </div>
     )
   }
@@ -48,10 +52,42 @@ export function ListingPhoto({
       ref={imgRef}
       src={src}
       alt={alt}
+      sizes={sizes}
       loading="lazy"
       decoding="async"
       onError={() => setFailed(true)}
-      className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none ${className}`}
+      className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] motion-reduce:transition-none ${className}`}
     />
+  )
+}
+
+/**
+ * Compact stand-in for a property or room with no photos: the name's
+ * initials on a tinted tile, sized by the caller. Says plainly that no
+ * photos have been added rather than looking like a broken image.
+ */
+export function NoPhotoTile({
+  name,
+  caption = 'No photos yet',
+  className = '',
+}: {
+  name: string
+  /** Shown under the initials when the tile is big enough; null hides it. */
+  caption?: string | null
+  className?: string
+}) {
+  return (
+    <div
+      className={`flex shrink-0 flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-br from-bd-teal-50 to-bd-ivory-200 text-center ${className}`}
+      role="img"
+      aria-label={`${name}: no photos yet`}
+    >
+      <span className="font-display text-[20px] font-bold leading-none text-bd-teal/55" aria-hidden="true">
+        {listingInitials(name)}
+      </span>
+      {caption && (
+        <span className="px-1 text-[11px] font-medium leading-tight text-bd-slate" aria-hidden="true">{caption}</span>
+      )}
+    </div>
   )
 }

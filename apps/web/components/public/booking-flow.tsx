@@ -31,6 +31,20 @@ interface Tenant {
 interface BookingFlowProps {
   categories: Category[]
   tenant: Tenant
+  /** Room type picked on the marketplace listing (?room=). Opens straight
+   *  at the details step when that type exists and isn't sold out;
+   *  otherwise the flow starts at the room picker as usual. */
+  initialCategoryId?: string | null
+}
+
+/** The category to open the flow on, under the same rule the room picker
+ *  applies: it must exist and not be sold out. */
+export function preselectedCategory<C extends { id: string; available: number }>(
+  categories: C[],
+  id: string | null | undefined,
+): C | null {
+  if (!id) return null
+  return categories.find((c) => c.id === id && c.available > 0) ?? null
 }
 
 interface OccupantMatchingProfile {
@@ -1175,9 +1189,10 @@ function Steps({ current, brandColor }: { current: number; brandColor: string })
 
 /* ── Main component ────────────────────────────────────────────────────── */
 
-export function BookingFlow({ categories, tenant }: BookingFlowProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1)
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
+export function BookingFlow({ categories, tenant, initialCategoryId }: BookingFlowProps) {
+  const initialCategory = preselectedCategory(categories, initialCategoryId)
+  const [step, setStep] = useState<1 | 2 | 3>(initialCategory ? 2 : 1)
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(initialCategory)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<BookingResult | null>(null)

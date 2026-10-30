@@ -18,7 +18,10 @@ const BYPASS_PATHS = [
   '/robots.txt',
   '/sitemap.xml',
 ]
-const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/privacy', '/terms', '/browse', '/listing', '/for-owners', '/list-your-property', '/offline', '/api/public', '/api/widget', '/api/mobile/role', '/api/mobile/tenant-theme']
+// The last four are the generated PWA manifest and link-preview images plus
+// /.well-known probes: browsers and social crawlers fetch them logged out,
+// and a redirect to /login broke installs and link previews.
+const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/privacy', '/terms', '/browse', '/listing', '/for-owners', '/list-your-property', '/offline', '/api/public', '/api/widget', '/api/mobile/role', '/api/mobile/tenant-theme', '/manifest.webmanifest', '/opengraph-image', '/twitter-image', '/.well-known']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']
 const PORTAL_PATHS  = ['/staff-portal', '/occupant-portal']
 // Reachable by a signed-in user who is not a member of the request's tenant:

@@ -54,7 +54,7 @@ export function RoomPhotosUpload({ categoryId, initialUrls }: {
     <div className="space-y-2">
       <p className="text-sm font-medium text-text-primary">Photos</p>
       <p className="text-xs text-text-secondary">
-        Shown on your public marketplace listing and booking page. Up to {MAX_PHOTOS} photos, 4MB each.
+        Shown on your public marketplace listing and booking page. Use your own photos of this room type — landscape, in daylight. Up to {MAX_PHOTOS} photos, 4 MB each.
       </p>
 
       <div className="flex flex-wrap gap-3">

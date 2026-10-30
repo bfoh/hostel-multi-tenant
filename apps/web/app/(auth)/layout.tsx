@@ -76,7 +76,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       {/* ── Auth card ─────────────────────────────────────────────── */}
       <div className="relative z-10 w-full max-w-[440px]">
         {/* Logo / Identity */}
-        <div className="mb-7 flex flex-col items-center">
+        <div className="mb-5 flex flex-col items-center sm:mb-7">
           {isTenantPage && tenantLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -104,12 +104,12 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         </div>
 
         {/* Card */}
-        <div className="rounded-3xl border border-bd-ivory/15 bg-bd-teal/70 p-6 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)] backdrop-blur-sm sm:p-8">
+        <div className="rounded-3xl border border-bd-ivory/15 bg-bd-teal/70 p-5 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)] backdrop-blur-sm sm:p-8">
           {children}
         </div>
 
         {/* Footer */}
-        <p className="mt-8 text-center text-[12px] text-bd-ivory/60">
+        <p className="mt-6 text-center text-[12px] text-bd-ivory/60 sm:mt-8">
           {isTenantPage
             ? `© ${new Date().getFullYear()} ${tenantName} · Powered by Beddilo`
             : `© ${new Date().getFullYear()} Beddilo · A world of stays`}

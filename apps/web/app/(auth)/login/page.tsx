@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { GraduationCap, Loader2 } from 'lucide-react'
+import { GraduationCap, Loader2, ChevronDown } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 import { PasswordInput } from '@/components/ui/password-input'
@@ -106,14 +106,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <AuthHeading title="Welcome back" subtitle="Sign in to your dashboard or resident portal." />
 
       {resetSuccess && (
         <AuthAlert tone="success">Password updated successfully. Sign in with your new password.</AuthAlert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div>
           <label htmlFor="email" className={`${authLabelClass} mb-1.5`}>
             Email
@@ -187,19 +187,20 @@ export default function LoginPage() {
         </Link>
       </p>
 
-      {/* Resident hint */}
-      <div className="rounded-2xl border border-bd-ivory/15 bg-bd-ivory/[0.04] px-4 py-4">
-        <div className="flex items-center gap-2.5">
+      {/* Resident hint — one line until opened, so the form stays the focus. */}
+      <details className="group rounded-2xl border border-bd-ivory/15 bg-bd-ivory/[0.04]">
+        <summary className="bd-focus-on-dark flex min-h-[44px] cursor-pointer list-none items-center gap-2.5 rounded-2xl px-4 py-2.5 [&::-webkit-details-marker]:hidden">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-bd-amber/15 text-bd-amber">
             <GraduationCap className="h-4 w-4" aria-hidden="true" />
           </span>
-          <p className="text-[14px] font-semibold text-bd-ivory">Student or resident?</p>
-        </div>
-        <p className="mt-1.5 pl-[38px] text-[13px] leading-relaxed text-bd-ivory/75">
-          Use this same page to sign in with the details your property manager sent you &mdash;
+          <span className="flex-1 text-[14px] font-semibold text-bd-ivory">Student or resident?</span>
+          <ChevronDown className="h-4 w-4 text-bd-ivory/70 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <p className="px-4 pb-4 pl-[54px] text-[13px] leading-relaxed text-bd-ivory/75">
+          Sign in here with the details your property manager sent you &mdash;
           you&apos;ll be taken to your portal automatically.
         </p>
-      </div>
+      </details>
     </div>
   )
 }

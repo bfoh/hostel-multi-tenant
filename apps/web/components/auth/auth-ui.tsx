@@ -11,8 +11,8 @@ import { AlertCircle } from 'lucide-react'
  */
 
 export const authInputClass =
-  'w-full rounded-xl border border-bd-ivory/40 bg-bd-ivory/[0.06] px-4 py-3 text-[15px] text-bd-ivory ' +
-  'placeholder:text-bd-ivory/45 transition-colors duration-200 ' +
+  'w-full rounded-xl border border-bd-ivory/40 bg-bd-ivory/[0.06] px-4 py-3 text-[16px] text-bd-ivory sm:text-[15px] ' +
+  'placeholder:text-bd-ivory/55 transition-colors duration-200 ' +
   'hover:border-bd-ivory/60 focus:border-bd-amber focus:bg-bd-ivory/[0.09] focus:outline-none focus:ring-2 focus:ring-bd-amber/30 ' +
   'aria-[invalid=true]:border-bd-coral-300 aria-[invalid=true]:focus:ring-bd-coral-300/30'
 

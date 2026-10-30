@@ -21,6 +21,9 @@ export interface DirectoryListing {
   address_city:   string | null
   address_region: string | null
   business_type:  BusinessType
+  /** tenants.accommodation_type — 'hotel' or 'apartment' within the hotel
+   *  pool; hostels carry the column default and ignore it. */
+  accommodation_type: string | null
   from_rate:      number
   /** Billing unit of the room type that sets from_rate (room_categories.
    *  rate_unit: 'night' | 'week' | 'month' | 'semester') — so a card never
@@ -76,7 +79,7 @@ export async function searchListings(
   // regional directory, without needing a materialized view.
   let query = supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, hero_image_url, primary_color, address_city, address_region, business_type, created_at, room_categories!inner(base_rate, rate_unit, is_active, image_urls, sort_order)')
+    .select('id, slug, name, tagline, logo_url, hero_image_url, primary_color, address_city, address_region, business_type, accommodation_type, created_at, room_categories!inner(base_rate, rate_unit, is_active, image_urls, sort_order)')
     .eq('listed_publicly', true)
     .in('status', ['trial', 'active', 'trial_expired'])
     .eq('room_categories.is_active', true)
@@ -119,7 +122,7 @@ export async function searchListings(
       byTenant.set(row.id, {
         slug: row.slug, name: row.name, tagline: row.tagline, logo_url: row.logo_url,
         primary_color: row.primary_color, address_city: row.address_city, address_region: row.address_region,
-        business_type: row.business_type,
+        business_type: row.business_type, accommodation_type: row.accommodation_type ?? null,
         from_rate: minRate, from_rate_unit: minRateUnit, category_count: activeRates.length,
         hero_image_url: row.hero_image_url ?? firstPhoto,
         created_at: row.created_at,

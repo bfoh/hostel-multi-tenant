@@ -5,6 +5,11 @@
  * dashboard's /bookings and /visitors rode on the public '/book' and
  * '/visit' entries and skipped the signed-in checks (login redirect,
  * resident-portal redirect, password-change and trial guards).
+ *
+ * The PWA manifest and the generated link-preview images are fetched by
+ * browsers and social crawlers with no session; when they were missing from
+ * NO_AUTH_PATHS they redirected to /login, which broke installs and every
+ * shared-link preview.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -46,6 +51,12 @@ function dashboardRoutes(): string[] {
 }
 
 describe('middleware logged-out paths', () => {
+  it('serves the manifest, link-preview images and /.well-known without a login', () => {
+    for (const p of ['/manifest.webmanifest', '/opengraph-image', '/twitter-image', '/.well-known/security.txt']) {
+      expect(isNoAuth(p)).toBe(true)
+    }
+  })
+
   it('keeps the public marketplace and booking pages logged out', () => {
     for (const p of ['/browse', '/listing/acacia-court', '/book', '/book/confirm', '/visit/abc', '/portal/xyz', '/order/123', '/api/public/listings', '/privacy', '/terms']) {
       expect(isNoAuth(p)).toBe(true)

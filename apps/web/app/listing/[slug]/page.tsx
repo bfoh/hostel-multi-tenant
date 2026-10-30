@@ -1,14 +1,17 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Mail, BedDouble, Star } from 'lucide-react'
+import { MapPin, Phone, Mail, Star, ArrowRight, ExternalLink, Users, BedDouble, Building2, Home } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { formatGHS } from '@/lib/utils'
-import { amenityIcon } from '@/lib/amenity-icons'
+import { amenityIcon, amenityLabel } from '@/lib/amenity-icons'
 import { tenantHost, bareRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
+import { stayTypeLabel, stayVertical, capacityLabel, bedAvailability } from '@/lib/listing-display'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { ShareButton } from '@/components/public/share-button'
+import { ListingGallery } from '@/components/public/listing-gallery'
+import { NoPhotoTile } from '@/components/public/listing-photo'
+import { Price } from '@/components/public/price'
 import { MP } from '@/lib/marketplace-theme'
 
 interface CmsContent {
@@ -17,6 +20,14 @@ interface CmsContent {
   about_text?:      string | null
   amenities?:       string[]
   gallery_urls?:    string[]
+  faqs?:            Array<{ q?: string | null; a?: string | null }>
+}
+
+interface OccupancyRow {
+  category_id:   string
+  free_beds:     number
+  capacity:      number
+  manual_status: string
 }
 
 async function getListing(slug: string) {
@@ -24,32 +35,46 @@ async function getListing(slug: string) {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, slug, name, tagline, logo_url, hero_image_url, primary_color, contact_phone, contact_email, address_city, address_region, custom_domain, website_content, listed_publicly, status, business_type')
+    .select('id, slug, name, tagline, logo_url, hero_image_url, primary_color, contact_phone, contact_email, address_line1, address_city, address_region, custom_domain, website_content, listed_publicly, status, business_type, accommodation_type, online_booking_enabled')
     .eq('slug', slug)
-    .single()
+    .maybeSingle()
 
   if (!tenant || !tenant.listed_publicly || !['trial', 'active', 'trial_expired'].includes(tenant.status)) {
     return null
   }
 
-  const { data: categories } = await supabase
-    .from('room_categories')
-    .select('id, name, type, base_rate, rate_unit, capacity, amenities, description, image_urls')
-    .eq('tenant_id', tenant.id)
-    .eq('is_active', true)
-    .order('sort_order')
+  const [{ data: categories }, { data: occupancy }, { data: testimonials }] = await Promise.all([
+    supabase
+      .from('room_categories')
+      .select('id, name, type, base_rate, rate_unit, capacity, amenities, description, image_urls')
+      .eq('tenant_id', tenant.id)
+      .eq('is_active', true)
+      .order('sort_order'),
+    // Same free-bed counts the property's booking page shows.
+    supabase
+      .from('room_occupancy_v')
+      .select('category_id, capacity, free_beds, manual_status')
+      .eq('tenant_id', tenant.id),
+    supabase
+      .from('occupant_feedback')
+      .select('overall_rating, comments, submitted_at, occupants(first_name, last_name)')
+      .eq('tenant_id', tenant.id)
+      .eq('status', 'approved')
+      .eq('featured', true)
+      .not('comments', 'is', null)
+      .order('submitted_at', { ascending: false })
+      .limit(6),
+  ])
 
-  const { data: testimonials } = await supabase
-    .from('occupant_feedback')
-    .select('overall_rating, comments, submitted_at, occupants(first_name, last_name)')
-    .eq('tenant_id', tenant.id)
-    .eq('status', 'approved')
-    .eq('featured', true)
-    .not('comments', 'is', null)
-    .order('submitted_at', { ascending: false })
-    .limit(6)
+  const beds = new Map<string, { available: number; total: number }>()
+  for (const row of (occupancy ?? []) as unknown as OccupancyRow[]) {
+    const agg = beds.get(row.category_id) ?? { available: 0, total: 0 }
+    agg.total += row.capacity
+    if (row.manual_status !== 'maintenance' && row.manual_status !== 'blocked') agg.available += row.free_beds
+    beds.set(row.category_id, agg)
+  }
 
-  return { tenant, categories: categories ?? [], testimonials: testimonials ?? [] }
+  return { tenant, categories: categories ?? [], beds, testimonials: testimonials ?? [] }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -62,21 +87,35 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
+const STAY_ICON = { hostel: BedDouble, hotel: Building2, apartment: Home } as const
+
 export default async function ListingProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const result = await getListing(slug)
   if (!result) notFound()
 
-  const { tenant, categories, testimonials } = result
+  const { tenant, categories, beds, testimonials } = result
   const cms = (tenant.website_content ?? {}) as CmsContent
-  const isHotel = tenant.business_type === 'hotel'
-  const nounSingular = isHotel ? 'hotel' : 'hostel'
+  const isHostel = tenant.business_type === 'hostel'
+  const vertical = stayVertical(tenant.business_type, tenant.accommodation_type)
+  const stayType = stayTypeLabel(tenant.business_type, tenant.accommodation_type)
+  const StayIcon = STAY_ICON[vertical]
+  const nounPlural = vertical === 'hostel' ? 'Hostels' : vertical === 'apartment' ? 'Apartments' : 'Hotels'
+  const browseHref = (extra: Record<string, string> = {}) => {
+    const qs = new URLSearchParams({ ...extra, ...(vertical === 'hostel' ? {} : { type: vertical }) }).toString()
+    return qs ? `/browse?${qs}` : '/browse'
+  }
+
   const rootDomain = bareRootDomain(process.env.NEXT_PUBLIC_APP_DOMAIN)
   const bookUrl = tenant.custom_domain
     ? `https://${tenant.custom_domain}/book`
     : `https://${tenantHost(tenant.slug, tenant.business_type as BusinessType, rootDomain)}/book`
+  // Owners can pause online booking (Settings → Public Listing); the
+  // booking page then shows nothing bookable, so don't send guests there.
+  const bookingOpen = tenant.online_booking_enabled !== false && categories.length > 0
 
   const location = [tenant.address_city, tenant.address_region].filter(Boolean).join(', ')
+  const fullAddress = [tenant.address_line1, tenant.address_city, tenant.address_region].filter(Boolean).join(', ')
 
   // Gallery: the owner's property photo leads when set, followed by the CMS
   // gallery (or every room photo across categories as a fallback) — all
@@ -88,9 +127,51 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
     : baseGallery
   ).slice(0, 9)
 
-  // Most popular facilities: dedupe amenities across all room categories.
-  const facilities = Array.from(new Set(categories.flatMap((c) => c.amenities ?? []))).slice(0, 10)
-  const minCapacity = categories.length > 0 ? Math.min(...categories.map((c) => c.capacity)) : null
+  // Amenities across all room types, plus any the owner listed on their site.
+  const facilities = Array.from(new Set(
+    [...categories.flatMap((c) => c.amenities ?? []), ...(cms.amenities ?? [])].map(amenityLabel),
+  )).slice(0, 12)
+  const faqs = (cms.faqs ?? []).filter((f) => f.q?.trim() && f.a?.trim())
+  const cheapest = categories.length > 0
+    ? categories.reduce((min, c) => (c.base_rate < min.base_rate ? c : min), categories[0])
+    : null
+  const lead = cms.hero_subheading || tenant.tagline
+
+  const sections = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'rooms', label: 'Rooms & prices' },
+    ...(facilities.length > 0 ? [{ id: 'amenities', label: 'Amenities' }] : []),
+    ...(location ? [{ id: 'location', label: 'Location' }] : []),
+    ...(faqs.length > 0 ? [{ id: 'good-to-know', label: 'Good to know' }] : []),
+    ...(testimonials.length > 0 ? [{ id: 'reviews', label: 'Reviews' }] : []),
+  ]
+
+  const contactActions = (tenant.contact_phone || tenant.contact_email) && (
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      {tenant.contact_phone && (
+        <a
+          href={`tel:${tenant.contact_phone.replace(/[^\d+]/g, '')}`}
+          className="bd-focus inline-flex min-h-[44px] min-w-0 items-center gap-2.5 rounded-xl border bg-white px-4 text-[14px] font-medium transition-colors hover:bg-bd-ivory-50"
+          style={{ borderColor: MP.border, color: MP.ink }}
+        >
+          <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="sr-only">Call </span>
+          <span className="[overflow-wrap:anywhere]">{tenant.contact_phone}</span>
+        </a>
+      )}
+      {tenant.contact_email && (
+        <a
+          href={`mailto:${tenant.contact_email}`}
+          className="bd-focus inline-flex min-h-[44px] min-w-0 items-center gap-2.5 rounded-xl border bg-white px-4 py-2 text-[14px] font-medium transition-colors hover:bg-bd-ivory-50"
+          style={{ borderColor: MP.border, color: MP.ink }}
+        >
+          <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="sr-only">Email </span>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{tenant.contact_email}</span>
+        </a>
+      )}
+    </div>
+  )
 
   return (
     <div className="relative min-h-screen" style={{ background: MP.bg }}>
@@ -98,171 +179,283 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
       <MarketplaceNav />
 
       {/* ── Breadcrumb ──────────────────────────────────────────── */}
-      <div className="mx-auto max-w-6xl px-4 py-3 text-[13px] sm:px-6" style={{ color: MP.textSecondary }}>
-        <Link href="/" className="hover:underline" style={{ color: MP.primary }}>Home</Link>
-        <span className="mx-1.5">›</span>
-        <Link href="/browse" className="hover:underline" style={{ color: MP.primary }}>{isHotel ? 'Hotels' : 'Hostels'}</Link>
-        {tenant.address_region && (
-          <>
-            <span className="mx-1.5">›</span>
-            <Link href={`/browse?region=${encodeURIComponent(tenant.address_region)}`} className="hover:underline" style={{ color: MP.primary }}>
-              {tenant.address_region}
-            </Link>
-          </>
-        )}
-        <span className="mx-1.5">›</span>
-        <span>{tenant.name}</span>
-      </div>
+      <nav aria-label="Breadcrumb" className="mx-auto max-w-6xl px-4 pb-1 pt-3 text-[13px] sm:px-6" style={{ color: MP.textSecondary }}>
+        <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <li><Link href="/" className="hover:underline" style={{ color: MP.primary }}>Home</Link></li>
+          <li aria-hidden="true">›</li>
+          <li><Link href={browseHref()} className="hover:underline" style={{ color: MP.primary }}>{nounPlural}</Link></li>
+          {tenant.address_region && (
+            <>
+              <li aria-hidden="true" className="hidden sm:block">›</li>
+              <li className="hidden sm:block">
+                <Link href={browseHref({ region: tenant.address_region })} className="hover:underline" style={{ color: MP.primary }}>
+                  {tenant.address_region}
+                </Link>
+              </li>
+            </>
+          )}
+          <li aria-hidden="true">›</li>
+          <li aria-current="page" className="min-w-0 truncate">{tenant.name}</li>
+        </ol>
+      </nav>
 
-      <div className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-        {/* ── Header ────────────────────────────────────────────── */}
-        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-          <div>
-            <h1 className="text-[26px] font-bold" style={{ color: MP.ink }}>{cms.hero_heading || tenant.name}</h1>
+      <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:pb-16">
+        {/* ── Summary ───────────────────────────────────────────── */}
+        <header className="mt-2 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[12px] font-semibold" style={{ color: MP.ink, border: `1px solid ${MP.border}` }}>
+              <StayIcon className="h-3.5 w-3.5" aria-hidden="true" /> {stayType}
+            </p>
+            <h1 className="mt-2 font-display text-[24px] font-bold leading-tight tracking-[-0.01em] [overflow-wrap:anywhere] sm:text-[30px]" style={{ color: MP.ink }}>
+              {tenant.name}
+            </h1>
             {location && (
-              <p className="mt-1 flex items-center gap-1.5 text-sm" style={{ color: MP.textSecondary }}>
-                <MapPin className="h-4 w-4" style={{ color: MP.primary }} />
+              <p className="mt-1 flex items-center gap-1.5 text-[14px]" style={{ color: MP.textSecondary }}>
+                <MapPin className="h-4 w-4 shrink-0" style={{ color: MP.primary }} aria-hidden="true" />
                 {location}
               </p>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <ShareButton title={tenant.name} />
-            {categories.length > 0 && (
+            {bookingOpen && (
               <a
-                href={bookUrl}
-                className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
+                href="#rooms"
+                className="bd-focus hidden min-h-[44px] items-center gap-2 rounded-xl px-5 text-[14px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900 sm:inline-flex"
                 style={{ background: MP.primary }}
               >
-                Reserve
+                See rooms <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
             )}
           </div>
+        </header>
+
+        {/* ── Photos ────────────────────────────────────────────── */}
+        <div className="mt-4">
+          {gallery.length > 0 ? (
+            <ListingGallery photos={gallery} name={tenant.name} />
+          ) : (
+            <div className="flex items-center gap-4 rounded-2xl border border-dashed bg-white/70 p-3 sm:p-4" style={{ borderColor: MP.borderStrong }}>
+              <NoPhotoTile name={tenant.name} caption={null} className="h-14 w-14" />
+              <div className="min-w-0">
+                <p className="text-[14px] font-semibold" style={{ color: MP.ink }}>No photos yet</p>
+                <p className="text-[13px]" style={{ color: MP.textSecondary }}>
+                  {tenant.name} hasn&apos;t added photos. Contact the property if you&apos;d like to see the rooms.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* ── Gallery ───────────────────────────────────────────── */}
-        {gallery.length === 1 ? (
-          // A lone photo spans the full width rather than leaving the
-          // thumbnail half of the grid below empty.
-          <div className="mp-reveal mt-5 overflow-hidden rounded-xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={gallery[0]}
-              alt={tenant.name}
-              className="aspect-[4/3] w-full object-cover transition-transform duration-500 hover:scale-105 motion-reduce:transition-none sm:aspect-[16/7]"
-            />
-          </div>
-        ) : gallery.length > 0 ? (
-          <div className="mp-reveal mt-5 grid grid-cols-2 gap-2 overflow-hidden rounded-xl sm:grid-cols-4 sm:grid-rows-2">
-            <div className="col-span-2 row-span-2 overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={gallery[0]}
-                alt={tenant.name}
-                className="aspect-[4/3] w-full rounded-l-xl object-cover transition-transform duration-500 hover:scale-105 sm:aspect-auto sm:h-full"
-              />
-            </div>
-            {gallery.slice(1, 5).map((url, i) => (
-              <div key={i} className="overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt={`${tenant.name} photo ${i + 2}`}
-                  className={`aspect-square w-full object-cover transition-transform duration-500 hover:scale-105 sm:aspect-auto sm:h-full ${i === 1 ? 'sm:rounded-tr-xl' : ''} ${i === 3 ? 'sm:rounded-br-xl' : ''}`}
-                />
-              </div>
+        {/* ── Section links ─────────────────────────────────────── */}
+        <nav
+          aria-label="On this page"
+          className="sticky z-30 -mx-4 mt-5 border-b px-4 backdrop-blur-md sm:-mx-6 sm:px-6"
+          style={{ top: 'calc(4rem + env(safe-area-inset-top))', background: 'rgb(247 242 233 / 0.92)', borderColor: MP.border }}
+        >
+          <ul className="mp-no-scrollbar flex gap-5 overflow-x-auto text-[14px] font-medium" style={{ color: MP.textSecondary }}>
+            {sections.map((s) => (
+              <li key={s.id} className="shrink-0">
+                <a href={`#${s.id}`} className="bd-focus block whitespace-nowrap border-b-2 border-transparent py-3 transition-colors hover:border-bd-teal/30 hover:text-bd-teal">
+                  {s.label}
+                </a>
+              </li>
             ))}
-          </div>
-        ) : (
-          <div className="mt-5 flex aspect-[16/7] w-full items-center justify-center rounded-xl" style={{ background: MP.surfaceSoft }}>
-            <BedDouble className="h-10 w-10" style={{ color: MP.accentText, opacity: 0.4 }} />
-          </div>
-        )}
+          </ul>
+        </nav>
 
-        <div className="mt-8 gap-8 lg:flex">
+        <div className="mt-6 gap-8 lg:flex">
           {/* ── Main column ─────────────────────────────────────── */}
-          <div className="min-w-0 flex-1 space-y-10">
-            {/* Tabs (in-page anchors) */}
-            <div className="flex gap-6 text-[14px] font-medium" style={{ borderBottom: `1px solid ${MP.border}`, color: MP.textSecondary }}>
-              <a href="#overview" className="pb-3 transition-opacity" style={{ borderBottom: `2px solid ${MP.primary}`, color: MP.primary }}>Overview</a>
-              <a href="#rooms" className="pb-3 transition-opacity hover:opacity-70">Rooms &amp; Prices</a>
-              {facilities.length > 0 && <a href="#facilities" className="pb-3 transition-opacity hover:opacity-70">Facilities</a>}
-            </div>
-
-            <section id="overview" className="space-y-3">
-              {(cms.hero_subheading || tenant.tagline) && (
-                <p className="text-[15px] leading-relaxed" style={{ color: MP.ink }}>{cms.hero_subheading || tenant.tagline}</p>
+          <div className="min-w-0 flex-1 space-y-9">
+            <section id="overview" aria-labelledby="overview-heading" className="scroll-mt-32 space-y-4">
+              <h2 id="overview-heading" className="sr-only">Overview</h2>
+              <dl className="grid grid-cols-[auto_1fr] gap-2 sm:max-w-md">
+                <div className="rounded-xl bg-white p-3" style={{ border: `1px solid ${MP.border}` }}>
+                  <dt className="text-[12px]" style={{ color: MP.textSecondary }}>Room types</dt>
+                  <dd className="mt-0.5 text-[14px] font-semibold" style={{ color: MP.ink }}>{categories.length}</dd>
+                </div>
+                {cheapest && (
+                  <div className="rounded-xl bg-white p-3" style={{ border: `1px solid ${MP.border}` }}>
+                    <dt className="text-[12px]" style={{ color: MP.textSecondary }}>Prices from</dt>
+                    <dd className="mt-0.5"><Price amount={cheapest.base_rate} unit={cheapest.rate_unit} /></dd>
+                  </div>
+                )}
+              </dl>
+              {cms.hero_heading && cms.hero_heading !== tenant.name && (
+                <p className="font-display text-[17px] font-semibold" style={{ color: MP.ink }}>{cms.hero_heading}</p>
               )}
+              {lead && <p className="text-[15px] leading-relaxed" style={{ color: MP.ink }}>{lead}</p>}
               {cms.about_text && (
                 <div>
-                  <h2 className="text-[17px] font-bold" style={{ color: MP.ink }}>About this {nounSingular}</h2>
-                  <p className="mt-2 text-[14px] leading-relaxed" style={{ color: MP.textSecondary }}>{cms.about_text}</p>
+                  <h3 className="text-[16px] font-bold" style={{ color: MP.ink }}>About this {isHostel ? 'hostel' : vertical === 'apartment' ? 'property' : 'hotel'}</h3>
+                  <p className="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed" style={{ color: MP.textSecondary }}>{cms.about_text}</p>
                 </div>
               )}
-              {(tenant.contact_phone || tenant.contact_email) && (
-                <div className="flex flex-wrap gap-4 pt-2 text-[13px]" style={{ color: MP.textSecondary }}>
-                  {tenant.contact_phone && <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {tenant.contact_phone}</span>}
-                  {tenant.contact_email && <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {tenant.contact_email}</span>}
+              {contactActions && (
+                <div id="contact" className="scroll-mt-32">
+                  <h3 className="mb-2 text-[14px] font-semibold" style={{ color: MP.ink }}>Contact the property</h3>
+                  {contactActions}
                 </div>
               )}
             </section>
 
-            {/* Rooms & Prices */}
-            <section id="rooms">
-              <h2 className="text-[17px] font-bold" style={{ color: MP.ink }}>Rooms &amp; Prices</h2>
+            {/* Rooms & prices */}
+            <section id="rooms" aria-labelledby="rooms-heading" className="scroll-mt-32">
+              <h2 id="rooms-heading" className="text-[19px] font-bold" style={{ color: MP.ink }}>Rooms &amp; prices</h2>
               {categories.length === 0 ? (
-                <p className="mt-3 text-sm" style={{ color: MP.textSecondary }}>No rooms currently listed — check back soon.</p>
+                <p className="mt-2 text-[14px]" style={{ color: MP.textSecondary }}>No rooms are listed yet — check back soon.</p>
               ) : (
-                <div className="mt-4 space-y-4">
-                  {categories.map((c, i) => (
-                    <div
-                      key={c.id}
-                      className="mp-reveal flex flex-col gap-4 rounded-xl bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center"
-                      style={{ border: `1px solid ${MP.border}`, animationDelay: `${Math.min(i, 6) * 50}ms` }}
-                    >
-                      {c.image_urls && c.image_urls.length > 0 ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={c.image_urls[0]} alt={c.name} className="h-32 w-full shrink-0 rounded-lg object-cover sm:h-20 sm:w-28" />
-                      ) : (
-                        <div className="flex h-32 w-full shrink-0 items-center justify-center rounded-lg sm:h-20 sm:w-28" style={{ background: MP.surfaceSoft }}>
-                          <BedDouble className="h-6 w-6" style={{ color: MP.accentText, opacity: 0.4 }} />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[15px] font-semibold" style={{ color: MP.ink }}>{c.name}</p>
-                        {c.description && <p className="mt-0.5 text-[13px]" style={{ color: MP.textSecondary }}>{c.description}</p>}
-                        {c.amenities && c.amenities.length > 0 && (
-                          <p className="mt-1 text-[12px]" style={{ color: MP.textSecondary }}>{c.amenities.slice(0, 5).join(' · ')}</p>
-                        )}
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-[18px] font-bold" style={{ color: MP.ink }}>{formatGHS(c.base_rate)}</p>
-                        <p className="text-[12px]" style={{ color: MP.textSecondary }}>per {c.rate_unit}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <>
+                  {!bookingOpen && (
+                    <p className="mt-2 rounded-xl px-3 py-2.5 text-[13px]" style={{ background: MP.surfaceSoft, color: MP.ink }}>
+                      {tenant.name} isn&apos;t taking online bookings right now. Contact the property to ask about a room.
+                    </p>
+                  )}
+                  <ul className="mt-3 space-y-3">
+                    {categories.map((c) => {
+                      const photo = c.image_urls?.[0]
+                      const capacity = capacityLabel(c.capacity, tenant.business_type)
+                      const bedCounts = beds.get(c.id)
+                      const availability = bedCounts ? bedAvailability(bedCounts.available, bedCounts.total, tenant.business_type) : null
+                      const soldOut = availability?.tone === 'full'
+                      const amenities = (c.amenities ?? []).map(amenityLabel)
+                      return (
+                        <li key={c.id} className="flex gap-3 rounded-2xl bg-white p-3 sm:gap-4 sm:p-4" style={{ border: `1px solid ${MP.border}` }}>
+                          {photo && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={photo}
+                              alt={`${c.name} at ${tenant.name}`}
+                              loading="lazy"
+                              decoding="async"
+                              className="h-20 w-20 shrink-0 rounded-xl object-cover sm:h-28 sm:w-36"
+                            />
+                          )}
+                          <div className="flex min-w-0 flex-1 flex-col">
+                            <h3 className="text-[16px] font-semibold leading-snug [overflow-wrap:anywhere]" style={{ color: MP.ink }}>{c.name}</h3>
+                            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px]" style={{ color: MP.textSecondary }}>
+                              {capacity && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Users className="h-3.5 w-3.5" aria-hidden="true" /> {capacity}
+                                </span>
+                              )}
+                              {availability && bookingOpen && (
+                                <span
+                                  className={`inline-flex items-center gap-1 font-semibold ${
+                                    availability.tone === 'full' ? 'text-bd-danger' : availability.tone === 'low' ? 'text-bd-coral-700' : 'text-bd-success'
+                                  }`}
+                                >
+                                  <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+                                  {availability.label}
+                                </span>
+                              )}
+                            </p>
+                            {c.description && (
+                              <p className="mt-1 line-clamp-2 text-[13px]" style={{ color: MP.textSecondary }}>{c.description}</p>
+                            )}
+                            {amenities.length > 0 && (
+                              <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Room amenities">
+                                {amenities.slice(0, 4).map((a) => (
+                                  <li key={a} className="rounded-full px-2 py-0.5 text-[12px]" style={{ background: MP.surfaceSoft, color: MP.ink }}>{a}</li>
+                                ))}
+                                {amenities.length > 4 && (
+                                  <li className="px-1 py-0.5 text-[12px]" style={{ color: MP.textSecondary }}>+{amenities.length - 4} more</li>
+                                )}
+                              </ul>
+                            )}
+                            <div className="mt-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+                              <Price amount={c.base_rate} unit={c.rate_unit} />
+                              {bookingOpen && (soldOut ? (
+                                <span className="inline-flex min-h-[40px] items-center rounded-xl px-4 text-[14px] font-semibold" style={{ background: MP.surfaceSoft, color: MP.textSecondary }}>
+                                  Fully booked
+                                </span>
+                              ) : (
+                                <a
+                                  href={`${bookUrl}?room=${encodeURIComponent(c.id)}`}
+                                  className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900"
+                                  style={{ background: MP.primary }}
+                                >
+                                  {isHostel ? 'Select room' : 'Check availability'}
+                                  <span className="sr-only">: {c.name}</span>
+                                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {bookingOpen && (
+                    <p className="mt-3 text-[12px]" style={{ color: MP.textSecondary }}>
+                      You&apos;ll choose your {isHostel ? 'room and stay' : 'dates'} and pay on {tenant.name}&apos;s booking page.
+                    </p>
+                  )}
+                </>
               )}
             </section>
 
-            {/* Facilities */}
             {facilities.length > 0 && (
-              <section id="facilities">
-                <h2 className="text-[17px] font-bold" style={{ color: MP.ink }}>Most popular facilities</h2>
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {facilities.map((f, i) => {
+              <section id="amenities" aria-labelledby="amenities-heading" className="scroll-mt-32">
+                <h2 id="amenities-heading" className="text-[19px] font-bold" style={{ color: MP.ink }}>Amenities</h2>
+                <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-3">
+                  {facilities.map((f) => {
                     const Icon = amenityIcon(f)
                     return (
-                      <div
-                        key={f}
-                        className="mp-reveal flex items-center gap-2 text-[13px]"
-                        style={{ color: MP.ink, animationDelay: `${Math.min(i, 9) * 30}ms` }}
-                      >
-                        <Icon className="h-4 w-4 shrink-0" style={{ color: MP.accentText }} />
-                        {f}
-                      </div>
+                      <li key={f} className="flex items-center gap-2 text-[14px]" style={{ color: MP.ink }}>
+                        <Icon className="h-4 w-4 shrink-0" style={{ color: MP.accentText }} aria-hidden="true" />
+                        <span className="min-w-0 [overflow-wrap:anywhere]">{f}</span>
+                      </li>
                     )
                   })}
+                </ul>
+              </section>
+            )}
+
+            {location && (
+              <section id="location" aria-labelledby="location-heading" className="scroll-mt-32">
+                <h2 id="location-heading" className="text-[19px] font-bold" style={{ color: MP.ink }}>Location</h2>
+                <p className="mt-2 flex items-start gap-2 text-[14px]" style={{ color: MP.ink }}>
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: MP.primary }} aria-hidden="true" />
+                  {fullAddress}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${tenant.name}, ${fullAddress}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border bg-white px-3.5 text-[14px] font-medium hover:bg-bd-ivory-50"
+                    style={{ borderColor: MP.border, color: MP.ink }}
+                  >
+                    View on map <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span className="sr-only">(opens Google Maps in a new tab)</span>
+                  </a>
+                  {tenant.address_city && (
+                    <Link
+                      href={browseHref({ city: tenant.address_city })}
+                      className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border bg-white px-3.5 text-[14px] font-medium hover:bg-bd-ivory-50"
+                      style={{ borderColor: MP.border, color: MP.ink }}
+                    >
+                      More {nounPlural.toLowerCase()} in {tenant.address_city}
+                    </Link>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {faqs.length > 0 && (
+              <section id="good-to-know" aria-labelledby="faq-heading" className="scroll-mt-32">
+                <h2 id="faq-heading" className="text-[19px] font-bold" style={{ color: MP.ink }}>Good to know</h2>
+                <div className="mt-3 divide-y overflow-hidden rounded-2xl bg-white" style={{ border: `1px solid ${MP.border}`, borderColor: MP.border }}>
+                  {faqs.map((f, i) => (
+                    <details key={i} className="group px-4" style={{ borderColor: MP.border }}>
+                      <summary className="bd-focus flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 py-3 text-[14px] font-semibold [&::-webkit-details-marker]:hidden" style={{ color: MP.ink }}>
+                        {f.q}
+                        <span className="text-[18px] leading-none transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                      </summary>
+                      <p className="whitespace-pre-line pb-4 text-[14px] leading-relaxed" style={{ color: MP.textSecondary }}>{f.a}</p>
+                    </details>
+                  ))}
                 </div>
               </section>
             )}
@@ -270,31 +463,28 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
             {/* Guest reviews — real, staff-moderated occupant_feedback,
                 never the platform's own marketplace reviews. */}
             {testimonials.length > 0 && (
-              <section id="reviews">
-                <h2 className="text-[17px] font-bold" style={{ color: MP.ink }}>What guests say</h2>
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <section id="reviews" aria-labelledby="reviews-heading" className="scroll-mt-32">
+                <h2 id="reviews-heading" className="text-[19px] font-bold" style={{ color: MP.ink }}>What residents say</h2>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {testimonials.map((t, i) => {
                     const occ = Array.isArray(t.occupants) ? t.occupants[0] : t.occupants
                     return (
-                      <div
-                        key={i}
-                        className="mp-reveal rounded-xl bg-white p-4"
-                        style={{ border: `1px solid ${MP.border}`, animationDelay: `${Math.min(i, 5) * 30}ms` }}
-                      >
-                        <div className="flex items-center gap-0.5">
+                      <figure key={i} className="rounded-2xl bg-white p-4" style={{ border: `1px solid ${MP.border}` }}>
+                        <div className="flex items-center gap-0.5" role="img" aria-label={`Rated ${t.overall_rating} out of 5`}>
                           {Array.from({ length: 5 }).map((_, s) => (
                             <Star
                               key={s}
                               className="h-3.5 w-3.5"
                               style={{ color: MP.accentText, fill: s < t.overall_rating ? MP.accentText : 'transparent' }}
+                              aria-hidden="true"
                             />
                           ))}
                         </div>
-                        <p className="mt-2 text-[13px] italic" style={{ color: MP.textSecondary }}>&quot;{t.comments}&quot;</p>
-                        <p className="mt-2 text-[12px] font-semibold" style={{ color: MP.ink }}>
-                          {occ ? `${occ.first_name} ${occ.last_name.charAt(0)}.` : 'Guest'}
-                        </p>
-                      </div>
+                        <blockquote className="mt-2 text-[14px] leading-relaxed" style={{ color: MP.textSecondary }}>&ldquo;{t.comments}&rdquo;</blockquote>
+                        <figcaption className="mt-2 text-[12px] font-semibold" style={{ color: MP.ink }}>
+                          {occ ? `${occ.first_name} ${occ.last_name.charAt(0)}.` : 'Resident'}
+                        </figcaption>
+                      </figure>
                     )
                   })}
                 </div>
@@ -303,25 +493,36 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
           </div>
 
           {/* ── Sidebar ───────────────────────────────────────────── */}
-          <aside className="mt-8 w-full shrink-0 lg:mt-0 lg:w-72">
-            <div className="sticky top-4 space-y-4">
-              <div className="rounded-xl bg-white p-5" style={{ border: `1px solid ${MP.border}` }}>
-                <h3 className="text-[15px] font-bold" style={{ color: MP.ink }}>Property highlights</h3>
-                <ul className="mt-3 space-y-2.5 text-[13px]" style={{ color: MP.textSecondary }}>
-                  <li>{categories.length} room type{categories.length === 1 ? '' : 's'} available</li>
-                  {minCapacity != null && <li>From {minCapacity} guest{minCapacity === 1 ? '' : 's'} per room</li>}
-                  {location && <li>Located in {location}</li>}
-                </ul>
-              </div>
+          <aside className="mt-9 w-full shrink-0 lg:mt-0 lg:w-80">
+            <div className="space-y-4 lg:sticky" style={{ top: 'calc(7.5rem + env(safe-area-inset-top))' }}>
+              {cheapest && (
+                <div className="hidden rounded-2xl bg-white p-5 lg:block" style={{ border: `1px solid ${MP.border}` }}>
+                  <Price amount={cheapest.base_rate} unit={cheapest.rate_unit} from size="lg" />
+                  <p className="mt-1 text-[13px]" style={{ color: MP.textSecondary }}>
+                    {categories.length} room type{categories.length === 1 ? '' : 's'} · {stayType.toLowerCase()}
+                  </p>
+                  {bookingOpen ? (
+                    <a
+                      href="#rooms"
+                      className="bd-focus mt-4 flex min-h-[44px] items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900"
+                      style={{ background: MP.primary }}
+                    >
+                      See rooms &amp; prices
+                    </a>
+                  ) : (
+                    <p className="mt-3 text-[13px]" style={{ color: MP.ink }}>Online booking is paused — contact the property.</p>
+                  )}
+                </div>
+              )}
 
-              <div className="rounded-xl bg-white p-5" style={{ border: `1px solid ${MP.border}` }}>
-                <h3 className="text-[14px] font-semibold" style={{ color: MP.ink }}>Already have a room here?</h3>
-                <p className="mt-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
-                  If {tenant.name} already sent you login details, sign in to your {isHotel ? 'guest' : 'student'} portal.
+              <div className="rounded-2xl bg-white p-5" style={{ border: `1px solid ${MP.border}` }}>
+                <h2 className="text-[14px] font-semibold" style={{ color: MP.ink }}>Already have a room here?</h2>
+                <p className="mt-1 text-[13px]" style={{ color: MP.textSecondary }}>
+                  If {tenant.name} sent you login details, sign in to your {isHostel ? 'student' : 'guest'} portal.
                 </p>
                 <Link
                   href="/login"
-                  className="mt-3 inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors hover:bg-neutral-50"
+                  className="bd-focus mt-3 flex min-h-[40px] w-full items-center justify-center rounded-xl text-[14px] font-semibold transition-colors hover:bg-bd-ivory-50"
                   style={{ border: `1px solid ${MP.border}`, color: MP.ink }}
                 >
                   Sign in
@@ -332,7 +533,28 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
         </div>
       </div>
 
+      {/* ── Phone booking bar — price + next step always in reach ── */}
+      {cheapest && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 px-4 pt-3 backdrop-blur-md lg:hidden"
+          style={{ borderColor: MP.border, paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+        >
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+            <Price amount={cheapest.base_rate} unit={cheapest.rate_unit} from />
+            <a
+              href={bookingOpen ? '#rooms' : contactActions ? '#contact' : '#rooms'}
+              className="bd-focus inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl px-5 text-[15px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900"
+              style={{ background: MP.primary }}
+            >
+              {bookingOpen ? 'See rooms' : 'Contact'}
+            </a>
+          </div>
+        </div>
+      )}
+
       <MarketplaceFooter />
+      {/* Room for the fixed phone booking bar below the footer. */}
+      {cheapest && <div className="h-20 bg-bd-teal lg:hidden" aria-hidden="true" />}
     </div>
   )
 }
