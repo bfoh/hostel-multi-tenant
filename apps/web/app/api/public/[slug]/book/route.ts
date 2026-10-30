@@ -8,6 +8,8 @@ import { calculateRoomHarmonyScore } from '@/lib/matching'
 import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
 import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
 import { formatGHS } from '@/lib/utils'
+import { isValidStayRange, STAY_RANGE_ERROR } from '@/lib/validation/stay-dates'
+import { billableUnits, stayTotal } from '@/lib/bookings/stay-pricing'
 
 const schema = z.object({
   category_id: z.string().uuid(),
@@ -49,7 +51,7 @@ const schema = z.object({
     })
     .nullable()
     .optional(),
-})
+}).refine((d) => isValidStayRange(d.check_in_date, d.check_out_date), STAY_RANGE_ERROR)
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   // This route creates a booking AND fans out to Paystack + SMS + email per
@@ -237,6 +239,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   // pays on arrival, which is already a valid state used elsewhere for
   // walk-in/manual admin bookings.
   const payAtHostel = tenant.booking_payment_mode === 'pay_at_hostel'
+  const totalAmount = stayTotal(category.base_rate, category.rate_unit, d.check_in_date, d.check_out_date)
   const holdExpiresAt = payAtHostel ? null : new Date(Date.now() + 30 * 60_000).toISOString()
 
   // Create booking
@@ -251,7 +254,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       check_out_date: d.check_out_date,
       rate_per_unit: category.base_rate,
       rate_unit: category.rate_unit,
-      total_amount: category.base_rate,
+      total_amount: totalAmount,
       paid_amount: 0,
       payment_status: 'unpaid',
       status: payAtHostel ? 'confirmed' : 'pending_payment',
@@ -290,7 +293,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   // Initialize Paystack hosted payment (card / momo / bank / bank_transfer)
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host') ?? 'localhost:3000'}`
-  const callbackUrl = `${appUrl}/api/public/${slug}/pay/callback?booking_id=${booking.id}&amount=${category.base_rate}`
+  const callbackUrl = `${appUrl}/api/public/${slug}/pay/callback?booking_id=${booking.id}`
 
   let payment: { authorization_url: string; reference: string; amount: number } | null = null
   if (!payAtHostel) {
@@ -300,7 +303,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
         tenantSubaccount: tenant.paystack_subaccount_code ?? null,
         bookingId: booking.id,
         bookingRef: booking.booking_ref,
-        amountPesewas: category.base_rate,
+        amountPesewas: totalAmount,
         email: d.email ?? null,
         callbackUrl,
         source: 'public_booking',
@@ -356,7 +359,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
         roomName: category.name,
         checkInDate: formatDate(d.check_in_date),
         checkOutDate: formatDate(d.check_out_date),
-        amountGHS: formatGHS(category.base_rate),
+        amountGHS: formatGHS(totalAmount),
         contactPhone: tenantFull?.contact_phone ?? undefined,
       }),
     }).catch(() => {})
@@ -394,7 +397,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
                 { label: 'Guest', value: guestName },
                 { label: 'Room', value: category.name },
                 { label: 'Check-in', value: d.check_in_date },
-                { label: 'Amount', value: formatGHS(category.base_rate) },
+                { label: 'Amount', value: formatGHS(totalAmount) },
                 { label: 'Booking', value: booking.booking_ref },
               ],
             }),
@@ -411,7 +414,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       room_type: category.name,
       check_in_date: d.check_in_date,
       check_out_date: d.check_out_date,
-      amount: category.base_rate,
+      amount: totalAmount,
+      rate: category.base_rate,
+      units: billableUnits(category.rate_unit, d.check_in_date, d.check_out_date),
       rate_unit: category.rate_unit,
       status: payAtHostel ? 'confirmed' : 'pending_payment',
       pay_at_hostel: payAtHostel,

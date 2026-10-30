@@ -4,6 +4,7 @@ import { sendBookingConfirmation, sendAdminBookingAlert } from '@/lib/sms'
 import { sendEmail, bookingConfirmationHtml, adminAlertHtml } from '@/lib/email'
 import { getTenantAdminContacts } from '@/lib/notifications/admin-recipients'
 import { formatGHS } from '@/lib/utils'
+import { stayTotal } from '@/lib/bookings/stay-pricing'
 
 /**
  * Shared single-room booking creation, used by both the plain single
@@ -66,8 +67,10 @@ export async function createBooking(
 
   const category = Array.isArray(room.category) ? room.category[0] : room.category
   const baseRate = category?.base_rate ?? 0
+  const rateUnit = category?.rate_unit ?? 'semester'
+  const totalAmount = stayTotal(baseRate, rateUnit, params.check_in_date, params.check_out_date)
   const categoryCapacity = category?.capacity ?? 1
-  const finalAmount = Math.max(0, baseRate - (params.discount_amount ?? 0))
+  const finalAmount = Math.max(0, totalAmount - (params.discount_amount ?? 0))
   const collectedAtBooking = (params.payments ?? []).reduce((sum, payment) => sum + payment.amount, 0)
 
   if (collectedAtBooking > finalAmount) {
@@ -110,8 +113,8 @@ export async function createBooking(
       semester:        params.semester ?? null,
       academic_year:   params.academic_year ?? null,
       rate_per_unit:   baseRate,
-      rate_unit:       category?.rate_unit ?? 'semester',
-      total_amount:    baseRate,
+      rate_unit:       rateUnit,
+      total_amount:    totalAmount,
       discount_amount: params.discount_amount ?? 0,
       discount_reason: params.discount_reason ?? null,
       tax_amount:      0,
@@ -170,7 +173,7 @@ export async function createBooking(
     roomNumber:   room.room_number ?? '',
     checkInDate:  params.check_in_date,
     checkOutDate: params.check_out_date,
-    amount:       Math.max(0, baseRate - (params.discount_amount ?? 0)),
+    amount:       finalAmount,
     occupantId:   params.occupant_id,
     status,
   }).catch(() => {})

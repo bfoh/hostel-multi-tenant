@@ -5,13 +5,15 @@ import { widgetCorsHeaders, corsPreflightResponse, checkOrigin } from '@/lib/wid
 import { sendBookingConfirmation } from '@/lib/sms'
 import { initBookingPayment } from '@/lib/booking-payment'
 import { paymentLimiter, enforceRateLimit } from '@/lib/rate-limit'
+import { isValidStayRange, STAY_RANGE_ERROR } from '@/lib/validation/stay-dates'
+import { billableUnits, stayTotal } from '@/lib/bookings/stay-pricing'
 
 export const runtime = 'edge'
 
 const schema = z.object({
   category_id:    z.string().uuid(),
   check_in_date:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  check_out_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  check_out_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   first_name:     z.string().min(1).max(100),
   last_name:      z.string().min(1).max(100),
   phone:          z.string().min(9).max(20),
@@ -19,7 +21,7 @@ const schema = z.object({
   institution:    z.string().max(200).optional().nullable(),
   student_id:     z.string().max(50).optional().nullable(),
   notes:          z.string().max(500).optional().nullable(),
-})
+}).refine((d) => isValidStayRange(d.check_in_date, d.check_out_date), STAY_RANGE_ERROR)
 
 export async function OPTIONS(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -116,16 +118,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   // Hold expires in 15 minutes (provisional booking)
   const holdExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+  const totalAmount = stayTotal(category.base_rate, category.rate_unit, d.check_in_date, d.check_out_date)
+  // Same reference format as the public booking route (e.g. ACA-2026-047382).
+  const bookingRef = `${slug.replace(/-/g, '').slice(0, 3).toUpperCase()}-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`
 
-  // Create booking
+  // Create booking. final_amount is generated from total_amount, so it is
+  // never written directly.
   const { data: booking, error: bookingErr } = await (supabase.from('bookings') as any)
     .insert({
       tenant_id:       tenant.id,
       occupant_id:     occupantId,
       room_id:         availableRoom.id,
+      booking_ref:     bookingRef,
       check_in_date:   d.check_in_date,
       check_out_date:  d.check_out_date,
-      final_amount:    category.base_rate,
+      rate_per_unit:   category.base_rate,
+      rate_unit:       category.rate_unit,
+      total_amount:    totalAmount,
       paid_amount:     0,
       payment_status:  'unpaid',
       status:          'pending_payment',
@@ -156,7 +165,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   // Initialize Paystack hosted payment (card / momo / bank / bank_transfer)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host') ?? 'localhost:3000'}`
-  const callbackUrl = `${appUrl}/api/public/${slug}/pay/callback?booking_id=${booking.id}&amount=${category.base_rate}`
+  const callbackUrl = `${appUrl}/api/public/${slug}/pay/callback?booking_id=${booking.id}`
 
   let payment: { authorization_url: string; reference: string; amount: number } | null = null
   try {
@@ -165,7 +174,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       tenantSubaccount: tenant.paystack_subaccount_code ?? null,
       bookingId:        booking.id,
       bookingRef:       booking.booking_ref,
-      amountPesewas:    category.base_rate,
+      amountPesewas:    totalAmount,
       email:            d.email ?? null,
       callbackUrl,
       source:           'widget_booking',
@@ -188,7 +197,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     room_type:      category.name,
     check_in_date:  d.check_in_date,
     check_out_date: d.check_out_date,
-    amount:         category.base_rate,
+    amount:         totalAmount,
+    rate:           category.base_rate,
+    units:          billableUnits(category.rate_unit, d.check_in_date, d.check_out_date),
     rate_unit:      category.rate_unit,
     status:         'pending_payment',
     hold_expires_at: holdExpiresAt,

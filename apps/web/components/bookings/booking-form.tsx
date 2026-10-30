@@ -8,6 +8,7 @@ import { z } from 'zod'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatGHS } from '@/lib/utils'
+import { billableUnits } from '@/lib/bookings/stay-pricing'
 import {
   PaymentSplitInput, defaultPaymentSplitValue, derivePayments, isPaymentSplitValid,
   type PaymentSplitValue,
@@ -111,7 +112,9 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
     }
   }, [checkIn, checkOut, setValue, isHotel])
 
-  const totalAmount = roomCategory?.base_rate ?? 0
+  // Mirrors the server (lib/bookings/create-booking.ts): rate × billable units.
+  const units = roomCategory ? billableUnits(roomCategory.rate_unit, checkIn ?? '', checkOut) : 1
+  const totalAmount = (roomCategory?.base_rate ?? 0) * units
   const discountPesewas = Math.round(Number(discountAmount) * 100)
   const finalAmount = Math.max(0, totalAmount - discountPesewas)
 
@@ -369,7 +372,10 @@ export function BookingForm({ rooms, occupants, preselectedRoomId, preselectedOc
             <div className="rounded-lg bg-surface-sunken px-3 py-2.5 space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-text-secondary">Rate</span>
-                <span className="currency-amount">{formatGHS(roomCategory.base_rate)}</span>
+                <span className="currency-amount">
+                  {formatGHS(roomCategory.base_rate)}
+                  {units > 1 && ` × ${units} ${roomCategory.rate_unit}s`}
+                </span>
               </div>
               {discountPesewas > 0 && (
                 <div className="flex justify-between">

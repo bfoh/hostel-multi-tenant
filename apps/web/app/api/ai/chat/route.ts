@@ -7,6 +7,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { z } from 'zod'
+import { stayTotal } from '@/lib/bookings/stay-pricing'
+import { isValidStayRange } from '@/lib/validation/stay-dates'
 
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 1024
@@ -58,7 +60,7 @@ const TOOLS = [
   },
   {
     name: 'create_booking',
-    description: 'Create a provisional booking for a guest. Call this ONLY after the guest has confirmed their details (name, phone, check-in date, and room type). The booking will be in pending_payment status until the phone is verified via OTP.',
+    description: 'Create a provisional booking for a guest. Call this ONLY after the guest has confirmed their details (name, phone, check-in and check-out dates, and room type). The booking will be in pending_payment status until the phone is verified via OTP.',
     input_schema: {
       type: 'object',
       properties: {
@@ -68,8 +70,9 @@ const TOOLS = [
         phone:         { type: 'string', description: "Guest's Ghana phone number (e.g. 0244000000)" },
         email:         { type: 'string', description: "Guest's email (optional)" },
         check_in_date: { type: 'string', description: 'ISO date YYYY-MM-DD' },
+        check_out_date: { type: 'string', description: 'ISO date YYYY-MM-DD, after check_in_date' },
       },
-      required: ['category_id', 'first_name', 'last_name', 'phone', 'check_in_date'],
+      required: ['category_id', 'first_name', 'last_name', 'phone', 'check_in_date', 'check_out_date'],
     },
   },
   {
@@ -179,9 +182,13 @@ async function runTool(
   }
 
   if (name === 'create_booking') {
-    const { category_id, first_name, last_name, phone, email, check_in_date } = input as any
-    if (!category_id || !first_name || !last_name || !phone || !check_in_date) {
+    const { category_id, first_name, last_name, phone, email, check_in_date, check_out_date } = input as any
+    if (!category_id || !first_name || !last_name || !phone || !check_in_date || !check_out_date) {
       return 'Missing required booking fields.'
+    }
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/
+    if (!datePattern.test(check_in_date) || !datePattern.test(check_out_date) || !isValidStayRange(check_in_date, check_out_date)) {
+      return 'Check-out must be a date (YYYY-MM-DD) after check-in.'
     }
 
     // Verify category + availability
@@ -213,9 +220,13 @@ async function runTool(
     }
 
     const holdExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    const totalAmount = stayTotal(cat.base_rate, cat.rate_unit, check_in_date, check_out_date)
+    const bookingRef = `AI-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`
+    // final_amount is generated from total_amount, so it is never written directly.
     const { data: booking, error: bErr } = await (supabase.from('bookings') as any).insert({
-      tenant_id: tenantId, occupant_id: occupantId, room_id: availRoom.id,
-      check_in_date, final_amount: cat.base_rate, paid_amount: 0,
+      tenant_id: tenantId, occupant_id: occupantId, room_id: availRoom.id, booking_ref: bookingRef,
+      check_in_date, check_out_date, rate_per_unit: cat.base_rate, rate_unit: cat.rate_unit,
+      total_amount: totalAmount, paid_amount: 0,
       payment_status: 'unpaid', status: 'pending_payment', source: 'voice_ai',
       hold_expires_at: holdExpiresAt,
     }).select('id, booking_ref').single()
@@ -228,7 +239,9 @@ async function runTool(
       booking_ref: booking.booking_ref,
       room_type:   cat.name,
       rate:        `GH₵ ${(cat.base_rate / 100).toFixed(2)} / ${cat.rate_unit}`,
+      total:       `GH₵ ${(totalAmount / 100).toFixed(2)}`,
       check_in:    check_in_date,
+      check_out:   check_out_date,
       status:      'Pending phone verification',
     })
   }
@@ -254,7 +267,7 @@ async function runTool(
         headers: { 'api-key': arkeselKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender: 'GH Hostels',
-          message: `Your GH Hostels booking verification code is: ${otp}. Valid for 10 minutes.`,
+          message: `Your Beddilo booking verification code is: ${otp}. Valid for 10 minutes.`,
           recipients: [phone.replace(/\D/g, '').replace(/^0/, '233')],
         }),
       }).catch(() => {})
@@ -502,7 +515,7 @@ ${languageGuide}
 
 Booking flow (follow this order strictly):
 1. When a guest wants to book: use check_availability to show available room types.
-2. Let the guest choose a room type and confirm their details (name, phone, check-in date).
+2. Let the guest choose a room type and confirm their details (name, phone, check-in and check-out dates).
 3. Call create_booking with their details — this creates a provisional hold.
 4. Immediately call send_otp to send a verification code to their phone.
 5. Ask the guest to share the 4-digit code they received by SMS.

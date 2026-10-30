@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2, CreditCard } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatGHS } from '@/lib/utils'
+import { stayTotal } from '@/lib/bookings/stay-pricing'
 import {
   PaymentSplitInput, defaultPaymentSplitValue, derivePayments, isPaymentSplitValid,
   type PaymentSplitValue,
@@ -67,10 +68,14 @@ export function GroupBookingForm({ rooms, occupants, checkIn, checkOut }: {
     setRows((prev) => (prev.length > 2 ? prev.filter((r) => r.key !== key) : prev))
   }
 
+  // Each room is billed rate × billable units, as createBooking() does server-side.
+  const roomTotal = (cat: { base_rate: number; rate_unit: string } | null) =>
+    cat ? stayTotal(cat.base_rate, cat.rate_unit, checkIn, checkOut) : 0
+
   const total = rows.reduce((sum, r) => {
     const room = rooms.find((x) => x.id === r.room_id)
     const cat = room ? categoryOf(room) : null
-    return sum + (cat?.base_rate ?? 0)
+    return sum + roomTotal(cat)
   }, 0)
 
   async function submit() {
@@ -88,7 +93,7 @@ export function GroupBookingForm({ rooms, occupants, checkIn, checkOut }: {
       if (!r.showPayment) continue
       const room = rooms.find((x) => x.id === r.room_id)
       const cat = room ? categoryOf(room) : null
-      if (!isPaymentSplitValid(r.payment, cat?.base_rate ?? 0)) {
+      if (!isPaymentSplitValid(r.payment, roomTotal(cat))) {
         setError('One of the room payments is invalid — check the amounts add up correctly.')
         return
       }
@@ -180,7 +185,7 @@ export function GroupBookingForm({ rooms, occupants, checkIn, checkOut }: {
                     ))}
                   </select>
                   <span className="w-24 shrink-0 text-right text-sm currency-amount text-text-secondary">
-                    {cat ? formatGHS(cat.base_rate) : '—'}
+                    {cat ? formatGHS(roomTotal(cat)) : '—'}
                   </span>
                   <button
                     onClick={() => removeRow(row.key)}
@@ -197,7 +202,7 @@ export function GroupBookingForm({ rooms, occupants, checkIn, checkOut }: {
                     {row.showPayment ? (
                       <div className="rounded-lg border border-border bg-surface-raised p-3">
                         <PaymentSplitInput
-                          totalDue={cat.base_rate}
+                          totalDue={roomTotal(cat)}
                           value={row.payment}
                           onChange={(payment) => updateRow(row.key, { payment })}
                         />

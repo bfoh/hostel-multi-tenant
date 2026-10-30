@@ -16,7 +16,7 @@ export interface BookingPayload {
   hostel_slug: string
   category_id: string
   check_in_date: string
-  check_out_date: string | null
+  check_out_date: string
   first_name: string
   last_name: string
   email: string | null

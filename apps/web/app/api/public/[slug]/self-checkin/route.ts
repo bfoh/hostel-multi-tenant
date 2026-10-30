@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { initializeTransaction } from '@/lib/paystack'
+import { stayTotal } from '@/lib/bookings/stay-pricing'
 import {
   selfCheckinSchema,
   GHANA_CARD_MAX_BYTES,
@@ -300,6 +301,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const year = new Date().getFullYear()
   const suffix = Math.floor(100000 + Math.random() * 900000)
   const bookingRef = `${prefix}-${year}-${suffix}`
+  const totalAmount = stayTotal(category.base_rate, category.rate_unit, d.check_in_date, d.check_out_date)
 
   const { data: booking, error: bookErr } = await admin
     .from('bookings')
@@ -312,7 +314,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       check_out_date: d.check_out_date,
       rate_per_unit: category.base_rate,
       rate_unit: category.rate_unit,
-      total_amount: category.base_rate,
+      total_amount: totalAmount,
       paid_amount: 0,
       payment_status: 'unpaid',
       status: 'pending_confirmation',
@@ -345,7 +347,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       {
         booking_ref: booking.booking_ref,
         booking_id: booking.id,
-        amount: category.base_rate,
+        amount: totalAmount,
         authorization_url: null,
         message: 'Payment will be collected at the front desk.',
       },
@@ -358,7 +360,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       {
         booking_ref: booking.booking_ref,
         booking_id: booking.id,
-        amount: category.base_rate,
+        amount: totalAmount,
         authorization_url: null,
         message: 'Payment will be collected at the front desk.',
       },
@@ -372,7 +374,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     .insert({
       tenant_id: tenant.id,
       booking_id: booking.id,
-      amount: category.base_rate,
+      amount: totalAmount,
       method: 'card' as any,
       status: 'pending',
       reference: null,
@@ -391,7 +393,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   try {
     const result = await initializeTransaction({
       email: d.email ?? `${d.phone}@selfcheckin.local`,
-      amountPesewas: category.base_rate,
+      amountPesewas: totalAmount,
       reference,
       callbackUrl,
       subaccount: tenant.paystack_subaccount_code,
@@ -414,7 +416,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       {
         booking_ref: booking.booking_ref,
         booking_id: booking.id,
-        amount: category.base_rate,
+        amount: totalAmount,
         authorization_url: result.authorizationUrl,
       },
       { status: 201 }
@@ -426,7 +428,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       {
         booking_ref: booking.booking_ref,
         booking_id: booking.id,
-        amount: category.base_rate,
+        amount: totalAmount,
         authorization_url: null,
         message:
           err instanceof Error

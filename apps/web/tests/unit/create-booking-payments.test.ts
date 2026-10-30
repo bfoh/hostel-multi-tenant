@@ -171,4 +171,33 @@ describe('createBooking — payment collection', () => {
     expect(paymentInserts).toHaveLength(0)
     expect(bookingUpdates).toHaveLength(0)
   })
+
+  it('bills every night of a multi-night stay, not just one', async () => {
+    const { client, bookingInserts, bookingUpdates } = fakeSupabase({ baseRate: 10000 })
+
+    const result = await createBooking(client, 'tenant-1', {
+      ...baseParams,
+      check_out_date: '2026-10-04', // 3 nights
+      payments:       [{ method: 'cash', amount: 30000 }],
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(bookingInserts[0]).toMatchObject({ rate_per_unit: 10000, rate_unit: 'night', total_amount: 30000 })
+    expect(result.status).toBe('confirmed')
+    expect(bookingUpdates).toEqual([{ status: 'confirmed' }])
+  })
+
+  it('still rejects payments above the multi-night total', async () => {
+    const { client, bookingInserts } = fakeSupabase({ baseRate: 10000 })
+
+    const result = await createBooking(client, 'tenant-1', {
+      ...baseParams,
+      check_out_date: '2026-10-04',
+      payments:       [{ method: 'cash', amount: 30001 }],
+    })
+
+    expect(result.ok).toBe(false)
+    expect(bookingInserts).toHaveLength(0)
+  })
 })

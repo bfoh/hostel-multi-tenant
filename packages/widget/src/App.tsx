@@ -34,6 +34,7 @@ export function App({ slug, onClose }: Props) {
   const [phone,     setPhone]     = useState('')
   const [studentId, setStudentId] = useState('')
   const [checkIn,   setCheckIn]   = useState('')
+  const [checkOut,  setCheckOut]  = useState('')
 
   useEffect(() => {
     getAvailableRooms(slug)
@@ -50,7 +51,7 @@ export function App({ slug, onClose }: Props) {
       const res = await createBooking(slug, {
         category_id:    selected.id,
         check_in_date:  checkIn,
-        check_out_date: null,
+        check_out_date: checkOut,
         first_name:     firstName.trim(),
         last_name:      lastName.trim(),
         email:          email.trim() || null,
@@ -159,10 +160,14 @@ export function App({ slug, onClose }: Props) {
               <label class="abw-label">Check-in date *</label>
               <input class="abw-input" type="date" value={checkIn} onInput={(e: any) => setCheckIn(e.target.value)} />
             </div>
+            <div class="abw-field">
+              <label class="abw-label">Check-out date *</label>
+              <input class="abw-input" type="date" value={checkOut} min={checkIn || undefined} onInput={(e: any) => setCheckOut(e.target.value)} />
+            </div>
             {error && <p class="abw-error">{error}</p>}
             <button
               class="abw-btn"
-              disabled={submitting || !firstName || !lastName || !email || !phone || !checkIn}
+              disabled={submitting || !firstName || !lastName || !email || !phone || !checkIn || !checkOut || checkOut <= checkIn}
               onClick={handleBook}
             >
               {submitting ? <span class="abw-spinner" /> : 'Confirm Booking'}

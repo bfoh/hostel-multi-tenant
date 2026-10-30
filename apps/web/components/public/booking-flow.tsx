@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Check, Users, Wifi, Wind, Droplets, Zap, Shield, Car, Utensils, Dumbbell, BookOpen, Share2, Phone, Flame, Clock, ArrowUpRight, BedDouble, UsersRound } from 'lucide-react'
+import { billableUnits } from '@/lib/bookings/stay-pricing'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -47,6 +48,13 @@ interface OccupantMatchingProfile {
 
 /* ── Helpers ───────────────────────────────────────────────────────────── */
 
+/** YYYY-MM-DD of the following day — stays need at least one night. */
+function dayAfter(isoDate: string) {
+  const d = new Date(`${isoDate}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().split('T')[0]
+}
+
 function formatGHS(pesewas: number) {
   return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(pesewas / 100)
 }
@@ -56,6 +64,11 @@ const RATE_LABEL: Record<string, string> = {
   week:     '/ week',
   month:    '/ month',
   semester: '/ semester',
+}
+
+/** "3 nights", "1 semester" */
+function unitCount(units: number, rateUnit: string) {
+  return `${units} ${rateUnit}${units === 1 ? '' : 's'}`
 }
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
@@ -615,13 +628,22 @@ function DetailsForm({
             <input
               type="date"
               required
-              min={form.check_in_date || today}
+              min={dayAfter(form.check_in_date || today)}
               value={form.check_out_date}
               onChange={e => set('check_out_date', e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
             />
           </div>
         </div>
+        {form.check_in_date && form.check_out_date > form.check_in_date && (() => {
+          const units = billableUnits(category.rate_unit, form.check_in_date, form.check_out_date)
+          return (
+            <p className="mt-4 flex flex-wrap items-baseline justify-between gap-x-3 border-t border-gray-100 pt-3 text-sm text-gray-600" aria-live="polite">
+              <span>{unitCount(units, category.rate_unit)} × {formatGHS(category.base_rate)}</span>
+              <span className="font-semibold text-gray-900">Total {formatGHS(category.base_rate * units)}</span>
+            </p>
+          )
+        })()}
       </fieldset>
 
       {/* Personal info */}
@@ -963,6 +985,8 @@ interface BookingResult {
   check_in_date: string
   check_out_date: string
   amount: number
+  rate?: number
+  units?: number
   rate_unit: string
   status: string
   pay_at_hostel: boolean
@@ -1028,8 +1052,12 @@ function Confirmation({
           <Row label="Check-in" value={formatDate(result.check_in_date)} />
           <Row label="Check-out" value={formatDate(result.check_out_date)} />
           <Row
-            label="Amount due"
-            value={`${formatGHS(result.amount)} ${RATE_LABEL[result.rate_unit] ?? `/ ${result.rate_unit}`}`}
+            label="Rate"
+            value={`${formatGHS(result.rate ?? result.amount)} ${RATE_LABEL[result.rate_unit] ?? `/ ${result.rate_unit}`}`}
+          />
+          <Row
+            label="Total due"
+            value={`${formatGHS(result.amount)}${result.units ? ` (${unitCount(result.units, result.rate_unit)})` : ''}`}
             bold
           />
           <Row
@@ -1200,9 +1228,13 @@ export function BookingFlow({ categories, tenant }: BookingFlowProps) {
       const json = await res.json()
 
       if (!res.ok) {
+        // 422s carry zod fieldErrors ({ field: [message] }) — show the first.
+        const fieldMsg = json.error && typeof json.error === 'object'
+          ? (Object.values(json.error as Record<string, string[]>).flat()[0] ?? null)
+          : null
         const msg = typeof json.error === 'string'
           ? json.error
-          : 'Booking failed. Please try again or contact the hostel.'
+          : fieldMsg ?? 'Booking failed. Please try again or contact the hostel.'
         setError(msg)
         return
       }

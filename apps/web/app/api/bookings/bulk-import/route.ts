@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
 import { bookingImportRowSchema } from '@/lib/validation/booking-import'
+import { stayTotal } from '@/lib/bookings/stay-pricing'
 
 const MAX_ROWS = 500
 
@@ -254,7 +255,7 @@ export async function POST(request: NextRequest) {
         academic_year:   row.academic_year ?? null,
         rate_per_unit:   room.base_rate,
         rate_unit:       room.rate_unit,
-        total_amount:    room.base_rate,
+        total_amount:    stayTotal(room.base_rate, room.rate_unit, row.check_in_date, row.check_out_date),
         discount_amount: row.discount_amount,
         discount_reason: row.discount_reason ?? null,
         tax_amount:      0,
