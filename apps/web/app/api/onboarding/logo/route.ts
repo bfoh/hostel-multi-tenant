@@ -65,12 +65,15 @@ export async function POST(req: NextRequest) {
   // comment on why the storage write below no longer relies on RLS too.
   const { data: membership } = await admin
     .from('tenant_members')
-    .select('id')
+    .select('role')
     .eq('tenant_id', tenantId)
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .maybeSingle()
+    .maybeSingle() as { data: { role: string } | null }
   if (!membership) return NextResponse.json({ error: 'Not a member of this tenant' }, { status: 403 })
+  if (!['owner', 'manager'].includes(membership.role)) {
+    return NextResponse.json({ error: 'Insufficient role' }, { status: 403 })
+  }
 
   const ext  = file.name.split('.').pop() ?? 'png'
   const path = `${tenantId}/logo.${ext}`

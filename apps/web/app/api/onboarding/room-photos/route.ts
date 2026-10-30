@@ -40,13 +40,13 @@ async function resolveTenant(admin: ReturnType<typeof createAdminClient>, userId
 
   const { data: membership } = await admin
     .from('tenant_members')
-    .select('id')
+    .select('role')
     .eq('tenant_id', tenantId)
     .eq('user_id', userId)
     .eq('is_active', true)
-    .maybeSingle()
+    .maybeSingle() as { data: { role: string } | null }
 
-  return membership ? tenantId : null
+  return membership && ['owner', 'manager'].includes(membership.role) ? tenantId : null
 }
 
 export async function POST(req: NextRequest) {

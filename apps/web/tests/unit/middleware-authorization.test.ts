@@ -194,12 +194,23 @@ describe('residents', () => {
     },
   )
 
-  it.each(['/occupant-portal', '/occupant-portal/profile', '/api/occupant/profile', '/auth/set-password'])(
+  it.each(['/occupant-portal', '/occupant-portal/profile', '/api/occupant/profile', '/api/messages/conversations', '/api/push/register', '/auth/set-password'])(
     'keep %s',
     async (path) => {
       const r = await hit(OWN_HOST, path, { as: 'residentOwn' })
       expect(r.passedThrough).toBe(true)
       expect(r.forwarded('x-tenant-id')).toBe(OWN)
+    },
+  )
+
+  // Most staff APIs have no role check of their own; before this a resident
+  // could rename the property, add room types or change its payout account.
+  it.each(['/api/rooms', '/api/room-categories', '/api/settings/profile', '/api/settings/payouts/subaccount', '/api/accounting/journal', '/api/occupants', '/api/occupantsx'])(
+    'are refused the staff API %s',
+    async (path) => {
+      const r = await hit(OWN_HOST, path, { as: 'residentOwn', method: 'POST' })
+      expect(r.status).toBe(403)
+      expect(await r.body()).toContain('do not have access')
     },
   )
 })
@@ -212,10 +223,18 @@ describe('staff and owners of the property', () => {
     expect(r.forwarded('x-tenant-role')).toBe('receptionist')
   })
 
-  it('staff are still kept out of admin-only settings', async () => {
-    const r = await hit(OWN_HOST, '/settings', { as: 'staffOwn' })
+  it.each(['/settings', '/staff', '/staff/performance'])('staff are still kept out of the admin-only %s', async (path) => {
+    const r = await hit(OWN_HOST, path, { as: 'staffOwn' })
     expect(r.status).toBe(307)
     expect(r.location).toBe('/dashboard')
+  })
+
+  // The mobile app sends every non-owner role to /staff-mobile; the '/staff'
+  // admin-only prefix used to catch it and bounce them to /dashboard.
+  it('staff reach the mobile staff home', async () => {
+    const r = await hit(OWN_HOST, '/staff-mobile/tasks', { as: 'staffOwn' })
+    expect(r.passedThrough).toBe(true)
+    expect(r.forwarded('x-tenant-role')).toBe('receptionist')
   })
 
   it.each(['/dashboard', '/bookings', '/visitors', '/settings/payouts', '/api/rooms'])('owners reach %s', async (path) => {
@@ -262,5 +281,29 @@ describe('fail-closed and impersonation', () => {
     const r = await hit('beddilo.test', '/dashboard', { as: 'newSignup', headers: { 'x-tenant-id': VICTIM, 'x-tenant-role': 'owner' } })
     expect(r.forwarded('x-tenant-id')).toBeNull()
     expect(r.forwarded('x-tenant-role')).toBeNull()
+  })
+})
+
+// getServerTenantId() falls back to the __tenant_id cookie when there is no
+// x-tenant-id header — which is the case for an account with no property on
+// the root domain, so a forged cookie used to pick the tenant API writes went to.
+describe('forged tenant cookie', () => {
+  it('is not forwarded for an account with no property', async () => {
+    const r = await hit('beddilo.test', '/api/room-categories', { as: 'newSignup', method: 'POST', cookies: `a=1; __tenant_id=${VICTIM}; b=2` })
+    expect(r.passedThrough).toBe(true)
+    expect(r.forwarded('x-tenant-id')).toBeNull()
+    expect(r.forwarded('cookie')).toBe('a=1; b=2')
+  })
+
+  it('is not forwarded to logged-out public pages either', async () => {
+    const r = await hit('beddilo.test', '/book', { cookies: `__tenant_id=${VICTIM}` })
+    expect(r.passedThrough).toBe(true)
+    expect(r.forwarded('cookie')).toBeNull()
+  })
+
+  it('cannot override the tenant a member was resolved to', async () => {
+    const r = await hit(OWN_HOST, '/api/room-categories', { as: 'ownerOwn', method: 'POST', cookies: `__tenant_id=${VICTIM}` })
+    expect(r.forwarded('x-tenant-id')).toBe(OWN)
+    expect(r.forwarded('cookie') ?? '').not.toContain(VICTIM)
   })
 })

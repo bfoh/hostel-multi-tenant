@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 import {
   createSubaccount,
   updateSubaccount,
@@ -19,6 +20,9 @@ const schema = z.object({
 export async function GET() {
   const tenantId = await getServerTenantId()
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+
+  const role = await requireTenantRole(tenantId, ['owner', 'manager'])
+  if (role instanceof NextResponse) return role
 
   const admin = await createTenantAdminClientFromHeaders()
   const { data: tenant, error } = await admin
@@ -63,6 +67,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const tenantId = await getServerTenantId()
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+
+  // Changes where the property's booking money settles.
+  const role = await requireTenantRole(tenantId, ['owner', 'manager'])
+  if (role instanceof NextResponse) return role
 
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)

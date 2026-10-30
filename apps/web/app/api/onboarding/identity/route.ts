@@ -62,17 +62,21 @@ export async function POST(request: NextRequest) {
 
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
-  // The tenant id can come from the request body, so membership is the real
-  // authorization gate for the service-role writes below (same check as
-  // /api/onboarding/logo).
+  // The tenant id can come from the request body, so this is the real
+  // authorization gate for the service-role writes below. Renaming the
+  // property and changing its URL is for its owner or a manager, not any
+  // member (same check as /api/onboarding/logo).
   const { data: membership } = await admin
     .from('tenant_members')
-    .select('id')
+    .select('role')
     .eq('tenant_id', tenantId)
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .maybeSingle()
+    .maybeSingle() as { data: { role: string } | null }
   if (!membership) return NextResponse.json({ error: 'Not a member of this tenant' }, { status: 403 })
+  if (!['owner', 'manager'].includes(membership.role)) {
+    return NextResponse.json({ error: 'Insufficient role' }, { status: 403 })
+  }
 
   const d = parsed.data
 

@@ -4,8 +4,9 @@
  * wizard sends it after self-provisioning) and write with the service-role
  * client; before the fix neither checked that the caller belonged to that
  * tenant, so any signed-in account could rename another property, take its
- * URL slug and add room types to it. Supabase, next/headers and email are
- * mocked — no network, no real accounts.
+ * URL slug and add room types to it. Those changes are also for the
+ * property's owner or a manager only, not any member of its team.
+ * Supabase, next/headers and email are mocked — no network, no real accounts.
  */
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,7 +17,7 @@ const USER = 'u0000000-0000-4000-8000-0000000000c1'
 
 let signedIn = true
 let headerTenantId: string | null = null
-let memberships: { tenant_id: string; user_id: string; is_active: boolean }[] = []
+let memberships: { tenant_id: string; user_id: string; is_active: boolean; role: string }[] = []
 let writes: { table: string; op: string; filters: unknown[][] }[] = []
 
 vi.mock('next/headers', () => ({
@@ -45,7 +46,7 @@ function query(table: string) {
         (eq.user_id === undefined || m.user_id === eq.user_id) &&
         (eq.tenant_id === undefined || m.tenant_id === eq.tenant_id) &&
         (eq.is_active === undefined || m.is_active === eq.is_active))
-      return { data: row ? { id: 'm1', tenant_id: row.tenant_id } : null, error: null }
+      return { data: row ? { id: 'm1', tenant_id: row.tenant_id, role: row.role } : null, error: null }
     }
     if (table === 'tenants' && op === 'select') {
       const byId = filters.some((f) => f[0] === 'eq' && f[1] === 'id')
@@ -92,7 +93,7 @@ async function post(route: 'identity' | 'complete', body: Record<string, unknown
 beforeEach(() => {
   signedIn = true
   headerTenantId = null
-  memberships = [{ tenant_id: OWN, user_id: USER, is_active: true }]
+  memberships = [{ tenant_id: OWN, user_id: USER, is_active: true, role: 'owner' }]
   writes = []
 })
 
@@ -113,10 +114,26 @@ describe.each(['identity', 'complete'] as const)('/api/onboarding/%s', (route) =
   })
 
   it('refuses an inactive membership', async () => {
-    memberships = [{ tenant_id: VICTIM, user_id: USER, is_active: false }]
+    memberships = [{ tenant_id: VICTIM, user_id: USER, is_active: false, role: 'owner' }]
     const res = await post(route, body)
     expect(res.status).toBe(403)
     expect(writes).toEqual([])
+  })
+
+  it.each(['receptionist', 'housekeeper', 'accountant', 'security'])(
+    'refuses a %s of the property and writes nothing',
+    async (role) => {
+      memberships = [{ tenant_id: OWN, user_id: USER, is_active: true, role }]
+      const res = await post(route, { ...body, tenantId: OWN })
+      expect(res.status).toBe(403)
+      expect(writes).toEqual([])
+    },
+  )
+
+  it('lets a manager of the property through', async () => {
+    memberships = [{ tenant_id: OWN, user_id: USER, is_active: true, role: 'manager' }]
+    const res = await post(route, { ...body, tenantId: OWN })
+    expect(res.status).toBe(200)
   })
 
   it('requires a signed-in user', async () => {

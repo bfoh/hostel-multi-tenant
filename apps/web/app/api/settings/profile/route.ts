@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 const schema = z.object({
   name:           z.string().min(2).max(200),
@@ -24,9 +25,11 @@ export async function PATCH(req: NextRequest) {
   const tenantId = headersList.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
 
+  const role = await requireTenantRole(tenantId, ['owner', 'manager'])
+  if (role instanceof NextResponse) return role
+
   // Use admin client to bypass RLS — tenants table has no UPDATE policy for
-  // user-scoped clients. The middleware already validates tenant ownership
-  // via the x-tenant-id header derived from JWT claims.
+  // user-scoped clients.
   const supabase = await createTenantAdminClientFromHeaders()
 
   // Normalise empty strings to null so optional fields (especially

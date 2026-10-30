@@ -25,6 +25,11 @@ const PORTAL_PATHS  = ['/staff-portal', '/occupant-portal']
 // sign-out and account flows (set-password, OTP, invite acceptance), and the
 // super-admin console, whose pages and APIs check platform_admins themselves.
 const MEMBERSHIP_EXEMPT_PATHS = ['/api/auth', '/auth', '/admin', '/api/admin']
+// The only APIs a resident (occupant, no tenant_members row) may call: their
+// portal's own routes, resident↔staff messaging, and the mobile app's push
+// registration and role lookup. Most staff APIs have no role check of their
+// own, so everything else is refused for residents here.
+const RESIDENT_API_PATHS = ['/api/occupant', '/api/messages', '/api/push', '/api/mobile']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -83,6 +88,12 @@ export async function middleware(request: NextRequest) {
   ]) {
     reqHeaders.delete(h)
   }
+  // Same for the __tenant_id cookie: getServerTenantId() and
+  // createTenantAdminClientFromHeaders() fall back to it when x-tenant-id is
+  // absent, so a forged value let a signed-in account with no property write
+  // to any tenant from the root domain. The tenant resolved below is the only
+  // one downstream code may see; the cookie is re-set from it at the end.
+  stripRequestCookie(reqHeaders, '__tenant_id')
 
   // Which vertical's marketplace/marketing site this request is for —
   // meaningful independent of any specific tenant (an anonymous visitor
@@ -190,7 +201,7 @@ export async function middleware(request: NextRequest) {
     '/portfolio', '/invoices', '/payments', '/intelligence', '/ai',
     '/activity', '/waiting-list', '/housekeeping', '/security', '/lost-found',
     '/kiosk', '/communications', '/my-account']
-  if (!isPortalPath && !isAuthPath && ADMIN_APP_PATHS.some(p => pathname.startsWith(p))) {
+  if (!isPortalPath && !isAuthPath && ADMIN_APP_PATHS.some(p => isUnderPath(pathname, p))) {
     if (portalRole === 'occupant') return NextResponse.redirect(new URL('/occupant-portal', request.url))
   }
 
@@ -200,7 +211,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Admin-only route guard (within the admin app) ──────────────────────────
-  // Staff roles (receptionist, housekeeper, etc.) must not access admin-only sections
+  // Staff roles (receptionist, housekeeper, etc.) must not access admin-only
+  // sections. Whole-segment matching: '/staff' must not catch /staff-mobile,
+  // the mobile app's home for exactly these roles.
   const ADMIN_ONLY_PATHS = [
     '/portfolio', '/invoices', '/payments', '/accounting', '/staff',
     '/assets', '/waiting-list', '/reports', '/intelligence', '/ai',
@@ -212,7 +225,7 @@ export async function middleware(request: NextRequest) {
     !isPortalPath && !isAuthPath &&
     portalRole !== 'occupant' && // already handled above
     !isAdminRole && tenantRole &&                            // has a role but not admin
-    ADMIN_ONLY_PATHS.some(p => pathname.startsWith(p))
+    ADMIN_ONLY_PATHS.some(p => isUnderPath(pathname, p))
   ) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
@@ -344,6 +357,9 @@ export async function middleware(request: NextRequest) {
         : new NextResponse('Could not verify your access. Please try again.', { status: 503 })
     }
     if (!occupant) return denyTenantAccess(isApi)
+    if (isApi && !RESIDENT_API_PATHS.some((p) => isUnderPath(pathname, p))) {
+      return denyTenantAccess(true)
+    }
     if (!isPortalPath && !isApi && pathname !== '/') {
       return NextResponse.redirect(new URL('/occupant-portal', request.url))
     }
@@ -665,6 +681,15 @@ function denyTenantAccess(isApi: boolean): NextResponse {
     '</body></html>',
     { status: 403, headers: { 'content-type': 'text/html; charset=utf-8' } },
   )
+}
+
+/** Removes one cookie from the Cookie header forwarded downstream. */
+function stripRequestCookie(headers: Headers, name: string) {
+  const cookie = headers.get('cookie')
+  if (!cookie) return
+  const kept = cookie.split(';').filter((c) => c.split('=')[0].trim() !== name)
+  if (kept.length) headers.set('cookie', kept.join(';'))
+  else headers.delete('cookie')
 }
 
 export const config = {

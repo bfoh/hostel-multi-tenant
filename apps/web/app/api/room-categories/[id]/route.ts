@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 
 const schema = z.object({
   name:        z.string().min(2).max(100).optional(),
@@ -31,6 +32,9 @@ export async function PUT(
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
 
+  const role = await requireTenantRole(tenantId, ['owner', 'manager'])
+  if (role instanceof NextResponse) return role
+
   const supabase = await createTenantAdminClientFromHeaders()
   const { data, error } = await supabase
     .from('room_categories')
@@ -57,6 +61,9 @@ export async function DELETE(
   if (!tenantId) {
     return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
   }
+
+  const role = await requireTenantRole(tenantId, ['owner', 'manager'])
+  if (role instanceof NextResponse) return role
 
   const supabase = await createTenantAdminClientFromHeaders()
 

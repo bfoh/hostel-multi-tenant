@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
 import { getServerTenantId } from '@/lib/auth/tenant'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
 import { invalidateTenantCache } from '@/lib/tenant/resolve'
 
 const schema = z.object({
@@ -20,6 +21,9 @@ const schema = z.object({
 export async function PATCH(request: NextRequest) {
   const tenantId = await getServerTenantId()
   if (!tenantId) return NextResponse.json({ error: 'No tenant context' }, { status: 401 })
+
+  const role = await requireTenantRole(tenantId, ['owner', 'manager'])
+  if (role instanceof NextResponse) return role
 
   const body   = await request.json().catch(() => null)
   const parsed = schema.safeParse(body)
