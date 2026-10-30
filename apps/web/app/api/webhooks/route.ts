@@ -1,19 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
+import { WEBHOOK_EVENT_TYPES } from '@/lib/webhooks'
 import { z } from 'zod'
 
-const VALID_EVENTS = [
-  '*',
-  'booking.created', 'booking.confirmed', 'booking.checked_in', 'booking.checked_out', 'booking.cancelled',
-  'payment.received',
-  'maintenance.created', 'maintenance.resolved',
-  'occupant.created',
-]
+// Endpoints receive guest and payment data, so only owners and managers may
+// see or change them (the settings page is already limited to those roles).
+const WEBHOOK_ROLES = ['owner', 'manager'] as const
 
 const schema = z.object({
   url:         z.string().url(),
-  events:      z.array(z.enum(VALID_EVENTS as [string, ...string[]])).min(1),
+  events:      z.array(z.enum(WEBHOOK_EVENT_TYPES)).min(1),
   description: z.string().max(200).optional(),
   is_active:   z.boolean().default(true),
 })
@@ -22,6 +20,8 @@ export async function GET() {
   const h = await headers()
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const role = await requireTenantRole(tenantId, WEBHOOK_ROLES)
+  if (role instanceof NextResponse) return role
 
   const supabase = await createTenantAdminClientFromHeaders()
   const { data: endpoints } = await supabase
@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
   const h = await headers()
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const role = await requireTenantRole(tenantId, WEBHOOK_ROLES)
+  if (role instanceof NextResponse) return role
 
   const supabase = await createTenantAdminClientFromHeaders()
   const body = await req.json().catch(() => null)

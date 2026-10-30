@@ -23,7 +23,7 @@ export default async function WebhooksPage() {
       <div>
         <h1 className="text-2xl font-bold text-text-primary">Webhooks</h1>
         <p className="mt-0.5 text-sm text-text-secondary">
-          Send real-time HTTP events to external systems when things happen in GH Hostels.
+          Send signed HTTP events to external systems when things happen in Beddilo, usually within a minute. Failed deliveries are retried.
         </p>
       </div>
       <WebhooksClient initialEndpoints={(endpoints ?? []) as any} initialEvents={(events ?? []) as any} />

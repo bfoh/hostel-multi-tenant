@@ -1,11 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { headers } from 'next/headers'
 import { createTenantAdminClientFromHeaders } from '@/lib/supabase/tenant-admin'
+import { requireTenantRole } from '@/lib/auth/tenant-role'
+import { WEBHOOK_EVENT_TYPES } from '@/lib/webhooks'
 import { z } from 'zod'
+
+const WEBHOOK_ROLES = ['owner', 'manager'] as const
 
 const schema = z.object({
   url:         z.string().url().optional(),
-  events:      z.array(z.string()).min(1).optional(),
+  events:      z.array(z.enum(WEBHOOK_EVENT_TYPES)).min(1).optional(),
   description: z.string().max(200).optional(),
   is_active:   z.boolean().optional(),
 })
@@ -18,6 +22,8 @@ export async function PATCH(
   const h = await headers()
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const role = await requireTenantRole(tenantId, WEBHOOK_ROLES)
+  if (role instanceof NextResponse) return role
 
   const supabase = await createTenantAdminClientFromHeaders()
   const body = await req.json().catch(() => null)
@@ -44,6 +50,8 @@ export async function DELETE(
   const h = await headers()
   const tenantId = h.get('x-tenant-id')
   if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const role = await requireTenantRole(tenantId, WEBHOOK_ROLES)
+  if (role instanceof NextResponse) return role
 
   const supabase = await createTenantAdminClientFromHeaders()
   const { error } = await supabase

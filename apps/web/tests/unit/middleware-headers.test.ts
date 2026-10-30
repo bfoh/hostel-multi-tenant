@@ -8,7 +8,7 @@
  * parses the real source and fails if someone adds a new `x-...` header
  * assignment without adding it to the strip list too.
  */
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { describe, expect, it } from 'vitest'
@@ -44,5 +44,47 @@ describe('middleware tenant header hygiene', () => {
     const setNames = extractSetHeaderNames(SRC)
     const missing = setNames.filter((n) => !stripList.includes(n))
     expect(missing).toEqual([])
+  })
+})
+
+// BYPASS_PATHS return before the strip loop, so a forged x-tenant-id reaches
+// those routes untouched. /api/webhooks used to be listed there while its
+// handlers trusted that header with a service-role client — anyone could
+// manage any tenant's webhook endpoints. No bypassed route may read
+// tenant context.
+const APP_DIR = path.resolve(__dirname, '../../app')
+const TENANT_CONTEXT = /x-tenant-|x-portal-role|x-occupant-id|x-admin-impersonating|FromHeaders\(|getServerTenantId\(/
+
+function listFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? listFiles(path.join(dir, e.name)) : /\.(ts|tsx)$/.test(e.name) ? [path.join(dir, e.name)] : [],
+  )
+}
+
+/** URL path a file under app/ serves, ignoring (route groups). */
+function urlPathOf(file: string): string {
+  const segments = path.relative(APP_DIR, path.dirname(file)).split(path.sep).filter((s) => s && !/^\(.*\)$/.test(s))
+  return '/' + segments.join('/')
+}
+
+describe('middleware bypass paths', () => {
+  const bypass = Array.from(
+    (SRC.match(/const BYPASS_PATHS = \[([\s\S]*?)\]/)?.[1] ?? '').matchAll(/'([^']+)'/g),
+  ).map((m) => m[1])
+
+  it('finds the bypass list', () => {
+    expect(bypass).toContain('/api/cron')
+  })
+
+  it('no longer bypasses the tenant webhook management API', () => {
+    expect(bypass.some((p) => '/api/webhooks'.startsWith(p))).toBe(false)
+  })
+
+  it('never routes a bypassed request to code that trusts tenant headers', () => {
+    const offenders = listFiles(APP_DIR)
+      .filter((f) => bypass.some((p) => urlPathOf(f).startsWith(p)))
+      .filter((f) => TENANT_CONTEXT.test(readFileSync(f, 'utf8')))
+      .map((f) => path.relative(APP_DIR, f))
+    expect(offenders).toEqual([])
   })
 })

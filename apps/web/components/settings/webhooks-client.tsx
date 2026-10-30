@@ -209,7 +209,7 @@ export function WebhooksClient({
           <p className="text-xs font-medium text-text-tertiary mb-2">Signature verification</p>
           <p className="text-xs text-text-secondary">
             Every request is signed with <span className="font-mono bg-surface-sunken px-1 rounded">HMAC-SHA256</span> using your endpoint's secret.
-            Verify the <span className="font-mono bg-surface-sunken px-1 rounded">X-GH Hostels-Sig</span> header to confirm authenticity.
+            Verify the <span className="font-mono bg-surface-sunken px-1 rounded">X-GH-Hostels-Sig</span> header (HMAC-SHA256 of the raw body with your endpoint secret) to confirm authenticity.
           </p>
         </CardContent>
       </Card>

@@ -5,7 +5,6 @@ import { classifyHost, tenantHost, type BusinessType } from '@/lib/tenant/host-c
 
 const BYPASS_PATHS = [
   '/widget',
-  '/api/webhooks',
   '/api/cron',
   '/api/payments/paystack/webhook',
   '/api/auth/forgot-password',
@@ -18,7 +17,7 @@ const BYPASS_PATHS = [
   '/robots.txt',
   '/sitemap.xml',
 ]
-const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/privacy', '/terms', '/browse', '/listing', '/for-owners', '/list-your-property', '/api/public', '/api/widget', '/api/mobile/role', '/api/mobile/tenant-theme']
+const NO_AUTH_PATHS = ['/book', '/checkin', '/portal', '/order', '/visit', '/compare', '/privacy', '/terms', '/browse', '/listing', '/for-owners', '/list-your-property', '/offline', '/api/public', '/api/widget', '/api/mobile/role', '/api/mobile/tenant-theme']
 const AUTH_PATHS    = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/invite']
 const PORTAL_PATHS  = ['/staff-portal', '/occupant-portal']
 
