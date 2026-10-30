@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyWebhookSignature } from '@/lib/paystack-webhook'
 import { findPlanByCode } from '@/lib/platform-plans'
+import { checkChargeCoversExpected } from '@/lib/payments/verified-charge'
 
 /**
  * Unified Paystack webhook.
@@ -70,6 +71,12 @@ export async function POST(req: NextRequest) {
       .from('paystack_events')
       .update({ error: err.message ?? String(err) })
       .eq('id', ledgerRow!.id)
+    // A charge that doesn't cover what it would settle can never pass on a
+    // retry: leave it on the ledger for review and acknowledge the delivery.
+    if (err instanceof ChargeRejectedError) {
+      console.warn('[paystack webhook]', err.message)
+      return NextResponse.json({ ok: false, rejected: err.reason })
+    }
     return NextResponse.json({ error: err.message ?? 'Handler failed' }, { status: 500 })
   }
 
@@ -137,6 +144,8 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
       .eq('reference', reference)
       .maybeSingle()
     if (existing) return
+
+    assertChargeCovers(event, md.amount, 'walkin_sale')
 
     // 1) Upsert visitor by (tenant_id, phone). Link to occupant when phone matches.
     let visitorId: string | null = null
@@ -268,6 +277,8 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
       .maybeSingle()
     if (existing) return
 
+    assertChargeCovers(event, md.total_amount, 'pos_sale')
+
     // Map Paystack channel to our payment_method enum
     const channel = event.data.channel
     const method  =
@@ -319,6 +330,8 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
 
     if (!existing || (existing.status === 'paid' && existing.booking_payment_id)) return
 
+    assertChargeCovers(event, existing.amount, 'installment')
+
     const { error: settleError } = await adminAny.rpc('settle_payment_plan_installment', {
       p_tenant_id: tenantId,
       p_installment_id: installmentId,
@@ -352,6 +365,8 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
 
     if (existing) return // idempotent — deposit already on file
 
+    assertChargeCovers(event, depositAmt, 'damage_deposit')
+
     await adminAny
       .from('damage_deposits')
       .insert({
@@ -376,6 +391,16 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
     if (!orderId || !tenantId) return
 
     const adminAny = supabase as any
+    const { data: order } = await adminAny
+      .from('food_orders')
+      .select('total_pesewas')
+      .eq('id', orderId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    if (!order) return
+
+    assertChargeCovers(event, order.total_pesewas, 'food_order')
+
     await adminAny
       .from('food_orders')
       .update({
@@ -439,11 +464,13 @@ async function handleChargeSuccess(event: PaystackWebhookPayload, supabase: Admi
 
   const { data: pendingPayment } = await supabase
     .from('booking_payments')
-    .select('tenant_id')
+    .select('tenant_id, amount')
     .eq('id', paymentId)
     .maybeSingle()
 
   if (!pendingPayment) return
+
+  assertChargeCovers(event, pendingPayment.amount, 'booking_payment')
 
   const { data: settlement, error: settlementError } = await (supabase as any).rpc(
     'finalize_pending_booking_payment',
@@ -597,6 +624,26 @@ async function handleDispute(_event: PaystackWebhookPayload, _supabase: AdminCli
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
+class ChargeRejectedError extends Error {
+  constructor(readonly reason: string, message: string) {
+    super(message)
+  }
+}
+
+/**
+ * Throws ChargeRejectedError unless the charge is in GHS and covers
+ * `expected` — which must come from our own records or the metadata our
+ * server attached at initialisation, never from the charge itself.
+ */
+function assertChargeCovers(event: PaystackWebhookPayload, expected: unknown, source: string) {
+  const check = checkChargeCoversExpected(event.data, Number(expected))
+  if (check.ok) return
+  throw new ChargeRejectedError(
+    check.reason,
+    `charge rejected (${source}): ${check.reason}; expected ${String(expected)}, charged ${check.charged ?? 'n/a'}, reference ${event.data.reference ?? 'n/a'}`,
+  )
+}
+
 function extractTenantId(event: PaystackWebhookPayload): string | null {
   const md = event.data?.metadata
   if (md && typeof md === 'object' && typeof md.tenant_id === 'string') return md.tenant_id
@@ -624,6 +671,8 @@ interface PaystackWebhookPayload {
     reference?: string
     status?: string
     amount?: number
+    requested_amount?: number
+    currency?: string
     paid?: boolean
     channel?: string
     metadata?: Record<string, any> | null

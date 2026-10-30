@@ -6,19 +6,19 @@ import {
   finalizeOnlineBookingPayment,
   notifyOnlinePayment,
 } from '@/lib/payments/record-online-payment'
+import { checkVerifiedBookingCharge } from '@/lib/payments/verified-charge'
 
 // GET /api/occupant/pay/callback — Paystack redirects here after payment
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const reference = searchParams.get('reference') ?? searchParams.get('trxref')
   const bookingId = searchParams.get('booking_id')
-  const amount = parseInt(searchParams.get('amount') ?? '0', 10)
 
   const host = req.headers.get('host') ?? 'localhost:3000'
   const proto = host.includes('localhost') ? 'http' : 'https'
   const origin = `${proto}://${host}`
 
-  if (!reference || !bookingId || !amount) {
+  if (!reference || !bookingId) {
     return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
   }
 
@@ -78,6 +78,16 @@ export async function GET(req: NextRequest) {
   if (!booking) {
     return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
   }
+
+  // The reference must be a GHS charge our server initialised for this exact
+  // booking and tenant; record Paystack's amount, never the URL's (?amount=
+  // on older links is ignored).
+  const charge = checkVerifiedBookingCharge(verifyData, { bookingId, tenantId: occupant.tenant_id })
+  if (!charge.ok) {
+    console.warn('[occupant pay callback] rejected verified charge', { reference, bookingId, reason: charge.reason })
+    return NextResponse.redirect(new URL('/occupant-portal/payments?pay=error', origin))
+  }
+  const amount = charge.amount
 
   const { recorded, requiresResolution } = await finalizeOnlineBookingPayment(admin, {
     tenantId: occupant.tenant_id,

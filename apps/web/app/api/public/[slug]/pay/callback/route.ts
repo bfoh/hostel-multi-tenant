@@ -4,17 +4,18 @@ import {
   finalizeOnlineBookingPayment,
   notifyOnlinePayment,
 } from '@/lib/payments/record-online-payment'
+import { checkVerifiedBookingCharge } from '@/lib/payments/verified-charge'
 
-// GET /api/public/[slug]/pay/callback?trxref=...&reference=...&booking_id=...&amount=...
-// Paystack redirects here after payment
+// GET /api/public/[slug]/pay/callback?trxref=...&reference=...&booking_id=...
+// Paystack redirects here after payment. Older links also carry &amount=,
+// which is ignored — the recorded amount is what Paystack verified.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const { searchParams } = req.nextUrl
   const reference = searchParams.get('reference') ?? searchParams.get('trxref')
   const bookingId = searchParams.get('booking_id')
-  const amount = parseInt(searchParams.get('amount') ?? '0', 10)
 
-  if (!reference || !bookingId || !amount) {
+  if (!reference || !bookingId) {
     return NextResponse.redirect(new URL(`/book/${slug}?pay=error`, req.url))
   }
 
@@ -56,6 +57,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     .maybeSingle()
 
   if (!booking) return NextResponse.redirect(new URL(`/book/${slug}?pay=error`, req.url))
+
+  // The reference must be a GHS charge our server initialised for this exact
+  // booking and tenant; record Paystack's amount, never the URL's.
+  const charge = checkVerifiedBookingCharge(verifyData, { bookingId, tenantId: tenant.id })
+  if (!charge.ok) {
+    console.warn('[public pay callback] rejected verified charge', { reference, bookingId, reason: charge.reason })
+    return NextResponse.redirect(new URL(`/book/${slug}?pay=error`, req.url))
+  }
+  const amount = charge.amount
 
   const { recorded, requiresResolution } = await finalizeOnlineBookingPayment(supabase, {
     tenantId: tenant.id,
