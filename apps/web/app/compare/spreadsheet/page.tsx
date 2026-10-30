@@ -6,7 +6,7 @@ const SITE_URL = 'https://gh-hostels.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Replace Your Hostel Spreadsheet — Beddilo vs Excel',
+  title: { absolute: 'Replace Your Hostel Spreadsheet — Beddilo vs Excel' },
   description:
     'Stop running your hostel from Excel. Beddilo replaces the room sheet, the MoMo log, the receipt book, the payroll workbook, and the maintenance log — in one Ghanaian platform.',
   keywords: [

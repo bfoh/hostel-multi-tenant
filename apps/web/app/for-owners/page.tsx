@@ -30,7 +30,7 @@ const SITE_URL = 'https://gh-hostels.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Beddilo for Owners — Hostel & Hotel Management Software',
+  title: { absolute: 'Beddilo for Owners — Hostel & Hotel Management Software' },
   description:
     'The complete property management platform from Beddilo for hostels and hotels. Bookings, Paystack MoMo payments, GRA-compliant accounting, payroll, occupant portal — built for hostels in Accra, Kumasi, Cape Coast, Legon, KNUST, UCC and beyond.',
   keywords: [

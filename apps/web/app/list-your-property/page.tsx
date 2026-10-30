@@ -6,7 +6,7 @@ import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { bareRootDomain, verticalRootDomain } from '@/lib/tenant/host-classification'
 
 export const metadata: Metadata = {
-  title: 'List Your Property — Beddilo',
+  title: { absolute: 'List Your Property — Beddilo' },
   description: 'List your hostel, hotel or apartment on Beddilo. Bring your property to more guests with a simpler way to manage and grow your accommodation business.',
 }
 

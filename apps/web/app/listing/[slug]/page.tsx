@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const result = await getListing(slug)
   if (!result) return { title: 'Property Not Found' }
   return {
-    title: `${result.tenant.name} — Beddilo`,
+    title: { absolute: `${result.tenant.name} — Beddilo` },
     description: result.tenant.tagline ?? `Book a room at ${result.tenant.name} in ${result.tenant.address_city ?? 'Ghana'}.`,
   }
 }

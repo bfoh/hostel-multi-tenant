@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { User, Briefcase, Clock, Shield } from 'lucide-react'
 import Link from 'next/link'
 
-export const metadata: Metadata = { title: 'My Account · Beddilo' }
+export const metadata: Metadata = { title: 'My Account' }
 
 function date(d: string) {
   return new Intl.DateTimeFormat('en-GH', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d))

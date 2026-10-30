@@ -47,6 +47,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const appleIconHref = tenantLogo || tenantFavicon || '/icons/apple-touch-icon.png'
 
   return {
+    // Child titles get " — <brand>" appended; a title that already names a
+    // brand uses { absolute } so it is not repeated.
     title: {
       default: brand,
       template: `%s — ${brand}`,

@@ -28,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
   if (!tenant) return { title: 'Book a Room' }
 
   return {
-    title: `Book a Room — ${tenant.name}`,
+    title: { absolute: `Book a Room — ${tenant.name}` },
     description:
       tenant.tagline ??
       `Book accommodation at ${tenant.name}. Check availability and reserve your room online.`,

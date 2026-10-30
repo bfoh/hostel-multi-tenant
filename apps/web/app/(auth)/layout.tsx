@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 import { BeddiloWordmark } from '@/components/brand/beddilo-logo'
 
-export const metadata: Metadata = { title: 'Sign in — Beddilo' }
+export const metadata: Metadata = { title: 'Sign in' }
 
 const TEAL_SOFT = '#2A5A61'
 const AMBER = '#F2B95A'

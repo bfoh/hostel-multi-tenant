@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { BeddiloWordmark } from '@/components/brand/beddilo-logo'
 import { authLinkClass, authPrimaryButtonClass } from '@/components/auth/auth-ui'
 
-export const metadata: Metadata = { title: 'Confirm your account — Beddilo' }
+export const metadata: Metadata = { title: 'Confirm your account' }
 export const dynamic = 'force-dynamic'
 
 /**

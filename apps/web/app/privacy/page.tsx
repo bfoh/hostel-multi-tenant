@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { LegalLayout, Section, Bullets } from '@/components/public/legal-layout'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — Beddilo',
+  title: { absolute: 'Privacy Policy — Beddilo' },
   description: 'How Beddilo collects, uses and protects personal data.',
   alternates: { canonical: 'https://gh-hostels.com/privacy' },
 }

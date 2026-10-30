@@ -6,7 +6,7 @@ const SITE_URL = 'https://gh-hostels.com'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Cloudbeds Alternative for Ghana — Beddilo vs Cloudbeds',
+  title: { absolute: 'Cloudbeds Alternative for Ghana — Beddilo vs Cloudbeds' },
   description:
     'Looking for a Cloudbeds alternative for your Ghanaian hostel or hotel? Beddilo is built in Ghana with native Paystack MoMo, GRA-compliant accounting, SSNIT/PAYE payroll, and pricing in cedis. See what Beddilo includes.',
   keywords: [

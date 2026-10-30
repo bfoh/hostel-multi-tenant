@@ -15,7 +15,7 @@ export async function generateMetadata({
   const { data } = await admin.from('tenants').select('name').eq('slug', slug).maybeSingle()
   const name = data?.name ?? 'Hostel'
   return {
-    title: `Self Check-in — ${name}`,
+    title: { absolute: `Self Check-in — ${name}` },
     description: `Scan to check in at ${name}. Fill your details, capture your Ghana Card, and pay online.`,
   }
 }

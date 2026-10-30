@@ -16,7 +16,7 @@ const GHANA_REGIONS = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Find a Stay — Beddilo',
+  title: { absolute: 'Find a Stay — Beddilo' },
   description: 'Search hotels, student hostels and apartments — real-time availability, booked directly with the property.',
 }
 
