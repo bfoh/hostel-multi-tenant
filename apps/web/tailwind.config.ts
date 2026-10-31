@@ -139,6 +139,8 @@ const config: Config = {
             700: bd('coral-700'),
           },
           slate: bd('slate'),
+          ink: bd('ink'),
+          mist: bd('mist'),
           success: bd('success'),
           danger: bd('danger'),
         },

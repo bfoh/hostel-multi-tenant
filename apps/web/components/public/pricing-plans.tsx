@@ -1,15 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Check, ArrowRight } from 'lucide-react'
-import { MP } from '@/lib/marketplace-theme'
-
-const FOREST_DEEP = MP.ink
-const GOLD = MP.accent
-const GOLD_DEEP = MP.accentText
-const INK_TEXT = MP.ink
-const HAIR_STRONG = MP.borderStrong
+import { Check } from 'lucide-react'
 
 export type Plan = {
   name: string
@@ -46,53 +39,55 @@ const PERIODS: Period[] = [
 
 const fmt = (n: number) => n.toLocaleString('en-US')
 
-export function PricingPlans({ plans, isHotel }: { plans: Plan[]; isHotel?: boolean }) {
+export function PricingPlans({
+  plans,
+  isHotel,
+  lead,
+}: {
+  plans: Plan[]
+  isHotel?: boolean
+  /** A card shown before the plans in the same grid (the free trial). */
+  lead?: ReactNode
+}) {
   const [periodId, setPeriodId] = useState('monthly')
   const period = PERIODS.find((p) => p.id === periodId) ?? PERIODS[0]
 
   return (
     <>
-      {/* Billing-period toggle */}
-      <div className="mt-12 flex justify-center" data-platform-reveal>
-        <div
-          className="grid w-full max-w-sm grid-cols-2 gap-1 rounded-2xl bg-white p-1 sm:inline-flex sm:w-auto sm:max-w-none sm:rounded-full"
-          style={{ border: `1px solid ${HAIR_STRONG}` }}
-          role="tablist"
-          aria-label="Billing period"
-        >
-          {PERIODS.map((p) => {
-            const active = p.id === period.id
-            return (
-              <button
-                key={p.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setPeriodId(p.id)}
-                className="bd-focus relative rounded-xl px-4 py-2 text-[13px] font-semibold transition-all sm:rounded-full"
-                style={
-                  active
-                    ? { background: MP.primary, color: '#F7F2E9' }
-                    : { color: MP.textSecondary }
-                }
-              >
-                {p.label}
-                {p.discount > 0 && (
-                  <span
-                    className="ml-1.5 text-[10px] font-bold"
-                    style={{ color: active ? GOLD : GOLD_DEEP }}
-                  >
-                    −{Math.round(p.discount * 100)}%
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+      {/* Billing-period toggle. Plain pressed buttons: it changes the
+          prices below rather than switching panels, so it isn't a tablist. */}
+      <div
+        className="mt-10 grid max-w-sm grid-cols-2 gap-1 rounded-lg border border-bd-ink/15 bg-white p-1 sm:inline-flex sm:max-w-none"
+        role="group"
+        aria-label="Billing period"
+      >
+        {PERIODS.map((p) => {
+          const active = p.id === period.id
+          return (
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setPeriodId(p.id)}
+              className={[
+                'bd-focus min-h-[40px] whitespace-nowrap rounded-md px-3.5 text-[14px] font-semibold transition-colors',
+                active ? 'bg-bd-ink text-white' : 'text-bd-slate hover:bg-bd-mist hover:text-bd-ink',
+              ].join(' ')}
+            >
+              {p.label}
+              {p.discount > 0 && (
+                <span className={`ml-1.5 text-[12px] font-semibold ${active ? 'text-white/75' : 'text-bd-teal'}`}>
+                  −{Math.round(p.discount * 100)}%
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
-      <div className="mt-12 grid gap-5 md:grid-cols-2 max-w-3xl mx-auto">
-        {plans.map((plan, i) => {
+      <div className={`mt-8 grid gap-5 ${lead ? 'sm:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2 lg:max-w-4xl'}`}>
+        {lead}
+        {plans.map((plan) => {
           const base = Number(plan.price.replace(/[^0-9.]/g, ''))
           const monthly = Math.round(base * (1 - period.discount))
           const total = monthly * period.months
@@ -101,82 +96,57 @@ export function PricingPlans({ plans, isHotel }: { plans: Plan[]; isHotel?: bool
           return (
             <div
               key={plan.name}
-              className="platform-glow-card relative flex flex-col rounded-2xl bg-white p-7"
-              style={{
-                border: `1px solid ${plan.highlight ? GOLD : HAIR_STRONG}`,
-                background: plan.highlight
-                  ? `linear-gradient(180deg, rgba(242,185,90,0.14) 0%, rgba(255,255,255,1) 60%)`
-                  : '#FFFFFF',
-                boxShadow: plan.highlight ? `0 30px 60px -30px ${GOLD}44` : undefined,
-              }}
-              data-platform-reveal
-              data-platform-reveal-delay={String(i * 80)}
+              className={[
+                'flex flex-col rounded-xl border bg-white p-6 sm:p-7',
+                plan.highlight ? 'border-bd-teal ring-1 ring-bd-teal' : 'border-bd-ink/15',
+              ].join(' ')}
             >
-              {plan.highlight && (
-                <span
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
-                  style={{ background: GOLD, color: FOREST_DEEP }}
-                >
-                  Most popular
-                </span>
-              )}
-              <p className="text-[14px] font-semibold tracking-tight" style={{ color: INK_TEXT }}>
-                {plan.name}
-              </p>
-              <p className="mt-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
-                {plan.desc}
-              </p>
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-[13px]" style={{ color: MP.textSecondary }}>GH₵</span>
-                <span
-                  className="text-[40px] font-bold tracking-tight tabular-nums sm:text-[48px]"
-                  style={{ color: INK_TEXT, fontFamily: 'Plus Jakarta Sans, Inter, sans-serif' }}
-                >
-                  {fmt(monthly)}
-                </span>
-                <span className="text-[14px]" style={{ color: MP.textSecondary }}>
-                  /month
-                </span>
-              </div>
-              {/* Billing detail */}
-              <div className="mt-2 min-h-[20px] text-[12.5px]">
-                {period.months > 1 ? (
-                  <span style={{ color: MP.textSecondary }}>
-                    <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>
-                      GH₵{fmt(base * period.months)}
-                    </span>{' '}
-                    GH₵{fmt(total)} billed every {period.months} months ·{' '}
-                    <span style={{ color: GOLD_DEEP, fontWeight: 600 }}>save GH₵{fmt(saved)}</span>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-[16px] font-semibold text-bd-ink">{plan.name}</h3>
+                {plan.highlight && (
+                  <span className="rounded-md bg-bd-teal/10 px-2 py-0.5 text-[12px] font-semibold text-bd-teal">
+                    Recommended
                   </span>
-                ) : (
-                  <span style={{ color: MP.textSecondary }}>Billed monthly</span>
                 )}
               </div>
-              <ul className="mt-7 flex-1 space-y-3.5">
+              <p className="mt-1 text-[14px] text-bd-slate">{plan.desc}</p>
+              <p className="mt-6 flex items-baseline gap-1">
+                <span className="text-[15px] font-medium text-bd-slate">GH₵</span>
+                <span className="font-display text-[40px] font-bold leading-none tracking-tight tabular-nums text-bd-ink">
+                  {fmt(monthly)}
+                </span>
+                <span className="text-[15px] text-bd-slate">/month</span>
+              </p>
+              <p className="mt-2 min-h-[40px] text-[13px] text-bd-slate">
+                {period.months > 1 ? (
+                  <>
+                    <span className="line-through">GH₵{fmt(base * period.months)}</span>{' '}
+                    GH₵{fmt(total)} billed every {period.months} months ·{' '}
+                    <span className="font-semibold text-bd-teal">save GH₵{fmt(saved)}</span>
+                  </>
+                ) : (
+                  'Billed monthly'
+                )}
+              </p>
+              <ul className="mt-6 flex-1 space-y-3">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-[14px]" style={{ color: INK_TEXT }}>
-                    <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: GOLD_DEEP }} strokeWidth={2.5} />
+                  <li key={f} className="flex items-start gap-2.5 text-[15px] text-bd-ink">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-bd-teal" strokeWidth={2.5} aria-hidden="true" />
                     {f}
                   </li>
                 ))}
               </ul>
               <Link
                 href={`/signup?plan=${plan.slug}&billing=${period.id}${isHotel ? '&type=hotel' : ''}`}
-                className="platform-cta mt-8 block rounded-full py-3.5 text-center text-[14px] font-semibold transition-all"
-                style={
+                className={[
+                  'bd-focus mt-8 inline-flex min-h-[48px] items-center justify-center rounded-lg px-5 text-[15px] font-semibold transition-colors',
                   plan.highlight
-                    ? {
-                        background: MP.primary,
-                        color: '#F7F2E9',
-                        boxShadow: '0 12px 28px -12px rgba(11,31,35,0.55)',
-                      }
-                    : {
-                        border: `1px solid ${HAIR_STRONG}`,
-                        color: INK_TEXT,
-                      }
-                }
+                    ? 'bg-bd-teal text-white hover:bg-bd-teal-900'
+                    : 'border border-bd-ink/20 bg-white text-bd-ink hover:border-bd-ink/40',
+                ].join(' ')}
               >
-                {plan.cta} <ArrowRight className="ml-1.5 inline h-3.5 w-3.5" />
+                {plan.cta}
+                <span className="sr-only"> to {plan.name}</span>
               </Link>
             </div>
           )

@@ -1,16 +1,16 @@
 /**
- * Homepage search (components/marketplace/hero-search.tsx): the tab each
- * category searches, the /browse URL a search builds, which input a chip
- * fills, and arrow-key movement across the category tabs.
+ * Homepage search (lib/marketplace-search.ts, used by
+ * components/marketplace/hero-search.tsx): the tab each category searches,
+ * the /browse URL a search or a popular town builds, and arrow-key movement
+ * across the category tabs.
  */
 import { describe, expect, it } from 'vitest'
 import {
   SEARCH_BUSINESS_TYPE,
-  applyQuickLink,
   browseSearchHref,
   nextTabIndex,
-  quickSearchHref,
-} from '@/components/marketplace/hero-search'
+  townSearchHref,
+} from '@/lib/marketplace-search'
 
 describe('category tabs', () => {
   it('search the matching vertical', () => {
@@ -43,14 +43,12 @@ describe('browseSearchHref', () => {
   })
 })
 
-describe('popular chips', () => {
-  it('fill the input /browse filters on and clear the other one', () => {
-    expect(applyQuickLink({ label: 'KNUST', field: 'q' })).toEqual({ q: 'KNUST', city: '' })
-    expect(applyQuickLink({ label: 'Kumasi', field: 'city' })).toEqual({ q: '', city: 'Kumasi' })
-  })
-
-  it('link to the same search a click runs', () => {
-    const link = { label: 'Cape Coast', field: 'city' } as const
-    expect(quickSearchHref(link, 'hotel')).toBe(browseSearchHref({ type: 'hotel', ...applyQuickLink(link) }))
+describe('popular towns', () => {
+  // /browse matches ?city= against address_city (lib/directory.ts), so a
+  // town must go to the city field, never the name field.
+  it('search the town in the current vertical', () => {
+    expect(townSearchHref('Kumasi', 'hostel')).toBe('/browse?city=Kumasi')
+    expect(townSearchHref('Cape Coast', 'hotel')).toBe('/browse?city=Cape+Coast&type=hotel')
+    expect(townSearchHref('East Legon', 'apartment')).toBe('/browse?city=East+Legon&type=apartment')
   })
 })

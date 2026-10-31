@@ -42,9 +42,10 @@ const SHORT_LABELS: Record<string, string> = {
 }
 
 /** Display label for an amenity string: known short keys are expanded,
- *  anything else is shown as entered with its first letter capitalised. */
+ *  anything else is shown as entered (underscores read as spaces) with its
+ *  first letter capitalised. */
 export function amenityLabel(amenity: string): string {
-  const trimmed = amenity.trim()
+  const trimmed = amenity.trim().replace(/_+/g, ' ')
   const known = SHORT_LABELS[trimmed.toLowerCase()]
   if (known) return known
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)

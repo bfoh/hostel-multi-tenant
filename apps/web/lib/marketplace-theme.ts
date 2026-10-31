@@ -23,13 +23,16 @@ export const BEDDILO = {
   coral:     '#EA806B',
 } as const
 
+/* Pages are white with near-black ink; Deep Teal is kept for actions and
+   brand moments so it reads as the brand rather than as body text, and the
+   warm ivory stays on the owner-facing hero bands. */
 export const MP = {
-  bg:            BEDDILO.ivory,
+  bg:            '#FFFFFF',
   surface:       '#FFFFFF',
-  surfaceSoft:   '#EFE7D8',
-  border:        'rgba(23, 59, 66, 0.12)',
-  borderStrong:  'rgba(23, 59, 66, 0.22)',
-  ink:           BEDDILO.teal,
+  surfaceSoft:   '#F6F4F0',
+  border:        'rgba(18, 36, 41, 0.12)',
+  borderStrong:  'rgba(18, 36, 41, 0.22)',
+  ink:           '#122429',
   textSecondary: '#52646A',
   /** Primary actions, links and active states. */
   primary:       BEDDILO.teal,

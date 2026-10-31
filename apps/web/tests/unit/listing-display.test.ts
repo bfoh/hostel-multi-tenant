@@ -7,10 +7,15 @@ import { describe, expect, it } from 'vitest'
 import {
   bedAvailability,
   capacityLabel,
+  coverTone,
+  displayName,
+  displayPlace,
   listingInitials,
+  listingLocation,
   photosFirst,
   stayTypeLabel,
   stayVertical,
+  townsWithListings,
 } from '@/lib/listing-display'
 import { amenityLabel } from '@/lib/amenity-icons'
 
@@ -90,5 +95,69 @@ describe('amenityLabel', () => {
     expect(amenityLabel('Private bathroom')).toBe('Private bathroom')
     expect(amenityLabel('study desk')).toBe('Study desk')
     expect(amenityLabel(' Balcony ')).toBe('Balcony')
+  })
+
+  it('reads underscores in stored keys as spaces', () => {
+    expect(amenityLabel('study_area')).toBe('Study area')
+  })
+})
+
+describe('displayName', () => {
+  it('title-cases names typed in capitals', () => {
+    expect(displayName('KENTE HOUSE HOSTEL')).toBe('Kente House Hostel')
+    expect(displayName('OFORI-ATTA LODGE')).toBe('Ofori-Atta Lodge')
+    expect(displayName('HOUSE OF GRACE')).toBe('House of Grace')
+    expect(displayName('THE ROYAL SUITES')).toBe('The Royal Suites')
+  })
+
+  it('keeps short capitalised words, which are usually acronyms', () => {
+    expect(displayName('AMP HOSTEL')).toBe('AMP Hostel')
+    expect(displayName('UCC ANNEX')).toBe('UCC Annex')
+  })
+
+  it('leaves names with any lowercase letters, and short names, as typed', () => {
+    expect(displayName('Sunrise apartments')).toBe('Sunrise apartments')
+    expect(displayName('McCarthy Hall')).toBe('McCarthy Hall')
+    expect(displayName('  AMP ')).toBe('AMP')
+  })
+})
+
+describe('displayPlace and listingLocation', () => {
+  it('capitalise towns typed in lowercase or capitals', () => {
+    expect(displayPlace('accra')).toBe('Accra')
+    expect(displayPlace('cape coast')).toBe('Cape Coast')
+    expect(displayPlace('KUMASI')).toBe('Kumasi')
+    expect(displayPlace('East Legon')).toBe('East Legon')
+    expect(displayPlace('  ')).toBeNull()
+    expect(displayPlace(null)).toBeNull()
+  })
+
+  it('join whichever of town and region are set', () => {
+    expect(listingLocation('accra', 'Greater Accra')).toBe('Accra, Greater Accra')
+    expect(listingLocation(null, 'Central')).toBe('Central')
+    expect(listingLocation(null, null)).toBe('')
+  })
+})
+
+describe('townsWithListings', () => {
+  it('merges spellings, counts listings and puts the busiest town first', () => {
+    const towns = townsWithListings([
+      { address_city: 'Accra', address_region: 'Greater Accra' },
+      { address_city: 'Kumasi', address_region: 'Ashanti' },
+      { address_city: 'accra', address_region: 'Greater Accra' },
+      { address_city: 'Winneba', address_region: 'Central' },
+      { address_city: null, address_region: 'Central' },
+    ])
+    expect(towns).toEqual([
+      { town: 'Accra', region: 'Greater Accra', count: 2 },
+      { town: 'Kumasi', region: 'Ashanti', count: 1 },
+      { town: 'Winneba', region: 'Central', count: 1 },
+    ])
+  })
+})
+
+describe('coverTone', () => {
+  it('gives a property the same colours every time', () => {
+    expect(coverTone('unity-court')).toBe(coverTone('unity-court'))
   })
 })

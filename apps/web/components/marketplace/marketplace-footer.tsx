@@ -8,9 +8,10 @@ const COLUMNS: Array<{ heading: string; links: Array<{ label: string; href: stri
       { label: 'Hostels', href: '/browse?type=hostel' },
       { label: 'Hotels', href: '/browse?type=hotel' },
       { label: 'Apartments', href: '/browse?type=apartment' },
-      { label: 'Hostels in Accra', href: '/browse?region=Greater%20Accra' },
-      { label: 'Hostels in Kumasi', href: '/browse?region=Ashanti' },
-      { label: 'Hostels in Cape Coast', href: '/browse?region=Central' },
+      // Region searches, so each label names the region it covers.
+      { label: 'Hostels in Greater Accra', href: '/browse?region=Greater%20Accra' },
+      { label: 'Hostels in Ashanti', href: '/browse?region=Ashanti' },
+      { label: 'Hostels in Central Region', href: '/browse?region=Central' },
     ],
   },
   {
@@ -39,35 +40,29 @@ const COLUMNS: Array<{ heading: string; links: Array<{ label: string; href: stri
  */
 export function MarketplaceFooter() {
   return (
-    <footer className="border-t border-bd-teal/10 bg-bd-teal text-bd-ivory">
-      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-6">
-        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div>
-            <Link href="/" aria-label="Beddilo home" className="bd-focus-on-dark -m-1 inline-block rounded-md p-1 text-bd-ivory">
-              <BeddiloWordmark className="h-8 w-auto" title="" />
+    <footer className="border-t border-bd-ink/10 bg-bd-mist text-bd-ink">
+      <div className="mx-auto max-w-6xl px-5 py-12 sm:px-6 sm:py-14">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="col-span-2 md:col-span-1">
+            <Link href="/" aria-label="Beddilo home" className="bd-focus -m-1 inline-block rounded-md p-1 text-bd-teal">
+              <BeddiloWordmark className="h-7 w-auto" title="" />
             </Link>
-            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-bd-amber">
-              A world of stays
-            </p>
-            <p className="mt-4 max-w-xs text-[14px] leading-relaxed text-bd-ivory/75">
-              Find your stay. Feel at home. Hotels, student hostels and apartments,
-              booked directly with the property.
+            <p className="mt-3 max-w-xs text-[14px] leading-relaxed text-bd-slate">
+              Hostels, hotels and apartments across Ghana, booked directly with the property.
             </p>
           </div>
           {COLUMNS.map((col) => (
             <div key={col.heading}>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-bd-ivory/60">
-                {col.heading}
-              </p>
-              <ul className="mt-4 space-y-2.5 text-[14px]">
+              <h2 className="text-[14px] font-semibold text-bd-ink">{col.heading}</h2>
+              <ul className="mt-3 space-y-2.5 text-[14px]">
                 {col.links.map((l) => (
                   <li key={l.label}>
                     {l.href.startsWith('mailto:') ? (
-                      <a href={l.href} className="bd-focus-on-dark rounded-sm text-bd-ivory/85 transition-colors hover:text-bd-amber">
+                      <a href={l.href} className="bd-focus rounded-sm text-bd-slate transition-colors hover:text-bd-ink hover:underline">
                         {l.label}
                       </a>
                     ) : (
-                      <Link href={l.href} className="bd-focus-on-dark rounded-sm text-bd-ivory/85 transition-colors hover:text-bd-amber">
+                      <Link href={l.href} className="bd-focus rounded-sm text-bd-slate transition-colors hover:text-bd-ink hover:underline">
                         {l.label}
                       </Link>
                     )}
@@ -78,12 +73,12 @@ export function MarketplaceFooter() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-bd-ivory/15 pt-6 text-[13px] text-bd-ivory/65 sm:flex-row">
-          <p>© {new Date().getFullYear()} Beddilo. All rights reserved.</p>
+        <div className="mt-10 flex flex-col gap-3 border-t border-bd-ink/10 pt-6 text-[13px] text-bd-slate sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Beddilo</p>
           <div className="flex gap-6">
-            <Link href="/privacy" className="bd-focus-on-dark rounded-sm transition-colors hover:text-bd-amber">Privacy</Link>
-            <Link href="/terms" className="bd-focus-on-dark rounded-sm transition-colors hover:text-bd-amber">Terms</Link>
-            <a href="mailto:support@gh-hostels.com" className="bd-focus-on-dark rounded-sm transition-colors hover:text-bd-amber">Support</a>
+            <Link href="/privacy" className="bd-focus rounded-sm hover:text-bd-ink hover:underline">Privacy</Link>
+            <Link href="/terms" className="bd-focus rounded-sm hover:text-bd-ink hover:underline">Terms</Link>
+            <a href="mailto:support@gh-hostels.com" className="bd-focus rounded-sm hover:text-bd-ink hover:underline">Support</a>
           </div>
         </div>
       </div>

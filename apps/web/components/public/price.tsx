@@ -20,13 +20,13 @@ export function Price({
   className?: string
 }) {
   return (
-    <p className={`leading-tight text-bd-slate ${className}`}>
-      {from && <span className="text-[12px]">From </span>}
-      <span className={`whitespace-nowrap font-display font-bold text-bd-teal ${size === 'lg' ? 'text-[20px]' : 'text-[17px]'}`}>
+    <p className={`leading-tight text-bd-slate ${size === 'lg' ? 'text-[15px]' : 'text-[14px]'} ${className}`}>
+      {from && <span>From </span>}
+      <span className={`whitespace-nowrap font-semibold tabular-nums text-bd-ink ${size === 'lg' ? 'text-[22px] tracking-[-0.01em]' : 'text-[16px]'}`}>
         {formatGHSPrice(amount)}
       </span>
       {unit && (
-        <span className="whitespace-nowrap text-[13px]">
+        <span className="whitespace-nowrap">
           <span aria-hidden="true"> / </span>
           <span className="sr-only"> per </span>
           {unit}

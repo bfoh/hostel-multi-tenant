@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ImageOff } from 'lucide-react'
-import { listingInitials } from '@/lib/listing-display'
+import { coverTone, listingInitials } from '@/lib/listing-display'
 
 /**
  * Listing photo with a fallback. Only ever shows the property's own
@@ -58,6 +58,53 @@ export function ListingPhoto({
       onError={() => setFailed(true)}
       className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] motion-reduce:transition-none ${className}`}
     />
+  )
+}
+
+/**
+ * Cover for a property with no photos, filling the same box a photo would:
+ * its initials inside an arched doorway (the counter of the "b" in the
+ * Beddilo mark) on a soft colour fixed by `colorKey`, so a page of
+ * photo-less listings reads as designed rather than broken. Says plainly
+ * that there are no photos and never passes for a picture of the property.
+ */
+export function ListingCover({
+  name,
+  colorKey,
+  note = true,
+  className = '',
+}: {
+  name: string
+  /** Stable per property (its slug), so it keeps its colour everywhere. */
+  colorKey: string
+  /** Show the "No photos yet" note; off for small thumbnails. */
+  note?: boolean
+  className?: string
+}) {
+  const tone = coverTone(colorKey)
+  return (
+    <div
+      role="img"
+      aria-label={`${name}: no photos yet`}
+      className={`relative h-full w-full overflow-hidden ${className}`}
+      style={{ background: tone.bg }}
+    >
+      <svg viewBox="0 0 200 150" preserveAspectRatio="xMidYMax slice" className="absolute inset-0 h-full w-full" aria-hidden="true">
+        <path d="M58 150V92a42 42 0 0 1 84 0v58" fill="none" stroke={tone.fg} strokeOpacity="0.16" strokeWidth="1.2" />
+        <path d="M70 150V94a30 30 0 0 1 60 0v56Z" fill={tone.fg} fillOpacity="0.08" />
+        <text
+          x="100" y="122" textAnchor="middle" fontSize="25" fontWeight="600" letterSpacing="0.5"
+          fill={tone.fg} fillOpacity="0.85" style={{ fontFamily: 'var(--font-display), sans-serif' }}
+        >
+          {listingInitials(name)}
+        </text>
+      </svg>
+      {note && (
+        <span className="absolute left-2.5 top-2.5 rounded-md bg-white/90 px-2 py-0.5 text-[12px] font-medium text-bd-slate" aria-hidden="true">
+          No photos yet
+        </span>
+      )}
+    </div>
   )
 }
 

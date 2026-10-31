@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 import type { DirectoryListing } from '@/lib/directory'
 import { ListingCard } from '@/components/public/listing-card'
 import { ListingListRow } from '@/components/public/listing-list-row'
-import { NoPhotoTile } from '@/components/public/listing-photo'
+import { ListingCover, NoPhotoTile } from '@/components/public/listing-photo'
 import { Price } from '@/components/public/price'
 import { preselectedCategory } from '@/components/public/booking-flow'
 
@@ -48,7 +48,6 @@ describe('ListingCard', () => {
   it('links to the property page', () => {
     const html = renderToStaticMarkup(createElement(ListingCard, { listing }))
     expect(html).toContain('href="/listing/adenta-heights-hostel"')
-    expect(text(html)).toContain('View property')
   })
 
   it('shows the stay type, room count, location and unit price', () => {
@@ -58,12 +57,20 @@ describe('ListingCard', () => {
     expect(t).toContain('per semester')
   })
 
-  it('uses a compact initials tile, not a stock image, when there is no photo', () => {
+  it('uses a designed cover, not a stock image, when there is no photo', () => {
     const html = renderToStaticMarkup(createElement(ListingCard, { listing }))
     expect(html).not.toContain('<img')
     expect(html).toContain('aria-label="Adenta Heights Hostel: no photos yet"')
     expect(text(html)).toContain('No photos yet')
-    expect(html).not.toContain('aspect-[3/2]')
+    expect(text(html)).toContain('AH')
+  })
+
+  it('shows an all-caps name and a lowercase town in normal case', () => {
+    const t = text(renderToStaticMarkup(createElement(ListingCard, {
+      listing: { ...listing, name: 'KENTE HOUSE HOSTEL', address_city: 'accra' },
+    })))
+    expect(t).toContain('Kente House Hostel')
+    expect(t).toContain('Accra, Greater Accra')
   })
 
   it("leads with the owner's photo when there is one", () => {
@@ -85,6 +92,16 @@ describe('ListingListRow', () => {
     expect(html).toContain('href="/listing/adenta-heights-hostel"')
     expect(html).not.toContain('<img')
     expect(html).toContain('aria-label="Adenta Heights Hostel: no photos yet"')
+  })
+})
+
+describe('ListingCover', () => {
+  it('keeps the same colours for a property and can drop the note', () => {
+    const a = renderToStaticMarkup(createElement(ListingCover, { name: 'Unity Court', colorKey: 'unity-court' }))
+    const b = renderToStaticMarkup(createElement(ListingCover, { name: 'Unity Court', colorKey: 'unity-court' }))
+    expect(a).toBe(b)
+    expect(text(a)).toContain('No photos yet')
+    expect(text(renderToStaticMarkup(createElement(ListingCover, { name: 'Unity Court', colorKey: 'unity-court', note: false })))).not.toContain('No photos yet')
   })
 })
 

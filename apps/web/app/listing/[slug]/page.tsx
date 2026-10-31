@@ -1,16 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Phone, Mail, Star, ArrowRight, ExternalLink, Users, BedDouble, Building2, Home } from 'lucide-react'
+import { MapPin, Phone, Mail, Star, ArrowRight, ExternalLink, Users, BedDouble, Building2, Home, ImageOff } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { amenityIcon, amenityLabel } from '@/lib/amenity-icons'
 import { tenantHost, bareRootDomain, type BusinessType } from '@/lib/tenant/host-classification'
-import { stayTypeLabel, stayVertical, capacityLabel, bedAvailability } from '@/lib/listing-display'
+import { stayTypeLabel, stayVertical, capacityLabel, bedAvailability, displayName, displayPlace, listingLocation } from '@/lib/listing-display'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { ShareButton } from '@/components/public/share-button'
 import { ListingGallery } from '@/components/public/listing-gallery'
-import { NoPhotoTile } from '@/components/public/listing-photo'
 import { Price } from '@/components/public/price'
 import { MP } from '@/lib/marketplace-theme'
 
@@ -82,8 +81,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const result = await getListing(slug)
   if (!result) return { title: 'Property Not Found' }
   return {
-    title: { absolute: `${result.tenant.name} — Beddilo` },
-    description: result.tenant.tagline ?? `Book a room at ${result.tenant.name} in ${result.tenant.address_city ?? 'Ghana'}.`,
+    title: { absolute: `${displayName(result.tenant.name)} — Beddilo` },
+    description: result.tenant.tagline ?? `Book a room at ${displayName(result.tenant.name)} in ${displayPlace(result.tenant.address_city) ?? 'Ghana'}.`,
   }
 }
 
@@ -114,8 +113,11 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
   // booking page then shows nothing bookable, so don't send guests there.
   const bookingOpen = tenant.online_booking_enabled !== false && categories.length > 0
 
-  const location = [tenant.address_city, tenant.address_region].filter(Boolean).join(', ')
-  const fullAddress = [tenant.address_line1, tenant.address_city, tenant.address_region].filter(Boolean).join(', ')
+  // Shown in normal case (see displayName); links and lookups keep the stored values.
+  const name = displayName(tenant.name)
+  const city = displayPlace(tenant.address_city)
+  const location = listingLocation(tenant.address_city, tenant.address_region)
+  const fullAddress = [tenant.address_line1?.trim(), location].filter(Boolean).join(', ')
 
   // Gallery: the owner's property photo leads when set, followed by the CMS
   // gallery (or every room photo across categories as a fallback) — all
@@ -151,7 +153,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
       {tenant.contact_phone && (
         <a
           href={`tel:${tenant.contact_phone.replace(/[^\d+]/g, '')}`}
-          className="bd-focus inline-flex min-h-[44px] min-w-0 items-center gap-2.5 rounded-xl border bg-white px-4 text-[14px] font-medium transition-colors hover:bg-bd-ivory-50"
+          className="bd-focus inline-flex min-h-[44px] min-w-0 items-center gap-2.5 rounded-lg border bg-white px-4 text-[14px] font-medium transition-colors hover:bg-bd-mist"
           style={{ borderColor: MP.border, color: MP.ink }}
         >
           <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -162,7 +164,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
       {tenant.contact_email && (
         <a
           href={`mailto:${tenant.contact_email}`}
-          className="bd-focus inline-flex min-h-[44px] min-w-0 items-center gap-2.5 rounded-xl border bg-white px-4 py-2 text-[14px] font-medium transition-colors hover:bg-bd-ivory-50"
+          className="bd-focus inline-flex min-h-[44px] min-w-0 items-center gap-2.5 rounded-lg border bg-white px-4 py-2 text-[14px] font-medium transition-colors hover:bg-bd-mist"
           style={{ borderColor: MP.border, color: MP.ink }}
         >
           <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -195,7 +197,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
             </>
           )}
           <li aria-hidden="true">›</li>
-          <li aria-current="page" className="min-w-0 truncate">{tenant.name}</li>
+          <li aria-current="page" className="min-w-0 truncate">{name}</li>
         </ol>
       </nav>
 
@@ -207,7 +209,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
               <StayIcon className="h-3.5 w-3.5" aria-hidden="true" /> {stayType}
             </p>
             <h1 className="mt-2 font-display text-[24px] font-bold leading-tight tracking-[-0.01em] [overflow-wrap:anywhere] sm:text-[30px]" style={{ color: MP.ink }}>
-              {tenant.name}
+              {name}
             </h1>
             {location && (
               <p className="mt-1 flex items-center gap-1.5 text-[14px]" style={{ color: MP.textSecondary }}>
@@ -217,11 +219,11 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <ShareButton title={tenant.name} />
+            <ShareButton title={name} />
             {bookingOpen && (
               <a
                 href="#rooms"
-                className="bd-focus hidden min-h-[44px] items-center gap-2 rounded-xl px-5 text-[14px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900 sm:inline-flex"
+                className="bd-focus hidden min-h-[44px] items-center gap-2 rounded-lg px-5 text-[14px] font-semibold text-white transition-colors hover:bg-bd-teal-900 sm:inline-flex"
                 style={{ background: MP.primary }}
               >
                 See rooms <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -233,17 +235,12 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
         {/* ── Photos ────────────────────────────────────────────── */}
         <div className="mt-4">
           {gallery.length > 0 ? (
-            <ListingGallery photos={gallery} name={tenant.name} />
+            <ListingGallery photos={gallery} name={name} />
           ) : (
-            <div className="flex items-center gap-4 rounded-2xl border border-dashed bg-white/70 p-3 sm:p-4" style={{ borderColor: MP.borderStrong }}>
-              <NoPhotoTile name={tenant.name} caption={null} className="h-14 w-14" />
-              <div className="min-w-0">
-                <p className="text-[14px] font-semibold" style={{ color: MP.ink }}>No photos yet</p>
-                <p className="text-[13px]" style={{ color: MP.textSecondary }}>
-                  {tenant.name} hasn&apos;t added photos. Contact the property if you&apos;d like to see the rooms.
-                </p>
-              </div>
-            </div>
+            <p className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[14px]" style={{ background: MP.surfaceSoft, color: MP.textSecondary }}>
+              <ImageOff className="h-4 w-4 shrink-0" aria-hidden="true" />
+              No photos yet. Contact the property if you&apos;d like to see the rooms.
+            </p>
           )}
         </div>
 
@@ -251,7 +248,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
         <nav
           aria-label="On this page"
           className="sticky z-30 -mx-4 mt-5 border-b px-4 backdrop-blur-md sm:-mx-6 sm:px-6"
-          style={{ top: 'calc(4rem + env(safe-area-inset-top))', background: 'rgb(247 242 233 / 0.92)', borderColor: MP.border }}
+          style={{ top: 'calc(4rem + env(safe-area-inset-top))', background: 'rgb(255 255 255 / 0.95)', borderColor: MP.border }}
         >
           <ul className="mp-no-scrollbar flex gap-5 overflow-x-auto text-[14px] font-medium" style={{ color: MP.textSecondary }}>
             {sections.map((s) => (
@@ -269,19 +266,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
           <div className="min-w-0 flex-1 space-y-9">
             <section id="overview" aria-labelledby="overview-heading" className="scroll-mt-32 space-y-4">
               <h2 id="overview-heading" className="sr-only">Overview</h2>
-              <dl className="grid grid-cols-[auto_1fr] gap-2 sm:max-w-md">
-                <div className="rounded-xl bg-white p-3" style={{ border: `1px solid ${MP.border}` }}>
-                  <dt className="text-[12px]" style={{ color: MP.textSecondary }}>Room types</dt>
-                  <dd className="mt-0.5 text-[14px] font-semibold" style={{ color: MP.ink }}>{categories.length}</dd>
-                </div>
-                {cheapest && (
-                  <div className="rounded-xl bg-white p-3" style={{ border: `1px solid ${MP.border}` }}>
-                    <dt className="text-[12px]" style={{ color: MP.textSecondary }}>Prices from</dt>
-                    <dd className="mt-0.5"><Price amount={cheapest.base_rate} unit={cheapest.rate_unit} /></dd>
-                  </div>
-                )}
-              </dl>
-              {cms.hero_heading && cms.hero_heading !== tenant.name && (
+              {cms.hero_heading && cms.hero_heading !== tenant.name && cms.hero_heading !== name && (
                 <p className="font-display text-[17px] font-semibold" style={{ color: MP.ink }}>{cms.hero_heading}</p>
               )}
               {lead && <p className="text-[15px] leading-relaxed" style={{ color: MP.ink }}>{lead}</p>}
@@ -308,7 +293,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                 <>
                   {!bookingOpen && (
                     <p className="mt-2 rounded-xl px-3 py-2.5 text-[13px]" style={{ background: MP.surfaceSoft, color: MP.ink }}>
-                      {tenant.name} isn&apos;t taking online bookings right now. Contact the property to ask about a room.
+                      {name} isn&apos;t taking online bookings right now. Contact the property to ask about a room.
                     </p>
                   )}
                   <ul className="mt-3 space-y-3">
@@ -320,12 +305,12 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                       const soldOut = availability?.tone === 'full'
                       const amenities = (c.amenities ?? []).map(amenityLabel)
                       return (
-                        <li key={c.id} className="flex gap-3 rounded-2xl bg-white p-3 sm:gap-4 sm:p-4" style={{ border: `1px solid ${MP.border}` }}>
+                        <li key={c.id} className="flex gap-3 rounded-xl bg-white p-3 sm:gap-4 sm:p-4" style={{ border: `1px solid ${MP.border}` }}>
                           {photo && (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={photo}
-                              alt={`${c.name} at ${tenant.name}`}
+                              alt={`${c.name} at ${name}`}
                               loading="lazy"
                               decoding="async"
                               className="h-20 w-20 shrink-0 rounded-xl object-cover sm:h-28 sm:w-36"
@@ -366,13 +351,13 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                             <div className="mt-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
                               <Price amount={c.base_rate} unit={c.rate_unit} />
                               {bookingOpen && (soldOut ? (
-                                <span className="inline-flex min-h-[40px] items-center rounded-xl px-4 text-[14px] font-semibold" style={{ background: MP.surfaceSoft, color: MP.textSecondary }}>
+                                <span className="inline-flex min-h-[40px] items-center rounded-lg px-4 text-[14px] font-semibold" style={{ background: MP.surfaceSoft, color: MP.textSecondary }}>
                                   Fully booked
                                 </span>
                               ) : (
                                 <a
                                   href={`${bookUrl}?room=${encodeURIComponent(c.id)}`}
-                                  className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900"
+                                  className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-4 text-[14px] font-semibold text-white transition-colors hover:bg-bd-teal-900"
                                   style={{ background: MP.primary }}
                                 >
                                   {isHostel ? 'Select room' : 'Check availability'}
@@ -388,7 +373,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                   </ul>
                   {bookingOpen && (
                     <p className="mt-3 text-[12px]" style={{ color: MP.textSecondary }}>
-                      You&apos;ll choose your {isHostel ? 'room and stay' : 'dates'} and pay on {tenant.name}&apos;s booking page.
+                      You&apos;ll choose your {isHostel ? 'room and stay' : 'dates'} and pay on {name}&apos;s booking page.
                     </p>
                   )}
                 </>
@@ -424,7 +409,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${tenant.name}, ${fullAddress}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border bg-white px-3.5 text-[14px] font-medium hover:bg-bd-ivory-50"
+                    className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border bg-white px-3.5 text-[14px] font-medium hover:bg-bd-mist"
                     style={{ borderColor: MP.border, color: MP.ink }}
                   >
                     View on map <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -433,10 +418,10 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                   {tenant.address_city && (
                     <Link
                       href={browseHref({ city: tenant.address_city })}
-                      className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border bg-white px-3.5 text-[14px] font-medium hover:bg-bd-ivory-50"
+                      className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border bg-white px-3.5 text-[14px] font-medium hover:bg-bd-mist"
                       style={{ borderColor: MP.border, color: MP.ink }}
                     >
-                      More {nounPlural.toLowerCase()} in {tenant.address_city}
+                      More {nounPlural.toLowerCase()} in {city}
                     </Link>
                   )}
                 </div>
@@ -446,7 +431,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
             {faqs.length > 0 && (
               <section id="good-to-know" aria-labelledby="faq-heading" className="scroll-mt-32">
                 <h2 id="faq-heading" className="text-[19px] font-bold" style={{ color: MP.ink }}>Good to know</h2>
-                <div className="mt-3 divide-y overflow-hidden rounded-2xl bg-white" style={{ border: `1px solid ${MP.border}`, borderColor: MP.border }}>
+                <div className="mt-3 divide-y overflow-hidden rounded-xl bg-white" style={{ border: `1px solid ${MP.border}`, borderColor: MP.border }}>
                   {faqs.map((f, i) => (
                     <details key={i} className="group px-4" style={{ borderColor: MP.border }}>
                       <summary className="bd-focus flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-3 py-3 text-[14px] font-semibold [&::-webkit-details-marker]:hidden" style={{ color: MP.ink }}>
@@ -469,7 +454,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                   {testimonials.map((t, i) => {
                     const occ = Array.isArray(t.occupants) ? t.occupants[0] : t.occupants
                     return (
-                      <figure key={i} className="rounded-2xl bg-white p-4" style={{ border: `1px solid ${MP.border}` }}>
+                      <figure key={i} className="rounded-xl bg-white p-4" style={{ border: `1px solid ${MP.border}` }}>
                         <div className="flex items-center gap-0.5" role="img" aria-label={`Rated ${t.overall_rating} out of 5`}>
                           {Array.from({ length: 5 }).map((_, s) => (
                             <Star
@@ -496,7 +481,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
           <aside className="mt-9 w-full shrink-0 lg:mt-0 lg:w-80">
             <div className="space-y-4 lg:sticky" style={{ top: 'calc(7.5rem + env(safe-area-inset-top))' }}>
               {cheapest && (
-                <div className="hidden rounded-2xl bg-white p-5 lg:block" style={{ border: `1px solid ${MP.border}` }}>
+                <div className="hidden rounded-xl bg-white p-5 lg:block" style={{ border: `1px solid ${MP.border}` }}>
                   <Price amount={cheapest.base_rate} unit={cheapest.rate_unit} from size="lg" />
                   <p className="mt-1 text-[13px]" style={{ color: MP.textSecondary }}>
                     {categories.length} room type{categories.length === 1 ? '' : 's'} · {stayType.toLowerCase()}
@@ -504,7 +489,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                   {bookingOpen ? (
                     <a
                       href="#rooms"
-                      className="bd-focus mt-4 flex min-h-[44px] items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900"
+                      className="bd-focus mt-4 flex min-h-[44px] items-center justify-center gap-2 rounded-lg text-[15px] font-semibold text-white transition-colors hover:bg-bd-teal-900"
                       style={{ background: MP.primary }}
                     >
                       See rooms &amp; prices
@@ -515,14 +500,14 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
                 </div>
               )}
 
-              <div className="rounded-2xl bg-white p-5" style={{ border: `1px solid ${MP.border}` }}>
+              <div className="rounded-xl bg-white p-5" style={{ border: `1px solid ${MP.border}` }}>
                 <h2 className="text-[14px] font-semibold" style={{ color: MP.ink }}>Already have a room here?</h2>
                 <p className="mt-1 text-[13px]" style={{ color: MP.textSecondary }}>
-                  If {tenant.name} sent you login details, sign in to your {isHostel ? 'student' : 'guest'} portal.
+                  If {name} sent you login details, sign in to your {isHostel ? 'student' : 'guest'} portal.
                 </p>
                 <Link
                   href="/login"
-                  className="bd-focus mt-3 flex min-h-[40px] w-full items-center justify-center rounded-xl text-[14px] font-semibold transition-colors hover:bg-bd-ivory-50"
+                  className="bd-focus mt-3 flex min-h-[40px] w-full items-center justify-center rounded-lg text-[14px] font-semibold transition-colors hover:bg-bd-mist"
                   style={{ border: `1px solid ${MP.border}`, color: MP.ink }}
                 >
                   Sign in
@@ -543,7 +528,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
             <Price amount={cheapest.base_rate} unit={cheapest.rate_unit} from />
             <a
               href={bookingOpen ? '#rooms' : contactActions ? '#contact' : '#rooms'}
-              className="bd-focus inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl px-5 text-[15px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900"
+              className="bd-focus inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-lg px-5 text-[15px] font-semibold text-white transition-colors hover:bg-bd-teal-900"
               style={{ background: MP.primary }}
             >
               {bookingOpen ? 'See rooms' : 'Contact'}
@@ -554,7 +539,7 @@ export default async function ListingProfilePage({ params }: { params: Promise<{
 
       <MarketplaceFooter />
       {/* Room for the fixed phone booking bar below the footer. */}
-      {cheapest && <div className="h-20 bg-bd-teal lg:hidden" aria-hidden="true" />}
+      {cheapest && <div className="h-20 bg-bd-mist lg:hidden" aria-hidden="true" />}
     </div>
   )
 }

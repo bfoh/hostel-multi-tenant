@@ -9,6 +9,7 @@ import { FiltersDisclosure } from '@/components/public/filters-disclosure'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { MP } from '@/lib/marketplace-theme'
+import { displayPlace } from '@/lib/listing-display'
 
 const VERTICALS = [
   { type: 'hostel', label: 'Hostels', icon: BedDouble },
@@ -67,6 +68,7 @@ export default async function BrowseDirectoryPage({
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
 
   const activeFilters = [sp.min, sp.max, sp.region].filter(Boolean).length
+  const place = sp.region || displayPlace(sp.city)
   const hasSearch = !!(sp.q || sp.city || sp.region || sp.min || sp.max)
   // Switching type keeps where the visitor is looking, but not a property
   // name or price range that belonged to the other type.
@@ -83,14 +85,14 @@ export default async function BrowseDirectoryPage({
       <MarketplaceNav />
 
       {/* ── Search bar + stay type ──────────────────────────────── */}
-      <div className="border-b pb-3 pt-4 sm:pb-4 sm:pt-6" style={{ background: MP.surfaceSoft, borderColor: MP.border }}>
+      <div className="border-b pt-4 sm:pt-6" style={{ background: MP.surfaceSoft, borderColor: MP.border }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <form action="/browse" method="get" role="search" aria-label={`Search ${nounPlural.toLowerCase()}`} className="grid gap-2 rounded-2xl border bg-white p-2 shadow-sm sm:grid-cols-[1.3fr_1fr_auto_auto]" style={{ borderColor: MP.border }}>
+          <form action="/browse" method="get" role="search" aria-label={`Search ${nounPlural.toLowerCase()}`} className="grid gap-2 rounded-xl border bg-white p-2 shadow-[0_8px_24px_-16px_rgba(18,36,41,0.3)] sm:grid-cols-[1.3fr_1fr_auto_auto]" style={{ borderColor: MP.border }}>
             {sp.type && <input type="hidden" name="type" value={sp.type} />}
             {sp.view && <input type="hidden" name="view" value={sp.view} />}
-            <label className="flex min-h-[44px] items-center gap-2 rounded-xl px-3 focus-within:bg-bd-ivory-50">
-              <Search className="h-4 w-4 shrink-0" style={{ color: MP.accentText }} aria-hidden="true" />
-              <span className="sr-only">{businessType === 'hostel' ? 'Hostel name or campus' : 'Property name'}</span>
+            <label className="flex min-h-[48px] items-center gap-2.5 rounded-lg px-3 focus-within:bg-bd-mist">
+              <Search className="h-[18px] w-[18px] shrink-0" style={{ color: MP.textSecondary }} aria-hidden="true" />
+              <span className="sr-only">{businessType === 'hostel' ? 'Hostel name' : 'Property name'}</span>
               <input
                 name="q"
                 defaultValue={sp.q ?? ''}
@@ -98,14 +100,14 @@ export default async function BrowseDirectoryPage({
                 placeholder={
                   businessType === 'hotel' ? 'Hotel or guesthouse name' :
                   businessType === 'apartment' ? 'Apartment or short-let name' :
-                  'Hostel name or campus'
+                  'Hostel name'
                 }
                 className="w-full bg-transparent text-[16px] outline-none placeholder:text-bd-slate sm:text-[15px]"
                 style={{ color: MP.ink }}
               />
             </label>
-            <label className="flex min-h-[44px] items-center gap-2 rounded-xl border-t px-3 focus-within:bg-bd-ivory-50 sm:border-l sm:border-t-0" style={{ borderColor: MP.border }}>
-              <MapPin className="h-4 w-4 shrink-0" style={{ color: MP.accentText }} aria-hidden="true" />
+            <label className="flex min-h-[48px] items-center gap-2.5 rounded-lg border-t px-3 focus-within:bg-bd-mist sm:rounded-none sm:border-l sm:border-t-0" style={{ borderColor: MP.border }}>
+              <MapPin className="h-[18px] w-[18px] shrink-0" style={{ color: MP.textSecondary }} aria-hidden="true" />
               <span className="sr-only">City or town</span>
               <input
                 name="city"
@@ -120,7 +122,7 @@ export default async function BrowseDirectoryPage({
             <select
               name="region" defaultValue={sp.region ?? ''}
               aria-label="Region"
-              className="bd-focus min-h-[44px] cursor-pointer rounded-xl border bg-white px-3 text-[16px] sm:w-44 sm:text-[15px]"
+              className="bd-focus min-h-[48px] cursor-pointer rounded-lg border bg-white px-3 text-[16px] sm:w-44 sm:text-[15px]"
               style={{ color: MP.ink, borderColor: MP.border }}
             >
               <option value="">All regions</option>
@@ -128,27 +130,27 @@ export default async function BrowseDirectoryPage({
             </select>
             <button
               type="submit"
-              className="bd-focus inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-semibold text-bd-ivory transition-colors duration-200 hover:bg-bd-teal-900"
+              className="bd-focus inline-flex min-h-[48px] cursor-pointer items-center justify-center gap-2 rounded-lg px-6 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-bd-teal-900"
               style={{ background: MP.primary }}
             >
               <Search className="h-4 w-4" aria-hidden="true" /> Search
             </button>
           </form>
 
-          <nav aria-label="Type of stay" className="mt-3">
-            <ul className="grid grid-cols-3 gap-1 rounded-xl bg-white/70 p-1 sm:inline-grid sm:w-auto sm:min-w-[420px]">
+          <nav aria-label="Type of stay" className="mt-2 sm:mt-3">
+            <ul className="flex gap-1 sm:gap-4">
               {VERTICALS.map(({ type, label, icon: Icon }) => {
                 const current = type === businessType
                 return (
-                  <li key={type}>
+                  <li key={type} className="flex-1 sm:flex-none">
                     <Link
                       href={verticalHref(type)}
                       aria-current={current ? 'page' : undefined}
-                      className={`bd-focus flex min-h-[40px] items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-[clamp(12.5px,3.6vw,14px)] font-semibold transition-colors ${
-                        current ? 'bg-bd-teal text-bd-ivory' : 'text-bd-slate hover:bg-white hover:text-bd-teal'
+                      className={`bd-focus -mb-px flex min-h-[48px] items-center justify-center gap-2 whitespace-nowrap border-b-2 px-2 text-[14px] font-semibold transition-colors sm:px-1 ${
+                        current ? 'border-bd-teal text-bd-ink' : 'border-transparent text-bd-slate hover:border-bd-ink/20 hover:text-bd-ink'
                       }`}
                     >
-                      <Icon className={`h-4 w-4 shrink-0 ${current ? 'text-bd-amber' : ''}`} aria-hidden="true" />
+                      <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={current ? 2.1 : 1.8} aria-hidden="true" />
                       {label}
                     </Link>
                   </li>
@@ -180,8 +182,8 @@ export default async function BrowseDirectoryPage({
         {/* ── Filters sidebar ─────────────────────────────────── */}
         <aside className="mb-4 w-full shrink-0 lg:mb-0 lg:w-64">
           <FiltersDisclosure activeCount={activeFilters}>
-          <div className="rounded-xl bg-white p-4" style={{ border: `1px solid ${MP.border}` }}>
-            <h2 className="text-[15px] font-bold" style={{ color: MP.ink }}>Filter by</h2>
+          <div className="rounded-xl bg-white p-4 lg:p-5" style={{ border: `1px solid ${MP.border}` }}>
+            <h2 className="text-[16px] font-semibold" style={{ color: MP.ink }}>Filters</h2>
 
             <form action="/browse" method="get" className="mt-4 space-y-5">
               {sp.type && <input type="hidden" name="type" value={sp.type} />}
@@ -211,7 +213,7 @@ export default async function BrowseDirectoryPage({
                 </div>
                 <button
                   type="submit"
-                  className="bd-focus mt-2.5 min-h-[40px] w-full rounded-lg border text-[14px] font-semibold transition-colors hover:bg-bd-ivory-50"
+                  className="bd-focus mt-2.5 min-h-[40px] w-full rounded-lg border text-[14px] font-semibold transition-colors hover:bg-bd-mist"
                   style={{ color: MP.primary, borderColor: MP.borderStrong }}
                 >
                   Apply price
@@ -244,18 +246,22 @@ export default async function BrowseDirectoryPage({
         {/* ── Results ────────────────────────────────────────── */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <h1 className="text-[19px] font-bold sm:text-[20px]" style={{ color: MP.ink }} aria-live="polite">
-              {filtered.length} {nounSingular}{filtered.length === 1 ? '' : 's'} found
-              {sp.region ? ` in ${sp.region}` : sp.city ? ` in ${sp.city}` : ''}
-            </h1>
+            <div>
+              <h1 className="font-display text-[22px] font-bold tracking-[-0.01em] sm:text-[26px]" style={{ color: MP.ink }}>
+                {nounPlural}{place ? ` in ${place}` : ''}
+              </h1>
+              <p className="mt-0.5 text-[14px]" style={{ color: MP.textSecondary }} aria-live="polite">
+                {filtered.length} {filtered.length === 1 ? nounSingular : `${nounSingular}s`} found
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <ListingSortSelect current={sort} />
-              <div className="hidden overflow-hidden rounded-xl sm:flex" style={{ border: `1px solid ${MP.border}` }}>
+              <div className="hidden overflow-hidden rounded-lg sm:flex" style={{ border: `1px solid ${MP.border}` }}>
                 <Link
                   href={`/browse${buildQuery(sp, { view: 'list' })}`}
                   aria-current={view === 'list' ? 'true' : undefined}
                   className="bd-focus flex min-h-[40px] items-center gap-1.5 px-3 text-[13px] font-medium transition-colors duration-150"
-                  style={view === 'list' ? { background: MP.primary, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
+                  style={view === 'list' ? { background: MP.surfaceSoft, color: MP.ink } : { background: MP.surface, color: MP.textSecondary }}
                 >
                   <ListIcon className="h-4 w-4" aria-hidden="true" /> List
                 </Link>
@@ -263,7 +269,7 @@ export default async function BrowseDirectoryPage({
                   href={`/browse${buildQuery(sp, { view: 'grid' })}`}
                   aria-current={view === 'grid' ? 'true' : undefined}
                   className="bd-focus flex min-h-[40px] items-center gap-1.5 px-3 text-[13px] font-medium transition-colors duration-150"
-                  style={view === 'grid' ? { background: MP.primary, color: '#fff' } : { background: MP.surface, color: MP.textSecondary }}
+                  style={view === 'grid' ? { background: MP.surfaceSoft, color: MP.ink } : { background: MP.surface, color: MP.textSecondary }}
                 >
                   <LayoutGrid className="h-4 w-4" aria-hidden="true" /> Grid
                 </Link>
@@ -272,10 +278,8 @@ export default async function BrowseDirectoryPage({
           </div>
 
           {hostels.length === 0 ? (
-            <div className="mt-5 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-white px-6 py-14 text-center" style={{ borderColor: MP.borderStrong }}>
-              <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: MP.surfaceSoft }}>
-                <SearchX className="h-5 w-5" style={{ color: MP.accentText }} />
-              </span>
+            <div className="mt-5 flex flex-col items-center justify-center gap-3 rounded-xl px-6 py-14 text-center" style={{ background: MP.surfaceSoft }}>
+              <SearchX className="h-6 w-6" style={{ color: MP.textSecondary }} aria-hidden="true" />
               <p className="font-medium" style={{ color: MP.ink }}>No {nounSingular}s found</p>
               <p className="max-w-xs text-sm" style={{ color: MP.textSecondary }}>
                 {hasSearch ? 'Nothing matches this search yet. Try a nearby town or fewer filters.' : 'New listings are on the way — check back soon.'}
@@ -283,7 +287,7 @@ export default async function BrowseDirectoryPage({
               {hasSearch && (
                 <Link
                   href={businessType === 'hostel' ? '/browse' : `/browse?type=${businessType}`}
-                  className="bd-focus mt-2 inline-flex min-h-[40px] items-center rounded-full border px-4 text-[14px] font-semibold"
+                  className="bd-focus mt-2 inline-flex min-h-[40px] items-center rounded-lg border bg-white px-4 text-[14px] font-semibold"
                   style={{ color: MP.primary, borderColor: MP.borderStrong }}
                 >
                   Clear search
@@ -291,20 +295,12 @@ export default async function BrowseDirectoryPage({
               )}
             </div>
           ) : view === 'grid' ? (
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {hostels.map((h, i) => (
-                <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
-                  <ListingCard listing={h} />
-                </div>
-              ))}
+            <div className="mt-5 grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+              {hostels.map((h) => <ListingCard key={h.slug} listing={h} />)}
             </div>
           ) : (
-            <div className="mt-4 space-y-3">
-              {hostels.map((h, i) => (
-                <div key={h.slug} className="mp-reveal" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
-                  <ListingListRow listing={h} />
-                </div>
-              ))}
+            <div className="mt-5 space-y-3">
+              {hostels.map((h) => <ListingListRow key={h.slug} listing={h} />)}
             </div>
           )}
 
@@ -329,7 +325,7 @@ export default async function BrowseDirectoryPage({
           <div className="mt-10 flex items-center justify-center gap-1.5 text-[13px]" style={{ color: MP.textSecondary }}>
             Run {businessType === 'apartment' ? 'an' : 'a'} {nounSingular}?
             <Link href="/list-your-property" className="font-semibold hover:underline" style={{ color: MP.primary }}>
-              List yours free <ChevronRight className="inline h-3 w-3" />
+              List it on Beddilo <ChevronRight className="inline h-3 w-3" aria-hidden="true" />
             </Link>
           </div>
         </div>

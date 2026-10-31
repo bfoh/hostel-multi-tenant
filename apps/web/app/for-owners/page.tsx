@@ -3,18 +3,15 @@ import { headers } from 'next/headers'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
-  BedDouble, Shield, Check, ArrowRight,
-  Building2, CreditCard, Users, Globe, Gift,
+  BedDouble, Shield, Check, ArrowRight, Minus,
+  CreditCard, Users, Globe,
   ChevronDown, BarChart3, Bot,
-  PhoneCall, FileSpreadsheet, Wrench, ClipboardList, MapPin,
+  Wrench, ClipboardList,
 } from 'lucide-react'
 
-import { PlatformFX } from '@/components/public/platform-fx'
 import { PricingPlans, type Plan } from '@/components/public/pricing-plans'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
-import { MP } from '@/lib/marketplace-theme'
-import { BeddiloMark } from '@/components/brand/beddilo-logo'
 
 /* ──────────────────────────────────────────────────────────────────────────────
    BEDDILO FOR OWNERS — Property management SaaS pitch for hostel and
@@ -22,8 +19,8 @@ import { BeddiloMark } from '@/components/brand/beddilo-logo'
    Split out from the consumer-facing marketplace homepage (app/page.tsx) so
    guests land on a search-first experience and owners get a dedicated,
    linkable advertising page for the management system.
-   Restrained Beddilo palette for a business audience: Deep Teal type and
-   actions on Warm Ivory, Sunny Amber only as an accent.
+   Same look as the marketplace: white pages, near-black type, teal only
+   for actions, and the real owner dashboard instead of illustrations.
    ────────────────────────────────────────────────────────────────────────── */
 
 const SITE_URL = 'https://gh-hostels.com'
@@ -80,80 +77,56 @@ export const metadata: Metadata = {
   category: 'business',
 }
 
-/* ── Design tokens — remapped to the shared light marketplace palette
-   (lib/marketplace-theme.ts). Names kept as-is to minimize the diff across
-   the rest of this file; FOREST_DEEP/IVORY/INK now mean "dark text",
-   "dark text" (was light-on-dark, now dark-on-light), and "page background"
-   (was dark ink, now light cream) respectively. ─────────────────────── */
-const FOREST_DEEP = MP.ink
-const FOREST_MID = MP.primary
-const GOLD = MP.accent
-const GOLD_SOFT = MP.accentSoft
-const GOLD_DEEP = MP.accentText
-const IVORY = MP.ink
-const INK = MP.bg
-
-const HAIR = MP.border
-const HAIR_STRONG = MP.borderStrong
 
 /* ── Content ──────────────────────────────────────────────────── */
 
-type Feature = { icon: typeof BedDouble; title: string; desc: string; accent: string }
+type Feature = { icon: typeof BedDouble; title: string; desc: string }
 
 const HOSTEL_FEATURES: Feature[] = [
   {
     icon: BedDouble,
     title: 'Room & booking engine',
     desc: 'Gantt calendar, drag-to-extend stays, split payments, walk-in kiosk mode. From single rooms to 500-bed dormitories.',
-    accent: MP.accentText,
   },
   {
     icon: CreditCard,
     title: 'MoMo & card payments',
     desc: 'Native Paystack integration. Accept MTN, Vodafone, AirtelTigo MoMo, cards, bank transfers — auto-reconciled to the ledger.',
-    accent: MP.coralText,
   },
   {
     icon: BarChart3,
     title: 'GRA-compliant accounting',
     desc: 'Double-entry ledger, chart of accounts, trial balance, P&L, VAT/NHIL/GETFund support. Audit-ready from day one.',
-    accent: MP.primary,
   },
   {
     icon: Users,
     title: 'Staff payroll & shifts',
     desc: 'QR clock-in, shift scheduling, SSNIT / PAYE / Tier-2 deductions, automated payslip generation. SSNIT-ready exports.',
-    accent: MP.accentText,
   },
   {
     icon: Globe,
     title: 'Your brand, your domain',
     desc: 'Custom domain (app.yourhostel.com), your logo, your colours. Occupant and staff portals that feel like your own product.',
-    accent: MP.coralText,
   },
   {
     icon: Bot,
     title: 'AI assistant in Twi & English',
     desc: '"How many rooms are free this weekend?" — Ask in plain English or Twi and get instant answers from your data.',
-    accent: MP.primary,
   },
   {
     icon: Wrench,
     title: 'Maintenance & housekeeping',
     desc: 'Work orders, preventive schedules, meter readings, photo evidence, housekeeping task board — track every issue to close.',
-    accent: MP.accentText,
   },
   {
     icon: ClipboardList,
     title: 'Occupant portal',
     desc: 'Residents see balance, upload deposit drafts, submit maintenance requests, view receipts. Less queue at the front desk.',
-    accent: MP.coralText,
   },
   {
     icon: Shield,
     title: 'Row-level security',
     desc: 'Every tenant fully isolated at the database level. Encrypted HTTPS connections. Hosted on Supabase + Vercel.',
-    accent: MP.primary,
   },
 ]
 
@@ -162,55 +135,46 @@ const HOTEL_FEATURES: Feature[] = [
     icon: BedDouble,
     title: 'Reservations & front desk',
     desc: 'Calendar view, walk-in check-in, split payments, room holds. From boutique guesthouses to full-service hotels.',
-    accent: MP.accentText,
   },
   {
     icon: CreditCard,
     title: 'MoMo & card payments',
     desc: 'Native Paystack integration. Accept MTN, Vodafone, AirtelTigo MoMo, cards, bank transfers — auto-reconciled to the ledger.',
-    accent: MP.coralText,
   },
   {
     icon: BarChart3,
     title: 'GRA-compliant accounting',
     desc: 'Double-entry ledger, chart of accounts, trial balance, P&L, VAT/NHIL/GETFund support. Audit-ready from day one.',
-    accent: MP.primary,
   },
   {
     icon: Users,
     title: 'Staff payroll & shifts',
     desc: 'QR clock-in, shift scheduling, SSNIT / PAYE / Tier-2 deductions, automated payslip generation. SSNIT-ready exports.',
-    accent: MP.accentText,
   },
   {
     icon: Globe,
     title: 'Your brand, your domain',
     desc: 'Custom domain (app.yourhotel.com), your logo, your colours. Guest and staff portals that feel like your own product.',
-    accent: MP.coralText,
   },
   {
     icon: Bot,
     title: 'AI assistant in Twi & English',
     desc: '"How many rooms are free this weekend?" — Ask in plain English or Twi and get instant answers from your data.',
-    accent: MP.primary,
   },
   {
     icon: Wrench,
     title: 'Maintenance & housekeeping',
     desc: 'Work orders, preventive schedules, meter readings, photo evidence, housekeeping task board — track every issue to close.',
-    accent: MP.accentText,
   },
   {
     icon: ClipboardList,
     title: 'Guest self-service portal',
     desc: 'Guests see their balance, view receipts, and submit requests from their phone. Less queue at the front desk.',
-    accent: MP.coralText,
   },
   {
     icon: Shield,
     title: 'Row-level security',
     desc: 'Every tenant fully isolated at the database level. Encrypted HTTPS connections. Hosted on Supabase + Vercel.',
-    accent: MP.primary,
   },
 ]
 
@@ -371,34 +335,12 @@ const HOTEL_FAQS: Faq[] = [
   },
 ]
 
-const UNIVERSITIES = [
-  'University of Ghana, Legon',
-  'KNUST · Kumasi',
-  'University of Cape Coast',
-  'Ashesi University',
-  'GIMPA',
-  'Central University',
-  'University for Development Studies',
-  'University of Mines and Technology',
-  'UEW · Winneba',
-  'Pentecost University',
-  'Wisconsin International',
-  'Lancaster University Ghana',
-]
-
-const DESTINATIONS = [
-  'Accra',
-  'Kumasi',
-  'Cape Coast',
-  'Elmina',
-  'Aburi',
-  'Akosombo',
-  'Ho · Volta Region',
-  'Tamale',
-  'Takoradi',
-  'Koforidua',
-  'Bolgatanga',
-  'Kokrobite',
+/** What the free trial includes — each point is stated in the FAQ below. */
+const TRIAL_POINTS = [
+  'Full Growth plan features',
+  'Import existing records from CSV',
+  'Your data is kept when you upgrade',
+  'Your listing stays up after the trial',
 ]
 
 type CompareValue = boolean | 'manual' | 'partial'
@@ -499,21 +441,9 @@ export default async function ForOwnersPage({
   const PLANS       = isHotel ? HOTEL_PLANS       : HOSTEL_PLANS
   const FAQS        = isHotel ? HOTEL_FAQS        : HOSTEL_FAQS
   const COMPARISON  = isHotel ? HOTEL_COMPARISON  : HOSTEL_COMPARISON
-  const MARQUEE     = isHotel ? DESTINATIONS      : UNIVERSITIES
-
-  const heroWords = isHotel ? ['Every', 'room', 'booked.'] : ['Every', 'bed', 'booked.']
 
   return (
-    <div
-      className="relative min-h-screen antialiased"
-      style={{ background: MP.bg }}
-    >
-      {/* Adinkra symbol collage — same fixed wallpaper texture as the
-          marketplace homepage, for visual continuity between the two */}
-
-      {/* Hydrate motion + glow + counters */}
-      <PlatformFX />
-
+    <div className="min-h-screen bg-white text-bd-ink antialiased">
       {/* JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareLd) }} />
@@ -521,492 +451,240 @@ export default async function ForOwnersPage({
 
       <MarketplaceNav />
 
-      {/* ── FOR HOSTEL OWNERS — management-system pitch ─────────── */}
-      <section id="for-owners" className="relative overflow-hidden">
-        {/* Animated mesh gradient backdrop */}
-        <div className="pointer-events-none absolute inset-0 platform-mesh-light" aria-hidden="true" />
-
-        {/* Floating ambient gold orb */}
-        <div
-          className="pointer-events-none absolute -right-32 top-32 h-[420px] w-[420px] rounded-full platform-float-slow"
-          style={{ background: `radial-gradient(circle, ${GOLD}22, transparent 70%)`, filter: 'blur(40px)' }}
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -left-20 top-1/2 h-[360px] w-[360px] rounded-full platform-float"
-          style={{ background: `radial-gradient(circle, ${MP.coral}24, transparent 65%)`, filter: 'blur(60px)' }}
-          aria-hidden="true"
-        />
-
-        <div className="relative mx-auto max-w-6xl px-5 pb-20 pt-20 text-center sm:px-6 sm:pb-28 md:pt-36">
-          <p className="mb-5 text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
-            For {nounSingular} owners
-          </p>
-
-          {/* Announcement pill */}
-          <div
-            className="mx-auto mb-8 inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] sm:text-[12px]"
-            style={{
-              border: `1px solid ${HAIR_STRONG}`,
-              background: MP.surfaceSoft,
-              color: FOREST_MID,
-            }}
-            data-platform-reveal
-          >
-            <span className="relative inline-flex h-1.5 w-1.5">
-              <span
-                className="absolute inset-0 rounded-full platform-pulse-ring"
-                style={{ color: GOLD_SOFT }}
-              />
-              <span className="relative h-1.5 w-1.5 rounded-full" style={{ background: GOLD_SOFT }} />
-            </span>
-            Bookings · Payments · Accounting<span className="hidden sm:inline"> · Payroll</span>
-          </div>
-
-          {/* Hero headline */}
-          <h1
-            className="mx-auto max-w-5xl font-display text-[40px] font-bold leading-[1.04] sm:text-[58px] md:text-[76px] lg:text-[92px]"
-            style={{
-              color: IVORY,
-              letterSpacing: '-0.035em',
-            }}
-          >
-            {heroWords.map((w, i) => (
-              <span
-                key={i}
-                className="platform-word mr-3 inline-block"
-                style={{ animationDelay: `${120 + i * 90}ms` }}
+      <main>
+        {/* ── HERO — what it is, the trial, and the real product ───── */}
+        <section aria-labelledby="owners-heading" className="overflow-hidden border-b border-bd-ink/10">
+          <div className="mx-auto max-w-6xl px-5 pt-12 sm:px-6 sm:pt-20">
+            <h1
+              id="owners-heading"
+              className="max-w-3xl font-display text-[34px] font-bold leading-[1.08] tracking-[-0.02em] sm:text-[48px] lg:text-[56px]"
+            >
+              {isHotel ? 'Hotel' : 'Hostel'} management software built for Ghana
+            </h1>
+            <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-bd-slate sm:mt-5 sm:text-[19px]">
+              Bookings, Mobile Money, accounting, payroll and the {guestNoun} portal in one
+              dashboard, set up for how {nounPlural} in Ghana get paid, taxed and staffed.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href={signupHref}
+                className="bd-focus inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg bg-bd-teal px-6 text-[15px] font-semibold text-white transition-colors hover:bg-bd-teal-900"
               >
-                {w}
-              </span>
-            ))}
-            <span
-              className="platform-word block"
-              style={{ animationDelay: `${120 + heroWords.length * 90}ms` }}
-            >
-              <span className="bg-[linear-gradient(transparent_62%,rgb(var(--bd-amber)/0.75)_62%,rgb(var(--bd-amber)/0.75)_92%,transparent_92%)] px-1">
-                Every cedi tracked.
-              </span>
-            </span>
-            <span
-              className="platform-word mt-5 block text-[40%] font-semibold"
-              style={{
-                animationDelay: `${120 + (heroWords.length + 1) * 90}ms`,
-                color: MP.textSecondary,
-                letterSpacing: '-0.02em',
-              }}
-            >
-              The operating system for your {nounSingular}.
-            </span>
-          </h1>
-
-          <p
-            className="mx-auto mt-8 max-w-[600px] text-[15px] leading-relaxed sm:mt-10 sm:text-[17px]"
-            style={{ color: MP.textSecondary }}
-            data-platform-reveal
-            data-platform-reveal-delay="450"
-          >
-            One dashboard for bookings, Mobile Money, GRA-compliant accounting,
-            SSNIT payroll and the {guestNoun} portal — built around how {nounPlural}{' '}
-            in Ghana actually get paid, taxed and staffed.
-          </p>
-
-          {/* CTA buttons */}
-          <div
-            className="mt-11 flex flex-col items-center justify-center gap-4 sm:flex-row"
-            data-platform-reveal
-            data-platform-reveal-delay="600"
-          >
-            <Link
-              href={signupHref}
-              className="bd-focus group inline-flex w-full items-center justify-center gap-2 rounded-full bg-bd-teal px-8 py-4 text-[15px] font-semibold text-bd-ivory shadow-[0_14px_30px_-14px_rgba(11,31,35,0.6)] transition-colors hover:bg-bd-teal-900 sm:w-auto"
-            >
-              Start 30-day free trial
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-            <a
-              href="#features"
-              className="bd-focus inline-flex w-full items-center justify-center gap-2 rounded-full px-8 py-4 text-[15px] font-medium transition-colors duration-300 hover:bg-bd-teal/5 sm:w-auto"
-              style={{ border: `1px solid ${HAIR_STRONG}`, color: IVORY }}
-            >
-              See how it works
-            </a>
-          </div>
-
-          <p
-            className="mt-5 text-[13px]"
-            style={{ color: MP.textSecondary }}
-            data-platform-reveal
-            data-platform-reveal-delay="750"
-          >
-            No credit card · 30-day free trial · Cancel anytime
-          </p>
-
-          {/* Dashboard mockup */}
-          <div
-            className="relative mx-auto mt-14 max-w-5xl sm:mt-20 platform-mockup"
-            data-platform-reveal
-            data-platform-reveal-delay="500"
-          >
-            <div className="absolute inset-0 -z-10 translate-y-8">
-              <div
-                className="mx-auto h-full w-full max-w-4xl rounded-3xl blur-[100px]"
-                style={{
-                  background: `linear-gradient(to bottom, ${GOLD}22, ${FOREST_MID}11, transparent)`,
-                }}
-              />
+                Start 30-day free trial
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <a
+                href="#pricing"
+                className="bd-focus inline-flex min-h-[48px] items-center justify-center rounded-lg border border-bd-ink/20 bg-white px-6 text-[15px] font-semibold text-bd-ink transition-colors hover:border-bd-ink/40"
+              >
+                See pricing
+              </a>
             </div>
-            <div
-              className="overflow-hidden rounded-2xl shadow-2xl"
-              style={{
-                border: `1px solid ${HAIR_STRONG}`,
-                boxShadow: '0 40px 80px -30px rgba(23,59,66,0.18), 0 20px 40px -15px rgba(42,90,97,0.12)',
-              }}
-            >
-              <div
-                className="flex items-center gap-2 px-4 py-3"
-                style={{ borderBottom: `1px solid ${HAIR}`, background: 'rgba(23,59,66,0.04)' }}
-              >
-                <div className="flex gap-1.5">
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(23,59,66,0.12)' }} />
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(23,59,66,0.12)' }} />
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgba(23,59,66,0.12)' }} />
-                </div>
-                <div
-                  className="ml-4 flex-1 rounded-md py-1 px-3 text-center text-[10px]"
-                  style={{ background: 'rgba(23,59,66,0.04)', color: MP.textSecondary }}
-                >
-                  {isHotel ? 'app.yourhotel.com/dashboard' : 'app.yourhostel.com/dashboard'}
-                </div>
+            <p className="mt-4 text-[14px] text-bd-slate">Free for 30 days. No credit card needed.</p>
+
+            {/* The real owner dashboard (sample data), cropped by the
+                section edge so it reads as the product, not a poster. */}
+            <div className="mt-12 rounded-t-2xl border border-b-0 border-bd-ink/10 bg-bd-mist p-2 pb-0 sm:mt-16 sm:p-3 sm:pb-0 lg:p-4 lg:pb-0">
+              <div className="aspect-[1920/1040] overflow-hidden rounded-t-lg border border-b-0 border-bd-ink/10 bg-white">
+                <Image
+                  src="/owner-dashboard.jpg"
+                  alt="Beddilo owner dashboard showing occupancy, monthly revenue, pending bookings and recent bookings, with sample data"
+                  width={1920}
+                  height={1200}
+                  className="h-full w-full object-cover object-top"
+                  priority
+                  sizes="(min-width: 1152px) 1088px, 100vw"
+                />
               </div>
-              <Image
-                src="/owner-dashboard.jpg"
-                alt="Beddilo owner dashboard showing occupancy, monthly revenue, pending bookings and recent bookings, with sample data"
-                width={1920}
-                height={1200}
-                className="h-auto w-full"
-                priority
-                sizes="(max-width: 1024px) 100vw, 1024px"
-              />
             </div>
-            <div
-              className="absolute bottom-0 left-0 right-0 h-44"
-              style={{ background: `linear-gradient(to top, ${INK} 5%, transparent 100%)` }}
-            />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── MARQUEE — institutions for hostels, destinations for hotels ── */}
-      <section className="py-14 sm:py-18" style={{ borderBottom: `1px solid ${HAIR}` }}>
-        <p
-          className="mb-7 text-center text-[11px] font-medium uppercase tracking-[0.24em]"
-          style={{ color: MP.textSecondary }}
+        {/* ── FEATURES ────────────────────────────────────────────── */}
+        <section
+          id="features"
+          aria-labelledby="features-heading"
+          className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-6 sm:py-24"
         >
-          {isHotel ? 'Built for hotels across these destinations' : 'Built for hostels near campuses like these'}
-        </p>
-        <div className="platform-marquee-mask overflow-hidden">
-          <div className="platform-marquee">
-            {[...MARQUEE, ...MARQUEE].map((u, i) => {
-              const MarqueeIcon = isHotel ? MapPin : Building2
-              return (
-                <span
-                  key={`${u}-${i}`}
-                  className="mx-6 inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-[14px] font-medium sm:text-[15px]"
-                  style={{ color: MP.textSecondary }}
-                >
-                  <MarqueeIcon className="h-3.5 w-3.5" style={{ color: GOLD }} />
-                  {u}
-                  <span className="ml-6 inline-block h-1 w-1 rounded-full" style={{ background: GOLD_DEEP }} />
-                </span>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURES ────────────────────────────────────────────── */}
-      <section id="features" className="py-20 sm:py-32">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
-              Features
-            </p>
-            <h2
-              className="mt-5 text-[32px] font-display font-bold leading-[1.1] tracking-[-0.03em] sm:text-[42px] md:text-[64px]"
-              style={{ color: IVORY }}
-            >
-              Everything your {nounSingular} needs,
-              <span className="block" style={{ color: MP.textSecondary }}>
-                elegantly unified.
-              </span>
+          <div className="max-w-2xl">
+            <h2 id="features-heading" className="font-display text-[28px] font-bold leading-tight tracking-[-0.015em] sm:text-[36px]">
+              Everything you need to run a {nounSingular}
             </h2>
-            <p
-              className="mx-auto mt-6 max-w-[460px] text-[14px] sm:text-[16px]"
-              style={{ color: MP.textSecondary }}
-            >
-              One login. No spreadsheets. No third-party patchwork. Just a system that works, with Ghana&apos;s payment rails and tax rules built in.
+            <p className="mt-3 text-[17px] leading-relaxed text-bd-slate">
+              One login for the front desk, the accounts and your staff, with
+              Ghana&apos;s payment rails and tax rules built in.
             </p>
           </div>
+          <ul className="mt-10 grid gap-x-8 gap-y-8 sm:mt-12 sm:grid-cols-2 sm:gap-y-10 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <li key={f.title} className="border-t border-bd-ink/10 pt-5">
+                <f.icon className="h-6 w-6 text-bd-teal" strokeWidth={1.75} aria-hidden="true" />
+                <h3 className="mt-4 text-[16px] font-semibold">{f.title}</h3>
+                <p className="mt-1.5 text-[15px] leading-relaxed text-bd-slate">{f.desc}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-          <div className="mt-14 grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f, i) => {
-              const Icon = f.icon
-              return (
-                <div
-                  key={f.title}
-                  className="platform-glow-card group relative rounded-2xl p-6 sm:p-7"
-                  style={{
-                    border: `1px solid ${HAIR_STRONG}`,
-                    background:
-                      'linear-gradient(180deg, rgba(23,59,66,0.025) 0%, rgba(23,59,66,0.005) 100%)',
-                  }}
-                  data-platform-reveal
-                  data-platform-reveal-delay={String(i * 60)}
-                >
-                  <div
-                    className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3"
-                    style={{
-                      background: `linear-gradient(135deg, ${f.accent}22, ${f.accent}08)`,
-                      border: `1px solid ${f.accent}33`,
-                    }}
-                  >
-                    <Icon className="h-5 w-5" style={{ color: f.accent }} strokeWidth={1.5} />
-                  </div>
-                  <h3
-                    className="mt-6 text-[16px] font-semibold tracking-tight sm:text-[17px]"
-                    style={{ color: IVORY, }}
-                  >
-                    {f.title}
-                  </h3>
-                  <p
-                    className="mt-2.5 text-[14px] leading-relaxed"
-                    style={{ color: MP.textSecondary }}
-                  >
-                    {f.desc}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
+        {/* ── COMPARISON ──────────────────────────────────────────── */}
+        <section aria-labelledby="compare-heading" className="bg-bd-mist">
+          <div className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-24 lg:grid lg:grid-cols-[1fr_1.7fr] lg:gap-16">
+            <div>
+              <h2 id="compare-heading" className="font-display text-[28px] font-bold leading-tight tracking-[-0.015em] sm:text-[36px]">
+                Why owners switch from spreadsheets
+              </h2>
+              <p className="mt-3 text-[17px] leading-relaxed text-bd-slate">
+                Spreadsheets and older desktop software leave payments, invoices and
+                tax work to you. Beddilo handles them as part of every booking.
+              </p>
+              <Link
+                href="/compare/spreadsheet"
+                className="bd-focus mt-5 inline-flex min-h-[44px] items-center gap-1.5 rounded text-[15px] font-semibold text-bd-teal hover:underline hover:underline-offset-4"
+              >
+                Compare in detail <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
 
-      {/* ── COMPARISON ──────────────────────────────────────────── */}
-      <section className="py-20 sm:py-28" style={{ borderTop: `1px solid ${HAIR}` }}>
-        <div className="mx-auto max-w-5xl px-6">
-          <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
-              Why switch
-            </p>
-            <h2
-              className="mt-5 text-[32px] font-display font-bold leading-[1.1] tracking-[-0.03em] sm:text-[42px] md:text-[58px]"
-              style={{ color: IVORY }}
-            >
-              Stop bleeding hours.
-              <span className="block" style={{ color: MP.textSecondary }}>
-                Spreadsheets weren&apos;t built for {nounPlural}.
-              </span>
-            </h2>
-          </div>
-
-          <div
-            className="bd-focus-on-dark mt-14 -mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0"
-            data-platform-reveal
-            tabIndex={0}
-            role="region"
-            aria-label="Comparison with spreadsheets"
-          >
-          <div
-            className="min-w-[560px] overflow-hidden rounded-2xl"
-            style={{ border: `1px solid ${HAIR_STRONG}` }}
-          >
             <div
-              className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-1 px-5 py-4 text-[12px] font-medium uppercase tracking-[0.14em]"
-              style={{
-                background: 'rgba(23,59,66,0.04)',
-                color: MP.textSecondary,
-                borderBottom: `1px solid ${HAIR}`,
-              }}
+              className="bd-focus -mx-5 mt-8 overflow-x-auto px-5 sm:mx-0 sm:px-0 lg:mt-0"
+              tabIndex={0}
+              role="region"
+              aria-labelledby="compare-heading"
             >
-              <div className="text-left">Capability</div>
-              <div className="text-center inline-flex items-center justify-center gap-1.5">
-                <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
-              </div>
-              <div className="text-center inline-flex items-center justify-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5" /> Legacy
-              </div>
-              <div className="text-center inline-flex items-center justify-center gap-1.5" style={{ color: GOLD_DEEP }}>
-                <BeddiloMark className="h-4 w-4" title="" />
-                Beddilo
-              </div>
-            </div>
-
-            {COMPARISON.map((row, i) => (
-              <div
-                key={row.label}
-                className="grid grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-1 px-5 py-3.5 text-[14px]"
-                style={{
-                  background: i % 2 ? 'rgba(23,59,66,0.015)' : 'transparent',
-                  color: IVORY,
-                  borderBottom: i === COMPARISON.length - 1 ? 'none' : `1px solid ${HAIR}`,
-                }}
-              >
-                <div style={{ color: 'rgba(23,59,66,0.78)' }}>{row.label}</div>
-                <ComparisonCell value={row.spreadsheet} />
-                <ComparisonCell value={row.traditional} />
-                <ComparisonCell value={row.gh} highlight />
-              </div>
-            ))}
-          </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PRICING ─────────────────────────────────────────────── */}
-      <section id="pricing" className="py-20 sm:py-28" style={{ borderTop: `1px solid ${HAIR}` }}>
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
-              Pricing
-            </p>
-            <h2
-              className="mt-5 text-[32px] font-display font-bold leading-[1.1] tracking-[-0.03em] sm:text-[42px] md:text-[58px]"
-              style={{ color: IVORY }}
-            >
-              Simple, transparent, in cedis.
-            </h2>
-            <p
-              className="mx-auto mt-5 max-w-[440px] text-[14px] sm:text-[16px]"
-              style={{ color: MP.textSecondary }}
-            >
-              Start free. Pick a plan when you&apos;re ready. No hidden charges, no per-occupant fees.
-            </p>
-          </div>
-
-          <PricingPlans plans={PLANS} isHotel={isHotel} />
-
-          <div
-            className="mx-auto mt-12 flex max-w-2xl flex-col items-center justify-between gap-4 rounded-2xl p-6 sm:flex-row"
-            style={{ border: `1px solid ${HAIR_STRONG}`, background: MP.surface }}
-            data-platform-reveal
-          >
-            <div className="flex items-center gap-3">
-              <Gift className="h-5 w-5" style={{ color: GOLD }} />
-              <div>
-                <p className="text-[14px] font-semibold" style={{ color: IVORY }}>
-                  Not ready to commit?
-                </p>
-                <p className="text-[13px]" style={{ color: MP.textSecondary }}>
-                  Start a 30-day free trial. All Growth features, no card required.
-                </p>
+              <div className="min-w-[540px] overflow-hidden rounded-xl border border-bd-ink/10 bg-white">
+                <table className="w-full text-left text-[15px]">
+                  <thead>
+                    <tr className="text-[14px]">
+                      <th scope="col" className="px-4 py-3.5 font-semibold text-bd-slate sm:px-5">Feature</th>
+                      <th scope="col" className="px-3 py-3.5 text-center font-semibold text-bd-slate">Spreadsheets</th>
+                      <th scope="col" className="px-3 py-3.5 text-center font-semibold text-bd-slate">Older software</th>
+                      <th scope="col" className="bg-bd-teal/[0.06] px-3 py-3.5 text-center font-semibold text-bd-ink">Beddilo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {COMPARISON.map((row) => (
+                      <tr key={row.label} className="border-t border-bd-ink/10">
+                        <th scope="row" className="px-4 py-3.5 font-normal sm:px-5">{row.label}</th>
+                        <td className="px-3 py-3.5 text-center"><CompareMark value={row.spreadsheet} /></td>
+                        <td className="px-3 py-3.5 text-center"><CompareMark value={row.traditional} /></td>
+                        <td className="bg-bd-teal/[0.06] px-3 py-3.5 text-center"><CompareMark value={row.gh} highlight /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-            <Link
-              href={signupHref}
-              className="bd-focus w-full shrink-0 rounded-full bg-bd-teal px-5 py-2.5 text-center text-[14px] font-semibold text-bd-ivory transition-colors hover:bg-bd-teal-900 sm:w-auto"
-            >
-              Start free trial <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-            </Link>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── FAQ ─────────────────────────────────────────────────── */}
-      <section id="faq" className="py-20 sm:py-28" style={{ borderTop: `1px solid ${HAIR}` }}>
-        <div className="mx-auto max-w-3xl px-6">
-          <div className="text-center" data-platform-reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em]" style={{ color: GOLD_DEEP }}>
-              FAQ
-            </p>
-            <h2
-              className="mt-5 text-[32px] font-display font-bold leading-[1.1] tracking-[-0.03em] sm:text-[40px] md:text-[52px]"
-              style={{ color: IVORY }}
-            >
-              Questions, answered.
+        {/* ── PRICING ─────────────────────────────────────────────── */}
+        <section
+          id="pricing"
+          aria-labelledby="pricing-heading"
+          className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-6 sm:py-24"
+        >
+          <div className="max-w-2xl">
+            <h2 id="pricing-heading" className="font-display text-[28px] font-bold leading-tight tracking-[-0.015em] sm:text-[36px]">
+              Simple pricing in cedis
             </h2>
+            <p className="mt-3 text-[17px] leading-relaxed text-bd-slate">
+              Start free and pick a plan when you&apos;re ready. No hidden charges,
+              no per-{guestNoun} fees.
+            </p>
           </div>
 
-          <div className="mt-12 divide-y" style={{ borderColor: HAIR }}>
-            {FAQS.map((faq, i) => (
-              <details
-                key={faq.q}
-                className="group py-5"
-                style={{ borderColor: HAIR }}
-                data-platform-reveal
-                data-platform-reveal-delay={String(i * 30)}
-              >
-                <summary
-                  className="flex cursor-pointer items-center justify-between text-[15px] font-medium transition-colors duration-300 hover:opacity-90 [&::-webkit-details-marker]:hidden"
-                  style={{ color: IVORY }}
-                >
-                  {faq.q}
-                  <ChevronDown
-                    className="h-4 w-4 shrink-0 transition-transform duration-300 group-open:rotate-180"
-                    style={{ color: MP.primary }}
-                  />
-                </summary>
-                <p
-                  className="platform-acc-body mt-3 pr-8 text-[14.5px] leading-relaxed"
-                  style={{ color: MP.textSecondary }}
-                >
-                  {faq.a}
+          <PricingPlans
+            plans={PLANS}
+            isHotel={isHotel}
+            lead={
+              <div className="flex flex-col rounded-xl bg-bd-mist p-6 sm:col-span-2 sm:p-7 lg:col-span-1">
+                <h3 className="text-[16px] font-semibold">Free trial</h3>
+                <p className="mt-1 text-[14px] text-bd-slate">Every Growth feature for 30 days</p>
+                <p className="mt-6 flex items-baseline gap-1">
+                  <span className="text-[15px] font-medium text-bd-slate">GH₵</span>
+                  <span className="font-display text-[40px] font-bold leading-none tracking-tight tabular-nums">0</span>
                 </p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FINAL CTA — Deep Teal band, the one place the amber shimmer
-           headline and amber CTA sit on a dark ground ─────────────── */}
-      <section className="relative overflow-hidden bg-bd-teal py-20 text-bd-ivory sm:py-28">
-        <div
-          className="pointer-events-none absolute inset-0 platform-mesh opacity-70"
-          aria-hidden="true"
-        />
-        <div className="relative mx-auto max-w-3xl px-6 text-center">
-          <BeddiloMark
-            tone="ivory"
-            title=""
-            className="mx-auto h-14 w-14 platform-float"
+                <p className="mt-2 min-h-[40px] text-[13px] text-bd-slate">No credit card needed</p>
+                <ul className="mt-6 flex-1 space-y-3">
+                  {TRIAL_POINTS.map((point) => (
+                    <li key={point} className="flex items-start gap-2.5 text-[15px]">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-bd-teal" strokeWidth={2.5} aria-hidden="true" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={signupHref}
+                  className="bd-focus mt-8 inline-flex min-h-[48px] items-center justify-center rounded-lg border border-bd-ink/20 bg-white px-5 text-[15px] font-semibold transition-colors hover:border-bd-ink/40"
+                >
+                  Start free trial
+                </Link>
+              </div>
+            }
           />
-          <h2
-            className="mt-8 font-display text-[36px] font-bold leading-[1.05] tracking-[-0.03em] text-bd-ivory sm:text-[48px] md:text-[64px]"
-            data-platform-reveal
-            data-platform-reveal-delay="100"
-          >
-            Run your {nounSingular}
-            <span className="block platform-shimmer-text">like it&apos;s 2026.</span>
-          </h2>
-          <p
-            className="mx-auto mt-6 max-w-[460px] text-[16px] leading-relaxed text-bd-ivory/80"
-            data-platform-reveal
-            data-platform-reveal-delay="200"
-          >
-            Start with a 30-day free trial of every Growth feature. No credit card required.
-          </p>
-          <div
-            className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
-            data-platform-reveal
-            data-platform-reveal-delay="300"
-          >
-            <Link
-              href={signupHref}
-              data-platform-magnetic
-              className="platform-cta bd-focus-on-dark inline-flex w-full items-center justify-center gap-2 rounded-full bg-bd-amber px-8 py-4 text-[15px] font-semibold text-bd-teal sm:w-auto"
-            >
-              Start 30-day free trial <ArrowRight className="h-4 w-4" />
-            </Link>
-            <a
-              href="mailto:sales@gh-hostels.com"
-              className="bd-focus-on-dark inline-flex w-full items-center justify-center gap-2 rounded-full border border-bd-ivory/30 px-8 py-4 text-[15px] font-medium text-bd-ivory transition-colors duration-300 hover:bg-bd-ivory/10 sm:w-auto"
-            >
-              <PhoneCall className="h-4 w-4" /> Talk to sales
-            </a>
+        </section>
+
+        {/* ── FAQ ─────────────────────────────────────────────────── */}
+        <section id="faq" aria-labelledby="faq-heading" className="scroll-mt-20 border-t border-bd-ink/10">
+          <div className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-24 lg:grid lg:grid-cols-[1fr_1.7fr] lg:gap-16">
+            <div>
+              <h2 id="faq-heading" className="font-display text-[28px] font-bold leading-tight tracking-[-0.015em] sm:text-[36px]">
+                Frequently asked questions
+              </h2>
+              <p className="mt-3 text-[16px] leading-relaxed text-bd-slate">
+                Something else on your mind? Email{' '}
+                <a href="mailto:sales@gh-hostels.com" className="bd-focus whitespace-nowrap rounded font-semibold text-bd-teal underline underline-offset-2">
+                  sales@gh-hostels.com
+                </a>
+                .
+              </p>
+            </div>
+            <div className="mt-8 border-t border-bd-ink/10 lg:mt-0">
+              {FAQS.map((faq) => (
+                <details key={faq.q} className="group border-b border-bd-ink/10">
+                  <summary className="bd-focus flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-4 py-4 text-[16px] font-semibold [&::-webkit-details-marker]:hidden">
+                    {faq.q}
+                    <ChevronDown
+                      className="h-5 w-5 shrink-0 text-bd-slate transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+                      aria-hidden="true"
+                    />
+                  </summary>
+                  <p className="pb-5 pr-8 text-[15px] leading-relaxed text-bd-slate">{faq.a}</p>
+                </details>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* ── CLOSING CTA ─────────────────────────────────────────── */}
+        <section aria-labelledby="cta-heading" className="bg-bd-teal text-white">
+          <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 py-14 sm:px-6 sm:py-20 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <h2 id="cta-heading" className="font-display text-white text-[28px] font-bold leading-tight tracking-[-0.015em] sm:text-[36px]">
+                Try Beddilo free for 30 days
+              </h2>
+              <p className="mt-3 text-[17px] leading-relaxed text-white/80">
+                Every Growth feature, no credit card needed. Your listing stays up
+                after the trial.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
+              <Link
+                href={signupHref}
+                className="bd-focus-on-dark inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg bg-white px-6 text-[15px] font-semibold text-bd-teal transition-colors hover:bg-bd-mist"
+              >
+                Start free trial <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <a
+                href="mailto:sales@gh-hostels.com"
+                className="bd-focus-on-dark inline-flex min-h-[48px] items-center justify-center rounded-lg border border-white/30 px-6 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
+              >
+                Talk to sales
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <MarketplaceFooter />
     </div>
@@ -1015,41 +693,25 @@ export default async function ForOwnersPage({
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 
-function ComparisonCell({
-  value,
-  highlight,
-}: {
-  value: boolean | 'manual' | 'partial'
-  highlight?: boolean
-}) {
+function CompareMark({ value, highlight }: { value: CompareValue; highlight?: boolean }) {
   if (value === true) {
     return (
-      <div className="text-center">
+      <>
         <Check
-          className="mx-auto h-4 w-4"
-          style={{ color: highlight ? MP.primary : MP.textSecondary }}
-          strokeWidth={3}
+          className={`mx-auto h-5 w-5 ${highlight ? 'text-bd-teal' : 'text-bd-slate'}`}
+          strokeWidth={2.5}
+          aria-hidden="true"
         />
-      </div>
+        <span className="sr-only">Yes</span>
+      </>
     )
   }
-  if (value === 'manual') {
-    return (
-      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: MP.textSecondary }}>
-        Manual
-      </div>
-    )
-  }
-  if (value === 'partial') {
-    return (
-      <div className="text-center text-[12px] uppercase tracking-[0.12em]" style={{ color: MP.textSecondary }}>
-        Partial
-      </div>
-    )
-  }
+  if (value === 'manual') return <span className="text-[14px] text-bd-slate">Manual</span>
+  if (value === 'partial') return <span className="text-[14px] text-bd-slate">Partial</span>
   return (
-    <div className="text-center text-[18px]" style={{ color: MP.textSecondary }}>
-      —
-    </div>
+    <>
+      <Minus className="mx-auto h-4 w-4 text-bd-ink/30" aria-hidden="true" />
+      <span className="sr-only">No</span>
+    </>
   )
 }

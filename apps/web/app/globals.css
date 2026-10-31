@@ -130,6 +130,8 @@
     --bd-coral-700:  168  69  47;   /* #A8452F — text on light */
 
     --bd-slate:       82 100 106;   /* #52646A — secondary text (≈5.6:1 on ivory) */
+    --bd-ink:         18  36  41;   /* #122429 — marketplace body and heading text (≈15:1 on white) */
+    --bd-mist:       246 244 240;   /* #F6F4F0 — neutral soft surface on white pages */
     --bd-success:     31 122  85;   /* #1F7A55 */
     --bd-danger:     180  35  24;   /* #B42318 */
 
@@ -346,16 +348,6 @@
     }
   }
 
-  /* Marketplace entrance reveal — pair with an inline animation-delay for
-     stagger (e.g. style={{ animationDelay: `${i * 60}ms` }}). Starts
-     invisible so content never flashes unstyled before JS/CSS loads;
-     prefers-reduced-motion is already handled globally above (collapses
-     animation-duration to ~0), so no separate no-motion variant is needed. */
-  .mp-reveal {
-    opacity: 0;
-    animation: fadeInUp 500ms var(--ease-standard) forwards;
-  }
-
   /* Hides the scrollbar on the hero's horizontally-scrolling vertical-tab
      strip (Hostels/Hotels/Apartments/…) on narrow viewports, without
      disabling scroll itself. */
@@ -365,16 +357,6 @@
   }
   .mp-no-scrollbar::-webkit-scrollbar {
     display: none;
-  }
-
-  /* Beddilo hero backdrop — Deep Teal with soft amber/coral light, used
-     instead of stock photography (we only show real owner-uploaded
-     photos, and never pass a generic image off as a listing). */
-  .bd-hero-backdrop {
-    background:
-      radial-gradient(60% 80% at 85% 0%, rgb(var(--bd-amber) / 0.22), transparent 60%),
-      radial-gradient(50% 70% at 0% 100%, rgb(var(--bd-coral) / 0.20), transparent 65%),
-      linear-gradient(165deg, rgb(var(--bd-teal-700)) 0%, rgb(var(--bd-teal)) 45%, rgb(var(--bd-teal-950)) 100%);
   }
 
   /* Keyboard focus ring for Beddilo public surfaces — the global
