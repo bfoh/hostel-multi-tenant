@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 
-import { BeddiloWordmark } from '@/components/brand/beddilo-logo'
-import { authLinkClass, authPrimaryButtonClass } from '@/components/auth/auth-ui'
+import { AuthPage, authLinkClass, authPrimaryButtonClass } from '@/components/auth/auth-ui'
 
 export const metadata: Metadata = { title: 'Confirm your account' }
 export const dynamic = 'force-dynamic'
@@ -21,9 +20,8 @@ export default async function ConfirmPage({
   const valid = !!token_hash
 
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-bd-mist px-4 py-12 text-bd-ink">
-      <BeddiloWordmark className="mb-7 h-8 w-auto text-bd-teal" />
-      <div className="w-full max-w-[440px] rounded-xl border border-bd-ink/10 bg-white p-6 text-center shadow-[0_1px_2px_rgba(18,36,41,0.04),0_12px_32px_-16px_rgba(18,36,41,0.14)] sm:p-8">
+    <AuthPage>
+      <div className="text-center">
         <h1 className="font-display text-[24px] font-bold tracking-[-0.015em] text-bd-ink">
           {valid ? 'Confirm your account' : 'Invalid link'}
         </h1>
@@ -52,6 +50,6 @@ export default async function ConfirmPage({
           ← Back to sign in
         </a>
       </div>
-    </div>
+    </AuthPage>
   )
 }

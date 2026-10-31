@@ -15,7 +15,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2 } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
+import {
+  AuthHeading,
+  AuthLoading,
+  AuthPage,
+  AuthStatusIcon,
+  authPrimaryButtonClass,
+} from '@/components/auth/auth-ui'
 
 export default function InvitePage() {
   const router = useRouter()
@@ -131,30 +138,19 @@ export default function InvitePage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface-raised px-4">
-        <div className="max-w-sm w-full rounded-2xl border border-border bg-surface p-8 text-center space-y-4 shadow-sm">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-danger-subtle">
-            <span className="text-2xl">⚠️</span>
-          </div>
-          <h1 className="text-lg font-bold text-text-primary">Invite link expired</h1>
-          <p className="text-sm text-text-secondary leading-relaxed">{error}</p>
-          <a
-            href="/login"
-            className="inline-block rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover transition-colors"
-          >
+      <AuthPage>
+        <div className="space-y-5 text-center">
+          <AuthStatusIcon tone="danger">
+            <AlertCircle className="h-7 w-7" aria-hidden="true" />
+          </AuthStatusIcon>
+          <AuthHeading title="Invite link expired" subtitle={error} />
+          <a href="/login" className={authPrimaryButtonClass}>
             Back to sign in
           </a>
         </div>
-      </div>
+      </AuthPage>
     )
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-raised">
-      <div className="text-center space-y-3">
-        <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand" />
-        <p className="text-sm font-medium text-text-secondary">Setting up your account…</p>
-      </div>
-    </div>
-  )
+  return <AuthLoading label="Setting up your account…" />
 }

@@ -1,4 +1,6 @@
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Loader2 } from 'lucide-react'
+
+import { BeddiloWordmark } from '@/components/brand/beddilo-logo'
 
 /**
  * Shared presentation for the (auth) pages — login, signup, forgot and
@@ -83,11 +85,51 @@ export function AuthDivider() {
   )
 }
 
-/** Round icon badge for the "check your email" confirmation states. */
-export function AuthStatusIcon({ children }: { children: React.ReactNode }) {
+/** Round icon badge for the confirmation and error states. */
+export function AuthStatusIcon({
+  tone = 'default',
+  children,
+}: {
+  tone?: 'default' | 'danger'
+  children: React.ReactNode
+}) {
+  const styles = tone === 'danger' ? 'bg-bd-danger/10 text-bd-danger' : 'bg-bd-teal/10 text-bd-teal'
   return (
-    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-bd-teal/10 text-bd-teal">
+    <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${styles}`}>
       {children}
+    </div>
+  )
+}
+
+const cardClass =
+  'w-full max-w-[440px] rounded-xl border border-bd-ink/10 bg-white p-6 sm:p-8 ' +
+  'shadow-[0_1px_2px_rgba(18,36,41,0.04),0_12px_32px_-16px_rgba(18,36,41,0.14)]'
+
+/**
+ * Whole page for auth screens outside app/(auth) — invite, set password,
+ * verify code, email confirm — which run on tenant hosts before a session
+ * exists, so they show the Beddilo wordmark over the same card.
+ */
+export function AuthPage({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="flex min-h-[100dvh] flex-col items-center justify-center bg-bd-mist px-4 py-12 text-bd-ink"
+      style={{ paddingTop: 'max(3rem, env(safe-area-inset-top))', paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}
+    >
+      <BeddiloWordmark className="mb-7 h-8 w-auto text-bd-teal" />
+      <div className={cardClass}>{children}</div>
+    </div>
+  )
+}
+
+/** Full-page spinner for the same screens while a session is checked. */
+export function AuthLoading({ label }: { label?: string }) {
+  return (
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 bg-bd-mist px-4" role="status">
+      <Loader2 className="h-7 w-7 animate-spin text-bd-teal motion-reduce:animate-none" aria-hidden="true" />
+      {label
+        ? <p className="text-[14px] font-medium text-bd-slate">{label}</p>
+        : <span className="sr-only">Loading</span>}
     </div>
   )
 }

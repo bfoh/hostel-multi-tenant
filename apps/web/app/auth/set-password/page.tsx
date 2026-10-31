@@ -17,8 +17,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { PasswordInput } from '@/components/ui/password-input'
-
-const FROST = 'rgba(214,235,253,0.19)'
+import {
+  AuthAlert,
+  AuthHeading,
+  AuthLoading,
+  AuthPage,
+  authInputClass,
+  authLabelClass,
+  authPrimaryButtonClass,
+} from '@/components/auth/auth-ui'
 
 export default function SetPasswordPage() {
   const router       = useRouter()
@@ -72,76 +79,59 @@ export default function SetPasswordPage() {
     }
   }
 
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
-        <Loader2 className="h-6 w-6 animate-spin text-white/70" />
-      </div>
-    )
-  }
+  if (!ready) return <AuthLoading />
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black px-4 py-12">
-      <div
-        className="w-full max-w-md rounded-2xl bg-black/60 p-8 text-[#f0f0f0] backdrop-blur-xl"
-        style={{ border: `1px solid ${FROST}` }}
-      >
-        <div className="space-y-2 text-center">
-          <h1 className="text-[22px] font-semibold tracking-[-0.5px] text-white">Set a password</h1>
-          <p className="text-[13px] text-[#a1a4a5]">
-            You&apos;re signed in as <span className="text-white">{email}</span>. Pick a password
-            so you can log in directly next time.
-          </p>
-        </div>
+    <AuthPage>
+      <div className="space-y-5">
+        <AuthHeading
+          title="Set a password"
+          subtitle={
+            <>
+              You&apos;re signed in as <span className="font-semibold text-bd-ink">{email}</span>. Pick a
+              password so you can log in directly next time.
+            </>
+          }
+        />
 
-        <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="text-[13px] font-medium text-[#a1a4a5]">New password</label>
+        <form onSubmit={submit} className="space-y-4" noValidate>
+          <div>
+            <label htmlFor="password" className={`${authLabelClass} mb-1.5`}>New password</label>
             <PasswordInput
               id="password"
               autoComplete="new-password"
               autoFocus
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="Min. 8 characters, one uppercase, one number"
-              className="w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] focus:outline-none focus:border-[#3b9eff]/50"
-              style={{ borderColor: FROST }}
-              tone="dark"
+              placeholder="Create a password"
+              aria-describedby="password-hint"
+              className={authInputClass}
             />
+            <p id="password-hint" className="mt-1.5 text-[13px] text-bd-slate">
+              At least 8 characters, with one uppercase letter and one number.
+            </p>
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="confirm" className="text-[13px] font-medium text-[#a1a4a5]">Confirm password</label>
+          <div>
+            <label htmlFor="confirm" className={`${authLabelClass} mb-1.5`}>Confirm password</label>
             <PasswordInput
               id="confirm"
               autoComplete="new-password"
               value={confirm}
               onChange={e => setConfirm(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] focus:outline-none focus:border-[#3b9eff]/50"
-              style={{ borderColor: FROST }}
-              tone="dark"
+              placeholder="Re-enter your password"
+              className={authInputClass}
             />
           </div>
 
-          {error && (
-            <div
-              className="rounded-xl px-4 py-3 text-[13px] text-[#ff2047]"
-              style={{ border: '1px solid rgba(255,32,71,0.2)', background: 'rgba(255,32,71,0.06)' }}
-            >
-              {error}
-            </div>
-          )}
+          {error && <AuthAlert>{error}</AuthAlert>}
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-full bg-white px-4 py-3 text-[14px] font-semibold text-black transition-all hover:bg-white/90 disabled:opacity-50"
-          >
+          <button type="submit" disabled={busy} className={authPrimaryButtonClass}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
             {busy ? 'Saving…' : 'Save password and continue'}
           </button>
         </form>
       </div>
-    </div>
+    </AuthPage>
   )
 }

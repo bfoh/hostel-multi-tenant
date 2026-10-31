@@ -18,8 +18,15 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-
-const FROST = 'rgba(214,235,253,0.19)'
+import { cn } from '@/lib/utils'
+import {
+  AuthAlert,
+  AuthHeading,
+  AuthPage,
+  authInputClass,
+  authLabelClass,
+  authPrimaryButtonClass,
+} from '@/components/auth/auth-ui'
 
 export default function VerifyOtpPage() {
   const searchParams = useSearchParams()
@@ -120,21 +127,16 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black px-4 py-12">
-      <div
-        className="w-full max-w-md rounded-2xl bg-black/60 p-8 text-[#f0f0f0] backdrop-blur-xl"
-        style={{ border: `1px solid ${FROST}` }}
-      >
-        <div className="space-y-2 text-center">
-          <h1 className="text-[22px] font-semibold tracking-[-0.5px] text-white">Enter your code</h1>
-          <p className="text-[13px] text-[#a1a4a5]">
-            We emailed a 6-digit code to your inbox. Enter it below to finish setup.
-          </p>
-        </div>
+    <AuthPage>
+      <div className="space-y-5">
+        <AuthHeading
+          title="Enter your code"
+          subtitle="We emailed a 6-digit code to your inbox. Enter it below to finish setup."
+        />
 
-        <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="text-[13px] font-medium text-[#a1a4a5]">Email</label>
+        <form onSubmit={submit} className="space-y-4" noValidate>
+          <div>
+            <label htmlFor="email" className={`${authLabelClass} mb-1.5`}>Email</label>
             <input
               id="email"
               type="email"
@@ -142,50 +144,39 @@ export default function VerifyOtpPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-[14px] text-[#f0f0f0] placeholder:text-[#464a4d] focus:outline-none focus:border-[#3b9eff]/50"
-              style={{ borderColor: FROST }}
+              className={authInputClass}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="code" className="text-[13px] font-medium text-[#a1a4a5]">Code</label>
+          <div>
+            <label htmlFor="code" className={`${authLabelClass} mb-1.5`}>Code</label>
             <input
               id="code"
               type="text"
               inputMode="numeric"
+              autoComplete="one-time-code"
               pattern="[0-9]{6}"
               maxLength={6}
               autoFocus={!!email}
               value={code}
               onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="000000"
-              className="w-full rounded-xl border bg-white/[0.04] px-4 py-3 text-center text-[20px] tracking-[0.5em] font-mono text-white placeholder:text-[#464a4d] focus:outline-none focus:border-[#3b9eff]/50"
-              style={{ borderColor: FROST }}
+              className={cn(authInputClass, 'text-center font-mono text-[20px] tracking-[0.5em] sm:text-[20px]')}
             />
           </div>
 
-          {error && (
-            <div
-              className="rounded-xl px-4 py-3 text-[13px] text-[#ff2047]"
-              style={{ border: '1px solid rgba(255,32,71,0.2)', background: 'rgba(255,32,71,0.06)' }}
-            >
-              {error}
-            </div>
-          )}
+          {error && <AuthAlert>{error}</AuthAlert>}
 
-          <button
-            type="submit"
-            disabled={busy || code.length !== 6}
-            className="w-full rounded-full bg-white px-4 py-3 text-[14px] font-semibold text-black transition-all hover:bg-white/90 disabled:opacity-50"
-          >
-            {busy ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : 'Verify and continue'}
+          <button type="submit" disabled={busy || code.length !== 6} className={authPrimaryButtonClass}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {busy ? 'Verifying…' : 'Verify and continue'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-[12px] text-[#464a4d]">
-          Didn&apos;t get a code? Ask your hostel manager to resend the invitation.
+        <p className="text-center text-[14px] leading-relaxed text-bd-slate">
+          Didn&apos;t get a code? Ask your property manager to resend the invitation.
         </p>
       </div>
-    </div>
+    </AuthPage>
   )
 }
