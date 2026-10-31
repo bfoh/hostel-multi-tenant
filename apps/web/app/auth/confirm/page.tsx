@@ -21,16 +21,16 @@ export default async function ConfirmPage({
   const valid = !!token_hash
 
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-bd-teal-950 px-4 py-12 text-bd-ivory">
-      <BeddiloWordmark className="mb-7 h-9 w-auto text-bd-ivory" />
-      <div className="w-full max-w-[440px] rounded-3xl border border-bd-ivory/15 bg-bd-teal/70 p-6 text-center shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)] sm:p-8">
-        <h1 className="font-display text-[24px] font-bold tracking-[-0.02em] text-bd-ivory">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-bd-mist px-4 py-12 text-bd-ink">
+      <BeddiloWordmark className="mb-7 h-8 w-auto text-bd-teal" />
+      <div className="w-full max-w-[440px] rounded-xl border border-bd-ink/10 bg-white p-6 text-center shadow-[0_1px_2px_rgba(18,36,41,0.04),0_12px_32px_-16px_rgba(18,36,41,0.14)] sm:p-8">
+        <h1 className="font-display text-[24px] font-bold tracking-[-0.015em] text-bd-ink">
           {valid ? 'Confirm your account' : 'Invalid link'}
         </h1>
 
         {valid ? (
           <>
-            <p className="mt-3 text-[14px] leading-relaxed text-bd-ivory/75">
+            <p className="mt-3 text-[14px] leading-relaxed text-bd-slate">
               Click below to activate your account and continue setting up your property.
             </p>
             <form method="POST" action="/auth/callback" className="mt-6">
@@ -42,7 +42,7 @@ export default async function ConfirmPage({
             </form>
           </>
         ) : (
-          <p className="mt-3 text-[14px] leading-relaxed text-bd-ivory/75">
+          <p className="mt-3 text-[14px] leading-relaxed text-bd-slate">
             This confirmation link is missing its token. Request a new one from the
             login page using “Resend confirmation email”.
           </p>

@@ -170,7 +170,7 @@ export default function SignupPage() {
           subtitle={<>Set up your {nounSingular} in minutes. {selectedPlan === 'trial' || !selectedPlan ? 'No credit card required.' : 'You\u2019ll subscribe after email confirmation.'}</>}
         />
         {selectedPlan && (
-          <div className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-bd-amber/40 bg-bd-amber/10 px-3 py-1 text-[12px] font-semibold text-bd-amber-300">
+          <div className="mx-auto inline-flex items-center gap-1.5 rounded-md bg-bd-teal/10 px-2.5 py-1 text-[13px] font-semibold text-bd-teal">
             <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
             {PLAN_LABEL[selectedPlan]}
           </div>
@@ -198,24 +198,24 @@ export default function SignupPage() {
           {/* Slug preview */}
           {slugPreview.length >= 2 && (
             <div
-              className="mt-2 flex items-center gap-1.5 rounded-xl border border-bd-ivory/15 bg-bd-ivory/[0.04] px-4 py-2.5 text-[13px]"
+              className="mt-2 flex items-center gap-1.5 rounded-lg bg-bd-mist px-3.5 py-2.5 text-[13px]"
               aria-live="polite"
             >
-              <span className="shrink-0 text-bd-ivory/65">Your URL:</span>
-              <span className="min-w-0 truncate font-mono font-medium text-bd-ivory/90">
+              <span className="shrink-0 text-bd-slate">Your URL:</span>
+              <span className="min-w-0 truncate font-mono font-medium text-bd-ink">
                 {slugPreview}.{appDomain}
               </span>
               {slugStatus === 'checking' && (
-                <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-bd-ivory/65" aria-label="Checking availability" />
+                <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-bd-slate" aria-label="Checking availability" />
               )}
               {slugStatus === 'available' && (
-                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-medium text-bd-amber">
+                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-medium text-bd-success">
                   <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                   available
                 </span>
               )}
               {slugStatus === 'taken' && (
-                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-medium text-bd-coral-300">
+                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-medium text-bd-danger">
                   <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
                   taken
                 </span>
@@ -254,12 +254,12 @@ export default function SignupPage() {
             aria-describedby={errors.password ? 'password-error' : 'password-hint'}
             className={authInputClass}
             placeholder="Create a password"
-            tone="dark"
+           
           />
           {errors.password ? (
             <FieldError id="password" message={errors.password.message} />
           ) : (
-            <p id="password-hint" className="mt-1.5 text-[13px] text-bd-ivory/65">
+            <p id="password-hint" className="mt-1.5 text-[13px] text-bd-slate">
               At least 8 characters, with one uppercase letter and one number.
             </p>
           )}
@@ -277,7 +277,7 @@ export default function SignupPage() {
             {...fieldA11y('confirmPassword', !!errors.confirmPassword)}
             className={authInputClass}
             placeholder="Re-enter your password"
-            tone="dark"
+           
           />
           <FieldError id="confirmPassword" message={errors.confirmPassword?.message} />
         </div>
@@ -293,17 +293,17 @@ export default function SignupPage() {
           {isSubmitting ? 'Creating account\u2026' : 'Create account'}
         </button>
 
-        <p className="text-center text-[12px] leading-relaxed text-bd-ivory/65">
+        <p className="text-center text-[12px] leading-relaxed text-bd-slate">
           By signing up you agree to our{' '}
-          <Link href="/terms" className="bd-focus-on-dark rounded text-bd-ivory underline underline-offset-2 hover:text-bd-amber">Terms</Link>
+          <Link href="/terms" className="bd-focus rounded text-bd-ink underline underline-offset-2 hover:text-bd-teal">Terms</Link>
           {' '}and{' '}
-          <Link href="/privacy" className="bd-focus-on-dark rounded text-bd-ivory underline underline-offset-2 hover:text-bd-amber">Privacy Policy</Link>.
+          <Link href="/privacy" className="bd-focus rounded text-bd-ink underline underline-offset-2 hover:text-bd-teal">Privacy Policy</Link>.
         </p>
       </form>
 
       <AuthDivider />
 
-      <p className="text-center text-[14px] text-bd-ivory/75">
+      <p className="text-center text-[14px] text-bd-slate">
         Already have an account?{' '}
         <Link href="/login" className={authLinkClass}>
           Sign in

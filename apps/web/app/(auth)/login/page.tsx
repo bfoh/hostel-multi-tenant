@@ -147,7 +147,7 @@ export default function LoginPage() {
             {...fieldA11y('password', !!errors.password)}
             className={authInputClass}
             placeholder="Your password"
-            tone="dark"
+           
           />
           <FieldError id="password" message={errors.password?.message} />
         </div>
@@ -160,7 +160,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={resendConfirmation}
                 disabled={resendState !== 'idle'}
-                className="bd-focus-on-dark mt-1.5 rounded text-[13px] font-semibold underline underline-offset-2 disabled:opacity-70"
+                className="bd-focus mt-1.5 rounded text-[13px] font-semibold underline underline-offset-2 disabled:opacity-70"
               >
                 {resendState === 'sending'
                   ? 'Sending…'
@@ -180,7 +180,7 @@ export default function LoginPage() {
 
       <AuthDivider />
 
-      <p className="text-center text-[14px] text-bd-ivory/75">
+      <p className="text-center text-[14px] text-bd-slate">
         Don&apos;t have an account?{' '}
         <Link href="/signup" className={authLinkClass}>
           Sign up
@@ -188,15 +188,13 @@ export default function LoginPage() {
       </p>
 
       {/* Resident hint — one line until opened, so the form stays the focus. */}
-      <details className="group rounded-2xl border border-bd-ivory/15 bg-bd-ivory/[0.04]">
-        <summary className="bd-focus-on-dark flex min-h-[44px] cursor-pointer list-none items-center gap-2.5 rounded-2xl px-4 py-2.5 [&::-webkit-details-marker]:hidden">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-bd-amber/15 text-bd-amber">
-            <GraduationCap className="h-4 w-4" aria-hidden="true" />
-          </span>
-          <span className="flex-1 text-[14px] font-semibold text-bd-ivory">Student or resident?</span>
-          <ChevronDown className="h-4 w-4 text-bd-ivory/70 transition-transform group-open:rotate-180" aria-hidden="true" />
+      <details className="group rounded-lg border border-bd-ink/10 bg-bd-mist">
+        <summary className="bd-focus flex min-h-[48px] cursor-pointer list-none items-center gap-2.5 rounded-lg px-4 py-2.5 [&::-webkit-details-marker]:hidden">
+          <GraduationCap className="h-5 w-5 shrink-0 text-bd-teal" strokeWidth={1.75} aria-hidden="true" />
+          <span className="flex-1 text-[14px] font-semibold text-bd-ink">Student or resident?</span>
+          <ChevronDown className="h-4 w-4 text-bd-slate transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
         </summary>
-        <p className="px-4 pb-4 pl-[54px] text-[13px] leading-relaxed text-bd-ivory/75">
+        <p className="px-4 pb-4 pl-[46px] text-[14px] leading-relaxed text-bd-slate">
           Sign in here with the details your property manager sent you &mdash;
           you&apos;ll be taken to your portal automatically.
         </p>

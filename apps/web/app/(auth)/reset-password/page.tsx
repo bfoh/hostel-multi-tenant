@@ -139,12 +139,12 @@ function ResetPasswordForm() {
             aria-describedby={errors.password ? 'password-error' : 'password-hint'}
             className={authInputClass}
             placeholder="Create a password"
-            tone="dark"
+           
           />
           {errors.password ? (
             <FieldError id="password" message={errors.password.message} />
           ) : (
-            <p id="password-hint" className="mt-1.5 text-[13px] text-bd-ivory/65">
+            <p id="password-hint" className="mt-1.5 text-[13px] text-bd-slate">
               At least 8 characters, with one uppercase letter and one number.
             </p>
           )}
@@ -161,7 +161,7 @@ function ResetPasswordForm() {
             {...fieldA11y('confirmPassword', !!errors.confirmPassword)}
             className={authInputClass}
             placeholder="Re-enter your password"
-            tone="dark"
+           
           />
           <FieldError id="confirmPassword" message={errors.confirmPassword?.message} />
         </div>
@@ -174,7 +174,7 @@ function ResetPasswordForm() {
         </button>
       </form>
 
-      <p className="text-center text-[14px] text-bd-ivory/75">
+      <p className="text-center text-[14px] text-bd-slate">
         Didn&apos;t get a code?{' '}
         <Link href="/forgot-password" className={authLinkClass}>
           Request a new one
