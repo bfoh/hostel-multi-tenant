@@ -10,5 +10,5 @@
 -- lib/data/rooms.ts) uses the service-role client, so nothing else needs it.
 -- ═══════════════════════════════════════════════════════════════════════════
 
-revoke all on room_occupancy_v from anon, authenticated;
+revoke all on room_occupancy_v from public, anon, authenticated;
 grant select on room_occupancy_v to service_role;
