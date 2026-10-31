@@ -307,3 +307,46 @@ describe('forged tenant cookie', () => {
     expect(r.forwarded('cookie') ?? '').not.toContain(VICTIM)
   })
 })
+
+// `/` on a property's host used to render the global marketplace, which
+// listed every other property on that property's own domain.
+describe('the root of a property\'s domain', () => {
+  it('sends guests to the property\'s booking page, keeping the query', async () => {
+    const r = await hit(OWN_HOST, '/?utm_source=flyer')
+    expect(r.status).toBe(307)
+    expect(r.location).toBe('/book?utm_source=flyer')
+  })
+
+  it.each<[Persona, string]>([
+    ['ownerOwn', '/dashboard'],
+    ['staffOwn', '/dashboard'],
+    ['residentOwn', '/occupant-portal'],
+  ])('sends %s to %s', async (persona, dest) => {
+    const r = await hit(OWN_HOST, '/', { as: persona })
+    expect(r.status).toBe(307)
+    expect(r.location).toBe(dest)
+  })
+
+  it.each<Persona>(['ownerOwn', 'residentOwn', 'newSignup'])(
+    'shows %s the booking page on a property they have no role at',
+    async (persona) => {
+      const r = await hit(VICTIM_HOST, '/', { as: persona })
+      expect(r.status).toBe(307)
+      expect(r.location).toBe('/book')
+    },
+  )
+
+  it('falls back to the public booking page when the role lookup fails', async () => {
+    restFails = true
+    const r = await hit(OWN_HOST, '/', { as: 'ownerOwn' })
+    expect(r.location).toBe('/book')
+  })
+
+  it.each(['beddilo.test', 'www.beddilo.test', 'app.beddilo.test'])(
+    'leaves the marketplace at the root of %s',
+    async (host) => {
+      const r = await hit(host, '/')
+      expect(r.passedThrough).toBe(true)
+    },
+  )
+})

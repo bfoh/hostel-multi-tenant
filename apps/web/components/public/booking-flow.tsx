@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Check, Users, Wifi, Wind, Droplets, Zap, Shield, Car, Utensils, Dumbbell, BookOpen, Share2, Phone, Flame, Clock, ArrowUpRight, BedDouble, UsersRound } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Check, Users, Share2, Phone, Clock, BedDouble, UsersRound } from 'lucide-react'
+import { amenityLabel } from '@/lib/amenity-icons'
+import { Price } from '@/components/public/price'
 import { billableUnits } from '@/lib/bookings/stay-pricing'
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
@@ -85,18 +87,6 @@ function unitCount(units: number, rateUnit: string) {
   return `${units} ${rateUnit}${units === 1 ? '' : 's'}`
 }
 
-const AMENITY_ICONS: Record<string, React.ReactNode> = {
-  wifi:          <Wifi className="h-3.5 w-3.5" />,
-  ac:            <Wind className="h-3.5 w-3.5" />,
-  water:         <Droplets className="h-3.5 w-3.5" />,
-  electricity:   <Zap className="h-3.5 w-3.5" />,
-  security:      <Shield className="h-3.5 w-3.5" />,
-  parking:       <Car className="h-3.5 w-3.5" />,
-  canteen:       <Utensils className="h-3.5 w-3.5" />,
-  gym:           <Dumbbell className="h-3.5 w-3.5" />,
-  'study room':  <BookOpen className="h-3.5 w-3.5" />,
-}
-
 const TYPE_LABEL: Record<string, string> = {
   single:  'Single Room',
   double:  'Double Room',
@@ -114,66 +104,20 @@ function scarcityLevel(available: number, total: number): 'none' | 'low' | 'crit
   return 'none'
 }
 
-function ScarcityBadge({
-  available,
-  total,
-  variant = 'solid',
-}: {
-  available: number
-  total: number
-  variant?: 'solid' | 'glass'
-}) {
+function ScarcityBadge({ available, total }: { available: number; total: number }) {
   const level = scarcityLevel(available, total)
-  const glass = variant === 'glass'
-
   if (level === 'sold') {
     return (
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${
-          glass
-            ? 'bg-black/55 text-white backdrop-blur-md ring-1 ring-white/10'
-            : 'bg-gray-900 text-white'
-        }`}
-      >
-        <Clock className="h-3 w-3" /> Sold out
+      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-bd-slate">
+        <Clock className="h-3.5 w-3.5" aria-hidden="true" /> Sold out
       </span>
     )
   }
-  if (level === 'critical') {
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ${
-          glass
-            ? 'bg-red-500/90 text-white backdrop-blur-md ring-1 ring-white/20 shadow-[0_4px_14px_rgba(239,68,68,0.4)]'
-            : 'bg-red-500 text-white shadow-[0_4px_14px_rgba(239,68,68,0.35)]'
-        }`}
-      >
-        <Flame className="h-3 w-3" /> Only {available} left
-      </span>
-    )
-  }
-  if (level === 'low') {
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${
-          glass
-            ? 'bg-amber-400/90 text-amber-950 backdrop-blur-md ring-1 ring-white/20'
-            : 'bg-amber-100 text-amber-800'
-        }`}
-      >
-        <Flame className="h-3 w-3" /> {available} left
-      </span>
-    )
-  }
+  if (level === 'critical') return <span className="text-[13px] font-semibold text-bd-danger">Only {available} left</span>
+  if (level === 'low') return <span className="text-[13px] font-semibold text-[#8A5A0B]">{available} left</span>
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${
-        glass
-          ? 'bg-white/80 text-emerald-900 backdrop-blur-md ring-1 ring-emerald-900/10'
-          : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-600/10'
-      }`}
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+    <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-bd-success">
+      <span className="h-1.5 w-1.5 rounded-full bg-bd-success" aria-hidden="true" />
       {available} available
     </span>
   )
@@ -191,189 +135,73 @@ function RoomPicker({
   onSelect: (cat: Category) => void
 }) {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
       {categories.map(cat => {
         const sold = cat.available === 0
-        const hasImage = cat.image_urls.length > 0
-        const typeLabel = cat.type ? (TYPE_LABEL[cat.type] ?? cat.type) : null
+        const typeLabel = cat.type ? (TYPE_LABEL[cat.type] ?? null) : null
+        const meta = [`${cat.capacity} per room`, typeLabel].filter(Boolean).join(' · ')
 
         return (
-          <article
-            key={cat.id}
-            className={`group relative flex flex-col overflow-hidden rounded-[20px] bg-white ring-1 ring-gray-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)] transition-all duration-300 will-change-transform ${
-              sold
-                ? 'opacity-60'
-                : 'hover:-translate-y-1 hover:shadow-[0_4px_8px_rgba(15,23,42,0.06),0_24px_48px_-16px_rgba(15,23,42,0.2)] hover:ring-gray-300/70'
-            }`}
-          >
-            {/* ── Media zone ─────────────────────────────────────────── */}
-            <div className="relative h-52 overflow-hidden">
-              {hasImage ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={cat.image_urls[0]}
-                    alt={cat.name}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
-                  />
-                  {/* Bottom gradient for legibility */}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
-                </>
+          <li key={cat.id} className={`flex flex-col ${sold ? 'opacity-60' : ''}`}>
+            <div className="relative aspect-[3/2] overflow-hidden rounded-xl bg-bd-mist">
+              {cat.image_urls.length > 0 ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={cat.image_urls[0]}
+                  alt={cat.name}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                />
               ) : (
-                <div
-                  className="relative h-full w-full overflow-hidden"
-                  style={{
-                    background: `radial-gradient(120% 80% at 100% 0%, ${brandColor}38 0%, ${brandColor}1a 35%, ${brandColor}05 70%, #ffffff 100%)`,
-                  }}
-                >
-                  {/* Decorative grain dots — subtle, hardware-cheap */}
-                  <svg
-                    className="absolute inset-0 h-full w-full opacity-[0.18] mix-blend-multiply"
-                    aria-hidden
-                  >
-                    <defs>
-                      <pattern id={`dots-${cat.id}`} width="14" height="14" patternUnits="userSpaceOnUse">
-                        <circle cx="1" cy="1" r="1" fill={brandColor} />
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill={`url(#dots-${cat.id})`} />
-                  </svg>
-
-                  {/* Sweeping highlight line */}
-                  <div
-                    className="absolute -left-10 top-10 h-px w-44 rotate-[-18deg] opacity-50"
-                    style={{ background: `linear-gradient(90deg, transparent, ${brandColor}, transparent)` }}
-                  />
-
-                  {/* Icon tile — bed glyph, replaces bare initial */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div
-                      className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/70 backdrop-blur-md ring-1 ring-white/80 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.2)]"
-                    >
-                      <BedDouble
-                        className="h-9 w-9"
-                        style={{ color: brandColor }}
-                        strokeWidth={1.5}
-                        aria-hidden
-                      />
-                    </div>
-                  </div>
+                <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-bd-slate">
+                  <BedDouble className="h-8 w-8" strokeWidth={1.5} aria-hidden="true" />
+                  <span className="text-[13px]">No photos yet</span>
                 </div>
               )}
-
-              {/* Top-left: type chip in glass */}
-              {typeLabel && (
-                <div className="absolute left-3 top-3">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/85 backdrop-blur-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-700 ring-1 ring-black/5">
-                    <BedDouble className="h-3 w-3" style={{ color: brandColor }} />
-                    {typeLabel}
-                  </span>
-                </div>
-              )}
-
-              {/* Top-right: scarcity badge (single placement) */}
-              {scarcityLevel(cat.available, cat.total) !== 'none' && (
-                <div className="absolute right-3 top-3">
-                  <ScarcityBadge available={cat.available} total={cat.total} variant="glass" />
-                </div>
-              )}
-
-              {/* Bottom-left: capacity, sits on image */}
-              <div className="absolute bottom-3 left-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/85 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-gray-700 ring-1 ring-black/5">
-                  <Users className="h-3 w-3" />
-                  {cat.capacity} {cat.capacity === 1 ? 'guest' : 'guests'}
+              {cat.image_urls.length > 1 && (
+                <span className="absolute bottom-2.5 right-2.5 rounded-md bg-white/90 px-2 py-0.5 text-[12px] font-medium text-bd-ink">
+                  {cat.image_urls.length} photos
                 </span>
-              </div>
+              )}
             </div>
 
-            {/* ── Content zone ───────────────────────────────────────── */}
-            <div className="flex flex-1 flex-col gap-4 p-5">
-              {/* Title block */}
-              <div>
-                <h3 className="text-lg font-semibold tracking-tight text-gray-900 leading-tight">
-                  {cat.name}
-                </h3>
-                {cat.description && (
-                  <p className="mt-1.5 text-[13px] text-gray-500 leading-relaxed line-clamp-2">
-                    {cat.description}
-                  </p>
-                )}
+            <div className="mt-4 flex flex-1 flex-col">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-[18px] font-semibold leading-snug text-bd-ink">{cat.name}</h3>
+                <span className="shrink-0 pt-0.5"><ScarcityBadge available={cat.available} total={cat.total} /></span>
               </div>
-
-              {/* Amenities — refined: hairline ring, no fill */}
+              <p className="mt-0.5 flex items-center gap-1.5 text-[14px] text-bd-slate">
+                <Users className="h-3.5 w-3.5" aria-hidden="true" /> {meta}
+              </p>
+              {cat.description && (
+                <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-bd-slate">{cat.description}</p>
+              )}
               {cat.amenities.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {cat.amenities.slice(0, 4).map(a => (
-                    <span
-                      key={a}
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-200 bg-white"
-                    >
-                      {AMENITY_ICONS[a.toLowerCase()] ?? null}
-                      {a}
-                    </span>
-                  ))}
-                  {cat.amenities.length > 4 && (
-                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-gray-500 ring-1 ring-gray-200 bg-gray-50">
-                      +{cat.amenities.length - 4} more
-                    </span>
-                  )}
-                </div>
+                <p className="mt-2 text-[14px] text-bd-ink/80">
+                  {cat.amenities.slice(0, 4).map(amenityLabel).join(' · ')}
+                  {cat.amenities.length > 4 && <span className="text-bd-slate"> · +{cat.amenities.length - 4} more</span>}
+                </p>
               )}
 
-              {/* Spacer */}
-              <div className="flex-1" />
-
-              {/* Price + CTA. Hairline divider, editorial type contrast. */}
-              <div className="space-y-4 border-t border-gray-100 pt-4">
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[11px] font-medium text-gray-400">GH₵</span>
-                      <span className="text-[26px] font-bold tracking-tight text-gray-900 leading-none tabular-nums">
-                        {new Intl.NumberFormat('en-GH').format(cat.base_rate / 100)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-[11px] uppercase tracking-[0.08em] text-gray-400 font-medium">
-                      {(RATE_LABEL[cat.rate_unit] ?? `/ ${cat.rate_unit}`).replace(/^\/\s*/, 'per ')}
-                    </p>
-                  </div>
-                  {scarcityLevel(cat.available, cat.total) === 'none' && (
-                    <div className="shrink-0 pt-1">
-                      <ScarcityBadge available={cat.available} total={cat.total} />
-                    </div>
-                  )}
-                </div>
-
+              <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+                <Price amount={cat.base_rate} unit={cat.rate_unit} size="lg" />
                 <button
+                  type="button"
                   disabled={sold}
                   onClick={() => onSelect(cat)}
-                  className="group/btn relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(0,0,0,0.4)] transition-all duration-200 hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.5)] hover:-translate-y-px disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-                  style={{ backgroundColor: brandColor }}
+                  aria-label={sold ? `${cat.name} is sold out` : `Book ${cat.name}`}
+                  className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-lg px-5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{ backgroundColor: brandColor, outlineColor: brandColor }}
                 >
-                  {/* Subtle sheen on hover */}
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-white/15 opacity-0 transition-all duration-700 group-hover/btn:left-[120%] group-hover/btn:opacity-100"
-                  />
-                  {sold ? (
-                    <>
-                      <Clock className="h-4 w-4" />
-                      Unavailable
-                    </>
-                  ) : (
-                    <>
-                      Book now
-                      <ArrowUpRight className="h-4 w-4 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
-                    </>
-                  )}
+                  {sold ? 'Sold out' : <>Book <ArrowRight className="h-4 w-4" aria-hidden="true" /></>}
                 </button>
               </div>
             </div>
-          </article>
+          </li>
         )
       })}
-    </div>
+    </ul>
   )
 }
 
@@ -611,7 +439,7 @@ function DetailsForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Selected room summary */}
       <div
-        className="rounded-xl border-l-4 px-4 py-3 bg-white shadow-sm"
+        className="rounded-xl border border-bd-ink/10 border-l-4 bg-white px-4 py-3"
         style={{ borderLeftColor: brandColor }}
       >
         <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Selected room</p>
@@ -622,30 +450,30 @@ function DetailsForm({
       </div>
 
       {/* Stay dates */}
-      <fieldset className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <legend className="px-1 text-sm font-semibold text-gray-700">Stay dates</legend>
+      <fieldset className="rounded-xl border border-bd-ink/10 bg-white p-5">
+        <legend className="px-1 text-[15px] font-semibold text-bd-ink">Stay dates</legend>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Check-in date <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">Check-in date <span className="text-red-500">*</span></label>
             <input
               type="date"
               required
               min={today}
               value={form.check_in_date}
               onChange={e => set('check_in_date', e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
               style={{ ['--tw-ring-color' as string]: brandColor }}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Check-out date <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">Check-out date <span className="text-red-500">*</span></label>
             <input
               type="date"
               required
               min={dayAfter(form.check_in_date || today)}
               value={form.check_out_date}
               onChange={e => set('check_out_date', e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             />
           </div>
         </div>
@@ -661,11 +489,11 @@ function DetailsForm({
       </fieldset>
 
       {/* Personal info */}
-      <fieldset className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <legend className="px-1 text-sm font-semibold text-gray-700">Your details</legend>
+      <fieldset className="rounded-xl border border-bd-ink/10 bg-white p-5">
+        <legend className="px-1 text-[15px] font-semibold text-bd-ink">Your details</legend>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">First name <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">First name <span className="text-red-500">*</span></label>
             <input
               type="text"
               required
@@ -673,11 +501,11 @@ function DetailsForm({
               value={form.first_name}
               onChange={e => set('first_name', e.target.value)}
               placeholder="Kwame"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Last name <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">Last name <span className="text-red-500">*</span></label>
             <input
               type="text"
               required
@@ -685,11 +513,11 @@ function DetailsForm({
               value={form.last_name}
               onChange={e => set('last_name', e.target.value)}
               placeholder="Mensah"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Phone number <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">Phone number <span className="text-red-500">*</span></label>
             <input
               type="tel"
               required
@@ -698,62 +526,62 @@ function DetailsForm({
               value={form.phone}
               onChange={e => set('phone', e.target.value)}
               placeholder="0244000000"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Email address <span className="text-gray-400 font-normal">(optional)</span></label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">Email address <span className="text-gray-400 font-normal">(optional)</span></label>
             <input
               type="email"
               maxLength={200}
               value={form.email}
               onChange={e => set('email', e.target.value)}
               placeholder="kwame@example.com"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             />
           </div>
         </div>
       </fieldset>
 
       {/* Student info */}
-      <fieldset className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <legend className="px-1 text-sm font-semibold text-gray-700">Student info <span className="text-gray-400 font-normal text-xs">(optional)</span></legend>
+      <fieldset className="rounded-xl border border-bd-ink/10 bg-white p-5">
+        <legend className="px-1 text-[15px] font-semibold text-bd-ink">Student info <span className="text-gray-400 font-normal text-xs">(optional)</span></legend>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Institution / University</label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">Institution / University</label>
             <input
               type="text"
               maxLength={200}
               value={form.institution}
               onChange={e => set('institution', e.target.value)}
               placeholder="University of Ghana"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Student ID</label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">Student ID</label>
             <input
               type="text"
               maxLength={50}
               value={form.student_id}
               onChange={e => set('student_id', e.target.value)}
               placeholder="10123456"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             />
           </div>
         </div>
       </fieldset>
 
       {/* Identification */}
-      <fieldset className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <legend className="px-1 text-sm font-semibold text-gray-700">Identification <span className="text-gray-400 font-normal text-xs">(optional)</span></legend>
+      <fieldset className="rounded-xl border border-bd-ink/10 bg-white p-5">
+        <legend className="px-1 text-[15px] font-semibold text-bd-ink">Identification <span className="text-gray-400 font-normal text-xs">(optional)</span></legend>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Gender</label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">Gender</label>
             <select
               value={form.gender}
               onChange={e => set('gender', e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             >
               <option value="">Select...</option>
               <option value="male">Male</option>
@@ -762,20 +590,20 @@ function DetailsForm({
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Date of birth</label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">Date of birth</label>
             <input
               type="date"
               value={form.date_of_birth}
               onChange={e => set('date_of_birth', e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">ID type</label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">ID type</label>
             <select
               value={form.national_id_type}
               onChange={e => set('national_id_type', e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             >
               <option value="">Select...</option>
               <option value="ghana_card">Ghana Card</option>
@@ -785,14 +613,14 @@ function DetailsForm({
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">ID number</label>
+            <label className="mb-1 block text-[13px] font-medium text-bd-ink">ID number</label>
             <input
               type="text"
               maxLength={50}
               value={form.national_id_number}
               onChange={e => set('national_id_number', e.target.value)}
               placeholder="GHA-XXXXXXXXX-X"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-offset-0"
+              className="min-h-[44px] w-full rounded-lg border border-bd-ink/20 bg-white px-3 py-2 text-[16px] text-bd-ink focus:outline-none focus:ring-2 focus:ring-offset-0 sm:text-[15px]"
             />
           </div>
         </div>
@@ -800,8 +628,8 @@ function DetailsForm({
 
       {/* Roommate Matching Questionnaire (Optional) */}
       {roommate_matching_enabled && category.capacity > 1 && (
-        <fieldset className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-6">
-          <legend className="px-1 text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+        <fieldset className="rounded-xl border border-bd-ink/10 bg-white p-5 sm:p-6 space-y-6">
+          <legend className="px-1 text-[15px] font-semibold text-bd-ink flex items-center gap-1.5">
             <UsersRound className="h-4 w-4 text-indigo-500" />
             Roommate Matching Survey (Optional)
           </legend>
@@ -943,7 +771,7 @@ function DetailsForm({
 
       {/* Notes */}
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Additional notes <span className="text-gray-400 font-normal">(optional)</span></label>
+        <label className="mb-1 block text-[13px] font-medium text-bd-ink">Additional notes <span className="text-gray-400 font-normal">(optional)</span></label>
         <textarea
           maxLength={500}
           rows={3}
@@ -1154,36 +982,21 @@ function Row({
 function Steps({ current, brandColor }: { current: number; brandColor: string }) {
   const steps = ['Choose room', 'Your details', 'Confirmation']
   return (
-    <div className="flex items-center gap-0 mb-8">
+    <ol className="mb-8 grid grid-cols-3 gap-2" aria-label="Booking progress">
       {steps.map((label, i) => {
         const idx = i + 1
-        const done = idx < current
-        const active = idx === current
+        const reached = idx <= current
         return (
-          <div key={idx} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center">
-              <div
-                className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                  done ? 'text-white' : active ? 'text-white' : 'bg-gray-200 text-gray-400'
-                }`}
-                style={done || active ? { backgroundColor: brandColor } : undefined}
-              >
-                {done ? <Check className="h-4 w-4" /> : idx}
-              </div>
-              <span className={`mt-1 text-xs font-medium ${active ? 'text-gray-900' : 'text-gray-400'}`}>
-                {label}
-              </span>
-            </div>
-            {i < steps.length - 1 && (
-              <div
-                className="flex-1 h-0.5 mx-2 mb-5 transition-all"
-                style={{ backgroundColor: done ? brandColor : '#E5E7EB' }}
-              />
-            )}
-          </div>
+          <li key={idx} aria-current={idx === current ? 'step' : undefined}>
+            <div className="h-1 rounded-full bg-bd-ink/10" style={reached ? { backgroundColor: brandColor } : undefined} />
+            <p className={`mt-2 flex items-center gap-1.5 text-[13px] ${idx === current ? 'font-semibold text-bd-ink' : 'text-bd-slate'}`}>
+              {idx < current && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+              <span className="hidden sm:inline">Step {idx}: </span>{label}
+            </p>
+          </li>
         )
       })}
-    </div>
+    </ol>
   )
 }
 

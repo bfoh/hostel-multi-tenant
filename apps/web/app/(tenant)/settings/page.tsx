@@ -12,6 +12,8 @@ import { PasswordForm } from '@/components/settings/password-form'
 import { PushToggle } from '@/components/settings/push-toggle'
 import { BillingClient } from '@/components/settings/billing-client'
 import { ListingSettingsForm } from '@/components/settings/listing-settings-form'
+import { ListingCoverCard } from '@/components/settings/listing-cover-card'
+import { ListingPhotosCard } from '@/components/settings/listing-photos-card'
 import {
   listPlatformPlans, listAllPlanVariants, findPlanByCode, BILLING_INTERVALS,
 } from '@/lib/platform-plans'
@@ -46,7 +48,7 @@ async function getTenant() {
       currency, timezone,
       sms_enabled, email_enabled, momo_enabled,
       inter_occupant_dm_enabled, roommate_matching_enabled,
-      listed_publicly, online_booking_enabled, booking_payment_mode,
+      listed_publicly, online_booking_enabled, booking_payment_mode, hero_image_url,
       status, plan, trial_ends_at,
       bank_name, bank_branch, bank_account_name, bank_account_number,
       bank_swift_code, bank_instructions, bank_deposits_enabled,
@@ -188,12 +190,12 @@ export default async function SettingsPage({
   const billingData = tab === 'billing' && tenantId ? await getBillingData(tenantId, isHotel ? 'hotel' : 'hostel') : null
 
   // Room categories (for the listing tab's price preview) only when active
-  let listingCategories: { id: string; name: string; base_rate: number; rate_unit: string }[] = []
+  let listingCategories: { id: string; name: string; base_rate: number; rate_unit: string; image_urls: string[] | null }[] = []
   if (tab === 'listing' && tenantId) {
     const admin = createAdminClient()
     const { data } = await admin
       .from('room_categories')
-      .select('id, name, base_rate, rate_unit')
+      .select('id, name, base_rate, rate_unit, image_urls')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('sort_order')
@@ -346,6 +348,11 @@ export default async function SettingsPage({
                   hasPayoutAccount={!!(tenant as any)?.paystack_subaccount_code}
                   categories={listingCategories}
                   isHotel={isHotel}
+                />
+                <ListingCoverCard initialUrl={(tenant as any)?.hero_image_url ?? null} propertyName={tenant?.name ?? 'your property'} />
+                <ListingPhotosCard
+                  hasPropertyPhoto={!!(tenant as any)?.hero_image_url}
+                  categories={listingCategories.map((c) => ({ id: c.id, name: c.name, photoCount: c.image_urls?.length ?? 0 }))}
                 />
               </section>
             )}

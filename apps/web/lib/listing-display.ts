@@ -63,22 +63,6 @@ export function townsWithListings(
   return [...byKey.values()].sort((a, b) => b.count - a.count || a.town.localeCompare(b.town))
 }
 
-/** Colour pairs for the cover of a listing with no photos. */
-export const COVER_TONES = [
-  { bg: '#E9F1F1', fg: '#2A5A61' },
-  { bg: '#F2ECE1', fg: '#6E5634' },
-  { bg: '#E7EFE8', fg: '#3B5E46' },
-  { bg: '#F5E8E2', fg: '#8A4A38' },
-  { bg: '#E8EDF2', fg: '#38506A' },
-] as const
-
-/** The same cover colours for a property everywhere it appears. */
-export function coverTone(key: string): (typeof COVER_TONES)[number] {
-  let hash = 0
-  for (const ch of key) hash = (hash * 31 + ch.codePointAt(0)!) >>> 0
-  return COVER_TONES[hash % COVER_TONES.length]
-}
-
 /** "Student hostel" / "Hotel" / "Apartment" from tenants.business_type and
  *  tenants.accommodation_type (migration 131). */
 export function stayTypeLabel(businessType: string, accommodationType?: string | null): string {

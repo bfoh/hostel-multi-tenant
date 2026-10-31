@@ -1,23 +1,10 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { headers } from 'next/headers'
-import {
-  Phone,
-  Mail,
-  MapPin,
-  Wifi,
-  Wind,
-  Droplets,
-  Zap,
-  Shield,
-  Car,
-  Utensils,
-  Dumbbell,
-  BookOpen,
-} from 'lucide-react'
+import { Phone, Mail, MapPin } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { formatGHS } from '@/lib/utils'
 import { BookingFlow } from '@/components/public/booking-flow'
+import { amenityIcon, amenityLabel } from '@/lib/amenity-icons'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -55,6 +42,7 @@ interface TenantRow {
   name: string
   tagline: string | null
   logo_url: string | null
+  hero_image_url: string | null
   primary_color: string | null
   contact_phone: string | null
   contact_email: string | null
@@ -76,7 +64,7 @@ async function getTenantFromRequest(): Promise<TenantRow | null> {
   const { data } = await supabase
     .from('tenants')
     .select(
-      'id, slug, name, tagline, logo_url, primary_color, contact_phone, contact_email, address_line1, address_city, address_region, website_url, website_content, roommate_matching_enabled, online_booking_enabled'
+      'id, slug, name, tagline, logo_url, hero_image_url, primary_color, contact_phone, contact_email, address_line1, address_city, address_region, website_url, website_content, roommate_matching_enabled, online_booking_enabled'
     )
     .eq('id', tenantId)
     .single()
@@ -147,25 +135,6 @@ async function getRoomCategories(tenantId: string) {
   })
 }
 
-const AMENITY_ICONS: Record<string, React.ReactNode> = {
-  wifi: <Wifi className="h-4 w-4" />,
-  ac: <Wind className="h-4 w-4" />,
-  water: <Droplets className="h-4 w-4" />,
-  electricity: <Zap className="h-4 w-4" />,
-  security: <Shield className="h-4 w-4" />,
-  parking: <Car className="h-4 w-4" />,
-  canteen: <Utensils className="h-4 w-4" />,
-  gym: <Dumbbell className="h-4 w-4" />,
-  'study room': <BookOpen className="h-4 w-4" />,
-}
-
-const RATE_LABEL: Record<string, string> = {
-  night: '/ night',
-  week: '/ week',
-  month: '/ month',
-  semester: '/ semester',
-}
-
 export default async function PublicBookingPage({
   searchParams,
 }: {
@@ -180,206 +149,201 @@ export default async function PublicBookingPage({
   // reuses the existing "no rooms available" empty state below as-is.
   const categories =
     tenant.online_booking_enabled === false ? [] : await getRoomCategories(tenant.id)
-  const brandColor = tenant.primary_color ?? '#2563EB'
+  // The property's own colour; Beddilo's Deep Teal when it hasn't set one.
+  const brandColor = tenant.primary_color ?? '#173B42'
   const cms: CmsContent = tenant.website_content ?? {}
+  const address = [tenant.address_line1, tenant.address_city, tenant.address_region].filter(Boolean).join(', ')
+  const heading = 'font-display text-[22px] font-bold tracking-[-0.01em] text-bd-ink sm:text-[26px]'
 
   return (
-    <>
-      {/* ── CSS variable for brand color ─────────────────────────── */}
-      <style>{`:root { --brand: ${brandColor}; }`}</style>
-
-      <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, sans-serif' }}>
-        {/* ── Header / Hero ─────────────────────────────────────────── */}
-        <header
-          style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}CC 100%)` }}
-        >
-          <div className="mx-auto max-w-5xl px-4 py-10 text-white">
-            <div className="flex items-center gap-4">
-              {tenant.logo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={tenant.logo_url}
-                  alt={tenant.name}
-                  className="h-14 w-14 rounded-xl bg-white/20 object-cover p-1"
-                />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 text-2xl font-bold">
-                  {tenant.name[0]}
-                </div>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold">{cms.hero_heading ?? tenant.name}</h1>
-                <p className="mt-0.5 text-sm text-white/80">
-                  {cms.hero_subheading ?? tenant.tagline ?? ''}
-                </p>
+    <div className="min-h-screen bg-white text-bd-ink antialiased">
+      {/* ── Header — the property's own name, logo and colour ───────── */}
+      <header className="border-t-4 border-b border-b-bd-ink/10 bg-white" style={{ borderTopColor: brandColor }}>
+        <div className="mx-auto max-w-5xl px-5 py-8 sm:px-6 sm:py-10">
+          <div className="flex items-center gap-4">
+            {tenant.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={tenant.logo_url}
+                alt=""
+                className="h-14 w-14 shrink-0 rounded-xl border border-bd-ink/10 bg-white object-contain p-1"
+              />
+            ) : (
+              <div
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl font-display text-2xl font-bold text-white"
+                style={{ backgroundColor: brandColor }}
+                aria-hidden="true"
+              >
+                {tenant.name[0]}
               </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="font-display text-[26px] font-bold leading-tight tracking-[-0.015em] sm:text-[32px]">
+                {cms.hero_heading ?? tenant.name}
+              </h1>
+              {(cms.hero_subheading ?? tenant.tagline) && (
+                <p className="mt-0.5 text-[15px] text-bd-slate sm:text-[16px]">{cms.hero_subheading ?? tenant.tagline}</p>
+              )}
             </div>
+          </div>
 
-            {/* Contact strip */}
-            <div className="mt-6 flex flex-wrap gap-4 text-sm text-white/80">
+          {/* Contact strip */}
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[14px] text-bd-slate">
+            {tenant.contact_phone && (
+              <a href={`tel:${tenant.contact_phone}`} className="flex items-center gap-1.5 hover:text-bd-ink">
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                {tenant.contact_phone}
+              </a>
+            )}
+            {tenant.contact_email && (
+              <a href={`mailto:${tenant.contact_email}`} className="flex items-center gap-1.5 hover:text-bd-ink">
+                <Mail className="h-4 w-4" aria-hidden="true" />
+                {tenant.contact_email}
+              </a>
+            )}
+            {address && (
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-4 w-4" aria-hidden="true" />
+                {address}
+              </span>
+            )}
+          </div>
+
+          {/* The owner's own cover photo, when they have uploaded one. */}
+          {tenant.hero_image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={tenant.hero_image_url}
+              alt={`${tenant.name}`}
+              className="mt-7 aspect-[21/9] w-full rounded-xl bg-bd-mist object-cover"
+            />
+          )}
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl space-y-14 px-5 py-10 sm:px-6 sm:py-12">
+        {/* Room booking */}
+        <section aria-labelledby="rooms-heading">
+          <h2 id="rooms-heading" className={heading}>Choose a room</h2>
+          <p className="mb-6 mt-1 text-[15px] text-bd-slate">
+            Prices are in Ghana cedis and show how each room is billed. You pay {tenant.name} directly.
+          </p>
+
+          {categories.length === 0 ? (
+            <div className="rounded-xl bg-bd-mist px-6 py-14 text-center">
+              <p className="text-[16px] font-semibold">No rooms are open for online booking right now</p>
+              <p className="mt-1 text-[15px] text-bd-slate">Contact the property to ask about availability.</p>
               {tenant.contact_phone && (
                 <a
                   href={`tel:${tenant.contact_phone}`}
-                  className="flex items-center gap-1.5 transition-colors hover:text-white"
+                  className="mt-5 inline-flex min-h-[44px] items-center rounded-lg px-6 text-[15px] font-semibold text-white"
+                  style={{ backgroundColor: brandColor }}
                 >
-                  <Phone className="h-3.5 w-3.5" />
-                  {tenant.contact_phone}
+                  Call {tenant.contact_phone}
                 </a>
-              )}
-              {tenant.contact_email && (
-                <a
-                  href={`mailto:${tenant.contact_email}`}
-                  className="flex items-center gap-1.5 transition-colors hover:text-white"
-                >
-                  <Mail className="h-3.5 w-3.5" />
-                  {tenant.contact_email}
-                </a>
-              )}
-              {(tenant.address_city || tenant.address_region) && (
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {[tenant.address_line1, tenant.address_city, tenant.address_region]
-                    .filter(Boolean)
-                    .join(', ')}
-                </span>
               )}
             </div>
-          </div>
-        </header>
-
-        {/* ── Main content ──────────────────────────────────────────── */}
-        <main className="mx-auto max-w-5xl space-y-12 px-4 py-10">
-          {/* Amenities */}
-          {cms.amenities && cms.amenities.length > 0 && (
-            <section>
-              <h2 className="mb-4 text-lg font-bold text-gray-900">Facilities &amp; Amenities</h2>
-              <div className="flex flex-wrap gap-2">
-                {cms.amenities.map((a) => {
-                  const Icon = AMENITY_ICONS[a.toLowerCase()] ?? null
-                  return (
-                    <span
-                      key={a}
-                      className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700"
-                    >
-                      {Icon}
-                      {a}
-                    </span>
-                  )
-                })}
-              </div>
-            </section>
+          ) : (
+            <BookingFlow
+              categories={categories}
+              initialCategoryId={room ?? null}
+              tenant={{
+                id: tenant.id,
+                name: tenant.name,
+                slug: tenant.slug,
+                brandColor,
+                roommate_matching_enabled: tenant.roommate_matching_enabled ?? false,
+              }}
+            />
           )}
+        </section>
 
-          {/* About */}
-          {cms.about_text && (
-            <section>
-              <h2 className="mb-3 text-lg font-bold text-gray-900">About Us</h2>
-              <p className="whitespace-pre-line leading-relaxed text-gray-600">{cms.about_text}</p>
-            </section>
-          )}
-
-          {/* Gallery */}
-          {cms.gallery_urls && cms.gallery_urls.length > 0 && (
-            <section>
-              <h2 className="mb-4 text-lg font-bold text-gray-900">Gallery</h2>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {cms.gallery_urls.map((url, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={i}
-                    src={url}
-                    alt={`${tenant.name} photo ${i + 1}`}
-                    className="aspect-video w-full rounded-xl bg-gray-100 object-cover"
-                    loading="lazy"
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Room booking */}
-          <section>
-            <h2 className="mb-2 text-lg font-bold text-gray-900">Available Rooms</h2>
-            <p className="mb-6 text-sm text-gray-500">
-              Choose a room type to start your booking. All prices are in Ghana Cedis (GH₵).
-            </p>
-
-            {categories.length === 0 ? (
-              <div className="rounded-2xl border-2 border-dashed border-gray-200 py-20 text-center">
-                <p className="text-gray-500">
-                  No rooms available at this time. Please contact the hostel directly.
-                </p>
-                {tenant.contact_phone && (
-                  <a
-                    href={`tel:${tenant.contact_phone}`}
-                    className="mt-4 inline-block rounded-lg px-6 py-2.5 text-sm font-semibold text-white"
-                    style={{ backgroundColor: brandColor }}
-                  >
-                    Call {tenant.contact_phone}
-                  </a>
-                )}
-              </div>
-            ) : (
-              <BookingFlow
-                categories={categories}
-                initialCategoryId={room ?? null}
-                tenant={{
-                  id: tenant.id,
-                  name: tenant.name,
-                  slug: tenant.slug,
-                  brandColor,
-                  roommate_matching_enabled: tenant.roommate_matching_enabled ?? false,
-                }}
-              />
-            )}
+        {/* About */}
+        {cms.about_text && (
+          <section aria-labelledby="about-heading">
+            <h2 id="about-heading" className={heading}>About {tenant.name}</h2>
+            <p className="mt-3 max-w-3xl whitespace-pre-line text-[16px] leading-relaxed text-bd-ink/85">{cms.about_text}</p>
           </section>
+        )}
 
-          {/* FAQ */}
-          {cms.faqs && cms.faqs.length > 0 && (
-            <section>
-              <h2 className="mb-4 text-lg font-bold text-gray-900">Frequently Asked Questions</h2>
-              <div className="space-y-3">
-                {cms.faqs.map((faq, i) => (
-                  <details key={i} className="group rounded-xl border border-gray-200 bg-white">
-                    <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold text-gray-800">
-                      {faq.q}
-                      <span className="ml-3 shrink-0 text-gray-400 transition-transform group-open:rotate-180">
-                        ▾
-                      </span>
-                    </summary>
-                    <p className="border-t border-gray-100 px-5 py-4 text-sm leading-relaxed text-gray-600">
-                      {faq.a}
-                    </p>
-                  </details>
-                ))}
-              </div>
-            </section>
-          )}
-        </main>
+        {/* Amenities */}
+        {cms.amenities && cms.amenities.length > 0 && (
+          <section aria-labelledby="amenities-heading">
+            <h2 id="amenities-heading" className={heading}>Facilities</h2>
+            <ul className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+              {cms.amenities.map((a) => {
+                const Icon = amenityIcon(a)
+                return (
+                  <li key={a} className="flex items-center gap-2.5 text-[15px]">
+                    <Icon className="h-[18px] w-[18px] shrink-0 text-bd-slate" aria-hidden="true" />
+                    {amenityLabel(a)}
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )}
 
-        {/* ── Footer ───────────────────────────────────────────────── */}
-        <footer className="mt-12 border-t border-gray-100 bg-white py-8">
-          <div className="mx-auto max-w-5xl px-4 text-center text-xs text-gray-400">
-            <p>
-              {tenant.name} · Powered by <span className="font-semibold">Beddilo</span>
+        {/* Gallery */}
+        {cms.gallery_urls && cms.gallery_urls.length > 0 && (
+          <section aria-labelledby="gallery-heading">
+            <h2 id="gallery-heading" className={heading}>Photos</h2>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {cms.gallery_urls.map((url, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={i}
+                  src={url}
+                  alt={`${tenant.name} photo ${i + 1}`}
+                  className="aspect-[4/3] w-full rounded-xl bg-bd-mist object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* FAQ */}
+        {cms.faqs && cms.faqs.length > 0 && (
+          <section aria-labelledby="faq-heading">
+            <h2 id="faq-heading" className={heading}>Questions</h2>
+            <div className="mt-4 divide-y divide-bd-ink/10 border-y border-bd-ink/10">
+              {cms.faqs.map((faq, i) => (
+                <details key={i} className="group">
+                  <summary className="flex min-h-[52px] cursor-pointer list-none items-center justify-between gap-3 py-3 text-[16px] font-semibold">
+                    {faq.q}
+                    <span className="shrink-0 text-bd-slate transition-transform group-open:rotate-180" aria-hidden="true">▾</span>
+                  </summary>
+                  <p className="pb-4 text-[15px] leading-relaxed text-bd-slate">{faq.a}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
+
+      {/* ── Footer ───────────────────────────────────────────────── */}
+      <footer className="border-t border-bd-ink/10 bg-bd-mist py-8">
+        <div className="mx-auto max-w-5xl px-5 text-center text-[13px] text-bd-slate sm:px-6">
+          <p>
+            {tenant.name} · Powered by <span className="font-semibold text-bd-ink">Beddilo</span>
+          </p>
+          {tenant.contact_phone && (
+            <p className="mt-1">
+              Questions? Call or WhatsApp{' '}
+              <a
+                href={`https://wa.me/${tenant.contact_phone.replace(/\D/g, '').replace(/^0/, '233')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-bd-ink underline underline-offset-2"
+              >
+                {tenant.contact_phone}
+              </a>
             </p>
-            {tenant.contact_phone && (
-              <p className="mt-1">
-                Questions? Call or WhatsApp{' '}
-                <a
-                  href={`https://wa.me/${tenant.contact_phone.replace(/\D/g, '').replace(/^0/, '233')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium"
-                  style={{ color: brandColor }}
-                >
-                  {tenant.contact_phone}
-                </a>
-              </p>
-            )}
-          </div>
-        </footer>
-      </div>
-    </>
+          )}
+        </div>
+      </footer>
+    </div>
   )
 }

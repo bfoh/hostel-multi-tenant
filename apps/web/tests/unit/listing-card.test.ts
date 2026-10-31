@@ -80,6 +80,13 @@ describe('ListingCard', () => {
     expect(text(html)).not.toContain('No photos yet')
   })
 
+  it('can switch to a compact row on phones', () => {
+    const html = renderToStaticMarkup(createElement(ListingCard, { listing, rowOnPhone: true }))
+    expect(html).toContain('w-24')
+    expect(html).toContain('sm:flex-col')
+    expect(renderToStaticMarkup(createElement(ListingCard, { listing }))).not.toContain('w-24')
+  })
+
   it('labels apartments and hotels by their accommodation type', () => {
     const apt = text(renderToStaticMarkup(createElement(ListingCard, { listing: { ...listing, business_type: 'hotel', accommodation_type: 'apartment', category_count: 1 } })))
     expect(apt).toContain('Apartment · 1 room type')
@@ -96,12 +103,12 @@ describe('ListingListRow', () => {
 })
 
 describe('ListingCover', () => {
-  it('keeps the same colours for a property and can drop the note', () => {
-    const a = renderToStaticMarkup(createElement(ListingCover, { name: 'Unity Court', colorKey: 'unity-court' }))
-    const b = renderToStaticMarkup(createElement(ListingCover, { name: 'Unity Court', colorKey: 'unity-court' }))
-    expect(a).toBe(b)
-    expect(text(a)).toContain('No photos yet')
-    expect(text(renderToStaticMarkup(createElement(ListingCover, { name: 'Unity Court', colorKey: 'unity-court', note: false })))).not.toContain('No photos yet')
+  it('says there are no photos and can drop the note', () => {
+    const html = renderToStaticMarkup(createElement(ListingCover, { name: 'Unity Court' }))
+    expect(html).toContain('role="img"')
+    expect(text(html)).toContain('UC')
+    expect(text(html)).toContain('No photos yet')
+    expect(text(renderToStaticMarkup(createElement(ListingCover, { name: 'Unity Court', note: false })))).not.toContain('No photos yet')
   })
 })
 

@@ -13,11 +13,14 @@ import { townSearchHref, type TabKey } from '@/lib/marketplace-search'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { HeroSearch } from '@/components/marketplace/hero-search'
+import { KindsOfStay, KINDS_PHOTOS, PhotoCredits } from '@/components/marketplace/kinds-of-stay'
 
 /* ──────────────────────────────────────────────────────────────────────────────
    BEDDILO — Marketplace homepage (hostels, hotels, apartments)
-   A Deep Teal search band on a white page; listings first, then why to book
-   here and an owner invitation. Only real listings and real claims.
+   A light ivory hero with a one-row search, the kinds of stay, then real
+   listings with town filters, why to book here and an owner invitation.
+   Only real listings and real claims; the place photos are credited and
+   never shown as a property.
    Served on gh-hostels.com — the brand changed, the domain did not (see
    NEXT_PUBLIC_VERTICAL_DOMAINS_ENABLED in lib/tenant/host-classification.ts).
    ────────────────────────────────────────────────────────────────────────── */
@@ -95,10 +98,10 @@ const orgLd = {
   },
 }
 
-const TAB_NOUN: Record<TabKey, { one: string; many: string }> = {
-  hostels: { one: 'hostel', many: 'hostels' },
-  hotels: { one: 'hotel', many: 'hotels' },
-  apartments: { one: 'apartment', many: 'apartments' },
+const TAB_NOUN: Record<TabKey, { one: string; many: string; heading: string }> = {
+  hostels: { one: 'hostel', many: 'hostels', heading: 'Student hostels' },
+  hotels: { one: 'hotel', many: 'hotels', heading: 'Hotels' },
+  apartments: { one: 'apartment', many: 'apartments', heading: 'Apartments' },
 }
 
 /* Every claim here is backed by how the platform actually works: guest
@@ -169,9 +172,16 @@ export default async function LandingPage({
 
   // Every listing in the vertical (a regional directory — small): the newest
   // with real photos lead the featured row, the rest still fill it, and
-  // their towns become the popular searches and the town field's
-  // suggestions, so each of those finds at least one property.
-  const { listings, total } = await searchListings({ businessType: featuredBusinessType, limit: 200, sort: 'newest' })
+  // their towns become the popular searches, the town filters and the town
+  // field's suggestions, so each of those finds at least one property. The
+  // other two verticals only need their totals, for the kinds of stay.
+  const [{ listings, total }, ...others] = await Promise.all([
+    searchListings({ businessType: featuredBusinessType, limit: 200, sort: 'newest' }),
+    ...(['hostel', 'hotel', 'apartment'] as const)
+      .filter((v) => v !== featuredBusinessType)
+      .map(async (v) => [v, (await searchListings({ businessType: v, limit: 1 })).total] as const),
+  ])
+  const counts = Object.fromEntries([[featuredBusinessType, total], ...others]) as Record<MarketplaceVertical, number>
   const featured = photosFirst(listings).slice(0, 8)
   const towns = townsWithListings(listings)
 
@@ -182,49 +192,57 @@ export default async function LandingPage({
 
       <MarketplaceNav />
 
-      {/* ── HERO — plain Deep Teal band; the search card overlaps its
-           lower edge. No stock photography: we only ever show real
-           owner-uploaded photos. ─────────────────────────────────── */}
-      <section className="bg-bd-teal">
-        <div className="mx-auto max-w-6xl px-5 pb-28 pt-10 sm:px-6 sm:pb-32 sm:pt-16 lg:pt-20">
-          <h1 className="max-w-3xl font-display text-[32px] font-bold leading-[1.1] tracking-[-0.02em] text-white sm:text-[44px] lg:text-[52px]">
+      {/* ── HERO — light ivory, one-row search. No photo of a property:
+           listing photos only ever come from owners. ─────────────── */}
+      <section aria-labelledby="hero-heading" className="border-b border-bd-ink/10 bg-bd-ivory-50">
+        <div className="mx-auto max-w-6xl px-5 pb-10 pt-10 sm:px-6 sm:pb-14 sm:pt-16">
+          <p className="text-[15px] font-semibold text-bd-teal">A world of stays</p>
+          <h1 id="hero-heading" className="mt-2 max-w-3xl font-display text-[32px] font-bold leading-[1.1] tracking-[-0.02em] sm:text-[46px]">
             Find a place to stay in Ghana
           </h1>
-          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-white/80 sm:mt-4 sm:text-[18px]">
-            Hostels near campus, hotels and apartments. Compare rooms and prices, then book directly with the property.
+          <p className="mt-3 max-w-2xl text-[17px] leading-relaxed text-bd-slate sm:text-[18px]">
+            Student hostels near campus, hotels and apartments. Compare rooms and
+            prices, then book directly with the property.
           </p>
+          <div className="mt-7 max-w-4xl">
+            <HeroSearch initialTab={tab} destinations={towns.map((t) => t.town)} />
+          </div>
+          {towns.length > 0 && (
+            <nav aria-label={`Popular ${noun.many} searches`} className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[14px]">
+              <span className="text-bd-slate">Popular:</span>
+              {towns.slice(0, 6).map((t) => (
+                <Link
+                  key={t.town}
+                  href={townSearchHref(t.town, featuredBusinessType)}
+                  className="bd-focus rounded font-medium text-bd-ink underline decoration-bd-ink/25 underline-offset-4 hover:decoration-bd-ink"
+                >
+                  {t.town}
+                </Link>
+              ))}
+            </nav>
+          )}
         </div>
       </section>
 
-      <div className="relative z-10 mx-auto -mt-[5.5rem] max-w-6xl px-4 sm:-mt-24 sm:px-6">
-        <HeroSearch initialTab={tab} destinations={towns.map((t) => t.town)} />
-        {towns.length > 0 && (
-          <nav aria-label={`Popular ${noun.many} searches`} className="mt-4 flex flex-wrap items-center gap-2 px-1">
-            <span className="mr-1 text-[14px] text-bd-slate">Popular:</span>
-            {towns.slice(0, 6).map((t) => (
-              <Link
-                key={t.town}
-                href={townSearchHref(t.town, featuredBusinessType)}
-                className="bd-focus inline-flex min-h-[36px] items-center rounded-full border border-bd-ink/15 px-3.5 text-[14px] font-medium text-bd-ink transition-colors hover:border-bd-ink/40 hover:bg-bd-mist"
-              >
-                {t.town}
-              </Link>
-            ))}
-          </nav>
-        )}
-      </div>
+      {/* ── KINDS OF STAY — place photos, live counts ─────────────── */}
+      <section aria-labelledby="kinds-heading" className="mx-auto max-w-6xl px-5 pt-14 sm:px-6 sm:pt-20">
+        <h2 id="kinds-heading" className="font-display text-[24px] font-bold tracking-[-0.015em] sm:text-[30px]">
+          Explore your kind of stay
+        </h2>
+        <KindsOfStay counts={counts} />
+      </section>
 
       {/* ── LISTINGS — real listings for the selected tab ─────────── */}
-      <section aria-labelledby="featured-heading" className="mx-auto max-w-6xl px-5 pt-12 sm:px-6 sm:pt-16">
+      <section aria-labelledby="featured-heading" className="mx-auto max-w-6xl px-5 pt-14 sm:px-6 sm:pt-20">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 id="featured-heading" className="font-display text-[24px] font-bold tracking-[-0.015em] sm:text-[28px]">
-              Newly listed {noun.many}
+            <h2 id="featured-heading" className="font-display text-[24px] font-bold tracking-[-0.015em] sm:text-[30px]">
+              {noun.heading} on Beddilo
             </h2>
             {total > 0 && (
               <p className="mt-1 text-[15px] text-bd-slate">
-                {total} {total === 1 ? noun.one : noun.many} on Beddilo
-                {towns.length > 0 && ` in ${towns.length} town${towns.length === 1 ? '' : 's'}`}
+                {total} {total === 1 ? noun.one : noun.many}
+                {towns.length > 0 && ` in ${towns.length} town${towns.length === 1 ? '' : 's'}`}, newest first
               </p>
             )}
           </div>
@@ -239,28 +257,44 @@ export default async function LandingPage({
           )}
         </div>
 
+        {towns.length > 1 && (
+          <nav aria-label={`${noun.heading} by town`} className="mt-5 flex flex-wrap gap-2">
+            {towns.map((t) => (
+              <Link
+                key={t.town}
+                href={townSearchHref(t.town, featuredBusinessType)}
+                className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-bd-ink/15 bg-white px-4 text-[14px] font-medium text-bd-ink transition-colors hover:border-bd-ink/40"
+              >
+                {t.town} <span className="text-bd-slate">{t.count}</span>
+              </Link>
+            ))}
+          </nav>
+        )}
+
         {featured.length > 0 ? (
           <>
-            {/* Phones: a swipeable row with the next card peeking in.
-                Wider screens: a grid. */}
-            <ul className="mp-no-scrollbar -mx-5 mt-6 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-x-5 sm:gap-y-8 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+            {/* Phones: compact rows. Wider screens: a photo grid. */}
+            <ul className="mt-6 grid gap-5 sm:grid-cols-2 sm:gap-y-9 lg:grid-cols-4">
               {featured.map((h, i) => (
                 // Four columns on wide screens: show one full row unless
                 // there are eight to fill two, never a half-empty row.
-                <li key={h.slug} className={`w-[72%] max-w-[300px] shrink-0 snap-start sm:w-auto sm:max-w-none ${i >= 4 && featured.length < 8 ? 'lg:hidden' : ''}`}>
-                  <ListingCard listing={h} />
+                <li
+                  key={h.slug}
+                  className={`border-b border-bd-ink/10 pb-5 last:border-0 sm:border-0 sm:pb-0 ${i >= 4 && featured.length < 8 ? 'lg:hidden' : ''}`}
+                >
+                  <ListingCard listing={h} rowOnPhone />
                 </li>
               ))}
             </ul>
             <Link
               href={browseAllHref}
-              className="bd-focus mt-5 flex min-h-[48px] items-center justify-center gap-1.5 rounded-lg border border-bd-ink/20 text-[15px] font-semibold text-bd-ink sm:hidden"
+              className="bd-focus mt-6 flex min-h-[48px] items-center justify-center gap-1.5 rounded-lg border border-bd-ink/20 text-[15px] font-semibold text-bd-ink sm:hidden"
             >
-              See all {noun.many} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              See all {total} {total === 1 ? noun.one : noun.many} <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </>
         ) : (
-          <div className="mt-6 rounded-xl border border-bd-ink/10 bg-bd-mist px-6 py-10 text-center">
+          <div className="mt-6 rounded-xl bg-bd-mist px-6 py-10 text-center">
             <p className="text-[17px] font-semibold">No {noun.many} listed yet</p>
             <p className="mt-1 text-[15px] text-bd-slate">
               Run {tab === 'apartments' ? 'an' : 'a'} {noun.one}? Be the first to list it on Beddilo.
@@ -277,16 +311,16 @@ export default async function LandingPage({
 
       {/* ── WHY BEDDILO — only what the platform actually does ───── */}
       <section aria-labelledby="why-heading" className="mx-auto max-w-6xl px-5 pt-16 sm:px-6 sm:pt-24">
-        <h2 id="why-heading" className="font-display text-[24px] font-bold tracking-[-0.015em] sm:text-[28px]">
+        <h2 id="why-heading" className="font-display text-[24px] font-bold tracking-[-0.015em] sm:text-[30px]">
           Why book with Beddilo
         </h2>
-        <ul className="mt-6 grid gap-x-8 gap-y-6 sm:mt-8 sm:gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-6 grid gap-x-8 gap-y-6 sm:mt-8 sm:grid-cols-2 lg:grid-cols-4">
           {BENEFITS.map((item) => (
-            <li key={item.title} className="flex gap-4 border-t border-bd-ink/10 pt-5 sm:block">
+            <li key={item.title} className="flex gap-4 sm:block">
               <item.icon className="h-6 w-6 shrink-0 text-bd-teal" strokeWidth={1.75} aria-hidden="true" />
               <div>
-                <h3 className="text-[16px] font-semibold sm:mt-4">{item.title}</h3>
-                <p className="mt-1 text-[15px] leading-relaxed text-bd-slate sm:mt-1.5">{item.body}</p>
+                <h3 className="text-[16px] font-semibold sm:mt-3">{item.title}</h3>
+                <p className="mt-1 text-[15px] leading-relaxed text-bd-slate">{item.body}</p>
               </div>
             </li>
           ))}
@@ -295,33 +329,33 @@ export default async function LandingPage({
 
       {/* ── OWNERS — routes into the existing onboarding flow ─────── */}
       <section aria-labelledby="owners-heading" className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-24">
-        <div className="grid gap-8 rounded-2xl bg-bd-mist p-6 sm:p-10 lg:grid-cols-[1.15fr_1fr] lg:items-center lg:gap-14 lg:p-14">
+        <div className="grid gap-8 rounded-2xl bg-bd-teal p-6 text-white sm:p-10 lg:grid-cols-[1.2fr_1fr] lg:items-center lg:gap-14 lg:p-12">
           <div>
-            <h2 id="owners-heading" className="font-display text-[26px] font-bold leading-tight tracking-[-0.015em] sm:text-[32px]">
+            <h2 id="owners-heading" className="font-display text-[26px] font-bold leading-tight tracking-[-0.015em] text-white sm:text-[32px]">
               Run a hostel, hotel or apartment?
             </h2>
-            <p className="mt-3 max-w-lg text-[16px] leading-relaxed text-bd-slate">
+            <p className="mt-3 max-w-lg text-[16px] leading-relaxed text-white/80">
               List it on Beddilo, take bookings online and manage rooms, residents and payments from one place.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/list-your-property"
-                className="bd-focus inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg bg-bd-teal px-6 text-[15px] font-semibold text-white transition-colors hover:bg-bd-teal-900"
+                className="bd-focus-on-dark inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg bg-bd-amber px-6 text-[15px] font-semibold text-bd-teal transition-colors hover:bg-bd-amber-300"
               >
                 List your property <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
               <Link
                 href="/for-owners"
-                className="bd-focus inline-flex min-h-[48px] items-center justify-center rounded-lg border border-bd-ink/20 bg-white px-6 text-[15px] font-semibold text-bd-ink transition-colors hover:border-bd-ink/40"
+                className="bd-focus-on-dark inline-flex min-h-[48px] items-center justify-center rounded-lg border border-white/30 px-6 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
               >
                 See how it works
               </Link>
             </div>
           </div>
-          <ul className="grid gap-4 rounded-xl border border-bd-ink/10 bg-white p-6 sm:p-7">
+          <ul className="grid gap-3.5">
             {OWNER_POINTS.map((point) => (
-              <li key={point} className="flex gap-3 text-[15px] leading-snug">
-                <Check className="mt-0.5 h-5 w-5 shrink-0 text-bd-success" strokeWidth={2.2} aria-hidden="true" />
+              <li key={point} className="flex gap-3 text-[15px] leading-snug text-white/90">
+                <Check className="mt-0.5 h-5 w-5 shrink-0 text-bd-amber" strokeWidth={2.2} aria-hidden="true" />
                 {point}
               </li>
             ))}
@@ -329,6 +363,9 @@ export default async function LandingPage({
         </div>
       </section>
 
+      <div className="mx-auto max-w-6xl px-5 pb-10 sm:px-6">
+        <PhotoCredits photos={KINDS_PHOTOS} />
+      </div>
       <MarketplaceFooter />
     </div>
   )

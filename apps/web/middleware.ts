@@ -337,6 +337,23 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // ── A property's own domain opens on that property ───────────────────────
+  // `/` on a host that resolved to a tenant (its subdomain or custom domain)
+  // used to render the global marketplace, listing other properties. Guests,
+  // and anyone signed in without a role here, get the property's booking
+  // page; its staff get the dashboard and its residents their portal. Only
+  // `/` changes — every other path on the host behaves exactly as before.
+  if (tenant && pathname === '/') {
+    const isStaffHere = !!memberRole || reqHeaders.get('x-admin-impersonating') === 'true'
+    const isResidentHere = !isStaffHere && !!user && portalRole === 'occupant' &&
+      (await checkIsOccupantOfTenant(user.id, tenant.id)) === true
+    const dest = new URL(isStaffHere ? '/dashboard' : isResidentHere ? '/occupant-portal' : '/book', request.url)
+    if (!isStaffHere && !isResidentHere) dest.search = request.nextUrl.search
+    const res = NextResponse.redirect(dest)
+    cookieResponse.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value, c as any))
+    return res
+  }
+
   // ── Tenant membership guard ────────────────────────────────────────────────
   // x-tenant-id comes from the hostname (subdomain or custom domain) or the
   // user's JWT claims; neither proves the signed-in user belongs to that

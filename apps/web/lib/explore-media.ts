@@ -1,6 +1,6 @@
 /**
  * Illustrative photos of places in Ghana for the marketplace's discovery
- * sections (kinds of stay, destinations). They show towns and campuses,
+ * sections (kinds of stay). They show towns and campuses,
  * never a listed property: listing photos only ever come from owners (see
  * DirectoryListing.hero_image_url). Every file is from Wikimedia Commons
  * under the licence below, credited wherever it appears.
@@ -45,31 +45,4 @@ export const EXPLORE_PHOTOS = {
     licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Accra_Skyline_-_Ghana.jpg',
   },
-  kumasi: {
-    src: '/explore/kumasi-view.jpg',
-    alt: 'View across Kumasi under a blue sky',
-    place: 'Kumasi',
-    author: 'Maven Egote',
-    license: 'CC BY-SA 4.0',
-    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
-    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Kronum_Kumasi_2018-11-08_(130246).jpg',
-  },
-  winneba: {
-    src: '/explore/winneba-sunset.jpg',
-    alt: 'Sunset over trees in Winneba',
-    place: 'Winneba',
-    author: 'T.Chordson',
-    license: 'CC BY-SA 4.0',
-    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
-    sourceUrl: 'https://commons.wikimedia.org/wiki/File:A_PIC_OF_SUNSET_IN_WINNEBA_3.jpg',
-  },
 } satisfies Record<string, ExplorePhoto>
-
-/** Town photo for a destination tile, matched on the display name. */
-export function townPhoto(town: string): ExplorePhoto | null {
-  const key = town.trim().toLowerCase()
-  if (key === 'accra') return EXPLORE_PHOTOS.accra
-  if (key === 'kumasi') return EXPLORE_PHOTOS.kumasi
-  if (key === 'winneba') return EXPLORE_PHOTOS.winneba
-  return null
-}

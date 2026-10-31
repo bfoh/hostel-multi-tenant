@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest'
 import {
   bedAvailability,
   capacityLabel,
-  coverTone,
   displayName,
   displayPlace,
   listingInitials,
@@ -153,11 +152,5 @@ describe('townsWithListings', () => {
       { town: 'Kumasi', region: 'Ashanti', count: 1 },
       { town: 'Winneba', region: 'Central', count: 1 },
     ])
-  })
-})
-
-describe('coverTone', () => {
-  it('gives a property the same colours every time', () => {
-    expect(coverTone('unity-court')).toBe(coverTone('unity-court'))
   })
 })

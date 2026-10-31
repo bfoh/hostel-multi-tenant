@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getServerTenantId, getServerBusinessType } from '@/lib/auth/tenant'
 import { ListingSettingsForm } from '@/components/settings/listing-settings-form'
 import { ListingPhotosCard } from '@/components/settings/listing-photos-card'
+import { ListingCoverCard } from '@/components/settings/listing-cover-card'
 
 export const metadata: Metadata = { title: 'Public Listing' }
 
@@ -15,7 +16,10 @@ export default async function ListingSettingsPage() {
   const isHotel = (await getServerBusinessType()) === 'hotel'
   const nounSingular = isHotel ? 'hotel' : 'hostel'
 
-  if (callerRole !== 'owner') {
+  // Managers can keep the listing's photos up to date; visibility, booking
+  // and payment settings stay with the owner.
+  const isOwner = callerRole === 'owner'
+  if (!isOwner && callerRole !== 'manager') {
     return (
       <div className="mx-auto max-w-2xl space-y-4">
         <Link href="/settings" className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors">
@@ -31,7 +35,7 @@ export default async function ListingSettingsPage() {
   const admin = createAdminClient()
   const { data: tenant } = await admin
     .from('tenants')
-    .select('slug, listed_publicly, online_booking_enabled, booking_payment_mode, address_city, address_region, paystack_subaccount_code, hero_image_url')
+    .select('slug, name, listed_publicly, online_booking_enabled, booking_payment_mode, address_city, address_region, paystack_subaccount_code, hero_image_url')
     .eq('id', tenantId ?? '')
     .single()
 
@@ -64,17 +68,25 @@ export default async function ListingSettingsPage() {
         </div>
       </div>
 
-      <ListingSettingsForm
-        slug={tenant?.slug ?? ''}
-        initialListed={tenant?.listed_publicly ?? true}
-        initialOnlineBookingEnabled={tenant?.online_booking_enabled ?? true}
-        initialPaymentMode={(tenant?.booking_payment_mode as 'online' | 'pay_at_hostel') ?? 'online'}
-        initialCity={tenant?.address_city ?? null}
-        initialRegion={tenant?.address_region ?? null}
-        hasPayoutAccount={!!tenant?.paystack_subaccount_code}
-        categories={categories ?? []}
-        isHotel={isHotel}
-      />
+      {isOwner ? (
+        <ListingSettingsForm
+          slug={tenant?.slug ?? ''}
+          initialListed={tenant?.listed_publicly ?? true}
+          initialOnlineBookingEnabled={tenant?.online_booking_enabled ?? true}
+          initialPaymentMode={(tenant?.booking_payment_mode as 'online' | 'pay_at_hostel') ?? 'online'}
+          initialCity={tenant?.address_city ?? null}
+          initialRegion={tenant?.address_region ?? null}
+          hasPayoutAccount={!!tenant?.paystack_subaccount_code}
+          categories={categories ?? []}
+          isHotel={isHotel}
+        />
+      ) : (
+        <div className="rounded-xl border border-border bg-surface p-5 text-sm text-text-secondary">
+          You can update the listing&apos;s photos. Only the {nounSingular} owner can change its visibility, booking and payment settings.
+        </div>
+      )}
+
+      <ListingCoverCard initialUrl={tenant?.hero_image_url ?? null} propertyName={tenant?.name ?? 'your property'} />
 
       <ListingPhotosCard
         hasPropertyPhoto={!!tenant?.hero_image_url}

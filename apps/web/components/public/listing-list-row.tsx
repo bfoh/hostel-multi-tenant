@@ -1,13 +1,14 @@
 import Link from 'next/link'
-import { MapPin } from 'lucide-react'
+import { ChevronRight, MapPin } from 'lucide-react'
 import type { DirectoryListing } from '@/lib/directory'
 import { displayName, listingLocation, stayTypeLabel } from '@/lib/listing-display'
 import { ListingCover, ListingPhoto } from '@/components/public/listing-photo'
 import { Price } from '@/components/public/price'
 
 /**
- * Horizontal result row for /browse: picture left, details in the middle,
- * price and action on the right (under the details on phones). The picture
+ * Horizontal result row for /browse, separated from its neighbours by a
+ * divider rather than a box: picture left, details in the middle, price
+ * and action on the right (under the details on phones). The picture
  * slot is the same size with or without a photo, so rows stay even. Real
  * data only (no ratings/reviews system exists); the price always carries
  * its billing unit.
@@ -23,18 +24,18 @@ export function ListingListRow({ listing }: { listing: DirectoryListing }) {
   return (
     <Link
       href={`/listing/${listing.slug}`}
-      className="bd-focus group flex gap-4 rounded-xl border border-bd-ink/10 bg-white p-3 transition-shadow duration-200 hover:shadow-[0_6px_20px_-8px_rgba(18,36,41,0.18)] sm:gap-5"
+      className="bd-focus group flex gap-4 rounded-xl py-5 sm:gap-6"
     >
-      <div className="relative aspect-[4/3] w-28 shrink-0 overflow-hidden rounded-lg bg-bd-mist sm:w-56">
+      <div className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-lg bg-bd-mist sm:aspect-[3/2] sm:w-60 sm:rounded-xl">
         {listing.hero_image_url ? (
           <ListingPhoto
             src={listing.hero_image_url}
             alt={`${name}, ${location || 'property photo'}`}
             name={name}
-            sizes="(min-width: 640px) 224px, 112px"
+            sizes="(min-width: 640px) 240px, 96px"
           />
         ) : (
-          <ListingCover name={name} colorKey={listing.slug} note={false} />
+          <ListingCover name={name} note={false} />
         )}
       </div>
 
@@ -58,8 +59,8 @@ export function ListingListRow({ listing }: { listing: DirectoryListing }) {
 
         <div className="mt-auto flex flex-wrap items-end justify-between gap-x-3 gap-y-2 pt-2 sm:mt-0 sm:w-44 sm:flex-col sm:items-end sm:justify-between sm:pt-0">
           <Price amount={listing.from_rate} unit={listing.from_rate_unit} from className="sm:text-right" />
-          <span className="hidden min-h-[40px] items-center rounded-lg bg-bd-teal px-4 text-[14px] font-semibold text-white transition-colors group-hover:bg-bd-teal-900 sm:inline-flex">
-            See rooms
+          <span className="hidden items-center gap-1 text-[14px] font-semibold text-bd-teal group-hover:underline group-hover:underline-offset-4 sm:inline-flex">
+            See rooms <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </span>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { BedDouble, Building2, Home, Search, MapPin, Loader2 } from 'lucide-react'
+import { Search, MapPin, Loader2 } from 'lucide-react'
 import { NAME_FIELD, SEARCH_BUSINESS_TYPE, nextTabIndex, type TabKey } from '@/lib/marketplace-search'
 
 /**
@@ -11,13 +11,14 @@ import { NAME_FIELD, SEARCH_BUSINESS_TYPE, nextTabIndex, type TabKey } from '@/l
  * column also drives subdomain routing, so it stays binary), but are split
  * into separate marketplace listings via tenants.accommodation_type — see
  * lib/directory.ts's MarketplaceVertical. The fields are the ones /browse
- * filters on (see lib/marketplace-search.ts).
+ * filters on (see lib/marketplace-search.ts): a property name and a town.
+ * One row on wide screens, stacked on phones.
  */
 
-const TABS: Array<{ key: TabKey; label: string; icon: typeof BedDouble }> = [
-  { key: 'hostels', label: 'Hostels', icon: BedDouble },
-  { key: 'hotels', label: 'Hotels', icon: Building2 },
-  { key: 'apartments', label: 'Apartments', icon: Home },
+const TABS: Array<{ key: TabKey; label: string }> = [
+  { key: 'hostels', label: 'Student hostels' },
+  { key: 'hotels', label: 'Hotels' },
+  { key: 'apartments', label: 'Apartments' },
 ]
 
 export function HeroSearch({
@@ -69,11 +70,13 @@ export function HeroSearch({
     tabRefs.current[next]?.focus()
   }
 
+  const field =
+    'flex min-h-[60px] cursor-text items-center gap-3 rounded-lg px-3.5 transition-colors hover:bg-bd-mist focus-within:bg-white focus-within:ring-2 focus-within:ring-bd-teal/30'
+
   return (
-    <div className="rounded-xl border border-bd-ink/10 bg-white shadow-[0_18px_40px_-20px_rgba(11,31,35,0.35)]">
-      <div role="tablist" aria-label="Type of stay" className="flex gap-1 border-b border-bd-ink/10 px-2 sm:gap-2 sm:px-4">
+    <div>
+      <div role="tablist" aria-label="Type of stay" className="flex flex-wrap gap-1.5">
         {TABS.map((tab, i) => {
-          const Icon = tab.icon
           const isActive = tab.key === active
           return (
             <button
@@ -88,13 +91,10 @@ export function HeroSearch({
               onClick={() => selectTab(tab.key)}
               onKeyDown={(e) => onTabKeyDown(e, i)}
               className={[
-                'bd-focus relative -mb-px flex min-h-[48px] flex-1 items-center justify-center gap-2 whitespace-nowrap border-b-2 px-2 text-[14px] font-semibold transition-colors sm:flex-none sm:justify-start sm:px-3',
-                isActive
-                  ? 'border-bd-teal text-bd-ink'
-                  : 'border-transparent text-bd-slate hover:border-bd-ink/20 hover:text-bd-ink',
+                'bd-focus min-h-[44px] whitespace-nowrap rounded-full px-4 text-[14px] font-semibold transition-colors',
+                isActive ? 'bg-bd-ink text-white' : 'text-bd-ink/75 hover:bg-bd-ink/5 hover:text-bd-ink',
               ].join(' ')}
             >
-              <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={isActive ? 2.1 : 1.8} aria-hidden="true" />
               {tab.label}
             </button>
           )
@@ -108,33 +108,34 @@ export function HeroSearch({
           role="search"
           aria-label={`Search ${activeLabel.toLowerCase()}`}
           onSubmit={() => setPending(true)}
-          className="grid gap-2 p-3 sm:p-4 md:grid-cols-[1fr_1fr_auto] md:gap-3"
+          className="mt-3 grid gap-1 rounded-xl border border-bd-ink/15 bg-white p-1.5 shadow-[0_1px_2px_rgba(18,36,41,0.05),0_10px_30px_-18px_rgba(18,36,41,0.25)] md:grid-cols-[1fr_1px_1fr_auto] md:items-center"
         >
           {type !== 'hostel' && <input type="hidden" name="type" value={type} />}
-          <label className="flex min-h-[60px] cursor-text items-center gap-3 rounded-lg border border-bd-ink/15 px-3.5 transition-colors focus-within:border-bd-teal hover:border-bd-ink/30">
+          <label className={field}>
             <Search className="h-5 w-5 shrink-0 text-bd-slate" aria-hidden="true" />
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[12px] font-medium text-bd-slate">{nameField.label}</span>
+              <span className="text-[12px] font-semibold text-bd-ink">{nameField.label}</span>
               <input
                 name="q"
                 placeholder={nameField.placeholder}
                 autoComplete="off"
                 enterKeyHint="search"
-                className="w-full bg-transparent text-[16px] text-bd-ink outline-none placeholder:text-bd-slate/70"
+                className="w-full bg-transparent text-[16px] text-bd-ink outline-none placeholder:text-bd-slate/80"
               />
             </span>
           </label>
-          <label className="flex min-h-[60px] cursor-text items-center gap-3 rounded-lg border border-bd-ink/15 px-3.5 transition-colors focus-within:border-bd-teal hover:border-bd-ink/30">
+          <span className="mx-3 h-px bg-bd-ink/10 md:mx-0 md:h-8 md:w-px" aria-hidden="true" />
+          <label className={field}>
             <MapPin className="h-5 w-5 shrink-0 text-bd-slate" aria-hidden="true" />
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[12px] font-medium text-bd-slate">Town or city</span>
+              <span className="text-[12px] font-semibold text-bd-ink">Town or city</span>
               <input
                 name="city"
                 placeholder="Anywhere in Ghana"
                 autoComplete="address-level2"
                 enterKeyHint="search"
                 list={destinations.length > 0 ? 'stay-destinations' : undefined}
-                className="w-full bg-transparent text-[16px] text-bd-ink outline-none placeholder:text-bd-slate/70"
+                className="w-full bg-transparent text-[16px] text-bd-ink outline-none placeholder:text-bd-slate/80"
               />
             </span>
           </label>
@@ -147,7 +148,7 @@ export function HeroSearch({
             type="submit"
             disabled={pending}
             aria-busy={pending}
-            className="bd-focus inline-flex min-h-[56px] items-center justify-center gap-2 rounded-lg bg-bd-teal px-8 text-[16px] font-semibold text-white transition-colors duration-200 hover:bg-bd-teal-900 disabled:cursor-wait disabled:opacity-80 md:min-h-[60px]"
+            className="bd-focus inline-flex min-h-[56px] items-center justify-center gap-2 rounded-lg bg-bd-teal px-8 text-[16px] font-semibold text-white transition-colors duration-200 hover:bg-bd-teal-900 disabled:cursor-wait disabled:opacity-80"
           >
             {pending
               ? <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden="true" />

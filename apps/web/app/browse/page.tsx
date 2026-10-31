@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Search, MapPin, LayoutGrid, List as ListIcon, ChevronRight, SearchX, BedDouble, Building2, Home } from 'lucide-react'
+import { Search, MapPin, LayoutGrid, List as ListIcon, ChevronRight, SearchX, X } from 'lucide-react'
 import { searchListings, type MarketplaceVertical } from '@/lib/directory'
 import { ListingCard } from '@/components/public/listing-card'
 import { ListingListRow } from '@/components/public/listing-list-row'
@@ -9,12 +9,12 @@ import { FiltersDisclosure } from '@/components/public/filters-disclosure'
 import { MarketplaceNav } from '@/components/marketplace/marketplace-nav'
 import { MarketplaceFooter } from '@/components/marketplace/marketplace-footer'
 import { MP } from '@/lib/marketplace-theme'
-import { displayPlace } from '@/lib/listing-display'
+import { displayPlace, townsWithListings } from '@/lib/listing-display'
 
 const VERTICALS = [
-  { type: 'hostel', label: 'Hostels', icon: BedDouble },
-  { type: 'hotel', label: 'Hotels', icon: Building2 },
-  { type: 'apartment', label: 'Apartments', icon: Home },
+  { type: 'hostel', label: 'Student hostels' },
+  { type: 'hotel', label: 'Hotels' },
+  { type: 'apartment', label: 'Apartments' },
 ] as const
 
 const GHANA_REGIONS = [
@@ -75,6 +75,11 @@ export default async function BrowseDirectoryPage({
   const verticalHref = (type: string) =>
     `/browse${buildQuery({ city: sp.city, region: sp.region, view: sp.view, sort: sp.sort }, { type: type === 'hostel' ? undefined : type })}`
 
+  // Town filters: the towns this search's results are in (only offered
+  // while no town is chosen, and only when there's more than one).
+  const towns = sp.city ? [] : townsWithListings(allResults)
+  const townHref = (town: string | undefined) => `/browse${buildQuery(sp, { city: town, page: undefined })}`
+
   const priceBounds = allResults.length > 0
     ? { lo: Math.min(...allResults.map((h) => h.from_rate)) / 100, hi: Math.max(...allResults.map((h) => h.from_rate)) / 100 }
     : { lo: 0, hi: 0 }
@@ -84,10 +89,31 @@ export default async function BrowseDirectoryPage({
 
       <MarketplaceNav />
 
-      {/* ── Search bar + stay type ──────────────────────────────── */}
-      <div className="border-b pt-4 sm:pt-6" style={{ background: MP.surfaceSoft, borderColor: MP.border }}>
+      {/* ── Stay type + search bar ──────────────────────────────── */}
+      <div className="border-b border-bd-ink/10 bg-bd-ivory-50 pb-5 pt-5 sm:pb-6 sm:pt-7">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <form action="/browse" method="get" role="search" aria-label={`Search ${nounPlural.toLowerCase()}`} className="grid gap-2 rounded-xl border bg-white p-2 shadow-[0_8px_24px_-16px_rgba(18,36,41,0.3)] sm:grid-cols-[1.3fr_1fr_auto_auto]" style={{ borderColor: MP.border }}>
+          <nav aria-label="Type of stay">
+            <ul className="flex flex-wrap gap-1.5">
+              {VERTICALS.map(({ type, label }) => {
+                const current = type === businessType
+                return (
+                  <li key={type}>
+                    <Link
+                      href={verticalHref(type)}
+                      aria-current={current ? 'page' : undefined}
+                      className={`bd-focus inline-flex min-h-[44px] items-center whitespace-nowrap rounded-full px-4 text-[14px] font-semibold transition-colors ${
+                        current ? 'bg-bd-ink text-white' : 'text-bd-ink/75 hover:bg-bd-ink/5 hover:text-bd-ink'
+                      }`}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
+
+          <form action="/browse" method="get" role="search" aria-label={`Search ${nounPlural.toLowerCase()}`} className="mt-3 grid gap-2 rounded-xl border border-bd-ink/15 bg-white p-1.5 shadow-[0_1px_2px_rgba(18,36,41,0.05),0_10px_30px_-18px_rgba(18,36,41,0.25)] sm:grid-cols-[1.3fr_1fr_auto_auto]">
             {sp.type && <input type="hidden" name="type" value={sp.type} />}
             {sp.view && <input type="hidden" name="view" value={sp.view} />}
             <label className="flex min-h-[48px] items-center gap-2.5 rounded-lg px-3 focus-within:bg-bd-mist">
@@ -136,28 +162,6 @@ export default async function BrowseDirectoryPage({
               <Search className="h-4 w-4" aria-hidden="true" /> Search
             </button>
           </form>
-
-          <nav aria-label="Type of stay" className="mt-2 sm:mt-3">
-            <ul className="flex gap-1 sm:gap-4">
-              {VERTICALS.map(({ type, label, icon: Icon }) => {
-                const current = type === businessType
-                return (
-                  <li key={type} className="flex-1 sm:flex-none">
-                    <Link
-                      href={verticalHref(type)}
-                      aria-current={current ? 'page' : undefined}
-                      className={`bd-focus -mb-px flex min-h-[48px] items-center justify-center gap-2 whitespace-nowrap border-b-2 px-2 text-[14px] font-semibold transition-colors sm:px-1 ${
-                        current ? 'border-bd-teal text-bd-ink' : 'border-transparent text-bd-slate hover:border-bd-ink/20 hover:text-bd-ink'
-                      }`}
-                    >
-                      <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={current ? 2.1 : 1.8} aria-hidden="true" />
-                      {label}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </nav>
         </div>
       </div>
 
@@ -277,6 +281,27 @@ export default async function BrowseDirectoryPage({
             </div>
           </div>
 
+          {(towns.length > 1 || sp.city) && (
+            <nav aria-label={`${nounPlural} by town`} className="mt-4 flex flex-wrap gap-2">
+              {sp.city ? (
+                <Link
+                  href={townHref(undefined)}
+                  className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-bd-ink px-4 text-[14px] font-medium text-white"
+                >
+                  {displayPlace(sp.city)} <X className="h-4 w-4" aria-hidden="true" /><span className="sr-only">Remove town filter</span>
+                </Link>
+              ) : towns.map((t) => (
+                <Link
+                  key={t.town}
+                  href={townHref(t.town)}
+                  className="bd-focus inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-bd-ink/15 bg-white px-4 text-[14px] font-medium text-bd-ink transition-colors hover:border-bd-ink/40"
+                >
+                  {t.town} <span className="text-bd-slate">{t.count}</span>
+                </Link>
+              ))}
+            </nav>
+          )}
+
           {hostels.length === 0 ? (
             <div className="mt-5 flex flex-col items-center justify-center gap-3 rounded-xl px-6 py-14 text-center" style={{ background: MP.surfaceSoft }}>
               <SearchX className="h-6 w-6" style={{ color: MP.textSecondary }} aria-hidden="true" />
@@ -299,9 +324,9 @@ export default async function BrowseDirectoryPage({
               {hostels.map((h) => <ListingCard key={h.slug} listing={h} />)}
             </div>
           ) : (
-            <div className="mt-5 space-y-3">
-              {hostels.map((h) => <ListingListRow key={h.slug} listing={h} />)}
-            </div>
+            <ul className="mt-3 divide-y divide-bd-ink/10">
+              {hostels.map((h) => <li key={h.slug}><ListingListRow listing={h} /></li>)}
+            </ul>
           )}
 
           {totalPages > 1 && (
