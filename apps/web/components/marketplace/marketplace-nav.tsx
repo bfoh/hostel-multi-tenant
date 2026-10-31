@@ -6,12 +6,14 @@ import Link from 'next/link'
 import { Menu, X, ArrowRight } from 'lucide-react'
 import { BeddiloWordmark } from '@/components/brand/beddilo-logo'
 
+// Guests first: the three kinds of stay. Owner pages sit on the right (and
+// at the end of the phone menu) so they don't compete with discovery.
 const NAV_LINKS: Array<{ label: string; href: string }> = [
-  { label: 'Hostels', href: '/browse' },
+  { label: 'Student hostels', href: '/browse' },
   { label: 'Hotels', href: '/browse?type=hotel' },
   { label: 'Apartments', href: '/browse?type=apartment' },
-  { label: 'For property owners', href: '/for-owners' },
 ]
+const OWNER_LINK = { label: 'For property owners', href: '/for-owners' }
 
 /** Nav bar height (h-16) plus its 1px bottom border — the mobile menu
  *  overlay is positioned directly below it. */
@@ -52,9 +54,9 @@ export function MarketplaceNav() {
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-10">
           <Link href="/" aria-label="Beddilo home" className="bd-focus -m-1 rounded-md p-1 text-bd-teal">
-            <BeddiloWordmark className="h-[26px] w-auto sm:h-7" title="" />
+            <BeddiloWordmark className="h-7 w-auto sm:h-8" title="" />
           </Link>
 
           <div className="hidden items-center gap-1 lg:flex">
@@ -62,7 +64,7 @@ export function MarketplaceNav() {
               <Link
                 key={l.label}
                 href={l.href}
-                className="bd-focus rounded-md px-3 py-2 text-[14px] font-medium text-bd-ink/80 transition-colors hover:bg-bd-mist hover:text-bd-ink"
+                className="bd-focus rounded-md px-3 py-2 text-[15px] font-medium text-bd-ink transition-colors hover:bg-bd-mist"
               >
                 {l.label}
               </Link>
@@ -72,10 +74,10 @@ export function MarketplaceNav() {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/list-your-property"
-            className="bd-focus hidden rounded-md px-3 py-2 text-[14px] font-semibold text-bd-teal transition-colors hover:bg-bd-mist lg:inline-flex"
+            href={OWNER_LINK.href}
+            className="bd-focus hidden rounded-md px-3 py-2 text-[14px] font-medium text-bd-slate transition-colors hover:bg-bd-mist hover:text-bd-ink lg:inline-flex"
           >
-            List your property
+            {OWNER_LINK.label}
           </Link>
           <Link
             href="/login"
